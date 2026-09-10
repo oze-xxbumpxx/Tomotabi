@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// PostToolUse Hook — Agent 設定の構文・整合性検証
+// PostToolUse / ConfigChange Hook — Agent 設定の構文・整合性検証
 //
 // 方針（docs/claude-code/improvement-cycle.md / memory機能改善 §7）:
 // - 重要な制御は Command Hook で行う。LLM 判断が必要な部分は Agent（reflection / manager）に委ねる。
@@ -45,6 +45,19 @@ function readStdin() {
 function toRel(filePath) {
   if (!filePath) return null;
   return filePath.startsWith(ROOT) ? filePath.slice(ROOT.length + 1) : filePath;
+}
+
+/** PostToolUse は tool_input.file_path。ConfigChange は file_path / source。 */
+function resolveTargetRel(input) {
+  const event = input.hook_event_name || 'PostToolUse';
+  if (event === 'ConfigChange') {
+    const fromField = toRel(input.file_path);
+    if (fromField) return fromField;
+    if (input.source === 'project_settings') return '.claude/settings.json';
+    if (input.source === 'local_settings') return '.claude/settings.local.json';
+    return null;
+  }
+  return toRel(input.tool_input?.file_path);
 }
 
 function isWatched(rel) {
@@ -164,11 +177,11 @@ function blockExit(reasons) {
   process.exit(2);
 }
 
-function warnExit(warnings) {
+function warnExit(warnings, hookEventName = 'PostToolUse') {
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
-        hookEventName: 'PostToolUse',
+        hookEventName,
         additionalContext:
           '⚠ Agent 設定の注意（方針・整合性。ブロックはしません）:\n' +
           warnings.map((w) => ` - ${w}`).join('\n'),
@@ -186,7 +199,8 @@ function main() {
     process.exit(0);
   }
 
-  const rel = toRel(input.tool_input?.file_path);
+  const eventName = input.hook_event_name || 'PostToolUse';
+  const rel = resolveTargetRel(input);
   if (!isWatched(rel)) process.exit(0);
 
   const blocks = [];
@@ -266,7 +280,7 @@ function main() {
 
 
   if (blocks.length) blockExit(blocks);
-  if (warns.length) warnExit(warns);
+  if (warns.length) warnExit(warns, eventName);
   process.exit(0);
 }
 

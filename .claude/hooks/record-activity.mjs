@@ -40,6 +40,10 @@ function main() {
     event: input.hook_event_name || 'unknown',
     session_id: input.session_id || null,
   };
+  // SessionEnd の reason（clear / logout / other 等）。会話本文は保存しない。
+  if (typeof input.reason === 'string' && input.reason.trim() !== '') {
+    entry.reason = input.reason.trim();
+  }
 
   try {
     mkdirSync(dirname(LOG), { recursive: true });

@@ -150,6 +150,38 @@ test('settings.json の欠けたフック参照先を拒否する', () => {
   }
 });
 
+test('ConfigChange でも不正な settings.json を拒否する', () => {
+  const sb = sandbox();
+  try {
+    writeRel(sb, '.claude/settings.json', '{not-json');
+    const denied = runHook(sb, {
+      hook_event_name: 'ConfigChange',
+      source: 'project_settings',
+      file_path: join(sb.root, '.claude/settings.json'),
+    });
+    assert.equal(denied.code, DENY);
+    assert.match(denied.stderr, /JSON が不正/);
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('ConfigChange の skills で壊れた SKILL.md を拒否する', () => {
+  const sb = sandbox();
+  try {
+    writeRel(sb, '.claude/skills/demo/SKILL.md', '# no frontmatter\n');
+    const denied = runHook(sb, {
+      hook_event_name: 'ConfigChange',
+      source: 'skills',
+      file_path: join(sb.root, '.claude/skills/demo/SKILL.md'),
+    });
+    assert.equal(denied.code, DENY);
+    assert.match(denied.stderr, /frontmatter/);
+  } finally {
+    sb.cleanup();
+  }
+});
+
 test('settings.json の実在するフック参照は許可する', () => {
   const sb = sandbox();
   try {

@@ -12,7 +12,7 @@ Claude Code と Codex は、このリポジトリの同じハーネス・成果�
 
 **現行（今すぐ使う）**
 
-- 作業分担、変更レベル分類、日次ログ、危険操作ガード、実在する品質コマンド、ハーネス試験（`node --test .claude/tests/*.test.mjs`）。
+- 作業分担、変更レベル分類、日次ログ、危険操作ガード、実在する品質コマンド、ハーネス試験（日常は `bash .claude/scripts/run-quality-gates.sh`。全件は `node --test .claude/tests/*.test.mjs`）。
 
 **休眠（アプリの L2 / L3 が複数回回るまで必須にしない）**
 

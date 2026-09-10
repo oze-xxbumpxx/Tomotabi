@@ -31,6 +31,13 @@ function readFeatureName() {
   }
 }
 
+/** 空文字は「無い」とみなし null。非文字列は null（本文を誤って保存しない）。 */
+function optionalString(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
 function main() {
   let input = {};
   try {
@@ -45,8 +52,14 @@ function main() {
     feature: readFeatureName(),
     session_id: input.session_id ?? null,
     transcript_path: input.transcript_path ?? null,
+    // SubagentStop 入力の機械的事実（Claude Code 2026-09 時点）。
+    // agent_type が無い古い入力では agent_name を使う。
+    agent_type: optionalString(input.agent_type) ?? optionalString(input.agent_name),
+    agent_id: optionalString(input.agent_id),
+    agent_transcript_path: optionalString(input.agent_transcript_path),
+    // last_assistant_message は会話本文になり得るので保存しない（秘密・全文ポリシー）。
     // 抽出すべき意味項目（振り返り工程が transcript から埋める）:
-    // agent_name / 成果 / 失敗 / 未解決 / 引き継ぎ情報 / Memory候補 / 改善候補
+    // 成果 / 失敗 / 未解決 / 引き継ぎ情報 / Memory候補 / 改善候補
     pending_reflection: true,
   };
 

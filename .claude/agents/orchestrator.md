@@ -44,7 +44,7 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
 
 ## 進め方
 
-1. **変更レベルを判定**（L1/L2/L3）し、判定理由を簡潔にユーザーへ提示する。
+1. **変更レベルを判定**（L1/L2/L3）し、判定理由と **ユーザー承認: 必要 / 不要** を簡潔にユーザーへ提示する。L2/L3 の設計承認と ADR 級決定は、ユーザー承認後に実装へ進む（正典: `AGENTS.md` 作業分担）。
 2. タスクを分解し、必要な Subagent と実行順序・並列可否を決める。あわせて起動予定の
    Subagent と使用モデルの采配表（orchestration-policy.md §モデル割り当ての 4 層基準）を
    ユーザーへ提示してから委譲を開始する。
@@ -92,11 +92,11 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
 ## 委譲フロー早見（詳細は orchestration-policy.md）
 
 - L0：調査・相談のみ。
-- L1：implementer へ直接修正、または確認のみ。
-- L2：architecture-designer →〔契約変更あれば contract-designer〕→
+- L1：implementer へ直接修正、または確認のみ。ユーザー承認は不要。
+- L2：architecture-designer → **ユーザーの設計承認** →〔契約変更あれば contract-designer〕→
   (implementation-planner ∥ test-designer) → implementer → reviewer →
   〔security-reviewer（省略条件あり）〕→ reflection-agent
-- L3：architecture-designer（requirements + design〔+ 性能節〕）→〔契約あれば contract-designer〕→
+- L3：architecture-designer（requirements + design〔+ 性能節〕）→ **ユーザーの設計承認** →〔契約あれば contract-designer〕→
   (planner ∥ test-designer) → implementer（〔E2E 基盤あれば E2E も〕）→
   reviewer（+ ADR・文書観点）→ security-reviewer → reflection-agent
 

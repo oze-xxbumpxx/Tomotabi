@@ -18,13 +18,9 @@ description: >
 
 ## 採番
 
-- 番号はプロジェクト全体で一意。**既存 ADR は `docs/` 直下に ADR-001〜004 が実在する**
-  （`docs/decisions/ADR-0001-web-not-native.md` 〜 `docs/decisions/ADR-0004-no-user-in-domain.md`。設計書・レビューから
-  「ADR-003 準拠」等で参照されている）。この連番を引き継ぐ。
-- 新規 ADR は `docs/decisions/` に **`ADR-0005-<タイトル>.md` から**作成する
-  （既存最大 004 の +1。以降は `docs/` 直下と `docs/decisions/` を合わせた最大 +1）。
-  `ADR-0001` から始めない — 既存 ADR-001 と番号が衝突する。
-- 既存 4 件は移動しない（移設・置き場所の統一はユーザー判断事項）。
+- 番号はプロジェクト全体で一意。Tomotabi に既存 ADR は無いので
+  **`docs/decisions/ADR-0001-<タイトル>.md` から開始**する。
+- 以降は `docs/decisions/` の最大番号 +1。`docs/` 直下の配布元 ADR は引き継がない。
 
 ## テンプレート
 
@@ -56,12 +52,12 @@ description: >
 - Alternatives に非採用案と却下理由がある（「検討した」ことを残す）。
 - Migration / Rollback が判断されている（不要なら「対象外」と明記）。
 
-## 良い例（既存 ADR）
+## 良い例
 
-- `docs/decisions/ADR-0003-no-auth-in-mvp1.md`（ADR-003）— 検討した選択肢 A/B/C と採択理由が残っており、
-  後続の設計書（`cookpit/store-master 設計書` §13 ほか）が「ADR-003 準拠」として参照できて
-  いる（出典: `cookpit/store-master レビュー` で意図的な設計判断として確認済み）。
-  ※旧形式のため Migration / Rollback 節が無い。新規作成では本スキルのテンプレートを使う。
+Tomotabi に ADR はまだ無い。初めて書くときは本スキルのテンプレートを使い、
+Alternatives に非採用案と却下理由を残す。
+（配布元 Cookpit では ADR に選択肢 A/B/C と採択理由があり、後続設計が「ADR-xxx 準拠」と
+参照できた。その型を踏襲する。）
 
 ## 注意
 

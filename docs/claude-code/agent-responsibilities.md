@@ -3,13 +3,12 @@
 各 Subagent の責務・入出力・ツール権限・禁止事項の早見表。定義の実体は
 `.claude/agents/<name>.md`。詳細な工程手順はそこと各 Skill にある。
 
-## 一覧（11・IMP-2026-031）
+## 一覧（10 本。定義は `.claude/agents/`）
 
 | Agent                     | 役割                                                           | 主な出力                                                | ツール                                          | コード変更 |
 | ------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------- | ---------- |
 | orchestrator              | 指揮・委譲・統合                                               | 委譲計画・統合報告                                      | Agent, Read, Grep, Glob                         | しない     |
-| architecture-designer     | 技術設計（L3 は requirements + 条件付き性能節）                | `docs/requirements/` + `docs/designs/<feature>.md`      | Read, Grep, Glob, Write                         | しない     |
-| contract-designer         | 契約設計（Zod/Drizzle/Hono RPC/DTO）。必要時のみ               | `docs/designs/<feature>.md` の Contract 節              | Read, Grep, Glob, Write                         | しない     |
+| architecture-designer     | 技術設計（L3 は requirements + 条件付き性能節。契約も含む）    | `docs/requirements/` + `docs/designs/<feature>.md`      | Read, Grep, Glob, Write                         | しない     |
 | implementation-planner    | 実装計画                                                       | `docs/implementation-plans/<feature>.md`                | Read, Grep, Glob, Write                         | しない     |
 | implementer               | 実装・単体/E2E・lint/型チェック                                | ソースコード・テスト                                    | Read, Grep, Glob, Edit, Write, Bash             | する       |
 | test-designer             | 試験観点・試験計画                                             | `docs/tests/<feature>.md`                               | Read, Grep, Glob, Write                         | しない     |
@@ -22,8 +21,9 @@
 > ツール権限は最小限に絞る。`Agent` を持つのは **orchestrator** と
 > **agent-improvement-manager**（evaluator のみ）。プロダクションコードを変更するのは
 > **implementer** のみ（E2E テストも同 Agent が条件付きで担当）。
-> 吸収済み（起動しない）: requirements-analyst / performance-designer /
-> e2e-test-implementer / document-reviewer。
+> 起動しない: requirements-analyst / performance-designer /
+> e2e-test-implementer / document-reviewer（吸収済み） /
+> contract-designer（未定義。契約は architecture-designer が担う）。
 > 改善系の詳細は [improvement-cycle.md](./improvement-cycle.md) を参照。
 
 ## architecture-designer
@@ -37,17 +37,6 @@
 - このプロジェクトの設計判断（アーキテクチャ・ドメインモデル・DB スキーマ）は
   確定前に Orchestrator 経由でユーザー確認を要する。
 
-## contract-designer
-
-- 契約（Hono RPC 入出力 / `packages/api-contract` の Zod / Drizzle スキーマ / DTO /
-  将来の外部連携メッセージ）の型・必須/任意・nullability・バージョン・後方互換・エラー形式・
-  冪等性キー・サンプル・契約テスト方針。
-- **契約の新設・変更があるときだけ**起動する（過剰工程の禁止）。
-- 成果は `docs/designs/<feature>.md` の Contract 節（大きければ `-contract.md` に分割）。
-- **実装コードは変更しない**（Zod/Drizzle/Hono の実装は implementer）。
-- 後方互換破壊はユーザー確認なしに確定しない。入出力スキーマは Zod で
-  `packages/api-contract` に定義して共有する（`.claude/rules/presentation-layer.md`）。
-
 ## implementation-planner
 
 - 設計書を実装可能な単位へ分解、変更対象ファイル特定、ファイルごとの変更内容、
@@ -60,11 +49,10 @@
 
 - 確定済みの `docs/designs/<feature>.md` と `docs/implementation-plans/<feature>.md` を
   実装前に必ず確認する。
-- 計画に沿って実装し、必要な単体テストを作成、`pnpm lint` / `pnpm type-check` /
-  該当パッケージの `pnpm test`（Vitest・全層導入済み）を実行する。
-- **L3 かつ E2E 基盤整備済み**では結合/E2E テストも実装する（旧 e2e-test-implementer）。
+- 計画に沿って実装し、必要な単体テストを作成、実在する lint / 型チェック / テストを実行する。
+- **L3 かつ E2E 基盤整備済み**では結合/E2E テストも実装する。
 - 設計から逸脱が必要になったら**独断で変更せず Orchestrator へ差し戻す。**
-- アーキテクチャ原則は `.claude/rules/` を遵守（特に domain 層の制約）。
+- 規約は `AGENTS.md` と実在する `.claude/rules/` を遵守する。
 
 ## test-designer
 
@@ -89,8 +77,8 @@
 - 起動条件の正典は [orchestration-policy.md](./orchestration-policy.md) §security-reviewer。
   L3 は原則必須。L2 はセキュリティ触点があるとき必須、省略条件に該当すれば省略可
   （Presentation のみ / 契約不変の内部リファクタ / テスト基盤のみ 等）。
-- OWASP Top 10・入力検証（Zod 境界）・認証/認可の漏れ・秘密情報のログ漏洩・
-  `pnpm audit` による依存脆弱性・セキュリティヘッダー（フロント変更時のみ）を確認する。
+- OWASP Top 10・入力境界の検証・認証/認可の漏れ・秘密情報のログ漏洩・
+  実在する監査コマンドによる依存脆弱性・セキュリティヘッダー（フロント変更時のみ）を確認する。
 - `reviewer` と役割を分担: reviewer は品質/整合性を担当、security-reviewer はセキュリティ深掘り。
 - コードを変更せず、reviewer と同じ 4 軸の指摘と専門 evidence を返す。Reviewer / Orchestrator が
   重複を除いて assessment へ統合する。

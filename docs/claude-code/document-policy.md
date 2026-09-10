@@ -92,10 +92,10 @@ Hook で機械的に判定できない整合性（要件と実装の意味的な
 
 ## 既存ドキュメントとの関係
 
-プロジェクトの恒久ドキュメント（`docs/01`〜`08`、`docs/` 直下の ADR-001〜004、
-`docs/04-domain-model.md` など）は引き続き正典。feature 単位の成果物（`docs/designs/` 等）は
-それらを参照し、重要な意思決定が恒久ドキュメントに昇格すべき場合は ADR
-（`docs/decisions/`・採番は ADR-0005 から — `.claude/skills/create-adr/SKILL.md`）として残す。
+プロジェクトの恒久ドキュメント（`AGENTS.md` と、**実在する** `docs/`）が正典。
+未作成の `docs/01`〜`07` や層別ルールは正典にしない。
+feature 単位の成果物（`docs/designs/` 等）はそれらを参照し、重要な意思決定は ADR
+（`docs/decisions/`・採番は ADR-0001 から — `.claude/skills/create-adr/SKILL.md`）として残す。
 
 ## notes/（未整形メモ）
 

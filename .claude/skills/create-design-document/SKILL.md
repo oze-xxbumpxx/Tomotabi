@@ -12,8 +12,8 @@ description: >
 
 ## 手順
 
-1. 入力を確認する：要求メモ（Orchestrator）、`docs/03-architecture.md`、
-   `docs/04-domain-model.md`、関連する既存実装。
+1. 入力を確認する：要求メモ（Orchestrator）、`AGENTS.md`、関連する既存実装。
+   未作成のアーキテクチャ / ドメイン文書は読まない。
 2. 既存の `docs/designs/<feature-name>.md` があれば**更新**する（重複作成しない）。
 3. 下のテンプレートの**全セクションを残す**。該当しないセクションは削除せず
    「対象外」または「変更なし」と明記する。

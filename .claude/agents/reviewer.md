@@ -38,11 +38,9 @@ tools: Read, Grep, Glob, Bash
   - (iii) **防御性観点**（Domain 層の場合）: 防御的コピー・不変条件保持・不正引数・
     副作用（updatedAt 更新等）のテストがあるか
 - ドキュメント更新漏れ
-- **UI 変更の静的チェックすり抜け**（`apps/web` の画面変更を含む場合のみ）:
-  `docs/06-ai-tools.md` の既知リスク型を機械チェックの結果と突き合わせる。Tailwind 表示、
+- **UI 変更の静的チェックすり抜け**（画面変更を含む場合のみ）:
   ハンドラ結線、操作フローなどコードだけで確定できない振る舞いは、影響する経路に限って
-  `manual-browser-verify` Skill を Orchestrator へ推奨する。固定チェック表の全項目を
-  人間へ再走査させない。
+  ブラウザ確認を Orchestrator へ推奨する。固定チェック表の全項目を人間へ再走査させない。
 
 ### 障害設計の追加観点（対象タスクに外部 I/O / 障害設計が含まれる場合のみ）
 
@@ -92,16 +90,17 @@ Reviewer は tier を上げられるが下げない。人間が下げる場合�
 
 1. `docs/designs/<feature-name>.md` `docs/implementation-plans/<feature-name>.md`
    `docs/tests/<feature-name>.md`（あれば `docs/requirements/`）と対象差分を読む。
-2. アーキテクチャ原則は `.claude/rules/domain-layer.md` と
-   `.claude/rules/coding-standards.md` に照らす。`apps/web/` の変更を含む場合は
-   `.claude/rules/presentation-layer.md` にも照らす。
+2. アーキテクチャ原則は `AGENTS.md` と、実在する `.claude/rules/`（現状は
+   `coding-standards.md`）に照らす。未作成の層別ルールは見ない。
 3. 変更内容から review tier と主要な失敗モードを先に決める。
-4. 必要なら `pnpm lint` `pnpm type-check` `pnpm test` を実行し、推測を証拠へ変える。
+4. 必要なら実在する lint / 型チェック / テストを実行し、推測を証拠へ変える。
+   未導入なら `unknown`。
 5. 候補指摘を上の 4 条件で検証し、同じ根本原因をまとめる。
 6. 仕様の事実確認が必要なら、自分の Read/Grep/Glob で調査する
    （旧 requirements-analyst への再委譲はしない。IMP-2026-031）。
 7. 人間へ渡す項目を、AI が代替できない `subjective` / `irreversible` / `unknown` に限定する。
-   書き方の正典は `docs/reviews/README.md`「人間向け packet の書き方（Gate B）」。
+   `docs/reviews/README.md`（Gate B）は未作成。人間向けの項目は主観・不可逆・未知に限定し、
+   PR / 日次ログに残す。
 
 ## 指摘契約
 

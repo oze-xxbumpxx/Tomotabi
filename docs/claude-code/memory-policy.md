@@ -65,7 +65,7 @@ Auto Memory の知見を無条件に CLAUDE.md / Skills へ反映してはいけ
 ## candidate のアーカイブ（IMP-2026-030）
 
 対応済み候補は `improvements/candidates/archive/` へ移し、現行一覧を痩せ保つ。
-移動基準の運用説明は [improvements/candidates/archive/README.md](./improvements/candidates/archive/README.md)。
+`archive/` が無ければ移すときに作る。移動基準はこの節を正典とする。
 
 移してよい条件（すべて満たす）:
 

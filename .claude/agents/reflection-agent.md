@@ -39,8 +39,9 @@ Write は `docs/claude-code/improvements/candidates/` への候補保存にの�
 
 1. Orchestrator から渡された `task-id` と対象範囲を確認する。なければ
    `.claude/state/current-feature` の値や会話文脈から task-id を決める（kebab-case）。
-2. `.claude/state/subagent-log.jsonl`（SubagentStop Hook の記録）があれば読み、各 Subagent の
-   成果・失敗・未解決・引き継ぎ情報を突き合わせる。
+2. `.claude/state/subagent-log.jsonl`（SubagentStop Hook の記録）があれば読み、
+   `agent_type` / `agent_id` と各 Subagent の成果・失敗・未解決・引き継ぎ情報を突き合わせる。
+   ログに本文は入っていない。詳細は各 `agent_transcript_path` を読む。
 3. 成果物（`docs/designs/` `docs/implementation-plans/` `docs/tests/` `docs/reviews/`）と
    会話上のユーザー修正・差し戻しを照合する。
 4. 各事象を「事象 / 発生回数 / 対象タスク / 原因仮説 / 一般化可能性」で整理する。

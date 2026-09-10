@@ -19,21 +19,15 @@
 // 出力: そのまま logs/ に貼れる 1 行の Markdown。
 
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { resolveReadablePath } from '../lib/harness-paths.mjs';
+import { dayInTz, gitDayRange, harnessTz } from '../lib/harness-time.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-// COOKPIT_* は旧名（後方互換）。新規は HARNESS_* を使う。
-const TZ = process.env.HARNESS_TZ || process.env.COOKPIT_TZ || 'Asia/Tokyo';
+const TZ = harnessTz();
 const GAP_CAP_MIN = Number(
   process.env.HARNESS_GAP_CAP_MIN || process.env.COOKPIT_GAP_CAP_MIN || 30,
 );
-
-function dayInTz(date) {
-  // en-CA ロケールは YYYY-MM-DD 形式を返す
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(date);
-}
 function timeInTz(date) {
   return new Intl.DateTimeFormat('ja-JP', {
     timeZone: TZ,
@@ -60,7 +54,7 @@ if (activityLog !== '' && existsSync(activityLog)) {
     if (!line.trim()) continue;
     try {
       const d = new Date(JSON.parse(line).ts);
-      if (!Number.isNaN(d.getTime()) && dayInTz(d) === targetDay) {
+      if (!Number.isNaN(d.getTime()) && dayInTz(d, TZ) === targetDay) {
         timestamps.push(d);
         activityCount++;
       }
@@ -70,17 +64,23 @@ if (activityLog !== '' && existsSync(activityLog)) {
   }
 }
 
-// 2. 当日コミット（現在ブランチ）
+// 2. 当日コミット（現在ブランチ）。窓は「直近 48 時間」ではなく対象日の暦日
+// （HARNESS_TZ）。3 日前のログを埋めるときにコミットが消えないようにする。
 try {
-  const out = execSync('git log --format=%aI --since="48 hours ago" HEAD', {
-    cwd: ROOT,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-  });
+  const { since, until } = gitDayRange(targetDay, TZ);
+  const out = execFileSync(
+    'git',
+    ['log', '--format=%aI', `--since=${since}`, `--until=${until}`, 'HEAD'],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    },
+  );
   for (const line of out.split('\n')) {
     if (!line.trim()) continue;
     const d = new Date(line.trim());
-    if (!Number.isNaN(d.getTime()) && dayInTz(d) === targetDay) {
+    if (!Number.isNaN(d.getTime()) && dayInTz(d, TZ) === targetDay) {
       timestamps.push(d);
       commitCount++;
     }

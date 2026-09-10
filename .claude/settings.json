@@ -94,5 +94,23 @@
   },
   "env": {
     "HARNESS_NAMESPACE": "tomotabi-harness"
+  },
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.production)",
+      "Read(./.env.development)",
+      "Read(./**/.env)",
+      "Read(./**/.env.local)",
+      "Read(./**/*.pem)",
+      "Read(./**/id_rsa)",
+      "Edit(./.env)",
+      "Edit(./.env.local)",
+      "Edit(./.env.production)",
+      "Edit(./.env.development)",
+      "Edit(./**/.env)",
+      "Edit(./**/.env.local)"
+    ]
   }
 }

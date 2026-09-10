@@ -1,0 +1,8 @@
+.DS_Store
+.claude/settings.local.json
+.claude/state/
+.claude/evals/results/
+.claude/evals/baselines/
+.env
+.env.*
+!.env.example

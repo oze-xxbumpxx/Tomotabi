@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tomotabi ハーネス構成レビュー（2026-09-10）</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+    --high: #b91c1c;
+    --high-soft: #fee2e2;
+    --mid: #b45309;
+    --mid-soft: #fef3c7;
+    --low: #1d4ed8;
+    --low-soft: #dbeafe;
+    --good: #047857;
+    --good-soft: #d1fae5;
+    --code-bg: #f3f4f6;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.75;
+    font-size: 15px;
+  }
+  header.hero {
+    background: linear-gradient(135deg, #111827 0%, #1e3a8a 100%);
+    color: #fff;
+    padding: 48px 24px 40px;
+  }
+  header.hero .wrap { max-width: 1080px; margin: 0 auto; }
+  header.hero h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: 0.01em; }
+  header.hero p.sub { margin: 0; opacity: 0.85; }
+  header.hero .meta { display: flex; flex-wrap: wrap; gap: 16px 28px; margin-top: 20px; font-size: 13px; opacity: 0.9; }
+  header.hero .meta span b { font-weight: 600; opacity: 1; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+  nav.toc {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 20px; margin-bottom: 28px;
+  }
+  nav.toc ol { margin: 8px 0 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  nav.toc li { break-inside: avoid; margin: 2px 0; }
+  nav.toc a { color: var(--accent); text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 24px 28px; margin-bottom: 28px; }
+  section h2 { margin: 0 0 14px; font-size: 21px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-soft); }
+  section h3 { margin: 26px 0 8px; font-size: 17px; }
+  section h4 { margin: 18px 0 6px; font-size: 15px; color: #374151; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 6px 0 10px; padding-left: 24px; }
+  li { margin: 3px 0; }
+  code, pre {
+    font-family: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 13px;
+  }
+  code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; }
+  pre { background: #111827; color: #e5e7eb; padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.6; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; vertical-align: top; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  tbody tr:nth-child(even) td { background: #fcfcfd; }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 9px; border-radius: 999px;
+    letter-spacing: 0.02em; white-space: nowrap; vertical-align: middle;
+  }
+  .badge.high { background: var(--high-soft); color: var(--high); }
+  .badge.mid { background: var(--mid-soft); color: var(--mid); }
+  .badge.low { background: var(--low-soft); color: var(--low); }
+  .badge.good { background: var(--good-soft); color: var(--good); }
+  .badge.neutral { background: #e5e7eb; color: #374151; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 14px 0; }
+  .kpi { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: #fafafa; }
+  .kpi .label { font-size: 12px; color: var(--muted); }
+  .kpi .value { font-size: 26px; font-weight: 700; margin-top: 2px; }
+  .kpi .note { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .finding { border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: 8px; padding: 14px 18px; margin: 14px 0; background: #fff; }
+  .finding.high { border-left-color: var(--high); }
+  .finding.mid { border-left-color: var(--mid); }
+  .finding.low { border-left-color: var(--low); }
+  .finding .title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 6px; font-size: 16px; font-weight: 700; }
+  .finding .title .id { font-family: Menlo, Consolas, monospace; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .finding dl { display: grid; grid-template-columns: 96px 1fr; gap: 4px 14px; margin: 8px 0 0; }
+  .finding dt { color: var(--muted); font-size: 13px; font-weight: 600; padding-top: 2px; }
+  .finding dd { margin: 0; }
+  .callout { border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+  .callout.info { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .callout.good { background: var(--good-soft); border-left: 4px solid var(--good); }
+  .callout.warn { background: var(--mid-soft); border-left: 4px solid var(--mid); }
+  .callout.learn { background: #f5f3ff; border-left: 4px solid #6d28d9; }
+  .callout .head { font-weight: 700; margin-bottom: 4px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .nowrap { white-space: nowrap; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px; }
+  @media print {
+    body { background: #fff; font-size: 12px; }
+    header.hero { padding: 24px; }
+    section { break-inside: avoid; border: none; padding: 0 0 16px; }
+    nav.toc { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Tomotabi ハーネス構成レビュー</h1>
+    <p class="sub">Cookpit 由来ハーネス（harness-core / workflow / improvement 0.1.0）を Tomotabi に導入した現状に対する、惜しい点と改善提案の分析レポート</p>
+    <div class="meta">
+      <span><b>作成日</b> 2026-09-10</span>
+      <span><b>対象コミット</b> <code>e620f4a</code>（main）</span>
+      <span><b>対象範囲</b> AGENTS.md / CLAUDE.md / .claude/** / .agents/** / docs/** / logs/**</span>
+      <span><b>種別</b> Level 0（調査・分析。コード変更なし）</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<nav class="toc">
+  <b>目次</b>
+  <ol>
+    <li><a href="#summary">総評とスコアカード</a></li>
+    <li><a href="#method">分析の対象と方法</a></li>
+    <li><a href="#good">良い点（維持すべき設計）</a></li>
+    <li><a href="#findings">改善ポイント（重要度別）</a></li>
+    <li><a href="#deadrefs">参照切れ・残存前提の一覧</a></li>
+    <li><a href="#roadmap">推奨する改善の進め方</a></li>
+    <li><a href="#learning">学びのポイント（なぜそうなっているか）</a></li>
+    <li><a href="#round2">追加分析（第 2 回）：実測で見つかった改善点</a></li>
+    <li><a href="#appendix">付録：検証コマンドと結果</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<section id="summary">
+  <h2>1. 総評とスコアカード</h2>
+
+  <p>
+    <b>結論から言うと、「土台は堅牢だが、まだ Cookpit の服を着ている」状態です。</b>
+    状態管理・安全フック・原子的書き込みといった<b>基盤コード（harness-core 相当）</b>は、
+    個人開発ハーネスとしては水準が高く、テストも 88 件すべて成功しています。
+    一方で、<b>ワークフロー層・改善層の文書とスクリプトは Cookpit（Next.js / Hono / Drizzle / pnpm モノレポ）の前提が
+    そのまま残っており</b>、Tomotabi では「動いているが何もチェックしていない」「存在しないファイルを読めと指示している」
+    箇所が多数あります。
+  </p>
+
+  <div class="grid">
+    <div class="kpi"><div class="label">ハーネス総行数（.claude + docs）</div><div class="value">約 9,450</div><div class="note">アプリ本体は 0 行。比率の見直しが必要</div></div>
+    <div class="kpi"><div class="label">ハーネステスト</div><div class="value">88 / 88</div><div class="note">node --test、約 30 秒、追加依存なし</div></div>
+    <div class="kpi"><div class="label">参照切れパス（実運用に影響）</div><div class="value">29</div><div class="note">docs/01〜07、rules、ADR、evals 4 件など</div></div>
+    <div class="kpi"><div class="label">pnpm 前提の記述</div><div class="value">45 箇所</div><div class="note">14 ファイルに分散。Tomotabi では package.json 自体が未作成</div></div>
+    <div class="kpi"><div class="label">フック実行時間</div><div class="value">19〜33 ms</div><div class="note">体感遅延なし。設計どおり軽量</div></div>
+    <div class="kpi"><div class="label">Agent 定義の不整合</div><div class="value">1 件</div><div class="note">contract-designer が参照のみで実体なし（11 本と記載、実体 10 本）</div></div>
+  </div>
+
+  <h3>領域別の評価</h3>
+  <table>
+    <thead><tr><th style="width:24%">領域</th><th style="width:12%">評価</th><th>所見</th></tr></thead>
+    <tbody>
+      <tr><td>入口文書（AGENTS.md / CLAUDE.md）</td><td><span class="badge good">良い</span></td><td>「未採用の事実」を明示して幻覚を防ぐ設計。簡潔で正典が 1 つ。</td></tr>
+      <tr><td>基盤ライブラリ（harness-paths / harness-state）</td><td><span class="badge good">良い</span></td><td>リポジトリ外永続化、symlink 検証、原子的書き込み、ロック。テスト充実。</td></tr>
+      <tr><td>安全フック（guard-dangerous）</td><td><span class="badge good">良い</span></td><td>決定論的な判定のみブロック、限界を明記。Grep/Glob ツールが対象外なのは軽微な穴。</td></tr>
+      <tr><td>成果物・改善サイクル系フック</td><td><span class="badge mid">要改善</span></td><td>監視対象パスが Cookpit のモノレポ固定。Tomotabi では事実上ノーオペ。</td></tr>
+      <tr><td>品質ゲートスクリプト</td><td><span class="badge mid">要改善</span></td><td>pnpm 固定・package.json 前提。ハーネス自身のテストすら SKIP 判定になる。</td></tr>
+      <tr><td>スキル（15 本）</td><td><span class="badge mid">要改善</span></td><td>構造・発動条件・完了条件は良い。参照先と実例が Cookpit のまま。</td></tr>
+      <tr><td>Agent 定義（10 本）</td><td><span class="badge mid">要改善</span></td><td>責務分離は良い。自己紹介・参照ルール・ツールリストに Cookpit 前提が残る。</td></tr>
+      <tr><td>docs/claude-code（方針文書）</td><td><span class="badge high">優先対応</span></td><td>参照切れが最多。Codex 委譲・review packet 等、現段階では存在しない運用を前提にしている。</td></tr>
+      <tr><td>evals / metrics（改善層）</td><td><span class="badge neutral">休眠</span></td><td>Recipe ドメイン固定・10 件中 6 件のみ実在。ドメイン決定後に書き直す前提で「凍結」宣言を推奨。</td></tr>
+      <tr><td>CI / 移植性</td><td><span class="badge high">優先対応</span></td><td>.github なし。plugin はユーザーローカルの改変コピー依存。承認境界が PR なのに PR 上の機械検証がない。</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <div class="head">第 2 回分析（同日追記）</div>
+    構成の整合性だけでなく<b>実際にフックへ入力を流して挙動を実測</b>した結果、追加で 22 件の改善点が見つかりました（<a href="#round2">第 8 章</a>）。
+    特に重要なのは、<b>開発方針（AI 駆動開発を主とする。AI が実装し、ユーザーは要件・設計判断・レビューを担う）がハーネスの入口文書に書かれておらず、ツールごとに振る舞いがぶれうること</b>（<a href="#E1">E-1</a>）、
+    <code>git clean</code> / <code>git restore .</code> / <code>sequelize db:drop</code> など作業・データを消す操作が安全フックを素通りすること（<a href="#A1">A-1</a>〜<a href="#A3">A-3</a>）、
+    スキルの補助ファイルを書くとフックがブロックすること（<a href="#C1">C-1</a>）です。
+  </div>
+
+  <div class="callout info">
+    <div class="head">一言でいうと</div>
+    「守り（安全・状態）」は完成度が高いので触らず、「攻め（ワークフロー・改善）」は
+    <b>今のプロジェクト段階に合わせて縮退・凍結し、スタック決定後に再有効化する</b>のが最も費用対効果の高い改善です。
+    ハーネス自身の <code>memory-policy.md</code> が「改善＝追加ではない」「メタ作業の再増殖を監視する」と述べているとおり、
+    このレポートの提案も<b>削る・凍結する・置き換える</b>が中心です。
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="method">
+  <h2>2. 分析の対象と方法</h2>
+  <ul>
+    <li><b>全ファイルの通読</b>：hooks 7 本、lib 2 本、scripts 11 本、skills 15 本、agents 10 本、docs/claude-code 8 本 + テンプレート、evals、logs。</li>
+    <li><b>機械チェック</b>：文書・スクリプト中の <code>docs/…</code> <code>.claude/…</code> <code>.cursor/…</code> パス参照を抽出し実在確認。Cookpit 固有語（pnpm / Vitest / Drizzle / Hono / apps/web / packages/ / contract-designer 等）の出現数を集計。</li>
+    <li><b>実行検証</b>：<code>node --test .claude/tests/*.test.mjs</code>（88 件成功）、各フックを空入力で起動して所要時間を計測（19〜33 ms）。</li>
+    <li><b>観点</b>：<code>audit-skills</code> スキルの 6 項目（発動 / 再現性 / 例 / 完了条件 / 鮮度 / 構造）と、個人開発・スタック未決定という Tomotabi の現段階への適合性。</li>
+  </ul>
+  <p class="small muted">
+    確認できなかったこと：配布元 <code>oze-xxbumpxx/cookpit</code> は非公開のため、plugin 側の hooks 定義は未確認。
+    そのため「project settings のフックと plugin のフックが二重に発火するか」は<b>要確認事項</b>として扱っています（<a href="#M4">M-4</a>）。
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="good">
+  <h2>3. 良い点（維持すべき設計）</h2>
+  <p>改善提案の前に、変更しないほうがよい設計を明示しておきます。ここは今後スタックが決まっても、そのまま活かせます。</p>
+
+  <table>
+    <thead><tr><th style="width:26%">項目</th><th>何が良いか</th><th style="width:28%">根拠（ファイル）</th></tr></thead>
+    <tbody>
+      <tr><td><b>「未採用の事実」を入口で宣言</b></td><td>AGENTS.md が「Next.js、DDD、pnpm、Vitest、CI は Tomotabi の採用事実ではない」「架空の成果物を補わない」と明示。LLM の幻覚を構造的に抑える、現場でも有効な書き方。</td><td><code>AGENTS.md</code></td></tr>
+      <tr><td><b>正典が 1 つ</b></td><td>CLAUDE.md が <code>@AGENTS.md</code> で取り込むだけ。Claude Code と Codex で二重管理していない。</td><td><code>CLAUDE.md</code></td></tr>
+      <tr><td><b>状態をリポジトリ外に永続化</b></td><td>XDG 準拠のユーザー状態ディレクトリを既定にし、リポジトリ内を指す明示指定は拒否。symlink 経由の逆戻りも realpath で検証。エフェメラル環境（Cloud Agent 等）を正しく想定している。</td><td><code>.claude/lib/harness-paths.mjs</code></td></tr>
+      <tr><td><b>原子的書き込みとロック</b></td><td>tmp → fsync → rename、O_EXCL ロック、mtime による stale 判定。「4 並行中 3 件消失を実証」など、実測に基づいて設計されている。</td><td><code>.claude/lib/harness-state.mjs</code></td></tr>
+      <tr><td><b>fail-open / fail-closed の使い分け</b></td><td>記録系（活動ログ等）は失敗しても作業を止めない、安全判定は解決不能なら閉じる、と関数単位で明文化。</td><td><code>safeStatePath</code> と <code>StateDirError</code> のコメント</td></tr>
+      <tr><td><b>ブロックは決定論的な判定のみ</b></td><td>force push、reset --hard、壊滅的 rm、秘密ファイル読み取り、Hook 回避のみ deny。誤検知源になりやすい「保護ファイルの人間承認層」は撤去済みで、その理由も残している。</td><td><code>.claude/hooks/guard-dangerous.mjs</code></td></tr>
+      <tr><td><b>フックが軽量・非ブロッキング</b></td><td>全フック 19〜33 ms。警告系は 30 分クールダウンでノイズを抑制。</td><td>付録の計測結果</td></tr>
+      <tr><td><b>秘密情報を記録しない</b></td><td>活動ログは ts / event / session_id のみ。環境変数は名前だけ。</td><td><code>record-activity.mjs</code>, <code>record-subagent.mjs</code></td></tr>
+      <tr><td><b>スキルの書式</b></td><td>description に発動フレーズ、本文に発動条件・手順・完了条件・良い例/悪い例。「いつ使わないか」も書いてある。</td><td><code>.claude/skills/*/SKILL.md</code></td></tr>
+      <tr><td><b>ツール間でスキルを共有</b></td><td><code>.agents/skills/</code> が <code>.claude/skills/</code> への相対 symlink。二重管理しない。</td><td><code>.agents/skills/</code></td></tr>
+      <tr><td><b>「無いゲートは unknown」</b></td><td>実在しない品質コマンドを推測で通過扱いにしない原則が文書とスクリプトの両方にある。</td><td><code>run-quality-gates.sh</code>, <code>definition-of-done.md</code></td></tr>
+      <tr><td><b>追加依存ゼロのテスト</b></td><td><code>node:test</code> のみ。スタック未決定の今、npm 依存を持たないのは正しい判断。</td><td><code>.claude/tests/</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<section id="findings">
+  <h2>4. 改善ポイント（重要度別）</h2>
+
+  <p>
+    <span class="badge high">高</span> 今のセッションで既に誤動作・誤誘導している、または承認境界の穴になっているもの。
+    <span class="badge mid">中</span> 次のタスク着手前に直すと手戻りを防げるもの。
+    <span class="badge low">低</span> 気づいたら直せばよいもの。
+  </p>
+
+  <!-- ---------------- HIGH ---------------- -->
+  <h3>4.1 重要度：高</h3>
+
+  <div class="finding high" id="H1">
+    <div class="title"><span class="id">H-1</span><span class="badge high">高</span>スクリプト・フックが Cookpit のモノレポ構成と pnpm に固定されている</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        <ul>
+          <li><code>check-deliverables.mjs</code> の <code>isSourceFile()</code> は <code>packages/*/src/**</code> と <code>apps/web/src/**</code> の <code>.ts/.tsx</code> のみを「ソース」と見なす。Tomotabi でどんな構成を選んでも、この形にしない限り PostToolUse の成果物チェックは<b>一度も発火しない</b>。</li>
+          <li><code>run-quality-gates.sh</code> / <code>detect-project-commands.sh</code> は <code>pnpm</code> 固定・<code>package.json</code> 前提。特に <b>harness ゲートは <code>test:harness</code> script が無いと SKIP</b> になり、AGENTS.md が指示する <code>node --test .claude/tests/*.test.mjs</code> に落ちない。つまり「品質ゲートを回して」と頼むと、唯一実在するテストが unknown と報告される。</li>
+          <li>format-check は <code>pnpm exec prettier</code> 固定、テストは Vitest 前提のコメント。</li>
+        </ul>
+      </dd>
+      <dt>なぜ問題か</dt>
+      <dd>「動いているが何も見ていない」フックは、<b>守られていると思い込む</b>のが最大のリスク。品質ゲートの結果も AGENTS.md の指示と矛盾する。</dd>
+      <dt>提案</dt>
+      <dd>
+        <ol>
+          <li>監視対象ソースのパターンを設定ファイルへ外出しする（例：<code>.claude/harness.json</code> に <code>sourceGlobs</code>）。未設定なら「ソース判定不能」として沈黙ではなく 1 回だけ注意を出す。</li>
+          <li><code>run-quality-gates.sh</code> の harness ゲートを「<code>test:harness</code> script があればそれ、無ければ <code>node --test .claude/tests/*.test.mjs</code>」にフォールバックさせる。</li>
+          <li>パッケージマネージャーは lockfile（<code>pnpm-lock.yaml</code> / <code>package-lock.json</code> / <code>yarn.lock</code>）から検出し、無ければ npm を既定にする。業務で使っている npm/Node の構成にもそのまま適合する。</li>
+        </ol>
+      </dd>
+      <dt>対象</dt>
+      <dd><code>.claude/hooks/check-deliverables.mjs</code>, <code>.claude/scripts/run-quality-gates.sh</code>, <code>.claude/scripts/detect-project-commands.sh</code></dd>
+    </dl>
+  </div>
+
+  <div class="finding high" id="H2">
+    <div class="title"><span class="id">H-2</span><span class="badge high">高</span>参照切れが 29 箇所あり、毎セッション「存在しない文書を読め」と指示している</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        <ul>
+          <li><code>kickoff-session</code> 手順 3、<code>session-briefing.sh</code> の末尾チェックリスト、<code>orchestrator.md</code>、<code>architecture-designer.md</code> などが <code>docs/01-overview.md</code> 〜 <code>docs/07-dev-rules.md</code> の読み込みを必須としている。<b>いずれも Tomotabi には存在しない</b>。</li>
+          <li><code>.claude/rules/domain-layer.md</code> / <code>presentation-layer.md</code> を implementer・reviewer・validate-deliverables が「厳守」対象にしているが存在しない。</li>
+          <li><code>docs/claude-code/harness-state.md</code>（承認方式の正典）、<code>improvement-backlog.md</code>、<code>docs/reviews/README.md</code>（Gate B の正典）、<code>plugin-layer-manifest.md</code>、<code>codex-delegation-playbook.md</code>、<code>archive/</code> 配下が全て欠落。「正典はこちら」と書いた先が無い。</li>
+          <li><code>.claude/evals/README.md</code> は 10 ケースを列挙するが、実在は 6 件。</li>
+        </ul>
+      </dd>
+      <dt>なぜ問題か</dt>
+      <dd>AGENTS.md の「存在しない設計書を扱わない」ルールと、スキル側の「必ず読め」が衝突する。エージェントはどちらかを黙って無視することになり、<b>無視する習慣がついた指示は他の指示の効力も下げる</b>。</dd>
+      <dt>提案</dt>
+      <dd>
+        <code>audit-skills</code> スキルの手順（パスは必ず <code>test -e</code> で実在確認）を 1 回実行し、参照を「削除」「AGENTS.md へ置換」「<i>スタック決定後に作成</i> と注記」の 3 択で処理する。一覧は <a href="#deadrefs">第 5 章</a>。
+        ハーネス自身に「文書内のパス参照の実在チェック」を <code>node --test</code> に 1 本追加すると再発を防げる（今回使った抽出ロジックで十分）。
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding high" id="H3">
+    <div class="title"><span class="id">H-3</span><span class="badge high">高</span>Agent 構成の内部矛盾（contract-designer / 11 本 / Cookpit の自己紹介）</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        <ul>
+          <li><code>orchestrator.md</code> の <code>tools: Agent(architecture-designer, contract-designer, …)</code> と <code>agent-responsibilities.md</code> の一覧に <b>contract-designer</b> があるが、<code>.claude/agents/contract-designer.md</code> は存在しない。orchestrator を編集した瞬間に <code>validate-agent-config.mjs</code> が「参照先 Agent が存在しません」と警告する状態。</li>
+          <li>「常備 Agent は 11 本」と 3 文書に書かれているが、実体は 10 本。</li>
+          <li>orchestrator の冒頭が「このプロジェクト（Cookpit / Clean Architecture + DDD のモノレポ）の開発 Orchestrator です」。architecture-designer は「アーキテクチャ遵守（このプロジェクトの核）」として依存方向・集約境界・<code>create()/reconstruct()</code> を前提にしている。</li>
+          <li>security-reviewer の観点が Hono / Zod / Drizzle / <code>pnpm audit</code> 固定。</li>
+        </ul>
+      </dd>
+      <dt>なぜ問題か</dt>
+      <dd>Tomotabi の設計は未決定なのに、Agent が起動した時点で DDD モノレポを前提に設計・レビューを始める。<b>スタック選定という最重要判断がハーネスに先取りされてしまう</b>。</dd>
+      <dt>提案</dt>
+      <dd>
+        <ul>
+          <li>contract-designer を tools と一覧から外す（契約 Agent が必要になったら、その時のスタックに合わせて定義する）。「11 本」→「10 本」。</li>
+          <li>orchestrator / architecture-designer / implementer / reviewer / security-reviewer の「プロジェクト前提」節を <b>AGENTS.md への参照 1 行</b>に置き換える。アーキテクチャ原則はスタック決定後に <code>.claude/rules/</code> へ書く。</li>
+          <li>security-reviewer の観点は「入力境界のバリデーション」「認可チェック」「秘密情報」「依存脆弱性（<code>npm audit</code> 等、実在するコマンド）」と<b>フレームワーク非依存の表現</b>に戻す。</li>
+        </ul>
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding high" id="H4">
+    <div class="title"><span class="id">H-4</span><span class="badge high">高</span>ハーネスの規模がプロジェクトの段階に合っていない（現行と休眠の区別がない）</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        約 9,450 行のハーネスに対し、アプリは 0 行。特に次の要素は「複数の L2/L3 タスクを完了した後」に初めて意味を持つが、現時点で全て「必須」と書かれている。
+        <ul>
+          <li><code>review-readiness.mjs</code>（1,132 行 + テスト 719 行）と structured packet / Gate B / handoff-check の hard stop。</li>
+          <li>改善サイクル 3 Agent（reflection / manager / evaluator）、metrics YAML、evals。</li>
+          <li>Codex 委譲ルート（create-codex-brief / review-codex-implementation — スキル自体が未導入）。</li>
+        </ul>
+      </dd>
+      <dt>なぜ問題か</dt>
+      <dd>
+        「必須」と書かれた工程が実行不能だと、エージェントは毎回「スキップした理由」を書く作業に時間を使う。
+        ハーネス自身の <code>memory-policy.md</code> が警告する「指示過多 → 判断遅延・重要指示の埋没・トークン増」がそのまま起きる。
+        個人開発で学習目的なら、<b>まず自分で書いたコードが増えること</b>が最優先です。
+      </dd>
+      <dt>提案</dt>
+      <dd>
+        AGENTS.md に「<b>現在有効なハーネス機能</b>」節を追加し、次の 2 群に分ける。
+        <table>
+          <thead><tr><th style="width:18%">状態</th><th>対象</th><th>扱い</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge good">現行</span></td><td>AGENTS.md / guard-dangerous / record-activity / logs と write-work-log / kickoff・close-session / quality-gates（H-1 修正後） / classify-change</td><td>そのまま使う。L0/L1 中心。</td></tr>
+            <tr><td><span class="badge neutral">休眠</span></td><td>review-readiness と Gate B / 改善サイクル 3 Agent / metrics / evals / Codex 委譲 / check-improvement-cycle の feature 判定部</td><td>「技術スタック決定 + L2 タスク 3 件完了」を再有効化条件として文書に明記。削除はしない（core の設計は再利用可能）。</td></tr>
+          </tbody>
+        </table>
+        休眠部分は各 SKILL.md の冒頭に「<i>状態: 休眠（再有効化条件: …）</i>」を 1 行足すだけで、エージェントの判断コストが大きく下がります。
+      </dd>
+    </dl>
+  </div>
+
+  <!-- ---------------- MID ---------------- -->
+  <h3>4.2 重要度：中</h3>
+
+  <div class="finding mid" id="M1">
+    <div class="title"><span class="id">M-1</span><span class="badge mid">中</span><code>current-feature</code> の書き込み先が二重で、古い値が新しい値を隠す</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        スキル・Agent は「<code>.claude/state/current-feature</code> に 1 行書く」と指示する（リポジトリ内・gitignore 済み・<b>旧パス</b>）。
+        一方フックは <code>resolveReadablePath()</code> で <b>永続領域 → 旧パス</b> の順に読む。
+        永続領域（<code>~/.local/state/tomotabi-harness/current-feature</code>）に前タスクの値が残っていると、新しく書いた旧パスの値は<b>無視される</b>。
+      </dd>
+      <dt>提案</dt>
+      <dd>
+        <code>harness-run.mjs</code> に <code>feature set &lt;name&gt;</code> / <code>feature clear</code> / <code>feature show</code> を追加し、スキル・Agent の指示を「このコマンドを実行」に統一する。正典が 1 つになり、書き先の問題も消える。
+        ついでに <code>close-session</code> の完了条件に「feature をクリアしたか」を入れると取り残しが防げる。
+      </dd>
+      <dt>対象</dt>
+      <dd><code>.claude/scripts/harness-run.mjs</code>, <code>classify-change</code> / <code>create-design-document</code> / <code>create-requirements-document</code> / <code>orchestrator.md</code> / <code>architecture-designer.md</code></dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="M2">
+    <div class="title"><span class="id">M-2</span><span class="badge mid">中</span>model 検証が公式エイリアスをブロックする一方、ポリシーはエイリアス前提</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        <code>validate-agent-config.mjs</code> は frontmatter の <code>model</code> が <code>/^claude-(opus|sonnet|haiku|fable)-/</code> に一致しないと<b>BLOCK（exit 2）</b>する。
+        しかし Claude Code の subagent 定義で正規にサポートされる <code>sonnet</code> / <code>opus</code> / <code>haiku</code> / <code>inherit</code> はこの正規表現に当たらない。
+        <code>orchestration-policy.md</code> 自身も <code>Explore</code> を <code>model: haiku</code>、L3 を <code>model: fable</code> で起動すると書いており、エイリアス運用を前提にしている。
+      </dd>
+      <dt>なぜ問題か</dt>
+      <dd>「モデルは frontmatter で固定せず inherit にして親の采配に任せる」というごく普通の変更が、ハーネスに拒否される。ブロック系フックの条件が厳しすぎると、結局 <code>--no-verify</code> 的な回避を招く。</dd>
+      <dt>提案</dt>
+      <dd>許容値を「<code>claude-*</code> の完全 ID」+「<code>inherit | sonnet | opus | haiku | fable</code>」にする。タイポ検出という本来の目的は保てる。併せて agent 定義の <code>model</code> をベンダーの具体的なモデル ID に固定するか、エイリアスにするかを <code>orchestration-policy.md</code> で 1 つに決める。</dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="M3">
+    <div class="title"><span class="id">M-3</span><span class="badge mid">中</span><code>shouldEmitNotice()</code> の重複実装と、コメントと実装の不一致</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        同じ関数が <code>check-deliverables.mjs</code> と <code>check-improvement-cycle.mjs</code> に別々に存在する。
+        コメントは「警告セットが変化したか、クールダウンを過ぎたときだけ emit」と言うが、ハッシュ対象は <code>feature</code> のみで <code>warnings</code> 引数は<b>未使用</b>。
+        つまり 30 分以内に不足成果物が増えても再通知されない。
+      </dd>
+      <dt>提案</dt>
+      <dd><code>.claude/lib/hook-notice.mjs</code> に共通化し、ハッシュ対象を <code>feature + warnings.join()</code> にする。テストを 1 本追加（同一警告は抑制、警告が増えたら再通知）。</dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="M4">
+    <div class="title"><span class="id">M-4</span><span class="badge mid">中</span>移植性：plugin がユーザーローカルの改変コピーに依存し、二重発火が未確認</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        <code>settings.json</code> の <code>enabledPlugins</code> は <code>*@cookpit-harness</code> を有効化しているが、<code>harness-setup.md</code> によればその marketplace は <code>~/.local/share/cookpit-harness-claude/</code> の<b>手修正コピー</b>で「GitHub 更新に自動追随しない」。
+        別マシンや Cloud Agent 環境では解決できない。さらに同じフック群がプロジェクト内 <code>settings.json</code> にも直接登録されているため、plugin 側にもフック定義があれば<b>同じフックが 2 回走る</b>。
+        <code>harness-setup.md</code> 自身が「新しい対話セッションでのフック発火は未確認」と記録している。
+      </dd>
+      <dt>提案</dt>
+      <dd>
+        <ol>
+          <li>まず 1 回、新セッションで <code>record-activity.mjs</code> の活動ログを見て、1 回の UserPromptSubmit に対し行が 1 本か 2 本かを確認する（二重発火の最も簡単な検出法）。</li>
+          <li>方針を決める：<b>A</b> プロジェクト内ファイルを正とし <code>enabledPlugins</code> を外す（現状の 79 ファイルが既にリポジトリ内にあるので自然）／<b>B</b> plugin を正としリポジトリ内の hooks・skills を削る。個人開発でリポジトリ完結を優先するなら A を推奨。</li>
+        </ol>
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="M5">
+    <div class="title"><span class="id">M-5</span><span class="badge mid">中</span>名前空間の解決がツールごとに手動で、<code>package.json</code> 不在時に孤児化する</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        Claude Code は settings の env、Codex は毎回 <code>HARNESS_NAMESPACE=tomotabi-harness</code> を手で付ける。
+        付け忘れると <code>resolveNamespace()</code> は <code>package.json</code> を探すが Tomotabi には無く、既定の <code>claude-harness</code> に落ちる（警告は出るが記録は別ディレクトリへ孤児化）。
+      </dd>
+      <dt>提案</dt>
+      <dd>解決順に「リポジトリ内マーカー（例 <code>.claude/harness.json</code> の <code>namespace</code>）」を <code>package.json</code> の前に挿入する。H-1 の <code>sourceGlobs</code> と同じファイルにまとめれば、ハーネスの「プロジェクト固有設定」が 1 箇所になる。AGENTS.md の Codex 向け手順から env の記述を消せる。</dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="M6">
+    <div class="title"><span class="id">M-6</span><span class="badge mid">中</span>承認境界を PR レビューに置きながら、PR 上に機械検証がない</div>
+    <dl>
+      <dt>現状</dt>
+      <dd><code>.github/</code> が存在しない。ハーネステスト 88 件はローカル実行のみ。<code>improvement-cycle.md</code> は「構成変更の承認境界は PR レビュー」と定めるが、PR を開いてもテストもリンクチェックも走らない。</dd>
+      <dt>提案</dt>
+      <dd>
+        最小の GitHub Actions を 1 本。<code>node --test .claude/tests/*.test.mjs</code> と、H-2 で追加する参照実在チェックだけを回す。
+        アプリ用のゲートはスタック決定後に同じワークフローへ足す。ハーネスが「実在する CI」を持つことで、AGENTS.md の「導入済み CI は採用事実ではない」も更新できる。
+      </dd>
+      <dt>参考</dt>
+      <dd>
+<pre><code>name: harness
+on: [pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node --test .claude/tests/*.test.mjs</code></pre>
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="M7">
+    <div class="title"><span class="id">M-7</span><span class="badge mid">中</span>evals が Cookpit の Recipe ドメイン固定で、evaluator が動かせない</div>
+    <dl>
+      <dt>現状</dt>
+      <dd><code>.claude/evals/cases/*.md</code> は「<code>packages/domain/src/recipe</code> の Entity バリデーション」等、Cookpit の実コードを前提にする。README は 10 件を列挙するが実在 6 件。agent-evaluator は before/after をこのケースで採点するため、Tomotabi では評価不能。</dd>
+      <dt>提案</dt>
+      <dd>H-4 の「休眠」に含め、README 冒頭に「Tomotabi のドメイン決定後に書き直す。現ケースは書式の参考のみ」と明記。存在しない 4 件の行は削除する。</dd>
+    </dl>
+  </div>
+
+  <!-- ---------------- LOW ---------------- -->
+  <h3>4.3 重要度：低</h3>
+
+  <div class="finding low" id="L1">
+    <div class="title"><span class="id">L-1</span><span class="badge low">低</span>ハーネス自身に lint / format がなく、未使用 import が残っている</div>
+    <dl>
+      <dt>現状</dt><dd><code>check-deliverables.mjs</code> と <code>check-improvement-cycle.mjs</code> で <code>mkdirSync</code> が未使用。ハーネスの JS/Shell を検査するゲートがない。</dd>
+      <dt>提案</dt><dd>依存を増やしたくないなら <code>node --check</code> と <code>bash -n</code> を quality-gates の harness ゲートに含めるだけでも構文エラーは拾える。ESLint を入れるのはアプリのスタック決定後で十分。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="L2">
+    <div class="title"><span class="id">L-2</span><span class="badge low">低</span>lefthook / Codex 委譲など「導入済み」と読める記述の残存</div>
+    <dl>
+      <dt>現状</dt><dd><code>quality-gates</code> スキルの備考「ローカルの pre-commit（lefthook）は format + lint、pre-push は type-check を自動実行する」、<code>orchestration-policy.md</code> の「lefthook pre-commit の branch-guard がブロック」など。いずれも Tomotabi には無い。<code>guard-dangerous.mjs</code> の HOOK_BYPASS_DENY 自体は無害（将来 Git hook を導入しても効く）。</dd>
+      <dt>提案</dt><dd>H-2 の棚卸しで一緒に削除。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="L3">
+    <div class="title"><span class="id">L-3</span><span class="badge low">低</span>PreToolUse の matcher に Grep / Glob が含まれない</div>
+    <dl>
+      <dt>現状</dt><dd><code>settings.json</code> の matcher は <code>Bash|Read|Edit|Write|MultiEdit|NotebookEdit</code>。Grep ツールで <code>.env</code> を対象に検索すると内容が表示される。フックは「事故防止層であり認証境界ではない」と明記されているので致命ではない。</dd>
+      <dt>提案</dt><dd>matcher に <code>Grep</code> を足し、<code>tool_input.path</code> を <code>isSecretPath()</code> で見る。10 行程度の変更。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="L4">
+    <div class="title"><span class="id">L-4</span><span class="badge low">低</span>ハーネステストが 30 秒かかる</div>
+    <dl>
+      <dt>現状</dt><dd>88 件で約 30 秒。ロックのタイムアウト待ちや Atomics.wait のテストが支配的と推測。</dd>
+      <dt>提案</dt><dd>タイムアウト系テストの <code>timeoutMs</code> / <code>staleMs</code> を短くする、または <code>node --test --test-concurrency</code> でファイル並列化。CI に載せる前に見直すと快適。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="L5">
+    <div class="title"><span class="id">L-5</span><span class="badge low">低</span>Cookpit の運用履歴コメントが本文に混在</div>
+    <dl>
+      <dt>現状</dt><dd>「2026-07-01 PR #21」「IMP-2026-0xx」「pantry-core 事象 2」「MVP1: test runner 未導入」等が 18 ファイル / 38 箇所。出典として価値はあるが、Tomotabi からは辿れない。</dd>
+      <dt>提案</dt><dd>ルールの<b>根拠</b>として残す価値がある箇所は「（配布元 Cookpit での実績）」と 1 語添える。Tomotabi の判断に影響しない履歴は削除。判断基準は <code>audit-skills</code> の「鮮度」項目。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="L6">
+    <div class="title"><span class="id">L-6</span><span class="badge low">低</span>sprint-summary / write-work-log が roadmap と Sprint 表記に依存</div>
+    <dl>
+      <dt>現状</dt><dd><code>docs/05-roadmap.md</code> が無いこと、ログの Sprint 行フォーマット（<code>- Sprint：</code>）固定、<code>logs/_template.md</code> と実ログ（2026-09-08）で「今日のタスク」節の書き方が既に揺れている。</dd>
+      <dt>提案</dt><dd>Sprint 運用を始めるまでは sprint-review を休眠に含める。テンプレートに「Sprint: 未設定」の既定行を置くと抽出スクリプトの「セクション欠落」警告を避けられる。</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="deadrefs">
+  <h2>5. 参照切れ・残存前提の一覧</h2>
+
+  <h3>5.1 実在しない参照先（実運用に影響するもの）</h3>
+  <p class="small muted">テスト用フィクスチャ（<code>x.mjs</code>, <code>foo.md</code>, <code>demo.md</code>, <code>*.json</code> のサンプル）は除外。</p>
+  <table>
+    <thead><tr><th style="width:38%">参照先</th><th style="width:30%">参照している主な場所</th><th>推奨する処置</th></tr></thead>
+    <tbody>
+      <tr><td><code>docs/01-overview.md</code> 〜 <code>docs/07-dev-rules.md</code>（7 件）</td><td>kickoff-session, session-briefing.sh, orchestrator, architecture-designer, create-requirements-document, write-work-log, sprint-summary.sh</td><td>「AGENTS.md を読む」に置換。スタック決定後に必要な文書だけ新設。</td></tr>
+      <tr><td><code>.claude/rules/domain-layer.md</code>, <code>presentation-layer.md</code></td><td>implementer, reviewer, validate-deliverables, architecture-designer</td><td>参照を削除。層別ルールはアーキテクチャ決定後に作成。</td></tr>
+      <tr><td><code>docs/claude-code/harness-state.md</code></td><td>guard-dangerous.mjs, audit-skills, improvement-cycle, improvements/README</td><td>「承認境界は PR レビュー」の 1 段落を improvement-cycle.md に集約し、他はそこを参照。</td></tr>
+      <tr><td><code>docs/claude-code/improvements/improvement-backlog.md</code></td><td>session-briefing.sh, sprint-summary.sh, reflect-task, reflection-agent, manager</td><td>空のバックログを 1 つ作る（表ヘッダのみ）。スクリプトは存在チェック済みなので動作は変わらない。</td></tr>
+      <tr><td><code>docs/reviews/README.md</code></td><td>orchestrator, reviewer, validate-deliverables, development-workflow</td><td>休眠（Gate B）に含め、参照に「未作成」を注記。</td></tr>
+      <tr><td><code>docs/claude-code/plugin-layer-manifest.md</code>, <code>codex-delegation-playbook.md</code>, <code>archive/**</code>, <code>evaluations/IMP-2026-007.md</code></td><td>classify-change, orchestration-policy, orchestrator, reflect-task</td><td>参照削除。reflect-task の「IMP-2026-007 追跡計測」節は Cookpit 固有なので節ごと削除。</td></tr>
+      <tr><td><code>docs/decisions/ADR-0001</code> / <code>0003</code> / <code>0004</code></td><td>create-adr</td><td>採番節を「Tomotabi は ADR-0001 から開始」に書き直す。</td></tr>
+      <tr><td><code>.claude/evals/cases/</code> の 4 件（database-schema-change, frontend-screen-addition, aws-integration-change, contract-validation-change）</td><td>evals/README, classify-change</td><td>README の行を削除（M-7）。</td></tr>
+      <tr><td><code>.cursor/agents/implementer.md</code>, <code>.cursor/rules/implementation-default-model.mdc</code></td><td>orchestration-policy「Cursor Agent 経路」</td><td>節ごと削除、または Tomotabi で Cursor をどう使うかを決めてから書く。</td></tr>
+      <tr><td>Cookpit の成果物例（<code>docs/implementation-plans/store-master.md</code> 等 7 件）</td><td>各スキルの「良い例」</td><td>「配布元での実績」と明記して残すか、Tomotabi の初回成果物ができたら置換。</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.2 Cookpit 固有語の残存数</h3>
+  <table>
+    <thead><tr><th>語</th><th class="nowrap">ファイル数</th><th class="nowrap">出現数</th><th>備考</th></tr></thead>
+    <tbody>
+      <tr><td><code>pnpm</code></td><td>14</td><td>45</td><td>スクリプト・DoD・Agent・スキル全域</td></tr>
+      <tr><td><code>cookpit/</code>（振り返り出典）</td><td>12</td><td>40</td><td>スキルの良い例 / 悪い例の出典</td></tr>
+      <tr><td><code>IMP-2026-*</code></td><td>18</td><td>38</td><td>改善提案 ID。Tomotabi に該当提案書は無い</td></tr>
+      <tr><td><code>Codex</code>（委譲ルート）</td><td>12</td><td>28</td><td>Tomotabi では Codex は共通スキルの利用者であり、委譲ルートは未導入</td></tr>
+      <tr><td><code>apps/web</code> / <code>packages/</code></td><td>15 / 14</td><td>26 / 20</td><td>モノレポ前提</td></tr>
+      <tr><td><code>docs/0N-*.md</code></td><td>15</td><td>26</td><td>恒久ドキュメント参照</td></tr>
+      <tr><td><code>contract-designer</code></td><td>11</td><td>22</td><td>実体なし Agent</td></tr>
+      <tr><td><code>Hono</code> / <code>Vitest</code> / <code>Drizzle</code></td><td>7 / 10 / 6</td><td>14 / 11 / 8</td><td>フレームワーク固定</td></tr>
+      <tr><td><code>Cookpit</code>（名指し）</td><td>7</td><td>13</td><td>orchestrator 自己紹介、evals README 等</td></tr>
+      <tr><td><code>MVP1</code> / <code>lefthook</code></td><td>5 / 4</td><td>8 / 4</td><td>Cookpit の運用フェーズ・ツール</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<section id="roadmap">
+  <h2>6. 推奨する改善の進め方</h2>
+  <p>
+    順序は「誤誘導を止める → 段階を宣言する → スタック非依存にする → 小修正 → 仕組みで再発を防ぐ」です。
+    各ステップは独立して PR にでき、前のステップに依存するものだけ矢印で示しています。
+    いずれも <b>Level 1（ハーネス文書・スクリプトの修正）</b>で、設計書は不要です。
+  </p>
+
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:26%">ステップ</th><th>内容</th><th style="width:16%">対応する指摘</th><th style="width:12%">依存</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>棚卸し（audit-skills 実行）</b></td><td>参照切れの削除・置換、11→10 本、contract-designer 除去、Cookpit 自己紹介の置換、lefthook 等の削除。<code>audit-skills</code> スキルの手順そのもの。logs の「次回やること」にも既に載っている。</td><td>H-2, H-3, L-2, L-5</td><td>—</td></tr>
+      <tr><td>2</td><td><b>現行 / 休眠の宣言</b></td><td>AGENTS.md に「現在有効なハーネス機能」節を追加。休眠スキル・Agent の冒頭に状態と再有効化条件を 1 行。evals README を凍結表記に。</td><td>H-4, M-7, L-6</td><td>1</td></tr>
+      <tr><td>3</td><td><b>スタック非依存化</b></td><td><code>.claude/harness.json</code>（namespace / sourceGlobs）を導入。run-quality-gates に <code>node --test</code> フォールバックとパッケージマネージャー検出。check-deliverables の isSourceFile を設定駆動に。</td><td>H-1, M-5</td><td>—</td></tr>
+      <tr><td>4</td><td><b>小修正</b></td><td>harness-run に <code>feature</code> サブコマンド、model 検証のエイリアス許容、shouldEmitNotice の共通化、Grep matcher 追加、未使用 import 削除。</td><td>M-1, M-2, M-3, L-1, L-3</td><td>3（harness.json）</td></tr>
+      <tr><td>5</td><td><b>仕組み化</b></td><td>参照実在チェックのテスト追加、GitHub Actions で <code>node --test</code>。plugin 二重発火の確認と <code>enabledPlugins</code> の方針決定。</td><td>M-4, M-6, L-4</td><td>1, 4</td></tr>
+      <tr><td>6</td><td><b>スタック決定後</b></td><td>coding-standards / rules を実スタックへ、security-reviewer の観点を具体化、evals を Tomotabi ドメインで書き直し、休眠部分を順次再有効化。</td><td>—</td><td>MVP と技術選定</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <div class="head">やらないほうがよいこと</div>
+    <ul>
+      <li><b>harness-core（lib / guard / record 系）の再設計</b>。ここは十分に良い。触るのは M-2 / M-3 / L-3 の局所修正まで。</li>
+      <li><b>休眠部分の削除</b>。review-readiness や改善サイクルは、Tomotabi が育ったとき価値が出る。凍結して残す。</li>
+      <li><b>Tomotabi 用の設計文書（docs/01〜07）を今埋めること</b>。参照が切れているから作る、は逆。MVP と技術選定の判断が先。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="learning">
+  <h2>7. 学びのポイント（なぜそうなっているか・現場ではどう考えるか）</h2>
+
+  <div class="callout learn">
+    <div class="head">ハーネスは「足場」であり、建物より先に完成させるものではない</div>
+    今回の最大の指摘（H-4）は、技術的な誤りではなく<b>段階の不一致</b>です。現場でも、CI・レビュー規約・ADR などの仕組みは
+    「チームがその痛みを一度経験してから」導入するほうが定着します。先に全部入れると、守れないルールが増え、ルール全体の信頼が下がります。
+    「今有効なもの」を短く宣言し、残りは条件付きで凍結する、というのは Feature Flag と同じ発想です。
+  </div>
+
+  <div class="callout learn">
+    <div class="head">fail-open と fail-closed を「関数単位」で決める</div>
+    <code>harness-paths.mjs</code> は、記録のためのパス解決は失敗しても旧パスに落ちる（fail-open）、安全判定のためのパス解決は失敗したら例外で止める（fail-closed）と、
+    同じモジュール内で目的別に分けています。業務の Express / Node でも「ログ出力の失敗でリクエストを落とさない」「認可判定が不能なら拒否する」という同じ原則が使えます。
+    <b>どちらに倒すかをコメントで明文化している</b>点が、このコードの読みやすさの理由です。
+  </div>
+
+  <div class="callout learn">
+    <div class="head">「動いているが何も見ていない」チェックが最も危ない</div>
+    H-1 の <code>isSourceFile()</code> は例外を出さず、単に false を返し続けます。テストも通ります。
+    現場ではこれを「サイレント・ノーオペ」と呼び、CI のテストが 0 件で緑になるのと同じ危険があります。
+    対策は「対象が 1 件も無いときは警告を 1 回出す」「対象パターンを設定に外出しし、設定が無いこと自体を検出する」の 2 つです。
+  </div>
+
+  <div class="callout learn">
+    <div class="head">ブロック系のルールは緩く、警告系は賢く</div>
+    M-2（model のエイリアスをブロック）は、正しい入力を拒否するフックの典型です。exit 2 でブロックするルールは
+    「絶対に誤検知しない」ものだけにし、迷うものは additionalContext の警告に落とす。
+    <code>guard-dangerous.mjs</code> がその原則を守っているのに対し、<code>validate-agent-config.mjs</code> の model 判定だけがはみ出しています。
+    ESLint の <code>error</code> と <code>warn</code> の使い分けと同じです。
+  </div>
+
+  <div class="callout learn">
+    <div class="head">状態は「リポジトリの外」、設定は「リポジトリの中」</div>
+    ハーネスは状態（activity-log 等）を <code>~/.local/state/</code> に置き、リポジトリ内フォールバックを <code>trusted: false</code> と扱います。
+    一方で M-5 が示すとおり、<b>設定</b>（namespace や監視対象パス）まで環境変数に頼ると、ツールが増えるたびに手動設定が増えます。
+    12-Factor の「設定は環境変数」は<i>デプロイ環境ごとに変わるもの</i>の話で、<i>プロジェクトで固定のもの</i>はリポジトリ内のファイルが正典です。
+    この区別は Docker / AWS の設定管理でも同じです。
+  </div>
+
+  <div class="callout learn">
+    <div class="head">承認境界を決めたら、その境界に機械検証を置く</div>
+    改善サイクルは「構成変更の承認は PR レビューで」と決めています。であれば PR に <code>node --test</code> が走らないのは、
+    「レビュアーが目で 88 件のテスト結果を想像する」ことを求めているのと同じです。
+    <b>人が判断すべきことだけを人に残す</b>（Gate A / Gate B の思想）を、CI にも適用するのが M-6 です。
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="round2">
+  <h2>8. 追加分析（第 2 回）：実測で見つかった改善点</h2>
+
+  <p>
+    第 1 回は「文書とスクリプトの整合性」を中心に読みました。第 2 回は<b>実際に動かして</b>確認しています。
+    具体的には、(1) 安全フックに代表的なコマンド 30 種を流して deny / allow を実測、(2) 設定検証フックに「スキルの補助ファイル」「<code>model: inherit</code>」を流して挙動を確認、
+    (3) テストのファイル別所要時間、(4) Claude Code の現行フック仕様（公式リファレンス）との差分、(5) ユーザーの開発方針とハーネス運用ルールの整合、の 5 点です。
+  </p>
+
+  <div class="callout info">
+    <div class="head">8.1 節の改訂について（同日）</div>
+    初版の 8.1 節は「AI は提案のみ、コードはユーザーが手で書く」という古い前提で書いていました。ユーザーから<b>「基本的には AI 駆動開発を主として開発していきたい」</b>と確認が取れたため、
+    E-1 / E-3 を<b>AI 駆動開発を前提に書き直し</b>ています。ハーネスの既定（orchestrator が implementer を起動して AI が実装する）は、この方針と<b>一致</b>しています。
+  </div>
+
+  <div class="grid">
+    <div class="kpi"><div class="label">安全フックを素通りした破壊的操作</div><div class="value">12 / 25</div><div class="note">破壊的操作 12 件が allow（git clean・restore、DB drop、EC2 terminate など）</div></div>
+    <div class="kpi"><div class="label">設定検証フックの誤ブロック</div><div class="value">2 種</div><div class="note">スキル補助 .md、model: inherit</div></div>
+    <div class="kpi"><div class="label">テスト時間の偏り</div><div class="value">30.4 s / 32.0 s</div><div class="note">休眠中の review-readiness テストが 95%</div></div>
+    <div class="kpi"><div class="label">未活用のフックイベント</div><div class="value">4</div><div class="note">ConfigChange / SessionEnd / PreCompact / SubagentStop の拡張入力</div></div>
+  </div>
+
+  <!-- ---------------- E: 運用ルールと開発方針 ---------------- -->
+  <h3>8.1 運用ルールと開発方針のギャップ（最優先）</h3>
+
+  <div class="finding mid" id="E1">
+    <div class="title"><span class="id">E-1</span><span class="badge mid">中</span>「AI 駆動開発を主とする」という開発方針と、人が担う判断点がハーネスの入口文書に書かれていない</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        ユーザーの方針は<b>AI 駆動開発を主とする</b>（AI が実装し、ユーザーは要件提示・設計判断・レビュー・マージを担う）。
+        <code>orchestrator.md</code> は L1 で「implementer へ直接修正」、L2/L3 で「implementer → reviewer」と AI が実装する前提で書かれており、<b>方針とハーネスの既定は一致している</b>。
+        一方で、<code>AGENTS.md</code> / <code>CLAUDE.md</code> には「AI が実装する」「人はどこで判断するか」「AI が単独で進めてはいけないこと」が書かれていない。
+        Cursor 側のユーザールールは Claude Code や Codex のセッションからは読めないため、ツールを替えた瞬間に前提が消える。
+      </dd>
+      <dt>なぜ問題か</dt>
+      <dd>
+        AI 駆動開発では「AI に任せる範囲」より<b>「人が必ず止まって判断する点」を明文化するほうが重要</b>になる。書かれていないと、ツールごと・セッションごとに
+        「設計をユーザーに確認してから実装するのか」「スタック決定まで AI が決めてよいのか」「main へ直接コミットしてよいのか」の解釈がぶれる。
+        Codex ではフックが動かないので、文書が唯一の統制になる（<a href="#F1">F-1</a>）。
+      </dd>
+      <dt>提案</dt>
+      <dd>
+        <code>AGENTS.md</code> に「作業分担」節を追加する。骨子は次の 5 行で足りる。
+<pre><code>## 作業分担（AI 駆動開発）
+
+- 既定で AI が設計案の提示から実装・テスト・PR 作成まで行う。ユーザーは要件提示・設計判断・レビュー・マージを担う。
+- L2 / L3 では設計書（docs/designs/）をユーザーが承認してから実装に入る。L0 / L1 は承認なしで進める。
+- 技術スタック・アーキテクチャなど ADR 級の決定は AI が候補と比較を示し、決定はユーザーが行う。
+- main へ直接コミットしない。変更は作業ブランチ → PR。破壊的操作（履歴改変・データ削除・本番操作）は事前確認。
+- 実装完了の報告には「何を・なぜそう設計したか・別解との比較」を含め、ユーザーが読んで学べる形にする。</code></pre>
+        あわせて <code>classify-change</code> の出力に「ユーザー承認: 必要 / 不要」を加えると、orchestrator がどこで止まるかが機械的に決まる。
+        <b>現場での慣行</b>: AI 駆動開発を採るチームでは、ゲート（設計承認・PR レビュー）を人が握り、その間は AI に任せる「人が判断点だけを持つ」運用が一般的。ゲートの位置を文書化しておくと、任せ過ぎと確認し過ぎの両方を防げる。
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="E2">
+    <div class="title"><span class="id">E-2</span><span class="badge mid">中</span>入口文書に承認境界とブランチ運用が無い</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>「構成ファイルの変更は作業ブランチへコミットし PR レビューで確認」「main へ直接反映しない」は <code>improvement-cycle.md</code> と <code>implementer.md</code> の奥にある。<code>AGENTS.md</code> にはブランチ・PR・コミット粒度の記述が無い。</dd>
+      <dt>提案</dt>
+      <dd>AGENTS.md「作業の進め方」に「main へ直接コミットしない。変更は作業ブランチ → PR。ハーネス構成（.claude/ / AGENTS.md）の変更は PR で重点レビュー」を 1 行追加。Codex には Claude Code のフックが無いので、この 1 行が唯一の防御になる。</dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="E3">
+    <div class="title"><span class="id">E-3</span><span class="badge mid">中</span>AI が書いたコードを「読んで学ぶ」ための説明が、成果物として定義されていない</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        <code>implementer.md</code> の完了報告は「変更ファイル・実行したテスト・残課題」が中心で、<code>reviewer.md</code> は「指摘数を増やさない」「nit は出さない」「人間が少ない判断で受容できる状態へ圧縮する」が原則。
+        いずれも<b>マージ判断を速くする</b>設計としては正しい。しかし AI 駆動開発でユーザーがスキルアップするには、AI が書いたコードの「なぜこの構成か」「別解は何で、なぜ採らなかったか」「現場ではどう書くか」を<b>読める形で受け取る</b>必要があり、それを出す役割がどこにも無い。
+      </dd>
+      <dt>なぜ問題か</dt>
+      <dd>
+        AI 駆動開発の弱点は、動くコードが増える速さに理解が追いつかず、レビューが「動いたから OK」になること。<b>理解していないコードはレビューもデバッグもできない</b>ので、学習用の説明は品質のためにも必要になる。
+      </dd>
+      <dt>提案</dt>
+      <dd>
+        既存 reviewer は変えず、<code>explain-change</code> スキル（または implementer 完了報告の「設計判断」節）を追加する。
+        内容は「採った構成とその理由 → 検討した別解と不採用理由 → 現場の慣行との差 → このコードで押さえるべき概念（1〜3 個）」の順で、コード参照（ファイル:行）付き。
+        L2 / L3 の実装完了時は必須、L1 は 3 行以内の要約、L0 は省略、と変更レベルに紐づけると過剰にならない。
+        ユーザーが「解説して」と言えば単独でも呼べるようにする。
+      </dd>
+    </dl>
+  </div>
+
+  <!-- ---------------- A: 安全フックの実測 ---------------- -->
+  <h3>8.2 安全フック（guard-dangerous）の実測結果</h3>
+
+  <p>代表コマンドを <code>PreToolUse</code> 入力として流した結果です。<span class="badge high">deny</span> はブロック、<span class="badge neutral">allow</span> は素通り。</p>
+  <table>
+    <thead><tr><th style="width:40%">コマンド</th><th style="width:12%">結果</th><th>所見</th></tr></thead>
+    <tbody>
+      <tr><td><code>git reset --hard</code></td><td><span class="badge high">deny</span></td><td>設計どおり</td></tr>
+      <tr><td><code>git clean -fdx</code></td><td><span class="badge neutral">allow</span></td><td>未追跡ファイル（書きかけのコード）を全消去。reset --hard と同等の破壊力</td></tr>
+      <tr><td><code>git checkout -- .</code> / <code>git restore .</code></td><td><span class="badge neutral">allow</span></td><td>未コミットの変更を全破棄</td></tr>
+      <tr><td><code>git stash drop</code> / <code>git branch -D</code></td><td><span class="badge neutral">allow</span></td><td>復旧困難</td></tr>
+      <tr><td><code>git push origin --delete main</code></td><td><span class="badge neutral">allow</span></td><td>リモートブランチ削除。force push は deny なのに非対称</td></tr>
+      <tr><td><code>git push --force-with-lease</code></td><td><span class="badge high">deny</span></td><td>安全側の force。deny でよいが、理由文が「force push」で一括なのは惜しい</td></tr>
+      <tr><td><code>npx sequelize-cli db:drop</code> / <code>npx prisma migrate reset</code> / <code>psql -c "drop database"</code></td><td><span class="badge neutral">allow</span></td><td><b>業務スタック（Sequelize / PostgreSQL）に直結</b>。ローカル DB なら許容だが、<code>--env production</code> や接続文字列に <code>prod</code> を含む場合は止めたい</td></tr>
+      <tr><td><code>aws s3 rm</code> / <code>aws cloudformation delete</code></td><td><span class="badge high">deny</span></td><td>設計どおり</td></tr>
+      <tr><td><code>aws s3 rb --force</code> / <code>aws ec2 terminate-instances</code> / <code>aws rds delete-db-instance</code></td><td><span class="badge neutral">allow</span></td><td>AWS の deny リストが 4 パターンのみで偏っている</td></tr>
+      <tr><td><code>find / -delete</code> / <code>sudo rm -rf /var/lib</code></td><td><span class="badge neutral">allow</span></td><td>rm 以外の削除経路と、壊滅的ターゲット判定の外（<code>/var/lib</code>）</td></tr>
+      <tr><td><code>rm -rf ./</code></td><td><span class="badge neutral">allow</span></td><td>正規表現が <code>.</code> の直後に空白か行末を要求し、<code>./</code> を見逃す</td></tr>
+      <tr><td><code>printenv</code></td><td><span class="badge high">deny</span></td><td>—</td></tr>
+      <tr><td><code>env</code> / <code>node -e "console.log(process.env)"</code> / <code>echo $AWS_SECRET_ACCESS_KEY</code></td><td><span class="badge neutral">allow</span></td><td>printenv だけ止めても同じ情報は他の 3 経路で見える。一貫性の問題</td></tr>
+      <tr><td><code>cat .env</code> / <code>grep KEY .env</code> / <code>export $(cat .env | xargs)</code></td><td><span class="badge high">deny</span></td><td>設計どおり</td></tr>
+      <tr><td>Read <code>docs/secret/plan.md</code></td><td><span class="badge high">deny</span></td><td><b>誤検知</b>。<code>/(secrets?|credentials?)(\/|$)/i</code> がディレクトリ名一致だけで判定するため、「秘密」に関する設計メモが読めない</td></tr>
+      <tr><td>Read <code>src/credentials.ts</code></td><td><span class="badge neutral">allow</span></td><td>拡張子付きは通る（意図どおり）</td></tr>
+      <tr><td>Grep <code>.env</code></td><td><span class="badge neutral">allow</span></td><td>第 1 回 L-3 のとおり matcher 対象外</td></tr>
+    </tbody>
+  </table>
+
+  <div class="finding high" id="A1">
+    <div class="title"><span class="id">A-1</span><span class="badge high">高</span>作業を破棄する git 操作が素通り（clean / checkout -- . / restore . / stash drop / branch -D / push --delete）</div>
+    <dl>
+      <dt>提案</dt>
+      <dd>
+        <code>ALWAYS_DENY</code> に次を追加する。いずれも「未コミットの作業を消す」「復旧困難」という点で <code>reset --hard</code> と同じ分類。
+<pre><code>{ re: /\bgit\s+clean\b[^\n]*-[a-zA-Z]*[fd]/, why: 'git clean（未追跡ファイルの削除）' },
+{ re: /\bgit\s+(checkout|restore)\s+(--\s+)?\.(\s|$)/, why: '作業ツリー全体の変更破棄' },
+{ re: /\bgit\s+stash\s+(drop|clear)\b/, why: 'stash の破棄' },
+{ re: /\bgit\s+branch\s+-D\b/, why: 'ブランチの強制削除' },
+{ re: /\bgit\s+push\b[^\n]*(--delete|:refs\/heads\/)/, why: 'リモートブランチの削除' },</code></pre>
+        <code>git clean -n</code>（dry-run）や <code>git restore path/to/file</code>（単一ファイル）は許可したまま。
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding high" id="A2">
+    <div class="title"><span class="id">A-2</span><span class="badge high">高</span>DB を破壊する操作が素通り（業務スタックに直結）</div>
+    <dl>
+      <dt>提案</dt>
+      <dd>
+        「常に deny」ではなく<b>本番を示す語を含むときだけ deny</b>にすると、ローカル開発の <code>db:drop</code> を邪魔しない。
+<pre><code>{ re: /\b(sequelize(-cli)?\s+db:drop|prisma\s+migrate\s+reset|drop\s+(database|schema)\b)[^\n]*(prod|production)/i,
+  why: '本番 DB の破壊操作' },
+{ re: /\bDATABASE_URL=[^\s]*prod/i, why: '本番 DB への接続文字列' },</code></pre>
+        判定に使う「本番を示す語」（<code>prod</code> / <code>production</code> / 本番ホスト名）は <code>.claude/harness.json</code>（第 1 回 H-1 / M-5 で提案した設定ファイル）に持たせると、Tomotabi の実環境が決まったときに正規表現を触らずに済む。
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="A3">
+    <div class="title"><span class="id">A-3</span><span class="badge mid">中</span>AWS deny リストの偏りと、rm 判定の取りこぼし</div>
+    <dl>
+      <dt>提案</dt>
+      <dd>
+        AWS は「サービス別の削除・停止サブコマンド」を列挙するより、<code>aws … (delete|terminate|rb|remove|destroy)</code> と <code>--profile prod</code> / <code>AWS_PROFILE=prod</code> の組み合わせで判定するほうが漏れが少ない。
+        rm は <code>/\s\.\.?\/?(\s|$)/</code> に広げて <code>./</code> <code>../</code> を捕捉し、<code>/\s\/(var|etc|usr|opt|home)\b/</code> を壊滅的ターゲットに加える。<code>find … -delete</code> と <code>xargs rm</code> は「調査を妨げない」方針との兼ね合いで警告止まりでもよい。
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="A4">
+    <div class="title"><span class="id">A-4</span><span class="badge mid">中</span>秘密情報の露出防止は文字列マッチだけでは閉じない。Claude Code ネイティブの permissions を併用する</div>
+    <dl>
+      <dt>現状</dt>
+      <dd><code>printenv</code> は deny だが <code>env</code> や <code>echo $VAR</code> は allow。フック自身も「認証境界ではない」と明記しているので設計上は想定内だが、<code>settings.json</code> に <code>permissions</code> が無く、ネイティブの防御を使っていない。</dd>
+      <dt>提案</dt>
+      <dd>
+        <code>settings.json</code> に <code>permissions.deny</code> を追加する。Read/Edit ルールはツール側で評価されるため、フックの正規表現漏れや Grep 経由の抜け道（L-3）を構造的に塞げる。フックは Bash コマンド判定に専念させる。
+<pre><code>"permissions": {
+  "deny": [
+    "Read(./.env)", "Read(./.env.*)", "Read(./**/*.pem)", "Read(./**/id_rsa)",
+    "Edit(./.env)", "Edit(./.env.*)"
+  ]
+}</code></pre>
+        <code>.env.example</code> は deny に含めない（現行フックと同じ方針）。
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="A5">
+    <div class="title"><span class="id">A-5</span><span class="badge low">低</span>ディレクトリ名 <code>secret</code> / <code>credentials</code> の誤検知</div>
+    <dl>
+      <dt>提案</dt><dd><code>isSecretPath()</code> のディレクトリ判定を「その配下の拡張子が <code>.json / .yml / .yaml / .env / .pem / .key</code> または拡張子なし」に限定する。<code>docs/secret/*.md</code> のような設計メモは通す。</dd>
+    </dl>
+  </div>
+
+  <!-- ---------------- C: validate-agent-config ---------------- -->
+  <h3>8.3 設定検証フック（validate-agent-config）の実測結果</h3>
+
+  <div class="finding high" id="C1">
+    <div class="title"><span class="id">C-1</span><span class="badge high">高</span>スキルディレクトリ内の補助 .md を書くと BLOCK される</div>
+    <dl>
+      <dt>実測</dt>
+      <dd>
+        <code>.claude/skills/demo/reference.md</code>（frontmatter なしの参考資料）を Write すると
+        <code>⛔ YAML frontmatter が欠落または閉じられていません</code> で <b>exit 2</b>。
+        判定が <code>rel.startsWith('.claude/skills/') && rel.endsWith('.md')</code> で、<code>SKILL.md</code> 以外も対象になっている。
+      </dd>
+      <dt>なぜ問題か</dt>
+      <dd>Claude Code のスキルは <code>SKILL.md</code> + 補助ファイル（テンプレート・参考資料・チェックリスト）で構成するのが標準的。<code>audit-skills</code> スキルが推奨する「詳細は参照ファイルに分離（構造の項目）」を実行した瞬間にハーネスが拒否する、<b>自分の方針と矛盾するブロック</b>。現在は補助ファイルが 1 つも無いため未発現。</dd>
+      <dt>提案</dt>
+      <dd><code>isSkill</code> を <code>/^\.claude\/skills\/[^/]+\/SKILL\.md$/</code> に限定する。1 行の修正。あわせてテストを追加（補助 .md は allow、SKILL.md の frontmatter 欠落は block）。</dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="C2">
+    <div class="title"><span class="id">C-2</span><span class="badge mid">中</span><code>model: inherit</code> の BLOCK を実測で確認（第 1 回 M-2 の裏取り）</div>
+    <dl>
+      <dt>実測</dt><dd><code>model: inherit</code> の Agent を Write → <code>⛔ model 指定が不正（claude-&lt;family&gt;-... 形式でない）: "inherit"</code> で exit 2。</dd>
+      <dt>提案</dt><dd>M-2 のとおり許容値にエイリアスを追加。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="C3">
+    <div class="title"><span class="id">C-3</span><span class="badge low">低</span>settings.json のフック参照先の実在を検証していない</div>
+    <dl>
+      <dt>現状</dt><dd>7 本のフック参照は今回手作業で全件実在を確認した。フックを追加・改名したときに参照切れを検出する仕組みは無い（JSON 構文のみ検証）。</dd>
+      <dt>提案</dt><dd>validate-agent-config の settings.json 判定に「<code>command</code> 内の <code>$CLAUDE_PROJECT_DIR/…</code> が実在するか」を追加し、テスト 1 本を足す。</dd>
+    </dl>
+  </div>
+
+  <!-- ---------------- B: フック仕様の活用 ---------------- -->
+  <h3>8.4 Claude Code 現行フック仕様との差分（活用できていない機能）</h3>
+
+  <p class="small muted">公式リファレンス（code.claude.com/docs/en/hooks）を 2026-09-10 時点で確認。</p>
+
+  <div class="finding mid" id="B1">
+    <div class="title"><span class="id">B-1</span><span class="badge mid">中</span>SubagentStop が渡す <code>agent_type</code> / <code>agent_transcript_path</code> / <code>last_assistant_message</code> を記録していない</div>
+    <dl>
+      <dt>現状</dt>
+      <dd><code>record-subagent.mjs</code> は <code>transcript_path</code>（親セッションのもの）だけを保存し、コメントで「agent_name は振り返り工程が transcript から埋める」としている。そのため <code>collect-task-metrics.mjs</code>（424 行）が transcript を解析して Agent 呼び出しを数えている。</dd>
+      <dt>提案</dt>
+      <dd>
+        現行仕様では <code>agent_type</code>（Agent 名）と <code>agent_id</code>、サブエージェント自身の <code>agent_transcript_path</code> が入力に含まれる。これを 1 行 JSON にそのまま入れるだけで、Agent 別呼び出し回数の集計が transcript 解析なしで済み、Codex 等 transcript が無い環境でも集計できる。
+        <code>last_assistant_message</code> は会話本文を含むため、<b>方針（秘密・本文を保存しない）に従い保存しない</b>。
+      </dd>
+    </dl>
+  </div>
+
+  <div class="finding mid" id="B2">
+    <div class="title"><span class="id">B-2</span><span class="badge mid">中</span><code>ConfigChange</code> イベントを使えば、エディタで手編集した設定も検証できる</div>
+    <dl>
+      <dt>現状</dt><dd><code>validate-agent-config</code> は PostToolUse（Edit/Write）でのみ動く。ユーザーが VS Code / Cursor で <code>settings.json</code> や Agent 定義を直接編集した場合は検証されない。ユーザーは手動で書く方針なので、この経路のほうが多い。</dd>
+      <dt>提案</dt><dd><code>ConfigChange</code>（<code>source: project_settings | skills</code>）にも同じフックを登録する。この イベントは exit 2 で「変更を適用しない」ことができるので、構文エラーの settings.json でセッションが壊れるのを防げる。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="B3">
+    <div class="title"><span class="id">B-3</span><span class="badge low">低</span><code>SessionEnd</code> と <code>PreCompact</code> が未使用</div>
+    <dl>
+      <dt>提案</dt>
+      <dd>
+        <ul>
+          <li><code>SessionEnd</code>（<code>reason</code> 付き）で活動ログに終了イベントを 1 行書く。<code>estimate-session-time</code> の「セッション帯」が正確になり、close-session 忘れ（所要時間未記録のまま終了）を次回 SessionStart で検知できる。</li>
+          <li><code>PreCompact</code> で「current-feature の値」「今日のログの未記入節」を additionalContext で再注入する。長いセッションでコンパクション後に feature 名や手順を忘れるのを防ぐ。</li>
+        </ul>
+      </dd>
+    </dl>
+  </div>
+
+  <div class="callout good">
+    <div class="head">確認できた良い知らせ</div>
+    <ul>
+      <li><code>Stop</code> / <code>SubagentStop</code> フックの <code>hookSpecificOutput.additionalContext</code> は現行仕様で正式サポートされている。<code>check-deliverables</code> / <code>check-improvement-cycle</code> の警告方式はそのまま有効。</li>
+      <li><code>.claude/rules/*.md</code> は公式に読み込まれる（<code>InstructionsLoaded</code> イベントの対象）。<code>claude-md-coding-standards.md</code> テンプレートの「全バージョンで保証される挙動とは限らない」という注記は現在は古く、<code>coding-standards.md</code> を rules に置く運用は正しい。</li>
+    </ul>
+  </div>
+
+  <!-- ---------------- D: スクリプトの不具合 ---------------- -->
+  <h3>8.5 スクリプトの細かな不具合・鮮度</h3>
+
+  <div class="finding mid" id="D1">
+    <div class="title"><span class="id">D-1</span><span class="badge mid">中</span><code>estimate-session-time.mjs</code> は過去日付を指定しても 48 時間より前のコミットを拾えない</div>
+    <dl>
+      <dt>現状</dt><dd><code>git log --since="48 hours ago"</code> が固定。引数 <code>[YYYY-MM-DD]</code> で 3 日前を指定すると、活動ログが無い環境（Codex / Cloud Agent）では常に「記録なし」になる。</dd>
+      <dt>提案</dt><dd>対象日から <code>--since="&lt;day&gt;T00:00:00+09:00" --until="&lt;day&gt;T23:59:59+09:00"</code>（HARNESS_TZ 基準）を生成する。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="D2">
+    <div class="title"><span class="id">D-2</span><span class="badge low">低</span>「今日」の判定が UTC と HARNESS_TZ で混在</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        <code>check-improvement-cycle.mjs</code> の stale 判定キーは <code>new Date().toISOString().slice(0,10)</code>（UTC）、同ファイルの nudge は HARNESS_TZ（Asia/Tokyo）。<code>record-task-metrics.sh</code> の <code>date +%F</code> は TZ 指定なし。
+        JST 0〜9 時の作業で「今日」が 1 日ズレ、クールダウンのキーやメトリクスの日付が食い違う。
+      </dd>
+      <dt>提案</dt><dd><code>harness-paths.mjs</code>（または新設の <code>lib/time.mjs</code>）に <code>todayInTz()</code> を 1 つ置き、全スクリプトから使う。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="D3">
+    <div class="title"><span class="id">D-3</span><span class="badge low">低</span>テスト時間 32 秒のうち 30.4 秒が休眠中の review-readiness テスト</div>
+    <dl>
+      <dt>実測</dt>
+      <dd>
+        <table>
+          <thead><tr><th>テストファイル</th><th>所要時間</th></tr></thead>
+          <tbody>
+            <tr><td><code>review-readiness.test.mjs</code>（27 テスト、各テストで git init + プロセス起動）</td><td><b>30,408 ms</b></td></tr>
+            <tr><td><code>guard-dangerous.test.mjs</code></td><td>1,305 ms</td></tr>
+            <tr><td><code>harness-state.test.mjs</code></td><td>210 ms</td></tr>
+            <tr><td><code>harness-paths.test.mjs</code></td><td>100 ms</td></tr>
+          </tbody>
+        </table>
+      </dd>
+      <dt>提案</dt><dd>H-4 で「休眠」にする review-readiness のテストを別コマンド（<code>node --test .claude/tests/review-readiness.test.mjs</code>）に分け、日常のゲートは 2 秒で終わる 3 ファイルにする。CI では両方回す。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="D4">
+    <div class="title"><span class="id">D-4</span><span class="badge low">低</span>SessionStart が毎回「全ゲート unavailable」の表を注入している</div>
+    <dl>
+      <dt>現状</dt><dd><code>session-start-info.sh</code> → <code>detect-project-commands.sh</code> が lint / type-check / build / format / test の 6 行すべて <code>[unavailable]</code> の表を毎セッション出力する。情報量ゼロのトークン消費。</dd>
+      <dt>提案</dt><dd>available が 0 件なら「品質コマンド: 未検出（package.json なし）」の 1 行に畳む。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="D5">
+    <div class="title"><span class="id">D-5</span><span class="badge low">低</span><code>.gitignore</code> が evals の結果を除外しており、「計測はコミット対象へ確定」原則と矛盾</div>
+    <dl>
+      <dt>現状</dt><dd><code>.claude/evals/results/</code> と <code>baselines/</code> が gitignore。一方 <code>evals/README.md</code> は「結果を results/ に残し evaluations/ に集約」、<code>improvement-cycle.md</code> は「エフェメラル環境では後から集計できないのでコミット対象へ確定」と言う。</dd>
+      <dt>提案</dt><dd>休眠中は放置でよいが、再有効化時に「results は evaluations/ へ転記後に破棄する一時領域」と README に書くか、gitignore から外すかを決める。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="D6">
+    <div class="title"><span class="id">D-6</span><span class="badge low">低</span>鮮度切れ：<code>harness-setup.md</code> と配布用テンプレートの重複</div>
+    <dl>
+      <dt>現状</dt>
+      <dd>
+        <ul>
+          <li><code>harness-setup.md</code> の「この導入作業ではコミット・push を行っていない」は PR #1 マージ後は誤り。</li>
+          <li><code>.claude/templates/claude-md-coding-standards.md</code> は配布側（Cookpit）が消費側へ配るための断片で、<code>.claude/rules/coding-standards.md</code> と本文が同一。消費側の Tomotabi では二重管理になる。</li>
+        </ul>
+      </dd>
+      <dt>提案</dt><dd>前者は 1 行修正。後者は削除（配布元にあるものを消費側で持つ必要がない）。</dd>
+    </dl>
+  </div>
+
+  <!-- ---------------- F: Codex ---------------- -->
+  <h3>8.6 Codex 側の防御</h3>
+
+  <div class="finding mid" id="F1">
+    <div class="title"><span class="id">F-1</span><span class="badge mid">中</span>Codex では安全フックが一切効かないが、代替の防御方針が書かれていない</div>
+    <dl>
+      <dt>現状</dt><dd><code>AGENTS.md</code> と <code>harness-setup.md</code> は「Claude Code のフックは Codex では自動実行されない」と事実を述べるだけ。Codex 側で <code>git reset --hard</code> や <code>.env</code> 読み取りを止めるものは無い。</dd>
+      <dt>提案</dt><dd>AGENTS.md に「Codex では承認モードを既定（コマンド実行ごとに確認）から緩めない。破壊的 git 操作・秘密ファイルの読み取りは guard-dangerous.mjs の deny 一覧に準じて行わない」を明記する。フックが無い環境では<b>文書の禁止事項が唯一の層</b>になるので、deny 一覧を AGENTS.md から参照できる形（<code>.claude/hooks/guard-dangerous.mjs</code> の先頭コメント）にしておく。</dd>
+    </dl>
+  </div>
+
+  <div class="finding low" id="F2">
+    <div class="title"><span class="id">F-2</span><span class="badge low">低</span><code>.agents/skills/</code> の symlink は Windows チェックアウトで壊れる</div>
+    <dl>
+      <dt>現状</dt><dd>15 本すべて正常（実測）。ただし Git for Windows は既定で symlink をテキストファイルとして checkout する。</dd>
+      <dt>提案</dt><dd>ユーザー環境が macOS のみなら対応不要。<code>harness-setup.md</code> に「Windows では <code>core.symlinks=true</code> が必要」と 1 行残す。</dd>
+    </dl>
+  </div>
+
+  <h3>8.7 第 2 回の指摘を進め方（第 6 章）へ組み込む</h3>
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:26%">ステップ</th><th>追加する内容</th><th style="width:18%">対応する指摘</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td><b>（新規・最初に）作業分担の明文化</b></td><td>AGENTS.md に「作業分担（AI 駆動開発）」「人が判断するゲート（設計承認・ADR 級決定・PR）」「ブランチ / PR」「Codex の禁止事項」を追加。開発方針をハーネスの正典にする。他のどの修正より先に、かつ単独 PR で。</td><td>E-1, E-2, F-1</td></tr>
+      <tr><td>1</td><td>棚卸し</td><td>harness-setup.md の鮮度修正、templates/ の重複削除を追加。</td><td>D-6</td></tr>
+      <tr><td>4</td><td>小修正</td><td>guard の deny 追加（A-1〜A-3, A-5）、permissions.deny（A-4）、validate の SKILL.md 限定（C-1）、agent_type 記録（B-1）、estimate の日付窓（D-1）、todayInTz 共通化（D-2）、SessionStart 出力の圧縮（D-4）。</td><td>A-*, C-*, B-1, D-1, D-2, D-4</td></tr>
+      <tr><td>5</td><td>仕組み化</td><td>ConfigChange への validate 登録（B-2）、settings.json 参照先テスト（C-3）、テスト分割（D-3）。</td><td>B-2, C-3, D-3</td></tr>
+      <tr><td>6</td><td>スタック決定後</td><td>explain-change スキル（E-3）、DB / AWS の本番識別語を harness.json に設定（A-2）、SessionEnd / PreCompact の活用（B-3）。</td><td>E-3, A-2, B-3</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout learn">
+    <div class="head">学びのポイント（第 2 回）</div>
+    <ul>
+      <li><b>「読んで分かる」と「動かして分かる」は別</b>。第 1 回で guard-dangerous を「良い」と評価したのは設計思想の話で、実際に 25 コマンドを流すと 11 件が素通りした。セキュリティやバリデーションのレビューは、必ず入力を作って流す。業務でも Sequelize のバリデーションや Express のミドルウェアは、テストケースを書いて初めて穴が見える。</li>
+      <li><b>ブロックする側の誤検知は、警告する側の誤検知より高くつく</b>。C-1 は「補助ファイルを書けない」という形で、ハーネス自身が推奨する構造化を妨げる。exit 2 を返す条件は「対象を厳密に絞る」ことがまず第一。</li>
+      <li><b>入力に含まれている情報を捨てて、後で解析し直さない</b>。B-1 の <code>agent_type</code> は既に渡されているのに保存せず、424 行のスクリプトで transcript から復元している。ログ設計では「あとで欲しくなる機械的事実は、そのとき安く取れるなら今取る」。</li>
+      <li><b>ツールの目的と、人が判断する点を文書の先頭に書く</b>。E-1 のギャップは、ハーネスの各文書が「何を」「どう」を詳細に書きながら「誰が実装し、人はどこで止まって判断するか」を書いていないことから生じた。AI 駆動開発ほど、この 1 節が README や AGENTS.md の先頭に必要になる。</li>
+      <li><b>前提が違えば指摘の向きが変わる</b>。8.1 節の初版は「AI は提案のみ」という古い前提で書かれ、ユーザー確認で反転した。レビューや分析は「誰の・どんな方針に対して」を最初に確認してから始めると、手戻りが減る。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="appendix">
+  <h2>9. 付録：検証コマンドと結果</h2>
+
+  <h3>9.1 ハーネステスト</h3>
+<pre><code>$ node --version
+v22.14.0
+$ node --test .claude/tests/*.test.mjs
+# tests 88
+# pass 88
+# fail 0
+# duration_ms 30448</code></pre>
+
+  <h3>9.2 フックの起動時間（空入力・Node 22）</h3>
+  <table>
+    <thead><tr><th>フック</th><th>所要時間</th><th>イベント</th></tr></thead>
+    <tbody>
+      <tr><td><code>guard-dangerous.mjs</code></td><td>21 ms</td><td>PreToolUse</td></tr>
+      <tr><td><code>check-deliverables.mjs</code></td><td>22 ms</td><td>PostToolUse / Stop</td></tr>
+      <tr><td><code>check-improvement-cycle.mjs</code></td><td>33 ms</td><td>Stop</td></tr>
+      <tr><td><code>record-activity.mjs</code></td><td>22 ms</td><td>SessionStart / UserPromptSubmit / Stop</td></tr>
+      <tr><td><code>validate-agent-config.mjs</code></td><td>19 ms</td><td>PostToolUse</td></tr>
+    </tbody>
+  </table>
+
+  <h3>9.3 参照切れの抽出に使ったコマンド</h3>
+<pre><code>rg -o --no-filename \
+  -e 'docs/[A-Za-z0-9_./-]+\.(md|yml|ts)' \
+  -e '\.claude/[A-Za-z0-9_./-]+\.(md|mjs|sh|json)' \
+  -e '\.cursor/[A-Za-z0-9_./-]+\.(md|mdc)' \
+  .claude docs AGENTS.md CLAUDE.md logs \
+| sort -u | while read p; do [ -e "$p" ] || echo "MISSING: $p"; done</code></pre>
+  <p class="small muted">このロジックをそのまま <code>.claude/tests/doc-references.test.mjs</code> にすると H-2 の再発防止になります（許容リストにテストフィクスチャを登録）。</p>
+
+  <h3>9.4 テストが直接カバーしている対象</h3>
+  <ul>
+    <li><code>lib/harness-paths.mjs</code>（harness-paths.test.mjs）</li>
+    <li><code>lib/harness-state.mjs</code>（harness-state.test.mjs）</li>
+    <li><code>scripts/review-readiness.mjs</code>（review-readiness.test.mjs）</li>
+    <li><code>hooks/guard-dangerous.mjs</code>（guard-dangerous.test.mjs、プロセス起動で検証）</li>
+  </ul>
+  <p class="small">未カバー：check-deliverables / check-improvement-cycle / validate-agent-config / estimate-session-time / collect-task-metrics / 各シェルスクリプト。M-3 の共通化と合わせて、少なくとも notice のデバウンスと model 検証にはテストを付けると安全です。</p>
+
+  <h3>9.5 第 2 回で使った実測方法</h3>
+<pre><code># 安全フックにコマンドを流す（tool_name: Bash）
+node -e '
+const { spawnSync } = require("node:child_process");
+for (const c of ["git clean -fdx", "git restore .", "npx sequelize-cli db:drop"]) {
+  const r = spawnSync(process.execPath, [".claude/hooks/guard-dangerous.mjs"], {
+    input: JSON.stringify({ tool_name: "Bash", tool_input: { command: c } }), encoding: "utf8" });
+  console.log(r.status === 2 ? "DENY " : "allow", c);
+}'
+
+# 設定検証フックに補助 .md と model: inherit を流す（CLAUDE_PROJECT_DIR を一時ディレクトリへ）
+printf '{"tool_name":"Write","tool_input":{"file_path":"/tmp/vac/.claude/skills/demo/reference.md"}}' \
+  | CLAUDE_PROJECT_DIR=/tmp/vac node .claude/hooks/validate-agent-config.mjs; echo "exit=$?"
+
+# テストのファイル別所要時間
+for t in .claude/tests/*.test.mjs; do /usr/bin/time -f "%e s $t" node --test "$t" >/dev/null; done</code></pre>
+  <p class="small muted">JSON 内にシェル変数（<code>$HOME</code> 等）を含めるときは printf の文字列連結ではなく Node 側で <code>JSON.stringify</code> すること。不正な JSON はフックが「解析不能 → 許可」に倒すため、テスト自体が誤って allow を報告する（第 2 回で一度踏んだ）。</p>
+
+  <h3>9.6 本レポートの位置づけ</h3>
+  <p>
+    変更レベルは <b>Level 0（調査・分析）</b>。コードと構成ファイルは変更していません。
+    本レポートは <code>logs/2026-09-08.md</code> の「次回やること」にある
+    「workflow 層の Cookpit 前提を Tomotabi 向けに棚卸しする」の入力資料として使えます。
+    実施は <code>audit-skills</code> スキルの手順に沿って、第 6 章の順序で進めることを推奨します。
+  </p>
+</section>
+
+</main>
+
+<footer>
+  Tomotabi ハーネス構成レビュー / 2026-09-10 / 対象 main@e620f4a
+</footer>
+
+</body>
+</html>

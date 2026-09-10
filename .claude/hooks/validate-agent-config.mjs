@@ -7,7 +7,7 @@
 //     BLOCK(exit 2, stderr): 機械的に確実な誤り
 //       - settings.json の JSON が不正
 //       - Agent/Skill の YAML frontmatter が欠落 or 不正
-//       - model 指定が claude-* の形式でない（タイポ等）
+//       - model 指定が公式形式でもエイリアス（sonnet / opus / inherit 等）でもない
 //       - Agent 名が重複している
 //     WARN(exit 0, additionalContext): 方針・整合性の注意（ロックアウト回避のためブロックしない）
 //       - Agent() ツール権限を許可外 Agent が持つ（過剰権限の疑い）
@@ -25,7 +25,14 @@ const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager']);
 // Claude Code 組み込み Agent（.claude/agents/ に定義ファイルが無い。存在チェックから除外）
 const BUILTIN_AGENTS = new Set(['Explore']);
+// 公式エイリアスと claude-<family>-... 形式。Cursor の inherit も含む。
+const MODEL_ALIAS = new Set(['inherit', 'opus', 'sonnet', 'haiku', 'fable']);
+const MODEL_FULL = /^claude-(opus|sonnet|haiku|fable)(-|$)/;
 // 構成変更の承認境界は PR レビュー（フック内の人間承認層は撤去済み）
+
+function isAllowedModel(model) {
+  return MODEL_ALIAS.has(model) || MODEL_FULL.test(model);
+}
 
 function readStdin() {
   try {
@@ -100,6 +107,41 @@ function listAgentNames() {
   return names;
 }
 
+function isSkillFile(rel) {
+  return /^\.claude\/skills\/[^/]+\/SKILL\.md$/.test(rel);
+}
+
+function collectHookCommands(settings) {
+  const commands = [];
+  const hooks = settings?.hooks;
+  if (!hooks || typeof hooks !== 'object') return commands;
+  for (const entries of Object.values(hooks)) {
+    if (!Array.isArray(entries)) continue;
+    for (const entry of entries) {
+      for (const hook of entry?.hooks || []) {
+        if (hook?.command) commands.push(String(hook.command));
+      }
+    }
+  }
+  return commands;
+}
+
+function missingHookPaths(settings) {
+  const missing = [];
+  const seen = new Set();
+  for (const cmd of collectHookCommands(settings)) {
+    const re = /\$CLAUDE_PROJECT_DIR\/([^"'\s]+)/g;
+    let m;
+    while ((m = re.exec(cmd))) {
+      const relPath = m[1];
+      if (seen.has(relPath)) continue;
+      seen.add(relPath);
+      if (!existsSync(join(ROOT, relPath))) missing.push(relPath);
+    }
+  }
+  return missing;
+}
+
 function referencedAgents(toolsValue) {
   // 例: "Agent(architecture-designer, implementer, Explore), Read, Grep"
   const refs = [];
@@ -158,18 +200,21 @@ function main() {
     process.exit(0);
   }
 
-  // settings.json: JSON 妥当性
+  // settings.json: JSON 妥当性 + フック参照先の実在
   if (rel === '.claude/settings.json') {
     try {
-      JSON.parse(text);
+      const settings = JSON.parse(text);
+      for (const p of missingHookPaths(settings)) {
+        blocks.push(`.claude/settings.json: フック参照先が存在しません: ${p}`);
+      }
     } catch (e) {
       blocks.push(`.claude/settings.json の JSON が不正: ${String(e.message || e)}`);
     }
   }
 
-  // Agent / Skill の frontmatter 検証
+  // Agent / Skill の frontmatter 検証（スキルは SKILL.md のみ。補助 .md は対象外）
   const isAgent = rel.startsWith('.claude/agents/') && rel.endsWith('.md');
-  const isSkill = rel.startsWith('.claude/skills/') && rel.endsWith('.md');
+  const isSkill = isSkillFile(rel);
 
   if (isAgent || isSkill) {
     const fm = parseFrontmatter(text);
@@ -180,9 +225,11 @@ function main() {
       if (isSkill && !fm.description) warns.push(`${rel}: Skill に description がありません`);
 
       if (isAgent) {
-        // model 形式
-        if (fm.model && !/^claude-(opus|sonnet|haiku|fable)-/.test(fm.model)) {
-          blocks.push(`${rel}: model 指定が不正（claude-<family>-... 形式でない）: "${fm.model}"`);
+        // model 形式（公式エイリアスと claude-<family>-... を許可）
+        if (fm.model && !isAllowedModel(fm.model)) {
+          blocks.push(
+            `${rel}: model 指定が不正（inherit / opus / sonnet / haiku / fable または claude-<family>-...）: "${fm.model}"`,
+          );
         }
         if (!fm.model) warns.push(`${rel}: model 指定がありません`);
 

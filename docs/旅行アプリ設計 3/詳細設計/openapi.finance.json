@@ -1,0 +1,1449 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "旅行アプリ 支払い・精算API",
+    "version": "0.1.0-design",
+    "description": "支払い・精算の詳細設計。認証はBetter AuthのDBセッションCookie。詳細は03_認証とセッション.md。セッション検証後、利用許可と旅行参加者を検証する。"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "同一オリジンの公開API接頭辞の設計案。NestJSへのルーティングと認証伝達は認証詳細設計で決定。"
+    }
+  ],
+  "security": [
+    {
+      "SessionCookie": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Finance",
+      "description": "支払いと精算"
+    }
+  ],
+  "paths": {
+    "/trips/{tripId}/payments": {
+      "post": {
+        "operationId": "createPayment",
+        "summary": "支払いを記録",
+        "description": " 業務POSTはOrigin完全一致とContent-Type application/jsonを必要とする。bodyなしの操作も同ヘッダーを送信する。",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既存リソースを返す。取消の再送・同じpreviewの既存完了等。取り消された精算を再実行しない。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCreate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/payments/{id}": {
+      "get": {
+        "operationId": "getPayment",
+        "summary": "支払い詳細を取得",
+        "description": "",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/payments/{id}/cancel": {
+      "post": {
+        "operationId": "cancelPayment",
+        "summary": "支払いを取り消す",
+        "description": " 業務POSTはOrigin完全一致とContent-Type application/jsonを必要とする。bodyなしの操作も同ヘッダーを送信する。",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancellation"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既存リソースを返す。取消の再送・同じpreviewの既存完了等。取り消された精算を再実行しない。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancellation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/balance": {
+      "get": {
+        "operationId": "getBalance",
+        "summary": "現在の精算内容を取得",
+        "description": "参照のみ。確認内容を作成しない。レスポンス全体を整合したDBスナップショットから組み立てる。",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Balance"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/settlement-previews": {
+      "post": {
+        "operationId": "createSettlementPreview",
+        "summary": "精算対象を固定する",
+        "description": "現在の全対象を固定。自動期限切れなし。受け渡し済みにはしない。 業務POSTはOrigin完全一致とContent-Type application/jsonを必要とする。bodyなしの操作も同ヘッダーを送信する。",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preview"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既存リソースを返す。取消の再送・同じpreviewの既存完了等。取り消された精算を再実行しない。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preview"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listSettlementPreviews",
+        "summary": "自分の未完了確認一覧",
+        "description": "認証利用者が作成し、完了記録がない確認を返す。競合で無効な確認も理由付きで返す。完了後取り消した確認は再利用できないため除外。",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending"
+              ],
+              "default": "pending"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/settlement-previews/{id}": {
+      "get": {
+        "operationId": "getSettlementPreview",
+        "summary": "元の確認内容を再開",
+        "description": "",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/settlements": {
+      "post": {
+        "operationId": "completeSettlement",
+        "summary": "受け渡し完了または受け渡し不要を記録",
+        "description": "元の確認金額でのみ記録。取消済みBASEを含む場合は了承IDを全件一致で検証。相手が別previewで同じ対象を先行精算した場合は409と既存IDを返す。 業務POSTはOrigin完全一致とContent-Type application/jsonを必要とする。bodyなしの操作も同ヘッダーを送信する。",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settlement"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既存リソースを返す。取消の再送・同じpreviewの既存完了等。取り消された精算を再実行しない。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settlement"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettlementCreate"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listSettlements",
+        "summary": "精算履歴を取得",
+        "description": "sequence降順。取消済みを含む。新規データで既読ページがずれないカーソル方式。",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettlementPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/settlements/{id}": {
+      "get": {
+        "operationId": "getSettlement",
+        "summary": "精算履歴の詳細",
+        "description": "",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settlement"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/settlements/{id}/cancel": {
+      "post": {
+        "operationId": "cancelSettlement",
+        "summary": "最新の有効な精算を取り消す",
+        "description": " 業務POSTはOrigin完全一致とContent-Type application/jsonを必要とする。bodyなしの操作も同ヘッダーを送信する。",
+        "tags": [
+          "Finance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TripId"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "201": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancellation"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既存リソースを返す。取消の再送・同じpreviewの既存完了等。取り消された精算を再実行しない。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancellation"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-travel.session_token",
+        "description": "本番のHTTPS・同一オリジン用。Better Authが署名とDBセッションを検証し、利用許可と旅行参加者を別途確認する。ローカル開発Cookie名は別設定。"
+      }
+    },
+    "parameters": {
+      "TripId": {
+        "name": "tripId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。"
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "description": "サーバー発行の不透明カーソル。対象旅行・フィルターを検証する。"
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "Origin": {
+        "name": "Origin",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uri"
+        },
+        "description": "公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "existingSettlementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "changedPaymentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "requestId",
+          "retryable"
+        ]
+      },
+      "PaymentCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "amountYen": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,8}$"
+          },
+          "payerUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AllocationInput"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "amountYen",
+          "payerUserId",
+          "allocations"
+        ],
+        "description": "参加者二人を各1回指定し、percent合計100をサーバーで検証。割合は支払いごと。空白のみのlabelは拒否。"
+      },
+      "AllocationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "userId",
+          "percent"
+        ]
+      },
+      "Allocation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "burdenYen": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "maxLength": 19,
+            "description": "円単位の非負整数。BigIntから10進文字列へ変換。"
+          }
+        },
+        "required": [
+          "userId",
+          "percent",
+          "burdenYen"
+        ]
+      },
+      "Cancellation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cancelledBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "targetId",
+          "cancelledBy",
+          "createdAt"
+        ]
+      },
+      "Participant": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slot": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "slot",
+          "displayName"
+        ]
+      },
+      "Payment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tripId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amountYen": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "maxLength": 19,
+            "description": "円単位の非負整数。BigIntから10進文字列へ変換。"
+          },
+          "payerUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Allocation"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancellation": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cancellation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "tripId",
+          "planId",
+          "label",
+          "amountYen",
+          "payerUserId",
+          "allocations",
+          "createdBy",
+          "createdAt",
+          "cancellation"
+        ]
+      },
+      "TargetItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "payment": {
+            "$ref": "#/components/schemas/Payment"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "BASE",
+              "REVERSAL"
+            ]
+          },
+          "signedContributionYen": {
+            "type": "string",
+            "pattern": "^(0|-?[1-9][0-9]*)$",
+            "maxLength": 20,
+            "description": "slot 1からslot 0を正とする円単位整数。UIではuserIdに対応付けて方向表示。"
+          },
+          "baseSettlementId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "payment",
+          "kind",
+          "signedContributionYen",
+          "baseSettlementId"
+        ],
+        "description": "支払い詳細を含む明細。確認レスポンスのpaymentは確認時点の表示用値。取消状態の変化はvalidationを参照。"
+      },
+      "Transfer": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "signedTotalYen": {
+            "type": "string",
+            "pattern": "^(0|-?[1-9][0-9]*)$",
+            "maxLength": 20,
+            "description": "slot 1からslot 0を正とする円単位整数。UIではuserIdに対応付けて方向表示。"
+          },
+          "amountYen": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "maxLength": 19,
+            "description": "円単位の非負整数。BigIntから10進文字列へ変換。"
+          },
+          "fromUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "toUserId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "requiresTransfer": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "signedTotalYen",
+          "amountYen",
+          "fromUserId",
+          "toUserId",
+          "requiresTransfer"
+        ],
+        "description": "0円ならfrom/toはnull、requiresTransfer=false。非0ならfromとtoは異なる旅行参加者。全フィールドの整合性をサーバーで保証。"
+      },
+      "Balance": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tripId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Participant"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "transfer": {
+            "$ref": "#/components/schemas/Transfer"
+          },
+          "targetCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetItem"
+            }
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tripId",
+          "participants",
+          "transfer",
+          "targetCount",
+          "items",
+          "fetchedAt"
+        ]
+      },
+      "PreviewValidation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "cancelled_items_ack_required",
+              "target_changed",
+              "already_completed",
+              "completed_then_cancelled"
+            ]
+          },
+          "cancelledPaymentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "uniqueItems": true
+          },
+          "changedPaymentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "uniqueItems": true
+          },
+          "existingSettlementId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "status",
+          "cancelledPaymentIds",
+          "changedPaymentIds",
+          "existingSettlementId"
+        ],
+        "description": "GET時点の参考状態。完了POSTで必ず再検証する。cancelledPaymentIdsは確認後に取り消されたBASE対象の全ID。"
+      },
+      "Preview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tripId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Participant"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "transfer": {
+            "$ref": "#/components/schemas/Transfer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetItem"
+            },
+            "minItems": 1
+          },
+          "validation": {
+            "$ref": "#/components/schemas/PreviewValidation"
+          }
+        },
+        "required": [
+          "id",
+          "tripId",
+          "createdBy",
+          "createdAt",
+          "participants",
+          "transfer",
+          "items",
+          "validation"
+        ]
+      },
+      "PreviewSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "transfer": {
+            "$ref": "#/components/schemas/Transfer"
+          },
+          "targetCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "validation": {
+            "$ref": "#/components/schemas/PreviewValidation"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "transfer",
+          "targetCount",
+          "validation"
+        ]
+      },
+      "SettlementCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "previewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "completionKind": {
+            "type": "string",
+            "enum": [
+              "transfer_completed",
+              "no_transfer_required"
+            ]
+          },
+          "acknowledgedCancellationPaymentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "previewId",
+          "completionKind",
+          "acknowledgedCancellationPaymentIds"
+        ],
+        "description": "非0円はtransfer_completed（元の全額を受け渡した申告）、0円はno_transfer_requiredのみ。取消了承IDは現在の取消済みBASEの集合と完全一致必須。通常は空配列。"
+      },
+      "Settlement": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tripId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completionKind": {
+            "type": "string",
+            "enum": [
+              "transfer_completed",
+              "no_transfer_required"
+            ]
+          },
+          "transfer": {
+            "$ref": "#/components/schemas/Transfer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetItem"
+            },
+            "minItems": 1
+          },
+          "cancellation": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cancellation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "canCancel": {
+            "type": "boolean"
+          },
+          "cannotCancelReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "not_latest",
+              "already_cancelled",
+              null
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "tripId",
+          "previewId",
+          "sequence",
+          "createdBy",
+          "createdAt",
+          "completionKind",
+          "transfer",
+          "items",
+          "cancellation",
+          "canCancel",
+          "cannotCancelReason"
+        ]
+      },
+      "PreviewPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewSummary"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "SettlementPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Settlement"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      }
+    },
+    "responses": {
+      "400": {
+        "description": "JSON・カーソル等の形式不正",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "401": {
+        "description": "未認証",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "403": {
+        "description": "利用許可・旅行参加権限なし、またはOrigin不一致",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "404": {
+        "description": "認可済み旅行内で対象が存在しない",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "409": {
+        "description": "対象変更、取消了承集合の不一致、先行精算、最新でない取消、キー再利用等",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "入力・業務条件不正、精算対象なし",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "503": {
+        "description": "一時的な接続・ロック待機失敗。結果が不明なら同じキーで再送して確認",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

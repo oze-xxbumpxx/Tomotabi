@@ -1,0 +1,32 @@
+{
+  "name": "tomotabi",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0 <23"
+  },
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "packages/contracts"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @tomotabi/web",
+    "dev:api": "npm run start:dev -w @tomotabi/api",
+    "build": "npm run build -w @tomotabi/contracts && npm run build -w @tomotabi/api && npm run build -w @tomotabi/web",
+    "build:web": "npm run build -w @tomotabi/web",
+    "build:api": "npm run build -w @tomotabi/api",
+    "lint": "eslint .",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:web": "npm run test -w @tomotabi/web",
+    "test:api": "npm run test -w @tomotabi/api",
+    "test:api-db": "npm run test:db -w @tomotabi/api",
+    "test:harness": "node --test .claude/tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "eslint": "^9.35.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.43.0"
+  }
+}

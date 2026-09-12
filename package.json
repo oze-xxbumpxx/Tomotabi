@@ -16,7 +16,7 @@
     "build:web": "npm run build -w @tomotabi/web",
     "build:api": "npm run build -w @tomotabi/api",
     "lint": "eslint .",
-    "type-check": "npm run type-check --workspaces --if-present",
+    "type-check": "npm run build -w @tomotabi/contracts && npm run type-check --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:web": "npm run test -w @tomotabi/web",
     "test:api": "npm run test -w @tomotabi/api",

@@ -1,0 +1,72 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tomotabi M0 foundation",
+    "version": "0.0.0",
+    "description": "Compatibility probe only. Not a product feature."
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Process is up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status"],
+                  "properties": {
+                    "status": { "const": "ok" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/foundation/probes": {
+      "get": {
+        "operationId": "getProbe",
+        "responses": {
+          "200": {
+            "description": "Current probe count",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProbeView" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/foundation/probes/increment": {
+      "post": {
+        "operationId": "incrementProbe",
+        "responses": {
+          "200": {
+            "description": "Incremented probe count",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProbeView" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ProbeView": {
+        "type": "object",
+        "required": ["count"],
+        "properties": {
+          "count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

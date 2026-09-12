@@ -1,0 +1,17 @@
+{
+  "name": "@tomotabi/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "openapi"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "type-check": "tsc -p tsconfig.json --noEmit",
+    "test": "node -e \"console.log('contracts: no runtime tests')\""
+  }
+}

@@ -29,7 +29,7 @@ M0（PR #9）で Next.js / NestJS / Drizzle + pg / Vitest / Testcontainers の�
 |---|---|
 | F-01 | Google のリダイレクト方式ログインだけを提供する。メール / パスワード認証、他 provider、idToken 直接入力、追加 scope、任意 callbackURL は受け付けない |
 | F-02 | 事前登録済み、かつ利用許可（allowlist の enabled）が有効な Google アカウントだけにセッションを発行する。新規サインアップ・暗黙のアカウント紐付け・メール一致による紐付けは行わない |
-| F-03 | セッションは DB で管理し、Cookie で運ぶ。有効期間は発行から 7 日、自動延長なし、Cookie キャッシュなし |
+| F-03 | セッションは DB で管理し、Cookie で運ぶ。有効期間は発行から 7 日、自動延長なし、Cookie キャッシュなし（2026-09-23 ユーザー決定。旅行期間を考えて 7 日で足りると判断。リフレッシュトークンは持たない） |
 | F-04 | 業務 API は Guard で「セッション検証 → 利用許可」を毎回確認し、検証済みの userId だけを UseCase へ渡す。リクエスト body やヘッダーの userId を操作主体にしない |
 | F-05 | 状態を変える要求（POST / PUT / PATCH / DELETE）は、Origin が公開オリジンと完全一致することを必須とする。body を持つ操作と POST は Content-Type: application/json を必須とする |
 | F-06 | 公開する認証経路は次の 4 つに限る: POST /api/auth/sign-in/social、GET /api/auth/callback/google、POST /api/auth/sign-out、GET /api/auth/error。get-session などライブラリの他の経路は公開しない（404） |
@@ -136,7 +136,6 @@ M0（PR #9）で Next.js / NestJS / Drizzle + pg / Vitest / Testcontainers の�
 
 ## 未決事項（誰に何を確認するか）
 
-- ユーザー: セッション 7 日・自動延長なしは元設計の「初期値の提案」のまま。これで確定してよいか。
 - ユーザー: Better Auth の採用は元設計で選定済みだが、個別承認の記録が無い。本 M1 の承認をもって採用確定と扱ってよいか。
 - ユーザー: Google Cloud の開発用 OAuth クライアント作成（あなたの操作が必要）。
 - 実装時確認: Better Auth 1.7.x の生成スキーマ、account に保存されるトークン列を空にできるか、セッショントークンの保存形式、DB フックの戻り値によるセッション発行拒否の挙動。

@@ -39,16 +39,12 @@ Hook は「ファイルの存在」「必須セクションの非空」までし
   副作用（updatedAt 等）の観点がテストに含まれている
 
 ### 4. アーキテクチャ・規約
-- [ ] 依存方向・集約境界（`.claude/rules/domain-layer.md`）に違反がない
-- [ ] コーディング規約（`.claude/rules/coding-standards.md`）に違反がない
+- [ ] `AGENTS.md` と実在する `.claude/rules/`（現状は `coding-standards.md`）に違反がない
+- [ ] 未作成の層別ルールを前提にした指摘をしていない
 
 ### 5. 品質ゲート
-- [ ] `pnpm lint` が通る
-- [ ] `pnpm type-check` が通る
-- [ ] `pnpm test` が通る（Vitest は domain / application / infrastructure / apps/web に
-  導入済み — 2026-07-01 PR #21 `cookpit/test-infra-expansion 設計書`。E2E は未整備）
-- [ ] `apps/web` の画面変更を含む場合、`manual-browser-verify` Skill の確認結果
-  （全項目に PASS / BLOCKED(理由) / FAIL）が報告に含まれている
+- [ ] 実在する lint / 型チェック / テストが通る（未導入は `unknown`）
+- [ ] 画面変更を含む場合、ブラウザ確認の結果が報告に含まれている
 
 ### 6. スコープ・運用
 - [ ] 依頼スコープ外の変更が混入していない
@@ -62,8 +58,8 @@ Hook は「ファイルの存在」「必須セクションの非空」までし
 - [ ] review state が current な `human_review_requested`（AI 承認ではない）
 - [ ] legacy marker なし文書のまま「完了」「PR 準備完了」としていない
 - [ ] チャット/PR 要約が `handoff-blurb` 相当で、`受け入れ可` / `APPROVED` を含まない
-- [ ] 人間向け packet が `docs/reviews/README.md` の Gate B 書き方に沿っている
-  （内容 lint の WARN は修正または監査ログへ理由を残す）
+- [ ] Gate B 文書（`docs/reviews/README.md`）は未作成。休眠中はレビュー指摘と検証結果を
+  PR / 日次ログに残す（packet 形式は必須にしない）
 
 ## 結果
 

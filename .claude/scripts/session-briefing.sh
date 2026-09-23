@@ -52,8 +52,8 @@ echo
 cat <<'EOF'
 ## セッション開始チェック（CLAUDE.md）
 
-- [ ] docs/01-overview.md / 03-architecture.md / 04-domain-model.md / 07-dev-rules.md を読み込む
+- [ ] AGENTS.md と logs/ の最新ファイルを読み込む
 - [ ] 変更レベル（L0〜L3）を判定する（classify-change Skill）
-- [ ] 実装ルートを宣言する（Codex 委譲 or Orchestrator — docs/06-ai-tools.md）
-- [ ] 現在の Sprint を docs/05-roadmap.md で確認する
+- [ ] 実装ルートを宣言する（implementer 経路。Codex 委譲スキルは未導入）
+- [ ] Sprint / roadmap 文書があれば確認する（未作成ならスキップ）
 EOF

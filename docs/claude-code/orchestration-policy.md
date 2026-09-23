@@ -4,12 +4,12 @@ Orchestrator（`claude-opus-5`）は**指揮役**であり、自分で詳細設�
 完結させない。タスクを分解し、専門 Subagent（`claude-sonnet-5`）へ委譲する。
 
 `Agent` ツールを持つのは orchestrator・agent-improvement-manager の 2 つ（実務委譲）と、
-回帰評価目的の manager→evaluator。orchestrator は常備 11 Agent を起動できる
-（IMP-2026-031）。reviewer は他 Agent を起動しない（事実確認は自身の Read/Grep）。
+回帰評価目的の manager→evaluator。orchestrator は常備 10 Agent を起動できる
+（定義は `.claude/agents/`）。reviewer は他 Agent を起動しない（事実確認は自身の Read/Grep）。
 他の Subagent は `Agent` を持たず、互いを起動しない。
 
-> 吸収済み（起動禁止）: requirements-analyst / performance-designer /
-> e2e-test-implementer / document-reviewer。定義は `docs/claude-code/archive/agents/` に凍結。
+> 起動しない: requirements-analyst / performance-designer /
+> e2e-test-implementer / document-reviewer / contract-designer。
 
 ## Orchestrator の責務
 
@@ -50,8 +50,7 @@ Subagent へ依頼する際、最低限これらを明示する。
 ### Level 2
 
 ```
-architecture-designer          → docs/designs/<feature>.md
-  →〔契約変更あれば contract-designer〕→ Contract 節（§必須起動トリガー参照）
+architecture-designer          → docs/designs/<feature>.md（契約変更があれば Contract 節も）
   → implementation-planner     → docs/implementation-plans/<feature>.md
   → test-designer（計画と並行可） → docs/tests/<feature>.md
   → implementer                → 実装 + 単体テスト + lint/型チェック/テスト
@@ -65,8 +64,7 @@ architecture-designer          → docs/designs/<feature>.md
 ```
 architecture-designer
     → docs/requirements/<feature>.md + docs/designs/<feature>.md
-      （外部I/O/大量データ時は設計書の性能節も厚く書く）
-  →〔契約変更あれば contract-designer〕→ Contract 節（§必須起動トリガー参照）
+      （外部I/O/大量データ時は設計書の性能節も厚く書く。契約変更があれば Contract 節も）
   → implementation-planner     → docs/implementation-plans/<feature>.md
   → test-designer              → docs/tests/<feature>.md
   → implementer                → 実装 + 単体テスト +〔E2E基盤整備済みなら E2E〕
@@ -77,9 +75,9 @@ architecture-designer
 
 ## 実装ルートの分岐（Codex 委譲）
 
-実装ルートは 2 系統ある（選定基準の正典は `docs/06-ai-tools.md` §実装ルートの使い分け、
-実行手順は `docs/claude-code/codex-delegation-playbook.md`）。**どちらのルートでも
-implementer 工程以外は共通**であり、上流（要件〜試験計画）と下流（振り返り）を省略しない。
+実装ルートの正典は `AGENTS.md`。Codex 委譲スキル（`create-codex-brief` /
+`review-codex-implementation` / `codex-delegation-playbook.md`）は未導入のため、
+**実装は implementer 経路を使う**。上流（要件〜試験計画）と下流（振り返り）は省略しない。
 
 ```
 …→ implementation-planner → test-designer →┬→ implementer（Orchestrator 経路）────────────┬→ reviewer →…
@@ -89,13 +87,9 @@ implementer 工程以外は共通**であり、上流（要件〜試験計画）
 
 Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・レビュー記録なしの再発防止）:
 
-1. **作業ブランチ必須**。main への直コミットは禁止（lefthook pre-commit の branch-guard がブロック）。
-2. **受け入れレビュー必須**。`review-codex-implementation` Skill を PR 作成前に実行し、
-   結果（機械検出・品質ゲート・Reviewer の意味レビュー・必要な black-box 証拠）を
-   `docs/reviews/<feature>.md` の current-state packet と監査ログへ記録する（**必須**。
-   複数 Task の feature では Task 単位で追記）。人間向け packet の書き方は
-   `docs/reviews/README.md` の Gate B 規範に従う。
-   受け入れレビューが Orchestrator 経路の reviewer 工程に相当する（省略ではなく代替）。
+1. **作業ブランチ必須**。main への直コミットは禁止（正典: `AGENTS.md`。lefthook は未導入）。
+2. **受け入れレビュー必須**。reviewer 工程を省略しない。`docs/reviews/README.md`（Gate B）は
+   未作成のため、指摘と検証結果を PR / 日次ログに残す。
 3. **引き渡し hard stop**。PR 作成・「人間レビュー待ち」報告の前に
    `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature>` が
    exit 0 であること（legacy 不可）。PR/チャット要約は `handoff-blurb` を使い、
@@ -114,14 +108,7 @@ Codex 委譲時の必須規律（2026-07-06 Task 01 の main 直コミット・�
   先行調査フェーズ（任意）で所在情報を渡してよい。
 - `architecture-designer` 完了後、`implementation-planner` と `test-designer` は
   並列に進められる（どちらも設計書を入力にするため）。
-- `contract-designer` は、契約の骨子（既存 `schema.ts` / `packages/api-contract` から確定
-  できる型・nullability・エラー形式）が立てられる場合に限り、`architecture-designer` と
-  **並列に先行起動できる**。並列化したときは:
-  - 契約書に設計書への参照リンク（「§集約設計は `docs/designs/<feature>.md` を参照」）を必ず入れる。
-  - `architecture-designer` が集約境界・新規 Entity・層責務を確定したら、その確定差分を
-    orchestrator が `contract-designer` へ追送し、契約を再確認させる（差し戻しでなく追補）。
-  - 整合チェックは orchestrator の統合フェーズで行う。
-  - **集約構造が未確定で契約の骨子が立てられない L3（新規ドメイン中心）では並列化せず直列**にする。
+- 契約の設計は `architecture-designer` が設計書の Contract 節で担う（専用 Agent は未定義）。
 - 性能観点は `architecture-designer` の条件付き節で設計書に含める（単独 Agent は起動しない）。
 - `implementer` は実装計画の確定後に着手する。E2E も同 Agent が条件付きで担当する。
 - `reviewer` は実装完了後。設計・計画・実装・試験を突き合わせる。
@@ -136,29 +123,21 @@ resume・再開直後（stop/resume・強制中断・killed からの復帰を�
 両方を防ぐ。出典: IMP-2026-009 の一般化。単一委譲での実績: meal-plan-screens 2026-07-09 /
 pantry-screens 2026-07-19。並列委譲は同判定を各成果物へ適用する）。
 
-> 旧 stop/resume 機構（`inflight-agents.json`・IMP-2026-008）と既知の制約の詳細は
-> [archive/orchestration-frozen-mechanisms.md](./archive/orchestration-frozen-mechanisms.md)
-> に凍結した（IMP-2026-028。2026-07 時点のハーネス挙動を前提とした機構。ハーネス側の
-> 通知配送・isolation 継承が改善されたら復元を判断する）。`inflight-agents.json` の運用は停止。
+> 旧 stop/resume 機構（`inflight-agents.json`）の運用は停止。配布元の archive 文書は
+> Tomotabi に無いので参照しない。
 
-## contract-designer の必須起動トリガー
+## 契約変更時の扱い
 
-contract-designer の起動を orchestrator の定性判断だけに委ねない。次のいずれかに該当したら
-**変更レベル（L2/L3）に関わらず必ず起動する**。L2 の「API フィールド追加」も該当すれば必須。
+専用の contract-designer は未定義。次のいずれかに該当したら architecture-designer の
+設計書に Contract 節を必ず書く。L2 の「API フィールド追加」も該当すれば必須。
 
-1. `packages/api-contract`（Zod）のスキーマにフィールドの追加 / 変更 / 削除がある。
-2. Drizzle スキーマ（DB 契約）に列・制約・型の追加 / 変更 / 削除がある。
-3. 内蔵 Hono の RPC 入出力型、または層をまたぐ DTO の形が変わる。
-4. フィールドの必須⇔任意・nullability・enum 値・最大長などバリデーション境界が変わる。
+1. 公開 API / イベント / CLI の入出力にフィールドの追加 / 変更 / 削除がある。
+2. DB スキーマに列・制約・型の追加 / 変更 / 削除がある。
+3. 層をまたぐ DTO の形が変わる。
+4. 必須⇔任意・nullability・enum・最大長などバリデーション境界が変わる。
 5. エラー形式・冪等性キーなど外部から観測される契約が変わる。
 
-**起動しない（過剰工程の禁止・不要起動の抑制）**:
-
-- 契約の形が一切変わらない内部実装リファクタ（入出力・スキーマ不変）。
-- ドキュメント / コメント / UI 文言のみの変更。
-- L1 の単一ファイル軽微修正で契約に触れないもの。
-
-判断に迷うフィールド変更は「契約変更あり」側に倒し起動する（契約品質の欠落は後段で高コスト）。
+**書かない（過剰工程の禁止）**: 契約の形が変わらない内部リファクタ、文書のみ、L1 の軽微修正。
 
 ## security-reviewer の起動条件
 
@@ -173,8 +152,7 @@ L2 はセキュリティ触点があるとき必須、省略条件に該当す�
 2. 秘密情報（トークン・API キー・個人情報）の取り扱いが変わる、またはログ出力経路が変わる。
 3. Infrastructure 経由の外部 API / 外部ストレージ I/O を新設・変更する。
 4. 依存パッケージの追加・メジャー更新がある（`package.json` / lockfile）。
-5. 入力境界（Hono ルート・Zod 契約）の新設・変更で、未検証入力が Domain / UseCase に
-   届きうる変更がある。
+5. 入力境界の新設・変更で、未検証入力が業務ロジックに届きうる変更がある。
 6. L3 の全層変更（新規 API / DB スキーマ / データ移行を含むもの）。
 
 ### 省略してよい（L2 限定・過剰工程の禁止）
@@ -219,7 +197,7 @@ L2/L3 共通で省略してよいケース:
 
 ## モデル割り当て
 
-正典は各 `.claude/agents/<name>.md` の frontmatter `model`（下表は常備 11 Agent の早見。
+正典は各 `.claude/agents/<name>.md` の frontmatter `model`（下表は常備 10 Agent の早見。
 IMP-2026-031）。モデルは「作業量」ではなく「判断の重さ」で選ぶ。采配基準は次の 4 層。
 
 ### 采配基準（4 層）
@@ -247,7 +225,6 @@ IMP-2026-031）。モデルは「作業量」ではなく「判断の重さ」�
 | ------------------------- | --------------------------------------------------------- |
 | orchestrator              | `claude-opus-5`                                           |
 | architecture-designer     | `claude-sonnet-5`（L3 は Fable オーバーライド。下記参照） |
-| contract-designer         | `claude-sonnet-5`                                         |
 | implementation-planner    | `claude-sonnet-5`                                         |
 | implementer               | `claude-sonnet-5`                                         |
 | test-designer             | `claude-sonnet-5`                                         |
@@ -287,19 +264,9 @@ agent-evaluator を Sonnet に据え置く理由：採点基準表ありの定�
 
 ### Cursor Agent 経路（Claude Code とは別）
 
-Cursor Agent / Cloud Agent で **実装** を行うときの既定モデルは GPT-5.6 Luna Max とする。
-Claude Code の implementer（`claude-sonnet-5`）は変更しない。
-
-| 経路                       | implementer の定義                                                    | 既定 model                 |
-| -------------------------- | --------------------------------------------------------------------- | -------------------------- |
-| Claude Code CLI            | `.claude/agents/implementer.md`                                       | `claude-sonnet-5`          |
-| Cursor Agent / Cloud Agent | `.cursor/agents/implementer.md`（同名のため Cursor ではこちらが優先） | `gpt-5.6-luna[effort=max]` |
-
-例外・Task slug のフォールバックは
-[`.cursor/rules/implementation-default-model.mdc`](../../.cursor/rules/implementation-default-model.mdc)
-が正典。設計・レビュー・オーケストレーションのモデルは上表の Claude Code 4 層を維持する。
-
-親セッションが Grok 等でも、アプリケーション実装を親モデルで書かない。implementer へ委譲する。
+`.cursor/agents/` と `.cursor/rules/implementation-default-model.mdc` は未設置。
+Cursor Cloud Agent では親セッションが `AGENTS.md` の作業分担に従って実装してよい。
+Claude Code CLI では `.claude/agents/implementer.md` のモデル指定を使う。
 
 ## 起動方法（正規ルート）
 
@@ -310,8 +277,7 @@ Claude Code の implementer（`claude-sonnet-5`）は変更しない。
   （実績: pantry-screens 2026-07-19）。
 - **Orchestrator 自体を `Agent` ツールの子エージェントとして起動する多段委譲は行わない**
   （孫 Sub-agent の通知配送先・isolation 未継承の既知問題により「成果物なし完了」が
-  累計 3 系統で反復。詳細は
-  [archive/orchestration-frozen-mechanisms.md](./archive/orchestration-frozen-mechanisms.md)）。
+  配布元で反復したため）。
 
 メインセッションとして起動した場合、`tools` の `Agent(...)` で起動可能な Subagent を
 制限できる。通常の Subagent として起動するとこの許可リストは無視される点も、

@@ -32,7 +32,13 @@ if [ -e "$OUT" ]; then
   exit 0
 fi
 
-DATE="$(date +%F)"
+# 日付は HARNESS_TZ（旧 COOKPIT_TZ・既定 Asia/Tokyo）。`date +%F` だと UTC 環境でずれる。
+DATE="$(
+  node --input-type=module -e '
+import { dayInTz } from "./.claude/lib/harness-time.mjs";
+process.stdout.write(dayInTz());
+' 2>/dev/null || TZ="${HARNESS_TZ:-${COOKPIT_TZ:-Asia/Tokyo}}" date +%F
+)"
 TPL="$OUT_DIR/_TEMPLATE.yml"
 if [ -e "$TPL" ]; then
   sed -e "s/^task_id:.*/task_id: ${TASK_ID}/" \

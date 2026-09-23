@@ -40,17 +40,12 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 // 状態ファイルは永続領域（リポジトリ外）を優先し、旧 .claude/state/ もフォールバックで読む
 import { resolveReadablePath } from '../lib/harness-paths.mjs';
+import { dayInTz } from '../lib/harness-time.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-// COOKPIT_* は旧名（後方互換）。新規は HARNESS_* を使う。
-const TZ = process.env.HARNESS_TZ || process.env.COOKPIT_TZ || 'Asia/Tokyo';
 const GAP_CAP_MIN = Number(
   process.env.HARNESS_GAP_CAP_MIN || process.env.COOKPIT_GAP_CAP_MIN || 30,
 );
-
-function dayInTz(date) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(date);
-}
 
 // ---- 引数パース -------------------------------------------------------------
 

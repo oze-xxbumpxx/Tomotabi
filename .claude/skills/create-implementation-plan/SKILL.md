@@ -36,9 +36,7 @@ description: >
 - 前提となる設計書: docs/designs/<feature-name>.md
 - レベル: L2 | L3
 - 実装ルート: Orchestrator（implementer）| Codex 委譲
-- 判断理由: （既定どおりなら「既定」+ docs/06-ai-tools.md の観点 1 語。
-  特殊判断・切替があれば理由 1 行。出典: cookpit/shopping-list-screens 事象 5 /
-  harness-post-020-audit 事象 2）
+- 判断理由: （既定どおりなら「既定」。特殊判断・切替があれば理由 1 行）
 
 ## 変更対象ファイル
 
@@ -74,8 +72,8 @@ description: >
 
 ## ドキュメント更新対象
 
-（docs/ 恒久ドキュメントや ADR の更新要否。ドメインモデルを変更する場合は
-`docs/04-domain-model.md` の該当エンティティ定義が実装と一致するかを必ず確認対象に含める）
+（docs/ 恒久ドキュメントや ADR の更新要否。ドメインモデル文書が**実在する**場合だけ、
+該当エンティティ定義が実装と一致するかを確認対象に含める）
 ```
 
 ## 完了条件
@@ -87,10 +85,8 @@ description: >
   - Orchestrator 経路: implementer がこの計画だけで実装に着手できる粒度。
   - Codex 委譲経路: create-codex-brief がこの計画からブリーフを生成できる分解粒度
     （ファイル別の完成コードは持たない。それはブリーフが正本）。
-- ドメインモデル変更を含む場合、「ドキュメント更新対象」に `docs/04-domain-model.md` の
-  整合確認が含まれている（出典: cookpit/store-master で更新漏れが reviewer Nice-2 指摘になった —
-  `cookpit/store-master レビュー` Nice-2 /
-  `cookpit/store-master` 事象 4）。
+- ドメインモデル変更を含み、かつドメインモデル文書が実在する場合、「ドキュメント更新対象」に
+  その整合確認が含まれている。
 
 ## 良い例（実タスクの成果物）
 

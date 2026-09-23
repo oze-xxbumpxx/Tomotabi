@@ -24,12 +24,12 @@ tools: Read, Grep, Glob, Write
 1. Orchestrator から渡された目的・対象範囲・参照ファイル・feature-name を確認。
 2. **L3 のとき**: 先に要求整理と既存調査を行い、`docs/requirements/<feature-name>.md` を保存する
    （Skill: create-requirements-document）。不明点は Orchestrator 経由でユーザー確認。
-3. プロジェクト前提を確認：`docs/03-architecture.md`、`docs/04-domain-model.md`、
-   `docs/02-tech-stack.md`。
-4. ドメイン層の制約は `.claude/rules/domain-layer.md` を必ず踏まえる。
-5. `create-design-document` Skill のテンプレートに沿って設計書を作る。
-6. 設計を `docs/designs/<feature-name>.md` に保存する。
-7. Orchestrator から指示された場合（L2/L3 で最初の Write 担当のとき）、`feature-name` を
+3. プロジェクト前提は `AGENTS.md` を正典とする。スタック・アーキテクチャ文書
+   （`docs/02`〜`04`）や層別ルールは未作成なので読まない。未決定の前提は設計書に
+   「未決定」と書き、ADR 級の決定はユーザーに委ねる。
+4. `create-design-document` Skill のテンプレートに沿って設計書を作る。
+5. 設計を `docs/designs/<feature-name>.md` に保存する。
+6. Orchestrator から指示された場合（L2/L3 で最初の Write 担当のとき）、`feature-name` を
    `.claude/state/current-feature` に 1 行で書き込む（Hook の成果物チェック用）。
 
 ## パフォーマンス設計（条件付き・旧 performance-designer 吸収）
@@ -51,12 +51,11 @@ tools: Read, Grep, Glob, Write
 
 計測データがない数値は断定せず「推定」「確認推奨」と明示する。
 
-## アーキテクチャ遵守（このプロジェクトの核）
+## アーキテクチャ遵守
 
-進め方の参照先（`docs/03-architecture.md` / `.claude/rules/domain-layer.md`）が正典。
-骨子: 依存方向 `Presentation → Application → Domain ← Infrastructure`・集約間は ID 参照のみ・
-`create()`/`reconstruct()`・1 UseCase = 1 クラス。例外・詳細はここに再掲しない
-（既存の必読指示があるため追加 Read なし）。
+正典は `AGENTS.md`。スタック決定前は特定の層構造やファクトリ規約を前提にしない。
+採用するアーキテクチャは設計書で提案し、ADR 級ならユーザーが決める。
+層別ルールはスタック決定後に `.claude/rules/` へ書く。
 
 ## 出力
 

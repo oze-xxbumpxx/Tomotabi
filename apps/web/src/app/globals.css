@@ -1,0 +1,48 @@
+:root {
+  color: #1a1a1a;
+  background: #f6f4ef;
+  font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+  line-height: 1.6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+section {
+  background: #fff;
+  border: 1px solid #ddd6c8;
+  border-radius: 12px;
+  padding: 1rem 1.1rem 1.2rem;
+}
+
+button {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: 8px;
+  background: #1f4b3a;
+  color: #fff;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+.error {
+  color: #9b1c1c;
+}

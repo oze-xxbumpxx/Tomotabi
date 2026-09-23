@@ -1,0 +1,1134 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "旅行・ホームAPI",
+    "version": "0.1.0-design",
+    "description": "詳細設計05の提案。GET tripはplanning仕様と同じ共有契約。統合仕様では重複定義しない。"
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "security": [
+    {
+      "SessionCookie": []
+    }
+  ],
+  "paths": {
+    "/trips": {
+      "post": {
+        "operationId": "createTrip",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          },
+          "201": {
+            "description": "旅行と二人の参加者と財務guardを同時に作成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          }
+        },
+        "description": "書き込みは公開Origin完全一致・JSON Content-Type。認証と利用許可を確認し、既存旅行の操作は参加者も確認。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripCreate"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listTrips",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "planning",
+                "traveling",
+                "finished"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripPage"
+                }
+              }
+            }
+          }
+        },
+        "description": "書き込みは公開Origin完全一致・JSON Content-Type。認証と利用許可を確認し、既存旅行の操作は参加者も確認。"
+      }
+    },
+    "/trips/{tripId}": {
+      "get": {
+        "operationId": "getTrip",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          }
+        },
+        "description": "書き込みは公開Origin完全一致・JSON Content-Type。認証と利用許可を確認し、既存旅行の操作は参加者も確認。"
+      },
+      "patch": {
+        "operationId": "renameTrip",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          }
+        },
+        "description": "書き込みは公開Origin完全一致・JSON Content-Type。認証と利用許可を確認し、既存旅行の操作は参加者も確認。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripRename"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trips/{tripId}/start": {
+      "post": {
+        "operationId": "startTrip",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          }
+        },
+        "description": "書き込みは公開Origin完全一致・JSON Content-Type。認証と利用許可を確認し、既存旅行の操作は参加者も確認。"
+      }
+    },
+    "/trips/{tripId}/finish": {
+      "post": {
+        "operationId": "finishTrip",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          }
+        },
+        "description": "書き込みは公開Origin完全一致・JSON Content-Type。認証と利用許可を確認し、既存旅行の操作は参加者も確認。"
+      }
+    },
+    "/trips/{tripId}/home": {
+      "get": {
+        "operationId": "getHome",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "詳細設計05のエラー契約を参照",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Home"
+                }
+              }
+            }
+          }
+        },
+        "description": "書き込みは公開Origin完全一致・JSON Content-Type。認証と利用許可を確認し、既存旅行の操作は参加者も確認。"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Trip": {
+        "$ref": "./openapi.planning.json#/components/schemas/Trip"
+      },
+      "TripCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "startsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endsOn": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "name",
+          "startsOn",
+          "endsOn"
+        ],
+        "additionalProperties": false
+      },
+      "TripRename": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "TripPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Trip"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "Context": {
+        "type": "object",
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date"
+          },
+          "mode": {
+            "enum": [
+              "before",
+              "during",
+              "after_dates",
+              "completed"
+            ]
+          },
+          "targetDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "dayNumber": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "daysUntilStart": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "suggestedAction": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "start",
+              "finish",
+              null
+            ]
+          }
+        },
+        "required": [
+          "today",
+          "mode",
+          "targetDate",
+          "dayNumber",
+          "daysUntilStart",
+          "suggestedAction"
+        ],
+        "additionalProperties": false
+      },
+      "Schedule": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "$ref": "./openapi.planning.json#/components/schemas/Plan"
+            }
+          },
+          "totalCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "date",
+          "items",
+          "totalCount"
+        ],
+        "additionalProperties": false
+      },
+      "BalanceSummary": {
+        "type": "object",
+        "properties": {
+          "transfer": {
+            "$ref": "./openapi.finance.json#/components/schemas/Transfer"
+          },
+          "targetCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "transfer",
+          "targetCount"
+        ],
+        "additionalProperties": false
+      },
+      "Home": {
+        "type": "object",
+        "properties": {
+          "trip": {
+            "$ref": "#/components/schemas/Trip"
+          },
+          "context": {
+            "$ref": "#/components/schemas/Context"
+          },
+          "schedule": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "ok"
+                  },
+                  "data": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/Schedule"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "data"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "unavailable"
+                  },
+                  "code": {
+                    "const": "TEMPORARILY_UNAVAILABLE"
+                  }
+                },
+                "required": [
+                  "status",
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "balance": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "ok"
+                  },
+                  "data": {
+                    "$ref": "#/components/schemas/BalanceSummary"
+                  }
+                },
+                "required": [
+                  "status",
+                  "data"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "unavailable"
+                  },
+                  "code": {
+                    "const": "TEMPORARILY_UNAVAILABLE"
+                  }
+                },
+                "required": [
+                  "status",
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "recentRecords": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "ok"
+                  },
+                  "data": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "$ref": "./openapi.planning.json#/components/schemas/TimelineItem"
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "data"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "unavailable"
+                  },
+                  "code": {
+                    "const": "TEMPORARILY_UNAVAILABLE"
+                  }
+                },
+                "required": [
+                  "status",
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "trip",
+          "context",
+          "schedule",
+          "balance",
+          "recentRecords",
+          "fetchedAt"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "$ref": "./openapi.finance.json#/components/schemas/Error"
+      }
+    },
+    "parameters": {
+      "tripId": {
+        "name": "tripId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Origin": {
+        "name": "Origin",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uri"
+        },
+        "description": "公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。"
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。"
+      },
+      "IfMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\"[1-9][0-9]*\"$"
+        },
+        "description": "単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。"
+      }
+    },
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-travel.session_token",
+        "description": "本番のHTTPS・同一オリジン用。Better Authが署名とDBセッションを検証し、利用許可と旅行参加者を別途確認する。ローカル開発Cookie名は別設定。"
+      }
+    }
+  }
+}

@@ -1,0 +1,394 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "旅行アプリ 認証境界API",
+    "version": "0.1.0-design",
+    "description": "公開する認証経路の限定契約。Better Authの全APIを公開する仕様ではない。認証コールバックの検証はライブラリに委ねる。"
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-travel.session_token",
+        "description": "本番のHTTPS・同一オリジン用。Better Authが署名とDBセッションを検証し、利用許可と旅行参加者を別途確認する。ローカル開発Cookie名は別設定。"
+      }
+    },
+    "schemas": {
+      "Me": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "user",
+          "sessionExpiresAt"
+        ],
+        "properties": {
+          "user": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "displayName"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            }
+          },
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "requestId"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "現在の利用者と期限を取得",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "description": "署名・セッションDB・許可リストを確認。session.token、Google token、sub等を返さない。Cache-Control private, no-store。",
+        "responses": {
+          "200": {
+            "description": "利用可能な本人情報",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sign-in/social": {
+      "post": {
+        "operationId": "startGoogleSignIn",
+        "summary": "Googleログインを開始",
+        "security": [],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "公開アプリの固定オリジンと完全一致。欠落・nullも拒否。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "provider"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "google"
+                  },
+                  "callbackURL": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "指定する場合はサーバーで固定したログイン後URLとの一致を検証。任意URLを許可しない。"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Googleへの遷移先。OAuth state等のCookieはSet-Cookieで返す。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "url",
+                    "redirect"
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "redirect": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/callback/google": {
+      "get": {
+        "operationId": "googleCallback",
+        "summary": "Googleの認証コードを受け取る",
+        "security": [],
+        "description": "Originヘッダー必須検査の例外。stateとPKCE等をライブラリで検証。Googleの結果を検証してから事前登録アカウントと許可リストを照合する。失敗時はセッションを発行せず固定のエラーページへ。",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "成功は固定のログイン後URLへ、失敗は固定のエラーページへ。複数Set-Cookieを保持。",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sign-out": {
+      "post": {
+        "operationId": "signOut",
+        "summary": "現在のセッションを失効",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "公開アプリの固定オリジンと完全一致。欠落・nullも拒否。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          }
+        },
+        "description": "有効セッションでは、ユーザー行ロック下でclosed_push_sessionsへ停止記録を登録し、そのsessionに紐づく購読を無効化してCOMMIT。その後Better AuthでsessionとCookieを失効。前処理失敗503は完了扱いにしない。既に失効しsessionを識別できない場合はCookie消去のみで200、通知停止を保証しない。クライアントはブラウザunsubscribeを試み、残る購読の管理は再ログイン後に行う。",
+        "responses": {
+          "200": {
+            "description": "失効または既に失効済み。Set-Cookieの削除指定をブラウザへ渡す。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "success"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "認証・認可または入力エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/error": {
+      "get": {
+        "operationId": "authError",
+        "summary": "認証エラーの表示",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "一般的なエラー画面。認証コード・トークン・個人情報を表示しない。",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,458 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "旅行アプリ Web Push設定API",
+    "version": "0.1.0-design",
+    "description": "4操作。全応答Cache-Control:no-store。Cookie認証。秘密のendpoint/鍵/sessionIdはレスポンスへ含めない。"
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "security": [
+    {
+      "SessionCookie": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-travel.session_token",
+        "description": "本番のHTTPS・同一オリジン用。Better Authが署名とDBセッションを検証し、利用許可と旅行参加者を別途確認する。ローカル開発Cookie名は別設定。"
+      }
+    },
+    "schemas": {
+      "PushConfig": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "publicVapidKey",
+          "keyId",
+          "maxActiveSubscriptions"
+        ],
+        "properties": {
+          "publicVapidKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{87}$"
+          },
+          "keyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "maxActiveSubscriptions": {
+            "type": "integer",
+            "const": 3
+          }
+        }
+      },
+      "PushSubscription": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "deviceLabel",
+          "enabled",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PushRegistration": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "endpoint",
+          "keys",
+          "expirationTime",
+          "deviceLabel",
+          "keyId"
+        ],
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 4096
+          },
+          "keys": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "p256dh",
+              "auth"
+            ],
+            "properties": {
+              "p256dh": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{87}$"
+              },
+              "auth": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{22}$"
+              }
+            }
+          },
+          "expirationTime": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 8640000000000000,
+            "description": "PushSubscriptionのUnixミリ秒。非nullは未来。DBはtimestamptzへ変換。"
+          },
+          "deviceLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "keyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "requestId"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/me/push-config": {
+      "get": {
+        "operationId": "getPushConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "取得／登録成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "セッションなし／期限切れ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "利用許可なし／Origin不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DBまたは設定を利用できない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/push-subscriptions": {
+      "get": {
+        "operationId": "listPushSubscriptions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "取得／登録成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PushSubscription"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "セッションなし／期限切れ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "利用許可なし／Origin不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DBまたは設定を利用できない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "registerPushSubscription",
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "公開オリジンと完全一致。欠落・null拒否。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取得／登録成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSubscription"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "セッションなし／期限切れ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "利用許可なし／Origin不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DBまたは設定を利用できない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PUSH_ENDPOINT_OWNED_BY_OTHER / PUSH_LIMIT_REACHED / PUSH_KEY_CHANGED / PUSH_SESSION_CLOSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "UNSUPPORTED_PUSH_SERVICE / INVALID_PUSH_SUBSCRIPTION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushRegistration"
+              }
+            }
+          }
+        },
+        "description": "JSON。認証済みuser/sessionで登録。ユーザー行ロック後にセッション停止記録を確認。同一endpoint無変更は更新なし。期限切れ購読を無効化後、有効数3まで。URL・曲線・canonical base64urlの意味検証を別途行う。"
+      }
+    },
+    "/me/push-subscriptions/{id}": {
+      "delete": {
+        "operationId": "disablePushSubscription",
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "公開オリジンと完全一致。欠落・null拒否。"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "無効化済み／自分の対象なしも204"
+          },
+          "400": {
+            "description": "形式不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "セッションなし／期限切れ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "利用許可なし／Origin不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "DBまたは設定を利用できない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "所有者で絞って無効化。他利用者または存在しないIDも204として情報を漏らさない。body不要。"
+      }
+    }
+  }
+}

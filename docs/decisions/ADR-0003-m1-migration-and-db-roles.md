@@ -1,6 +1,6 @@
 # ADR-0003: 本番 migration の方式と DB ロールの分離
 
-- Status: Proposed
+- Status: Accepted（2026-09-23 ユーザー承認）
 - Date: 2026-09-23
 - 関連 feature: m1-auth-onboarding
 

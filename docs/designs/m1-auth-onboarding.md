@@ -1,6 +1,6 @@
 # 設計書: m1-auth-onboarding
 
-- ステータス: draft（ユーザー設計承認待ち。実装未着手）
+- ステータス: confirmed（2026-09-23 ユーザー設計承認。実装は PR #10 の後）
 - レベル: L3 / ユーザー承認: 必要
 - 関連: docs/requirements/m1-auth-onboarding.md / docs/decisions/ADR-0002-m1-auth-integration.md / docs/decisions/ADR-0003-m1-migration-and-db-roles.md
 - 前提: docs/designs/m0-validation-result-client.md（PR #10）の実装完了

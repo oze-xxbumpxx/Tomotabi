@@ -2,7 +2,7 @@
 
 - task-id / 変更レベル: M1 / L3（認証・認可、DB スキーマ、本番 migration、DB 権限）
 - 作成日: 2026-09-23
-- ステータス: draft（ユーザー承認待ち）
+- ステータス: confirmed（2026-09-23 ユーザー承認）
 - 正本: `docs/旅行アプリ設計 3/詳細設計/03_認証とセッション.md`、`02_ORMとDB_API.md`、`08_デプロイと無料枠運用.md` §6、`09_テストと監視_CI.md` §5・§8、`10_Cursor実装順序.md` の M1 行、`sql/02_auth_allowlist.sql`、`openapi.auth.json`
 
 ## 背景

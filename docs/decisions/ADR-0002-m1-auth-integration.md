@@ -1,6 +1,6 @@
 # ADR-0002: Better Auth の NestJS への組み込みと二人の初期登録方式
 
-- Status: Proposed
+- Status: Accepted（2026-09-23 ユーザー承認）
 - Date: 2026-09-23
 - 関連 feature: m1-auth-onboarding
 

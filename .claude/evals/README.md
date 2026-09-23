@@ -10,7 +10,7 @@ Agent 構成（Agent / Skill / Rule / CLAUDE.md / Hook）を変更する前後�
 
 ```
 .claude/evals/
-├── cases/      代表タスク（Cookpit の Recipe ドメインに即した 10 ケース）
+├── cases/      代表タスク（実在 6 件。配布元ドメイン向けで Tomotabi では休眠）
 ├── rubrics/    採点基準（scoring-rubric.md）
 ├── baselines/  改善前（before）の基準スコアの保存先
 └── results/    評価結果の保存先（<proposal-id>--<case>.md など）
@@ -29,8 +29,8 @@ Agent 構成（Agent / Skill / Rule / CLAUDE.md / Hook）を変更する前後�
 
 - 評価ケースは「正解の実装」ではなく「**期待される進め方と成果物**」を定義する。実コードを
   変更せずに、Agent の判断・成果物の質を測ることを目的とする。
-- ケースは Cookpit の実構成（`packages/domain` `application` `infrastructure` `api-contract` /
-  `apps/web`）に紐づける。プロジェクトが変わったら内容も更新する。
+- ケースは配布元 Cookpit の実構成に紐づいている。Tomotabi 用に書き換えるまで評価には使わない
+  （AGENTS.md の休眠）。
 - 評価そのものに過剰なトークンをかけない。対象ケースは提案の影響範囲に絞る。
 
 ## ケース一覧
@@ -39,16 +39,10 @@ Agent 構成（Agent / Skill / Rule / CLAUDE.md / Hook）を変更する前後�
 | --- | --- | --- |
 | `cases/small-bug-fix.md` | L1 | 不要作業量・過剰な質問の抑制・最小修正 |
 | `cases/api-field-addition.md` | L2 | 影響範囲調査・設計/契約整合・実装計画 |
-| `cases/database-schema-change.md` | L2/L3 | 後方互換・移行・層の責務分離 |
-| `cases/frontend-screen-addition.md` | L2 | Presentation 層方針・契約利用・テスト |
-| `cases/aws-integration-change.md` | L2/L3 | 外部依存・設定/秘匿情報・ロールバック |
 | `cases/refactoring.md` | L2 | スコープ厳守・振る舞い不変・回帰観点 |
-| `cases/contract-validation-change.md` | L2/L3 | 契約品質・後方互換・contract-designer 起動 |
 | `cases/external-service-failure.md` | L2/L3 | 異常系・冪等性・リトライ・安全性 |
 | `cases/documentation-only-change.md` | L0/L1 | 過剰工程の抑制・Agent/トークン効率 |
-| `cases/permission-change.md` | L3 | 安全性・ユーザー確認（**MVP1 は N/A**：認証未導入） |
+| `cases/permission-change.md` | L3 | 安全性・ユーザー確認 |
 
-> 指示書 §18 の `graphql-validation-change` は Cookpit が GraphQL 未使用のため
-> `contract-validation-change`（Hono RPC + Zod）に、`aws-event-flow-change` は
-> `aws-integration-change` に翻案。`permission-change` は MVP1 の no-auth（docs/003・004）の
-> ため現状 N/A とし、認証導入時に有効化する。
+未作成のため一覧から外したもの: `database-schema-change` / `frontend-screen-addition` /
+`aws-integration-change` / `contract-validation-change`。必要になったら新設する。

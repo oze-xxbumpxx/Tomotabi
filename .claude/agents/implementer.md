@@ -23,18 +23,13 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 - 実装計画のステップに沿った実装。
 - 必要な単体テストの作成（下記「テスト品質基準」に従う）。
 - **実装計画の「ドキュメント更新対象」に列挙された全項目を実施する**（恒久ドキュメント
-  （`docs/04-domain-model.md` 等）の更新、設計書ステータスの `confirmed` への変更など）。
+  （ドメインモデル文書など、**実在するものだけ**）の更新、設計書ステータスの `confirmed` への変更など）。
   コード変更と同格の完了条件として扱い、実施漏れを最終報告前に自己チェックする（出典:
   recipe-servings で計画に明記された2件の非コード指示が実施されず reviewer 指摘になった —
   `cookpit/recipe-servings` 事象1）。
-- 静的チェックの実行：
-  - `pnpm lint`
-  - `pnpm type-check`
-  - 該当パッケージのテスト（テストランナー: Vitest。**全層導入済み** — 各 workspace の
-    `tests/` は `src/` の構造をミラーする。domain: 単体テスト、application: UseCase テスト、
-    infrastructure: PGlite Repository テスト、apps/web: Hono ルート + RTL。
-    2026-07-01 PR #21）。変更したパッケージの
-    対応テストを追加し、`pnpm test`（または対象パッケージで `vitest run`）を実行する。
+- 静的チェックの実行：実在する lint / 型チェック / テストだけを実行する。
+  未導入の `pnpm` ゲートや Vitest 全層は `unknown`。ハーネス自身の試験は
+  `node --test .claude/tests/*.test.mjs`。
 
 ## テスト品質基準
 
@@ -53,18 +48,13 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 ## アーキテクチャ・コーディング規約（厳守）
 
-`.claude/rules/` を遵守する（`domain-layer.md` / `coding-standards.md`、
-`apps/web/` を触る場合は `presentation-layer.md` も必読）。特に：
+正典は `AGENTS.md` と、**実在する** `.claude/rules/`（現状は `coding-standards.md` のみ）。
+未作成の `domain-layer.md` / `presentation-layer.md` は読まない。スタック固有の層規約は
+アーキテクチャ決定後に追加する。
 
-- 依存方向 `Presentation → Application → Domain ← Infrastructure`。
-  `packages/domain` は他に依存しない。Domain 層に Drizzle・HTTP の型を持ち込まない。
-- Entity 生成は `static create()`、DB 復元は `static reconstruct()`。
-  ドメインロジックは Entity / Value Object に閉じ込める。
-- 集約をまたぐ参照は ID 参照のみ。集約をまたぐ操作は UseCase に置く。
+- 品質コマンドは実在するものだけ実行する（`pnpm` 前提のコマンドは未導入なら `unknown`）。
 - `any` 禁止・default export 禁止・`import type`・`===`/`!==`・「値なし」は `null`。
-  **例外・詳細（default export の App Router 例外等）はここに再掲しない** — 例外の有無が
-  判断に関わる場合は必ず `coding-standards.md` を確認する（要約 drift の再発防止 —
-  harness-complexity-audit 事象 1）。
+  例外の有無が判断に関わる場合は `coding-standards.md` を確認する。
 - コメントは Why が非自明な時のみ。What は書かない。
 
 ## E2E・結合テスト実装（条件付き・旧 e2e-test-implementer 吸収）

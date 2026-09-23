@@ -20,10 +20,10 @@ description: >
 2. ゲートを実行する:
 
    ```bash
-   .claude/scripts/run-quality-gates.sh            # 既定: lint + type-check + test
+   .claude/scripts/run-quality-gates.sh            # 既定: harness + lint + type-check + test
    .claude/scripts/run-quality-gates.sh --format   # + prettier --check
    .claude/scripts/run-quality-gates.sh --build    # + build
-   .claude/scripts/run-quality-gates.sh --all      # 全部
+   .claude/scripts/run-quality-gates.sh --all      # 全部（休眠中の review-readiness 試験も含む）
    ```
 
 3. スクリプトの集計（PASS / FAIL / SKIP）をそのまま報告する。FAIL があれば該当出力を添え、
@@ -31,6 +31,8 @@ description: >
 
 ## 備考
 
-- ローカルの pre-commit（lefthook）は format + lint、pre-push は type-check を自動実行する。
-  本スキルはそれらを**手動で前倒し確認**したいときや、完了報告の根拠を残すときに使う。
-- 変更したパッケージにテスト追加が必要かは `.claude/rules/coding-standards.md` §品質ゲート を参照。
+- パッケージマネージャーは lockfile（pnpm / yarn / bun / npm）から検出する。無い script は SKIP。
+- ハーネス試験は `test:harness` が無ければ `node --test .claude/tests/*.test.mjs`。
+  既定は休眠中の `review-readiness.test.mjs` を除く。全件確認は `--all` か
+  `node --test .claude/tests/*.test.mjs`。
+- アプリの pre-commit は未導入。本スキルが手動確認と完了報告の手段。

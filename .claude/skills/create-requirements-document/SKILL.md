@@ -15,8 +15,8 @@ architecture-designer が `docs/requirements/<feature-name>.md` を作成する�
 ## 進め方
 
 1. Orchestrator から渡された目的・対象範囲・参照ファイルを確認する。
-2. プロジェクト前提を `docs/01-overview.md` `docs/03-architecture.md` `docs/04-domain-model.md`
-   で押さえ、既存実装・既存仕様を Grep/Glob/Read で調査する。
+2. プロジェクト前提は `AGENTS.md` で押さえる。未作成の `docs/01`〜`04` は読まない。
+   既存実装・既存仕様があれば Grep/Glob/Read で調査する。
 3. 曖昧点・前提・制約を列挙し、ユーザー確認が必要な事項を明示する。
 4. 下記テンプレートを埋める。対象外項目は削除せず「対象外」「該当なし」と書く。
 5. L3 で最初の Write 担当のときは Orchestrator の指示により `.claude/state/current-feature` に
@@ -63,5 +63,5 @@ architecture-designer が `docs/requirements/<feature-name>.md` を作成する�
 
 ## 禁止事項
 
-- コードの変更・設計の確定（設計は architecture-designer / contract-designer）。
+- コードの変更・設計の確定（設計は architecture-designer）。
 - 推測での仕様確定（未決は「未決事項」に残す）。

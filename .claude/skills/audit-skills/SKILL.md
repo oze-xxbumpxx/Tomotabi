@@ -59,7 +59,7 @@ description: >
   ルール化（memory-policy の昇格条件に従う）、ファイルの削除・移設。各提案に選択肢と推奨を添える。
 - スキル・Agent・Rule・CLAUDE.md を含む変更は作業ブランチへコミットしてよい。承認境界は
   **PR レビュー**（improvement-cycle §承認境界）。`main` へ直接反映しない
-  （正典: docs/claude-code/harness-state.md）。
+  （正典: docs/claude-code/improvement-cycle.md §承認境界）。
 
 ## 完了条件
 

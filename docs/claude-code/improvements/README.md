@@ -5,7 +5,7 @@ CLAUDE.md / Hook）を**半自動型**で段階的に改善するための記録
 
 - 改善サイクルの全体像・承認フロー・実行タイミング: [../improvement-cycle.md](../improvement-cycle.md)
 - 知見の保存先分類・昇格条件・肥大化対策: [../memory-policy.md](../memory-policy.md)
-- 現行の承認方式: [../harness-state.md](../harness-state.md)（2026-07-29 以降は PR レビュー。
+- 現行の承認方式: [../improvement-cycle.md](../improvement-cycle.md) §承認境界（PR レビュー。
   過去の proposal に残る承認マーカー手順は履歴であり、実行しない）
 
 ## 重要な前提（過剰適応を避ける）

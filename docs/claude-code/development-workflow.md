@@ -15,7 +15,7 @@ CLAUDE.md には常時必要な原則だけを置き、工程の詳細はこの�
 Orchestrator … 変更レベル判定（L1/L2/L3）・タスク分解・委譲計画
   │
   ├─(L2/L3)→ architecture-designer …（L3 は requirements も）技術設計 → docs/designs/<feature>.md
-  ├─(契約変更時)→ contract-designer … 契約設計（orchestration-policy.md §必須起動トリガー）
+  ├─(契約変更時)→ architecture-designer の設計書 Contract 節（専用 Agent は未定義）
   ├─(L2/L3)→ implementation-planner … 実装計画 → docs/implementation-plans/<feature>.md
   ├─(L2/L3)→ test-designer … 試験観点 → docs/tests/<feature>.md
   ├────────→ implementer … 実装 + 単体テスト +〔L3・基盤ありなら E2E〕+ lint/型チェック/テスト

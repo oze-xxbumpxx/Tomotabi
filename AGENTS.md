@@ -9,6 +9,20 @@ Claude Code と Codex は、このリポジトリの同じハーネス・成果�
 - スタック固有の規約は、採用済み技術にだけ適用する。存在しない設計書・コマンド・レビュー結果をあるものとして扱わない。
 - ハーネスの `run-quality-gates.sh` はまだ `pnpm` 固定。アプリの品質確認は `npm run lint` / `npm run type-check` / `npm test` / `npm run build` を使う。
 
+## 現在有効なハーネス機能 / 休眠
+
+**現行（今すぐ使う）**
+
+- 作業分担、変更レベル分類、日次ログ、危険操作ガード、実在する品質コマンド、ハーネス試験（日常は `bash .claude/scripts/run-quality-gates.sh`。全件は `node --test .claude/tests/*.test.mjs`）。
+
+**休眠（アプリの L2 / L3 が複数回回るまで必須にしない）**
+
+- `review-readiness` / Gate B / structured packet の hard stop（`docs/reviews/README.md` は未作成）。
+- 改善サイクル 3 Agent（reflection / manager / evaluator）と evals。evals は配布元ドメイン向けで、Tomotabi 用ケースは未整備。
+- Codex 委譲ルート（`create-codex-brief` 等は未導入）。実装は implementer 経路を使う。
+
+層別ルール（`.claude/rules/domain-layer.md` 等）や `docs/01`〜`07` は未作成。参照せず、必要になったときに新設する。
+
 ## 作業分担（AI 駆動開発）
 
 Tomotabi は **AI 駆動開発を主とする**。AI が実装し、ユーザーは要件提示・設計判断・レビュー・マージを担う。

@@ -13,6 +13,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { uncovered as reviewTasksUncovered } from '../scripts/check-review-coverage.mjs';
 import { resolveReadablePath, safeStatePath } from '../lib/harness-paths.mjs';
+import { dayInTz } from '../lib/harness-time.mjs';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
@@ -99,9 +100,7 @@ function staleWorkLogWarning() {
 // 時間表現（数字 + 分/時間/h）があれば記録済みとみなす。
 function timeUnrecordedNudge() {
   try {
-    // COOKPIT_TZ は旧名（後方互換）。新規は HARNESS_TZ を使う。
-    const tz = process.env.HARNESS_TZ || process.env.COOKPIT_TZ || 'Asia/Tokyo';
-    const today = new Date().toLocaleDateString('sv-SE', { timeZone: tz });
+    const today = dayInTz();
     const p = join(ROOT, `logs/${today}.md`);
     if (!existsSync(p)) return null;
     const content = readFileSync(p, 'utf8');
@@ -146,7 +145,7 @@ function main() {
 
   // 作業ログの鮮度は feature の有無に関係なく確認する（引き継ぎ切れ対策）
   const logWarn = staleWorkLogWarning();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dayInTz();
   if (logWarn && shouldEmitNotice('work-log-staleness:Stop', `log:${today}`, [logWarn])) {
     notices.push(`⚠ ${logWarn}`);
   }

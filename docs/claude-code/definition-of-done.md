@@ -87,7 +87,7 @@ Level 2 に加えて：
 
 - `docs/requirements/<feature>.md` を作成・更新。
 - 必要な ADR（`docs/decisions/ADR-<番号>-<タイトル>.md`）を作成。
-- 契約の後方互換性を確認（contract-designer の設計に対し reviewer が確認）。
+- 契約の後方互換性を確認（architecture-designer の設計に対し reviewer が確認）。
 - データ移行・ロールバック手順を確認。
 - セキュリティ確認（秘密情報・権限・入力検証）。
 - 性能確認（明らかな劣化が無いか）。

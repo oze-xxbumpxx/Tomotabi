@@ -1,10 +1,20 @@
 import type { ProbeView } from "@tomotabi/contracts";
-import { apiGet, apiPost } from "@/shared/api/http-client";
+import type { ResultAsync } from "neverthrow";
+import type { ApiFailure } from "@/shared/api/api-failure";
+import { callApi } from "@/shared/api/api-result";
+import {
+  getProbe as requestGetProbe,
+  incrementProbe as requestIncrementProbe,
+} from "@/shared/api/generated/foundation";
+import {
+  GetProbeResponse,
+  IncrementProbeResponse,
+} from "@/shared/api/generated/foundation.zod";
 
-export function getProbe(): Promise<ProbeView> {
-  return apiGet<ProbeView>("/api/foundation/probes");
+export function getProbe(): ResultAsync<ProbeView, ApiFailure> {
+  return callApi(requestGetProbe(), GetProbeResponse);
 }
 
-export function incrementProbe(): Promise<ProbeView> {
-  return apiPost<ProbeView>("/api/foundation/probes/increment");
+export function incrementProbe(): ResultAsync<ProbeView, ApiFailure> {
+  return callApi(requestIncrementProbe(), IncrementProbeResponse);
 }

@@ -51,6 +51,8 @@ apps/api/
       origin.guard.ts                   APP_GUARD。状態変更要求の Origin / Content-Type
       public-route.decorator.ts         @PublicRoute()（health だけに付ける）
       current-user.decorator.ts         Guard が検証した userId を取り出す
+    common/domain/
+      user-id.ts                        UserId のブランド型と parse（全モジュール共通）
     modules/identity/
       identity.module.ts
       controller/me.controller.ts       GET /api/me
@@ -207,6 +209,17 @@ betterAuth({
 - `SessionGuard` と `OriginGuard` を `APP_GUARD` で全体に適用する。保護を既定にし、公開は `@PublicRoute()` で明示する。
 - 付け忘れても安全側に倒れる（業務 API を追加したときに Guard を忘れても 401 になる）。
 - UseCase は userId を普通の引数で受け取り、Nest や Better Auth の型に依存しない。
+
+### 値オブジェクトの方針（UserId）
+
+値オブジェクトは、不変条件を持つ値にだけ作る（詳細設計 11 §2「必要箇所へ適用」）。M1 で作るのは `UserId` だけとする。
+
+- 形: ブランド型 `type UserId = string & { readonly __brand: "UserId" }` と、生成関数 `UserId.parse(value: string): UserId` を置く。parse は UUID 形式でなければ例外を投げる。クラスにはしない。
+- 置き場所: `apps/api/src/common/domain/user-id.ts`。Guard と、M2 以降の全モジュールの Domain / UseCase から参照する。業務の判断は置かず、この型だけを置く。パスが既存 ESLint の `apps/api/src/**/domain/**` に当たるため、Domain と同じ制約（NestJS・DB・他区分へ依存しない）が自動で適用される。
+- 生成するのは 2 か所だけにする。`SessionVerifier` の実装（検証済みセッションから）と、Infrastructure が DB 行を変換するときである。Controller は request body の値から UserId を作らない。
+- 目的: `tripId`・`planId`・支払者の userId などとの取り違えを、コンパイル時に検出する。操作者と支払者を型で区別できるのは M3 の前提になる。
+- 作らないもの: email・displayName（表示と保存だけで、アプリは判断に使わない）、Google sub（初期登録 CLI と許可リストの判定の中だけで使い、ID トークンの検証と DB の CHECK で守られる）。slot は `0 | 1` の型で足りる。
+- テスト: `UserId.parse` の単体テストを書く（正しい UUID、形式違い、空文字）。
 
 ### CLI（ADR-0002）
 

@@ -90,7 +90,7 @@ identity モジュールの Domain / Service 層は作らない。業務ルー�
 5. Google へリダイレクトし、`GET /api/auth/callback/google` に戻る。state / PKCE の検証はライブラリが行う。
 6. ライブラリが accountId=sub で既存 account を探す。disableSignUp なので未登録なら失敗する（E-01）。
 7. `databaseHooks.session.create.before` で allowlist を確認する。`allowlist-query` で userId・sub・enabled が一致しなければ `false` を返し、発行を中止する（E-02、E-05）。
-8. `databaseHooks.account.update.before` で Google の access / refresh / id token 列を null にしてから保存する（トークンを DB に残さない）。
+8. `account.updateAccountOnSignIn: false` により、ログイン時に Google の access / refresh / id token を accounts へ書き込まない。初期登録 CLI もトークンを保存しないため、トークン列は常に null になる（スパイクで確認。DB フックは使わない）。
 9. Cookie を設定して `/` へリダイレクトする。web が `GET /api/me` で表示名を取得する。
 
 ### 業務 API（N-02、E-03〜E-07）
@@ -133,8 +133,8 @@ SessionVerifier の結果は `authenticated(userId, expiresAt)`、`unauthenticat
 | 表 | 主な列・制約 | 備考 |
 |---|---|---|
 | identity.users | id uuid PK、name、email、email_verified、image、created_at、updated_at | `advanced.database.generateId: "uuid"`。業務の外部キー共通 UUID |
-| identity.accounts | id、user_id FK、provider_id、account_id（= sub）、トークン列、created_at、updated_at。UNIQUE(provider_id, account_id) | トークン列はフックで常に null |
-| identity.sessions | id、user_id FK、token、expires_at、ip_address、user_agent、created_at、updated_at | token の保存形式は実装時に確認 |
+| identity.accounts | id、user_id FK、provider_id、account_id（= sub）、トークン列、created_at、updated_at。UNIQUE(provider_id, account_id) | トークン列は常に null（`updateAccountOnSignIn: false`）。UNIQUE は生成物に無いので自分で追加する |
+| identity.sessions | id、user_id FK、token、expires_at、ip_address、user_agent、created_at、updated_at | token は**平文で保存**される（1.7.5 で確認）。Cookie の値は、この token に署名を付けたもの |
 | identity.verifications | id、identifier、value、expires_at | OAuth の一時データ |
 | identity.allowed_google_accounts | slot smallint PK CHECK(0,1)、user_id uuid UNIQUE FK、google_sub text UNIQUE CHECK(1〜255)、enabled bool、created_at | `sql/02_auth_allowlist.sql` をそのまま Drizzle へ |
 
@@ -148,7 +148,7 @@ migration とロールは ADR-0003 のとおりとする。
 
 | 表 | 権限 |
 |---|---|
-| identity.users | SELECT, UPDATE（ログイン時のプロフィール更新。実装時に要否を確認し、不要なら外す） |
+| identity.users | SELECT、列単位の UPDATE(email_verified, updated_at)。ログイン時に Better Auth が email_verified を true にする場合があるため（スパイクで確認） |
 | identity.accounts | SELECT, UPDATE |
 | identity.sessions | SELECT, INSERT, UPDATE, DELETE |
 | identity.verifications | SELECT, INSERT, UPDATE, DELETE |
@@ -275,7 +275,7 @@ betterAuth({
 |---|---|---|
 | 単体 | Vitest | GetMeUseCase、Guard（SessionVerifier を fake 化）、経路制限ミドルウェア、ログ serializer |
 | HTTP + 実 DB | Supertest + Testcontainers（test:api-db） | `configure-app` で組んだ実アプリに、N-02〜03、E-03〜E-10 を実行する |
-| セッション発行 | Better Auth のテスト用 fixture をテストプロセス内で使う（無ければ内部 adapter で作る） | 二人・第三者・停止・sub 不一致・期限切れ |
+| セッション発行 | `better-auth/plugins` の `testUtils` をテスト時だけ auth に追加し、`login({ userId })` で DB フックを通った正規のセッションと署名 Cookie を作る。本番の設定には入れない（`createAuth` の引数でテストからだけ渡し、ESLint で src からの `testUtils` の import を禁止する） | 二人・第三者・停止・sub 不一致・期限切れ |
 | DB 権限 | Testcontainers にロールを作り、app_runtime で接続 | N-06、N-07、E-13（T-18 の identity 分） |
 | migration | 空 DB に適用して再適用 | N-06 |
 | CLI | Google 部分を fake にした単体 + 実 DB の TX 検証 | E-11、E-12、F-10 |
@@ -291,6 +291,18 @@ CI には Google の実通信を入れない。fixture が通ったことを「G
 - CI: 既存の api-db ジョブで、Testcontainers 上に migration の適用と権限テストを追加する。本番の secret は CI に渡さない。
 - ロールバック: main の PR を revert すれば戻せる（本番データが無いため）。
 
+## スパイクの結果（2026-09-24、better-auth 1.7.5・drizzle-kit 0.31.11・PostgreSQL 16）
+
+| 確認項目 | 結果 | 設計への反映 |
+|---|---|---|
+| 生成スキーマ | `npx auth generate` は `pgTable`（public）で出力する。`pgSchema("identity")` に書き換えても adapter と `getSession` は動作した。accounts に UNIQUE(provider_id, account_id) は無い。日時はタイムゾーンなし | identity スキーマへ書き換え、UNIQUE を追加し、日時は `timestamptz` にする |
+| `session.create.before` が `false` | セッション行は作られず、`createSession` が null を返す。OAuth callback では「unable to create session」のエラーとして扱われ、500 にはならない | 設計どおり。E-01・E-02・E-05 の発行拒否はこのフックで行う |
+| Google のトークン | `account.updateAccountOnSignIn: false` で、ログイン時の account 更新が空になる | account の DB フックは不要。設定だけで足りる |
+| 暗黙のアカウント連携 | `account.accountLinking.disableImplicitLinking` は 1.7.5 に存在する | `enabled: false` と併用する |
+| セッショントークン | DB に平文で保存される（Cookie の値の署名なし部分と同じ） | リスク R-7 に追加 |
+| テスト用のセッション発行 | `testUtils` プラグインの `login({ userId })` で、DB フックを通った正規のセッションと署名 Cookie（`travel.session_token`、HttpOnly、Lax、Path=/）ができる。有効期間は 7 日 | テスト方針に反映 |
+| users の更新 | ログイン時、Google 側が確認済みで DB の email_verified が false なら true に更新する。表示名などは既定で上書きしない | users の UPDATE は列単位（email_verified, updated_at）に絞る。初期登録 CLI は ID トークンの email_verified を保存する |
+
 ## リスク
 
 | ID | リスク | 対策 |
@@ -301,11 +313,13 @@ CI には Google の実通信を入れない。fixture が通ったことを「G
 | R-4 | 生成スキーマの uuid 設定と Drizzle の pgSchema の組み合わせが通らない | 生成物を先に確認してから GRANT を書く |
 | R-5 | コミュニティ製ではなく公式方式を選ぶため、Guard などを自前で書く量が増える | Guard 2 つと経路制限だけに限定する。ADR-0002 に比較を残す |
 | R-6 | 開発用 OAuth クライアントの設定ミス（redirect URI） | README に登録すべき URI を正確に書く |
+| R-7 | セッショントークンが DB に平文で保存される。DB の内容と署名鍵の両方が漏れると、セッションを乗っ取れる | DB の接続情報と署名鍵を別々に管理する（どちらか一方だけでは乗っ取れない）。有効期間 7 日・自動延長なし。利用停止 CLI で全セッションを即時削除できる。Better Auth の標準機能にハッシュ化が無いため、M1 では行わない（ユーザー確認事項） |
 
 ## 未決事項
 
 1. `infra.m0_probes` と /api/foundation/* を、いつ撤去するか。本設計では M1 でログイン必須にし、テスト用 SQL のまま残す。M2 の開始時に撤去する案を推奨する。
 2. （解決済み）セッションは 7 日・自動延長なしで確定（2026-09-23 ユーザー決定）。
 3. （解決済み）Better Auth の採用は 2026-09-23 の設計承認で確定。
-4. 実装時確認: 上記 R-2 / R-4 の各項目、users の UPDATE 権限の要否、セッショントークンの保存形式。
+4. （解決済み）実装時確認は 2026-09-24 のスパイクで完了。結果は「スパイクの結果」節。
+6. ユーザー確認: セッショントークンが DB に平文で保存されることを受け入れるか（リスク R-7）。
 5. 前提: PR #10 の承認と実装が先に完了すること。

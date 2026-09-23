@@ -54,7 +54,7 @@
 | D-07 | app_runtime の必要 DML | app_runtime で接続 | sessions・verifications の INSERT / UPDATE / DELETE、accounts の UPDATE、全表の SELECT | 成功 | 正常 | N-07 |
 | D-08 | app_runtime の allowlist | app_runtime | allowlist の INSERT / UPDATE / DELETE | 権限エラー | 異常 | E-13 |
 | D-09 | app_runtime の DDL | app_runtime | CREATE TABLE / DROP / TRUNCATE / ALTER | 権限エラー | 異常 | E-13 |
-| D-10 | app_runtime の users | app_runtime | users の INSERT / DELETE | 権限エラー（UPDATE の要否はスパイク結果に従う） | 異常 | E-13 |
+| D-10 | app_runtime の users | app_runtime | users の INSERT / DELETE、name・email の UPDATE | 権限エラー。email_verified・updated_at の UPDATE だけは成功 | 異常 | E-13 |
 | D-11 | statement_timeout | app_runtime | `SHOW statement_timeout` | 5s | 正常 | 設計 |
 | D-12 | 過剰な権限がない | D-01 | `has_table_privilege` を全表×全権限で列挙 | GRANT 表と完全一致 | 整合 | F-12 |
 

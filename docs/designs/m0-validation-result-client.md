@@ -1,6 +1,6 @@
 # 設計書: m0-validation-result-client
 
-- ステータス: draft（ユーザー設計承認待ち。実装未着手）
+- ステータス: confirmed（2026-09-23 ユーザー設計承認。実装は feat/m0-validation-result-client）
 - レベル: L2 / ユーザー承認: 必要
 - 関連: `docs/designs/m0-foundation.md` / `docs/decisions/ADR-0001-m0-workspace-and-stack.md`
 - 調査対象: `feat/m0-foundation` の実装。現行 main にアプリソースは未統合のため、実装時に開始地点を再確認する。

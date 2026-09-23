@@ -10,6 +10,7 @@
 | web | Next.js App Router。`app` → `screens` → `features` → `shared`。機能内は `ui` / `model` / `api` |
 | api | NestJS モジュラーモノリス。業務モジュール内は Controller / UseCase / Service / Domain / Infrastructure / Adapter |
 | 契約 | `packages/contracts` に公開 API の型と OpenAPI だけを置く |
+| web の API 通信 | OpenAPI から Orval で fetch 関数と Zod スキーマを生成（`apps/web/src/shared/api/generated/`、手編集禁止）。応答は Zod で検証し、neverthrow の `ResultAsync` で成功と失敗を返す |
 | DB | Drizzle ORM + `pg`。M0 の表は検証用 `infra.m0_probes` のみ |
 | テスト | Vitest（web / api 共通ランナー）。API は `@nestjs/testing` と Supertest。実 PostgreSQL は Testcontainers |
 | CI | GitHub Actions の quality / build / api-db |
@@ -50,6 +51,8 @@ npm test           # web / api の単体・HTTP。Testcontainers は含まない
 npm run test:api-db
 npm run build
 npm run test:harness
+npm run api:generate  # OpenAPI から web の API クライアントを再生成
+npm run api:check     # 再生成して差分が無いことを確認（CI でも実行）
 ```
 
 `DATABASE_URL` が無いときの API は in-memory です。起動確認用であり、実 PostgreSQL 検証の合格には使いません。PGlite への自動フォールバックはありません。
@@ -77,6 +80,9 @@ npm run test:harness
 | pg | 8.23.0 |
 | vitest | 3.2.7 |
 | typescript | 5.9.3 |
+| orval | 8.36.0（2026-09-23） |
+| zod | 4.6.5（2026-09-23） |
+| neverthrow | 8.2.0（2026-09-23） |
 | eslint | 9.39.5 |
 | @testcontainers/postgresql | 11.14.0 |
 | Testcontainers のイメージ | `postgres:16-alpine`（2026-09-12 に起動・破棄を確認） |

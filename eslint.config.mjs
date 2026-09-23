@@ -85,6 +85,7 @@ export default defineConfig(
       "docs/**",
       "coverage/**",
       "**/tests/fixtures/boundaries/**",
+      "apps/web/src/shared/api/generated/**",
     ],
   },
   {

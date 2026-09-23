@@ -21,11 +21,14 @@
     "test:web": "npm run test -w @tomotabi/web",
     "test:api": "npm run test -w @tomotabi/api",
     "test:api-db": "npm run test:db -w @tomotabi/api",
-    "test:harness": "node --test .claude/tests/*.test.mjs"
+    "test:harness": "node --test .claude/tests/*.test.mjs",
+    "api:generate": "orval --config orval.config.ts",
+    "api:check": "npm run api:generate && test -z \"$(git status --porcelain -- apps/web/src/shared/api/generated)\""
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "eslint": "^9.35.0",
+    "orval": "^8.36.0",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.43.0"
   }

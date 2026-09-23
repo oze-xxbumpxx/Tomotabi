@@ -38,6 +38,11 @@ const webPatterns = [
     message: "web から apps/api を import しない。契約は @tomotabi/contracts のみ。",
   },
 ];
+// Generated clients return unvalidated bodies typed as trusted; only feature api wrappers may call them via callApi.
+const generatedClientPattern = {
+  group: ["@/shared/api/generated", "@/shared/api/generated/**", "**/shared/api/generated", "**/shared/api/generated/**"],
+  message: "生成クライアントは未検証の応答を返す。features/<name>/api で callApi を通して使う。",
+};
 
 const featureBoundaries = {
   rules: {
@@ -108,6 +113,10 @@ export default defineConfig(
       "apps/web/src/**/*.{ts,tsx}",
       "apps/web/tests/fixtures/boundaries/web-imports-pg.ts",
     ],
+    rules: restrict(webPaths, [...webPatterns, generatedClientPattern]),
+  },
+  {
+    files: ["apps/web/src/features/*/api/**/*.{ts,tsx}"],
     rules: restrict(webPaths, webPatterns),
   },
   {
@@ -127,6 +136,7 @@ export default defineConfig(
     files: ["apps/web/src/app/**/*.{ts,tsx}", "apps/web/src/screens/**/*.{ts,tsx}"],
     rules: restrict(webPaths, [
       ...webPatterns,
+      generatedClientPattern,
       {
         group: ["@/features/*/*", "@/features/*/*/**", "**/features/*/*", "**/features/*/*/**"],
         message: "feature の内部（ui / model / api）は import せず、features/<name> の公開入口だけを使う。",

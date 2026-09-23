@@ -50,6 +50,11 @@ const boundaryCases = [
   ["apps/web/src/screens/home/check.ts", "@/features/foundation", false],
   ["apps/web/src/features/foundation/ui/check.ts", "../model/use-probe", false],
   ["apps/web/src/shared/api/check.ts", "@tomotabi/contracts", false],
+  ["apps/web/src/features/foundation/model/check.ts", "@/shared/api/generated/foundation", true],
+  ["apps/web/src/features/foundation/ui/check.ts", "../../../shared/api/generated/foundation.zod", true],
+  ["apps/web/src/screens/home/check.ts", "@/shared/api/generated/foundation", true],
+  ["apps/web/src/features/foundation/api/check.ts", "@/shared/api/generated/foundation", false],
+  ["apps/web/src/shared/api/check.ts", "./generated/foundation", false],
   ["apps/api/src/modules/foundation/usecase/check.ts", "../adapter/service/increment-probe.port", false],
 ] as const;
 

@@ -8,13 +8,17 @@
     "start:dev": "nest start --watch",
     "type-check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
-    "test:db": "vitest run --config vitest.db.config.ts"
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:check": "drizzle-kit check"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",
     "@nestjs/platform-express": "^11.1.28",
     "@tomotabi/contracts": "0.0.0",
+    "better-auth": "^1.7.5",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
@@ -29,6 +33,7 @@
     "@types/node": "^22.18.0",
     "@types/pg": "^8.15.5",
     "@types/supertest": "^6.0.3",
+    "drizzle-kit": "^0.31.11",
     "supertest": "^7.1.4",
     "testcontainers": "^11.5.1",
     "typescript": "^5.9.2",

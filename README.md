@@ -57,6 +57,33 @@ npm run api:check     # 再生成して差分が無いことを確認（CI で�
 
 `DATABASE_URL` が無いときの API は in-memory です。起動確認用であり、実 PostgreSQL 検証の合格には使いません。PGlite への自動フォールバックはありません。
 
+```bash
+npm run db:check      # migration の整合と、スキーマ変更の生成漏れが無いことを確認（CI でも実行）
+```
+
+## ローカル DB と migration（M1）
+
+DB のスキーマは `apps/api/src/infrastructure/database/schema/` の Drizzle 定義が正で、`apps/api/drizzle/` に migration の SQL 履歴を残します（ADR-0003）。アプリの起動時に migration は適用しません。
+
+| ロール | 用途 | 権限 |
+|---|---|---|
+| `migrator` | migration の適用（管理者だけ） | スキーマと表の所有、DDL |
+| `app_runtime` | API の実行時接続（`DATABASE_URL`） | 表ごとに必要な DML だけ（`drizzle/0001_app_runtime_grants.sql`）。`statement_timeout` 5 秒 |
+
+```bash
+docker compose up -d --wait                  # 初回起動時にロールと DB の権限を作り、healthcheck が通るまで待つ
+MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
+  npm run db:migrate -w @tomotabi/api        # identity スキーマを作る。2 回目以降は差分だけ
+```
+
+- ローカルのパスワード（`migrator` / `app_runtime`）は compose.yaml の既定値で、ローカル専用です。本番のロールとパスワードは別の管理手順で作ります。
+- 管理手順は 2 つの SQL に分かれています（`apps/api/db/admin/`）。どちらも superuser で、`psql -v ON_ERROR_STOP=1` を付けて実行します。
+  1. `create-roles.sql`: ロールの作成。ロールはクラスタ全体で共有されるため、**クラスタごとに 1 回だけ**。2 回目はわざと失敗します（パスワードの変更は `ALTER ROLE` で明示的に行う）。
+  2. `grant-database.sql`: DB ごとの接続・作成権限。**DB ごとに**実行し、何度実行しても同じ結果になります。
+- スキーマを変えたら `npm run db:generate -w @tomotabi/api` で migration を作り、生成された SQL をレビューしてコミットします。GRANT などは `npx drizzle-kit generate --custom` の空ファイルに書きます。
+- 表を追加したら、`0001_app_runtime_grants.sql` と同じ形で GRANT の migration を追加し、`apps/api/tests/db/identity-schema.db.test.ts` と同じ形で権限テストを足します。
+- `DATABASE_URL` をローカル DB に向けると、検証用の foundation カウンタ（`infra.m0_probes`）は使えません。この表は migration に含めていないためです（M2 の開始時に撤去予定）。
+
 ## 検証用 HTTP
 
 | 方法 | 経路 | 意味 |

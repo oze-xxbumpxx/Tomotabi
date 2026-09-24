@@ -57,6 +57,7 @@
 | D-09 | app_runtime の DDL | app_runtime | CREATE TABLE / DROP / TRUNCATE / ALTER | 権限エラー | 異常 | E-13 |
 | D-10 | app_runtime の users | app_runtime | users の INSERT / DELETE、name・email の UPDATE | 権限エラー。email_verified・updated_at の UPDATE だけは成功 | 異常 | E-13 |
 | D-11 | statement_timeout | app_runtime | `SHOW statement_timeout` | 5s | 正常 | 設計 |
+| D-13 | 同じクラスタの 2 つ目の DB（PR #16 レビュー） | ロール作成済み | 2 つ目の DB で `grant-database.sql` を 2 回、ロール作成をもう一度 | DB 単位の権限は付き、再実行も成功。ロール作成の再実行は重複エラーで止まる | 冪等 | 運用 |
 | D-12 | 過剰な権限がない | D-01 | `has_table_privilege` を全表×全権限で列挙 | GRANT 表と完全一致 | 整合 | F-12 |
 
 ### 認証と Guard（M1-b）

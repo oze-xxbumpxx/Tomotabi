@@ -67,7 +67,8 @@ apps/api/
     cli/
       enroll-google-account.ts          初期登録（管理者端末専用）
       disable-google-account.ts         利用停止 + 全セッション削除
-  db/admin/create-roles.sql             ロール作成（パスワードは含めない。管理手順）
+  db/admin/create-roles.sql             ロール作成（クラスタごとに 1 回。パスワードは含めない。管理手順）
+  db/admin/grant-database.sql           DB ごとの接続・作成権限（再実行可。管理手順）
 apps/web/src/
   app/sign-in/page.tsx
   app/page.tsx                          ログイン後の表示（既存 home を差し替え）
@@ -287,7 +288,7 @@ CI には Google の実通信を入れない。fixture が通ったことを「G
 ## 移行とリリース
 
 - 本番環境が無いため、M1 のリリースは main へのマージだけとなる。本番 migration の適用と初期登録は M7 で行う。
-- ローカル: `docker compose up -d` → `db/admin/create-roles.sql` → `npm run db:migrate -w @tomotabi/api` → `enroll` で二人を登録 → `dev:api` / `dev:web`。README に手順を書く。
+- ローカル: `docker compose up -d --wait`（初回に `create-roles.sql` と `grant-database.sql` が流れる）→ `npm run db:migrate -w @tomotabi/api` → `enroll` で二人を登録 → `dev:api` / `dev:web`。README に手順を書く。
 - CI: 既存の api-db ジョブで、Testcontainers 上に migration の適用と権限テストを追加する。本番の secret は CI に渡さない。
 - ロールバック: main の PR を revert すれば戻せる（本番データが無いため）。
 

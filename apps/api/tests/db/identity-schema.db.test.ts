@@ -1,7 +1,9 @@
-import type { Pool } from "pg";
+import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  CREATE_ROLES_SQL,
   createRoles,
+  GRANT_DATABASE_SQL,
   migrateAsMigrator,
   startPostgres,
   type TestDatabase,
@@ -73,6 +75,35 @@ describe("identity schema migrations and runtime privileges", () => {
     const before = await snapshot();
     await migrateAsMigrator(db);
     expect(await snapshot()).toEqual(before);
+  });
+
+  describe("D-13 administrator procedure on a shared cluster", () => {
+    it("grants a second database without re-creating the cluster-wide roles", async () => {
+      await db.admin.query("CREATE DATABASE tomotabi_second");
+      const url = new URL(db.container.getConnectionUri());
+      url.pathname = "/tomotabi_second";
+      const second = new Pool({ connectionString: url.toString() });
+      try {
+        await second.query(GRANT_DATABASE_SQL);
+        await second.query(GRANT_DATABASE_SQL);
+        const privileges = await second.query<{ migrator: boolean; runtime_connect: boolean; runtime_create: boolean }>(
+          `SELECT has_database_privilege('migrator', current_database(), 'CREATE') AS migrator,
+                  has_database_privilege('app_runtime', current_database(), 'CONNECT') AS runtime_connect,
+                  has_database_privilege('app_runtime', current_database(), 'CREATE') AS runtime_create`,
+        );
+        expect(privileges.rows[0]).toEqual({ migrator: true, runtime_connect: true, runtime_create: false });
+      } finally {
+        await second.end();
+      }
+    });
+
+    it("re-running the per-database grants is harmless", async () => {
+      await expect(db.admin.query(GRANT_DATABASE_SQL)).resolves.toBeDefined();
+    });
+
+    it("refuses to create the roles twice instead of silently keeping old passwords", async () => {
+      await expect(db.admin.query(CREATE_ROLES_SQL)).rejects.toMatchObject({ code: "42710" });
+    });
   });
 
   it("D-03 declares the required constraints", async () => {

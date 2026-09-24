@@ -60,12 +60,17 @@ export async function startPostgres(): Promise<TestDatabase> {
   };
 }
 
-// Runs the same administrator script as production, substituting the psql variables.
+const adminScript = (name: string): string => readFileSync(join(API_ROOT, "db/admin", name), "utf8");
+
+// Same administrator scripts as production, with the psql variables substituted.
+export const CREATE_ROLES_SQL = adminScript("create-roles.sql")
+  .replace(":'migrator_password'", `'${ROLE_PASSWORDS.migrator}'`)
+  .replace(":'app_runtime_password'", `'${ROLE_PASSWORDS.app_runtime}'`);
+export const GRANT_DATABASE_SQL = adminScript("grant-database.sql");
+
 export async function createRoles(db: TestDatabase): Promise<void> {
-  const script = readFileSync(join(API_ROOT, "db/admin/create-roles.sql"), "utf8")
-    .replace(":'migrator_password'", `'${ROLE_PASSWORDS.migrator}'`)
-    .replace(":'app_runtime_password'", `'${ROLE_PASSWORDS.app_runtime}'`);
-  await db.admin.query(script);
+  await db.admin.query(CREATE_ROLES_SQL);
+  await db.admin.query(GRANT_DATABASE_SQL);
 }
 
 export async function migrateAsMigrator(db: TestDatabase): Promise<void> {

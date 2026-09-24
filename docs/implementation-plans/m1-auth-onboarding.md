@@ -41,7 +41,8 @@
 | `.env.example` | 環境変数の名前だけ（値なし） |
 | `apps/api/drizzle.config.ts` | `MIGRATION_DATABASE_URL`、schema、out=`drizzle/` |
 | `apps/api/drizzle/*.sql`、`drizzle/meta/*` | migration 履歴（生成物＋カスタム SQL。コミット対象） |
-| `apps/api/db/admin/create-roles.sql` | `migrator` / `app_runtime` の作成と接続権限。パスワードは psql 変数で渡す |
+| `apps/api/db/admin/create-roles.sql` | `migrator` / `app_runtime` の作成（クラスタごとに 1 回）。パスワードは psql 変数で渡す |
+| `apps/api/db/admin/grant-database.sql` | DB ごとの接続・作成権限（再実行可） |
 | `apps/api/src/infrastructure/database/schema/identity.ts` | Better Auth 標準 4 表＋ `allowed_google_accounts` |
 | `apps/api/src/infrastructure/logging/logger.ts` | Pino 設定（許可項目の serializer と redact） |
 | `apps/api/src/bootstrap/configure-app.ts` | 認証経路の許可リスト → Better Auth → JSON パーサー → prefix |

@@ -24,7 +24,11 @@ M0 は検証用 SQL をテストが直接流すだけで、migration の履歴�
 4. **ロールを分ける。**
    - `migrator`: スキーマと表の所有者。DDL を実行する。
    - `app_runtime`: 表ごとに必要な DML だけを GRANT で受け取る。DDL・TRUNCATE・所有権は持たない。
-   - ロールの作成（CREATE ROLE とパスワード）は migration に含めない。`db/admin/create-roles.sql` を管理手順とする。GRANT は migration に含める。
+   - ロールの作成（CREATE ROLE とパスワード）は migration に含めない。管理手順は 2 つに分ける（2026-09-24、PR #16 のレビューで追記）。
+     - `db/admin/create-roles.sql`: ロールはクラスタ全体で共有されるため、クラスタごとに 1 回だけ実行する。
+     - `db/admin/grant-database.sql`: DB ごとの CONNECT / CREATE 権限。DB ごとに実行し、再実行しても同じ結果になる。
+     - どちらも `psql -v ON_ERROR_STOP=1` で実行し、SQL のエラーを成功として扱わない。
+   - 表ごとの GRANT は migration に含める。
 5. 既存の `sql/00`〜`05` は参照仕様として扱い、生成 SQL と突き合わせるだけにする。そのまま実行しない。
 
 ## Alternatives（検討した非採用案と却下理由）

@@ -51,7 +51,8 @@
 | D-04 | allowlist 3 人目 | 2 行登録済み | slot 2 を INSERT | CHECK 違反 | 境界 | B-01 |
 | D-05 | allowlist の重複 | 1 行登録済み | 同じ sub / 同じ user_id | UNIQUE 違反 | 異常 | B-01 |
 | D-06 | google_sub の長さ | なし | 0 文字 / 256 文字 | CHECK 違反 | 境界 | B-01 |
-| D-07 | app_runtime の必要 DML | app_runtime で接続 | sessions・verifications の INSERT / UPDATE / DELETE、accounts の UPDATE、全表の SELECT | 成功 | 正常 | N-07 |
+| D-07 | app_runtime の必要 DML | app_runtime で接続 | sessions・verifications の INSERT / UPDATE / DELETE、users の email_verified の UPDATE、全表の SELECT | 成功 | 正常 | N-07 |
+| D-07b | app_runtime の accounts | app_runtime | accounts の INSERT / UPDATE / DELETE | 権限エラー | 異常 | E-13 |
 | D-08 | app_runtime の allowlist | app_runtime | allowlist の INSERT / UPDATE / DELETE | 権限エラー | 異常 | E-13 |
 | D-09 | app_runtime の DDL | app_runtime | CREATE TABLE / DROP / TRUNCATE / ALTER | 権限エラー | 異常 | E-13 |
 | D-10 | app_runtime の users | app_runtime | users の INSERT / DELETE、name・email の UPDATE | 権限エラー。email_verified・updated_at の UPDATE だけは成功 | 異常 | E-13 |

@@ -23,7 +23,8 @@
     "test:api-db": "npm run test:db -w @tomotabi/api",
     "test:harness": "node --test .claude/tests/*.test.mjs",
     "api:generate": "orval --config orval.config.ts",
-    "api:check": "npm run api:generate && test -z \"$(git status --porcelain -- apps/web/src/shared/api/generated)\""
+    "api:check": "npm run api:generate && test -z \"$(git status --porcelain -- apps/web/src/shared/api/generated)\"",
+    "db:check": "npm run db:check -w @tomotabi/api && npm run db:generate -w @tomotabi/api && test -z \"$(git status --porcelain -- apps/api/drizzle)\""
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

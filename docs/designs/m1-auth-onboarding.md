@@ -149,7 +149,7 @@ migration とロールは ADR-0003 のとおりとする。
 | 表 | 権限 |
 |---|---|
 | identity.users | SELECT、列単位の UPDATE(email_verified, updated_at)。ログイン時に Better Auth が email_verified を true にする場合があるため（スパイクで確認） |
-| identity.accounts | SELECT, UPDATE |
+| identity.accounts | SELECT のみ（`updateAccountOnSignIn: false` のため、ログインで更新しない） |
 | identity.sessions | SELECT, INSERT, UPDATE, DELETE |
 | identity.verifications | SELECT, INSERT, UPDATE, DELETE |
 | identity.allowed_google_accounts | SELECT のみ |
@@ -321,5 +321,5 @@ CI には Google の実通信を入れない。fixture が通ったことを「G
 2. （解決済み）セッションは 7 日・自動延長なしで確定（2026-09-23 ユーザー決定）。
 3. （解決済み）Better Auth の採用は 2026-09-23 の設計承認で確定。
 4. （解決済み）実装時確認は 2026-09-24 のスパイクで完了。結果は「スパイクの結果」節。
-6. ユーザー確認: セッショントークンが DB に平文で保存されることを受け入れるか（リスク R-7）。
+6. （解決済み）セッショントークンが DB に平文で保存されるリスク R-7 は、2026-09-24 にユーザーが受け入れた。
 5. 前提: PR #10 の承認と実装が先に完了すること。

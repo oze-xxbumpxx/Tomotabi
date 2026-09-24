@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run api:check
+      - run: npm run db:check
       - run: npm run type-check
       - run: npm test
 

@@ -126,6 +126,12 @@ export default defineConfig(
     ],
     rules: restrict(webPaths, [
       ...webPatterns,
+      generatedClientPattern,
+      {
+        // shared 内からは "./generated" のような相対指定になり、shared/api を含まないため別途塞ぐ。
+        group: ["./generated", "./generated/**", "**/api/generated", "**/api/generated/**"],
+        message: generatedClientPattern.message,
+      },
       {
         group: ["@/features/**", "@/screens/**", "@/app/**", "**/features/**", "**/screens/**", "**/app/**"],
         message: "shared から features / screens / app を参照しない。",

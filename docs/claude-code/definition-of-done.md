@@ -3,19 +3,23 @@
 タスクを「完了」と報告してよい条件を変更レベル別に定める。`development-workflow.md` の
 完了条件を Level 別に具体化したもの。**実在するコマンドだけ**をゲートに含める。
 
-## このリポジトリで実在する品質コマンド（2026-07 時点）
+## このリポジトリで実在する品質コマンド（2026-09 時点）
 
-| ゲート                    | コマンド                                        | 備考                                                                                                                                                |
-| ------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lint                      | `pnpm lint`（turbo lint）                       | 実在                                                                                                                                                |
-| Type check                | `pnpm type-check`（turbo type-check）           | 実在                                                                                                                                                |
-| Build                     | `pnpm build`（turbo build）                     | 実在。重いので L2/L3 で必要時                                                                                                                       |
-| Format check              | `pnpm exec prettier --check "**/*.{ts,tsx,md}"` | `pnpm format` は --write（修正）なので確認は --check                                                                                                |
-| Unit / Integration        | `pnpm test`（turbo test / Vitest）              | 実在。domain / application / infrastructure / apps/web に導入済み（2026-07-01 PR #21・`docs/designs/test-infra-expansion.md`）                      |
-| E2E / Contract / Security | 個別整備中                                      | Playwright 設定は `apps/web` に存在（シナリオは feature 単位で整備）。依存脆弱性は `pnpm audit`（security-reviewer が実行）。擬似コマンドを入れない |
+| ゲート             | コマンド             | 備考                                                                                                    |
+| ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------- |
+| Lint               | `npm run lint`       | ESLint                                                                                                  |
+| Type check         | `npm run type-check` |                                                                                                         |
+| Build              | `npm run build`      | contracts → api → web。重いので L2 / L3 で必要なときに実行                                              |
+| Format check       | `unavailable`        | Prettier 未導入                                                                                         |
+| Unit / Integration | `npm test`           | Vitest（web / api）。実 DB の結合は `npm run test:api-db`（Docker が必要）                              |
+| Contract / Schema  | `npm run api:check` / `npm run db:check` | API 契約を変えたら `api:check`、DB スキーマを変えたら `db:check`                            |
+| Harness            | `npm run test:harness` | `.claude/` か `.agents/` を変えたときに実行。CI では実行されない                                      |
+| E2E                | `unavailable`        | Playwright 未導入                                                                                       |
+| 依存脆弱性         | `npm audit`          | security-reviewer が実行                                                                                |
 
-> ゲートは `bash .claude/scripts/run-quality-gates.sh` で実行。実在しないコマンドは
-> 実行せず `unavailable` と報告する（推測で通過扱いにしない）。
+> ゲートは `bash .claude/scripts/run-quality-gates.sh` で実行する。ロックファイルから
+> パッケージマネージャー（本リポジトリでは npm）を検出し、既定では休眠中の試験を除いて回る。
+> 実在しないコマンドは実行せず `unavailable` と報告する（推測で通過扱いにしない）。
 
 ## Review readiness の共通契約
 

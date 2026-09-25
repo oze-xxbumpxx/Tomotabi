@@ -1,5 +1,6 @@
 import { HttpException } from "@nestjs/common";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { LogFn, Logger } from "pino";
 import type { Options } from "pino-http";
 
 const INTERNAL_ERROR_CODE = "INTERNAL_ERROR";
@@ -105,11 +106,57 @@ function hasError(res: ServerResponse, err: Error | undefined): boolean {
   return err !== undefined || state.err !== undefined || res.statusCode >= 500;
 }
 
+// Nest の ExceptionsHandler は例外を Nest logger（= この pino）の err に入れて
+// 直接出すため、pino-http の出力制御だけでは message / stack が漏れる。
+// pino-http は err serializer を std serializer の結果
+// （{ type, message, stack, raw }）を入力に呼ぶので、raw があれば元の Error で code を判定する。
+// 鍵名を errorCode にしているのは、redact の "*.code" が err.code を [Redacted] にするため。
+function serializeLoggedError(value: unknown): { type: string; errorCode: string } {
+  const raw =
+    typeof value === "object" && value !== null && "raw" in value ? value.raw : value;
+  const type = raw instanceof Error ? raw.constructor.name : "Unknown";
+  return { type, errorCode: codeFromError(raw) };
+}
+
+// pino は msg を渡さず err / Error をログに出すと msg に err.message を自動転記する。
+// 静的な msg を補って転記を止める（ExceptionsHandler 経路がまさにこの形）。
+function isErrorLike(value: unknown): boolean {
+  return (
+    value instanceof Error ||
+    (typeof value === "object" &&
+      value !== null &&
+      typeof (value as { message?: unknown }).message === "string")
+  );
+}
+
+function suppressErrorMessageAutofill(
+  this: Logger,
+  args: Parameters<LogFn>,
+  method: LogFn,
+): void {
+  const [first, second] = args;
+  const hasErrorArg =
+    first instanceof Error ||
+    (typeof first === "object" &&
+      first !== null &&
+      "err" in first &&
+      isErrorLike(first.err));
+  if (hasErrorArg && second === undefined) {
+    method.apply(this, [first, "unhandled exception"]);
+    return;
+  }
+  method.apply(this, args);
+}
+
 /**
  * 1 要求 1 行の pino-http 設定。
  * 出力は requestId / method / path（クエリを除く）/ statusCode / responseTime /
  * code（Guard の結果コード。無いときは出さない）に限る。
  * err はオブジェクトごと取り除き、既知の code だけを出す。
+ *
+ * serializers.err と hooks.logMethod はこの logger を共有する Nest logger
+ * （ExceptionsHandler など）経由の例外にも効かせるためのもので、
+ * err を { type, errorCode } に変換し、msg への message 自動転記を止める。
  */
 export function createPinoHttpOptions(): Options {
   return {
@@ -137,6 +184,8 @@ export function createPinoHttpOptions(): Options {
       res: ServerResponse,
       err?: Error,
     ): "error" | "info" => (hasError(res, err) ? "error" : "info"),
+    serializers: { err: serializeLoggedError },
+    hooks: { logMethod: suppressErrorMessageAutofill },
     redact: { paths: [...REDACT_PATHS], censor: "[Redacted]" },
   };
 }

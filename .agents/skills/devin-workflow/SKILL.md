@@ -38,6 +38,7 @@ npm run build
 ```
 
 - API 契約を変えたら `npm run api:check`、DB スキーマを変えたら `npm run db:check` も通す。
+- ハーネス（`.claude/`・`.agents/`）を変えたら `npm run test:harness` も通す。CI では実行されないため省略しない。
 - `npm run test:api-db` は Docker が必要。VM で動かなければ CI の `api-db` ジョブに任せ、PR に「未確認」と書く。
 - `.claude/scripts/run-quality-gates.sh` は pnpm 固定のため使わない。
 - 通らないテストをスキップ・無効化して CI を通さない。

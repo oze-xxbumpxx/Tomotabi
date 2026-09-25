@@ -57,3 +57,7 @@ Tomotabi 側では次を追加・調整した。
 - 新しい対話セッションでのスキル選択・フック発火は、この導入セッションでは未確認。
 
 Codex のローカルスキルとシンボリックリンクの仕様: https://learn.chatgpt.com/docs/build-skills
+
+## Devin の追加（2026-09-25）
+
+Devin を 4 つ目のツールとして追加した。ハーネスのプラグインは入れず、`AGENTS.md` と Devin の Knowledge でルールを共有する。役割分担・環境・Knowledge に登録する文面・未確認事項は `docs/devin-setup.md` を参照。

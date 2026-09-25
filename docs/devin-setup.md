@@ -35,11 +35,11 @@ Devin は `.mdc` のルールも読むため、Cursor 用の `.cursor/rules/psta
 
 Devin の作業環境は `.devin/blueprint.yaml` で定める（画面で設定する旧方式は 2026-07 に廃止）。リポジトリで管理するので、変えるときも PR でレビューする。
 
-| 節            | Tomotabi での内容                                                               | いつ動くか                                         |
-| ------------- | ------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `initialize`  | nvm があれば Node 22 を入れて既定にする                                         | 環境を一から作るとき。結果はスナップショットに残る |
-| `maintenance` | `npm ci`（CI と同じ）                                                           | スナップショットを作り直すたび                     |
-| `knowledge`   | lint / type-check / test / build / api:check・db:check / dev の各コマンドと注意 | 実行されない。Devin への参照情報                   |
+| 節            | Tomotabi での内容                                                                                        | いつ動くか                                         |
+| ------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `initialize`  | Node 22 が無ければ nodejs.org の公式配布物をチェックサムで確かめて入れる。最後に 22 でなければ失敗させる | 環境を一から作るとき。結果はスナップショットに残る |
+| `maintenance` | Node 22 であることを確かめてから `npm ci`（CI と同じ）                                                   | スナップショットを作り直すたび                     |
+| `knowledge`   | lint / type-check / test / build / api:check・db:check / dev の各コマンドと注意                          | 実行されない。Devin への参照情報                   |
 
 - `DATABASE_URL` は空のままでよい（API は in-memory で動く）。`.env` に本番の値を入れない。
 - `npm run test:api-db` は Docker（Testcontainers）が必要。使えない場合は CI の `api-db` ジョブで確かめる。
@@ -56,5 +56,5 @@ Devin のセッションで「使えるスキルの一覧」を尋ねて確か�
 ## 未確認のこと
 
 - Devin の VM で Docker（`npm run test:api-db`）が動くか。
-- blueprint で Node 22 が入り、`npm ci` が通るか（Devin の画面でビルド結果を確かめる）。ベースイメージに nvm が無い場合、`initialize` は Node を入れずに進む。
+- blueprint で Node 22 が入り、`npm ci` が通るか（Devin の画面でビルド結果を確かめる）。
 - GitHub 連携で Devin に与える権限。GitHub のブランチ保護で main への直接 push を止めておくと安全。

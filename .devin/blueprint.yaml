@@ -2,17 +2,31 @@
 # 作業手順とルールは AGENTS.md と .agents/skills/devin-workflow/SKILL.md。背景は docs/devin-setup.md。
 
 # Node 22.x に揃える（.nvmrc / package.json の engines と同じ）。ベースイメージの Node は 22 と限らない。
+# 22 が無ければ nodejs.org の公式配布物をチェックサムで確かめて入れる。最後に 22 でなければ失敗させる。
 initialize: |
-  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-  if [ -s "$NVM_DIR/nvm.sh" ]; then
-    . "$NVM_DIR/nvm.sh"
-    nvm install 22
-    nvm alias default 22
+  set -eu
+  if ! node --version 2>/dev/null | grep -q '^v22\.'; then
+    case "$(uname -m)" in
+      x86_64) arch=x64 ;;
+      aarch64 | arm64) arch=arm64 ;;
+      *) echo "未対応の CPU: $(uname -m)" >&2; exit 1 ;;
+    esac
+    base=https://nodejs.org/dist/latest-v22.x
+    tmp=$(mktemp -d)
+    curl -fsSL -o "$tmp/SHASUMS256.txt" "$base/SHASUMS256.txt"
+    file=$(grep -o "node-v22\.[0-9.]*-linux-$arch\.tar\.xz" "$tmp/SHASUMS256.txt" | head -n 1)
+    curl -fsSL -o "$tmp/$file" "$base/$file"
+    (cd "$tmp" && grep " $file\$" SHASUMS256.txt | sha256sum --check --strict -)
+    mkdir -p "$HOME/.local/node22"
+    tar -xJf "$tmp/$file" -C "$HOME/.local/node22" --strip-components=1
+    export PATH="$HOME/.local/node22/bin:$PATH"
+    if [ -n "${ENVRC:-}" ]; then echo "PATH=$PATH" >> "$ENVRC"; fi
   fi
-  node --version
+  node --version | grep -q '^v22\.' || { echo "Node 22 が必要です: $(node --version)" >&2; exit 1; }
 
-# lockfile どおりに入れる。CI（.github/workflows/ci.yml）と同じ。
+# lockfile どおりに入れる。CI（.github/workflows/ci.yml）と同じ。Node 22 以外では入れない。
 maintenance: |
+  node --version | grep -q '^v22\.' || { echo "Node 22 が必要です: $(node --version)" >&2; exit 1; }
   npm ci
 
 knowledge:

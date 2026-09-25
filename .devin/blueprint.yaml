@@ -1,0 +1,45 @@
+# Devin environment blueprint — https://docs.devin.ai/onboard-devin/environment/blueprint-reference
+# 作業手順とルールは AGENTS.md と .agents/skills/devin-workflow/SKILL.md。背景は docs/devin-setup.md。
+
+# Node 22.x に揃える（.nvmrc / package.json の engines と同じ）。ベースイメージの Node は 22 と限らない。
+initialize: |
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  if [ -s "$NVM_DIR/nvm.sh" ]; then
+    . "$NVM_DIR/nvm.sh"
+    nvm install 22
+    nvm alias default 22
+  fi
+  node --version
+
+# lockfile どおりに入れる。CI（.github/workflows/ci.yml）と同じ。
+maintenance: |
+  npm ci
+
+knowledge:
+  - name: lint
+    contents: |
+      npm run lint                  # ESLint（リポジトリ全体）
+  - name: type-check
+    contents: |
+      npm run type-check            # packages/contracts を build してから全 workspace を型チェック
+  - name: test
+    contents: |
+      npm test                      # web / api の単体・HTTP テスト。DB は使わない
+      npm run test:api-db           # Testcontainers で実 PostgreSQL。Docker が必要。動かなければ CI の api-db ジョブに任せ、PR に「未確認」と書く
+      npm run test:harness          # .claude/ か .agents/ を変えたときだけ。CI では実行されない
+  - name: build
+    contents: |
+      npm run build                 # contracts → api → web の順
+  - name: contract-and-schema
+    contents: |
+      npm run api:check             # API 契約を変えたとき。OpenAPI から web のクライアントを再生成し、差分が無いこと
+      npm run db:check              # DB スキーマを変えたとき。migration の生成漏れが無いこと
+  - name: dev
+    contents: |
+      npm run dev:api               # http://localhost:3001。DATABASE_URL が空なら in-memory
+      npm run dev:web               # http://localhost:3000。/api を 3001 へ転送
+  - name: notes
+    contents: |
+      .env は .env.example を元に作るが、DATABASE_URL は空のままでよい。本番の値や秘密情報を書かない。
+      .claude/scripts/run-quality-gates.sh は pnpm 固定のため使わない。
+      migration の適用（npm run db:migrate）は管理者だけ。Devin は実行しない。

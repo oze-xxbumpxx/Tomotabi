@@ -55,5 +55,5 @@ knowledge:
   - name: notes
     contents: |
       .env は .env.example を元に作るが、DATABASE_URL は空のままでよい。本番の値や秘密情報を書かない。
-      .claude/scripts/run-quality-gates.sh は pnpm 固定のため使わない。
+      .claude/scripts/run-quality-gates.sh はロックファイルから npm を検出して実行できる。既定では休眠中の試験を除く。ハーネスの全件は `npm run test:harness`。
       migration の適用（npm run db:migrate）は管理者だけ。Devin は実行しない。

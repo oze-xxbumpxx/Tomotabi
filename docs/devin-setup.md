@@ -48,9 +48,16 @@ npm run build
 - `npm run test:api-db` は Docker（Testcontainers）が必要。Devin の VM で Docker が使えるかは未確認。使えない場合は CI の `api-db` ジョブで確かめる。
 - ハーネスのテストは `npm run test:harness`。
 
+## 確認済みのこと（2026-09-25）
+
+Devin のセッションで「使えるスキルの一覧」を尋ねて確かめた。
+
+- `.agents/skills/` のシンボリックリンク先（`.claude/skills/`）も読めている。共有スキルと `devin-workflow` が一覧に出た。
+- Devin には、組み込みのスキル（`managing-playbooks`・`managing-automations`・`managing-child-sessions` など）もある。
+- Devin に接続した他のリポジトリ（Cookpit）のスキルも一覧に出る。その中には Tomotabi に無いスキル（`create-codex-brief`・`review-codex-implementation`・`manual-browser-verify`）がある。Tomotabi の作業で使わないよう、`devin-workflow` の「やってはいけないこと」に書いた。
+
 ## 未確認のこと
 
-- `.agents/skills/` のシンボリックリンク先（`.claude/skills/`）を Devin が読めるか。Devin のセッションで「使えるスキルの一覧を見せて」と頼んで確かめる。
 - Devin の VM で Docker（`npm run test:api-db`）が動くか。
 - Machine setup の画面の場所（旧 Settings → Devin's Machine。変わっている可能性がある）。
 - GitHub 連携で Devin に与える権限。GitHub のブランチ保護で main への直接 push を止めておくと安全。

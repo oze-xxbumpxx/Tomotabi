@@ -62,3 +62,4 @@ npm run build
 - `.env` や秘密情報のコミット（`.env.example` に本番の値を書かない）
 - `.claude/`・`.agents/`・`AGENTS.md`・`CLAUDE.md` の変更（ハーネスの構成。変えるなら PR で理由を書き、重点レビューを依頼する）
 - Cursor 用の `.cursor/rules/` の手順（pstack）に従うこと。Devin には pstack が無い。
+- 他のリポジトリ（Cookpit など）のスキルを Tomotabi の作業に使うこと。Tomotabi で使うのは、このリポジトリの `.agents/skills/` にあるスキルと Devin 組み込みのスキルだけ。`create-codex-brief`・`review-codex-implementation`・`manual-browser-verify` は Tomotabi に無い。

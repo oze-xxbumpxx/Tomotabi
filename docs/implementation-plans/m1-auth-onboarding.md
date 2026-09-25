@@ -10,11 +10,15 @@
 | PR | 範囲 | 手順 | マージ後にできること |
 |---|---|---|---|
 | M1-a | DB の土台 | 0〜3 | identity スキーマ・migration・ロール・GRANT がそろい、権限テストが CI で回る |
-| M1-b | API の認証 | 4〜9 | Better Auth・Guard・`/api/me`・ログがそろい、fixture で二人・第三者・失効・Origin を検証できる |
+| M1-b1 | Guard の土台 | 4、7 のロジック | `UserId`・デコレーター・`SessionVerifier` IF・両 Guard の判定が単体テスト（U-01〜U-10）で固まる。全体適用はしない |
+| M1-b2 | ログ | 9 | Pino のログが許可項目だけを出し、秘密を伏せる（U-17・U-18） |
+| M1-b3 | 契約と `/me` の中身 | 8 の契約・UseCase | `auth.json`・`Me` 型・`IdentityReader` IF・`GetMeUseCase`（U-16）がそろう。Controller は M1-b4 |
+| M1-b4 | 認証の組み込み | 5、6、7 の適用、8 の Controller | Better Auth・経路制限・Guard の全体適用・`/api/me` がつながり、fixture で二人・第三者・失効・Origin を検証できる（U-11〜U-15、H、A） |
 | M1-c | 管理 CLI | 10〜11 | 初期登録と利用停止ができる |
 | M1-d | web と実 Google 確認 | 12〜15 | サインインからログアウトまでを、ローカルの実 Google で確認できる |
 
 各 PR は単独で品質ゲートを通す。M1-a が後続すべての前提になる。
+M1-b1〜b3 は互いに依存しないため並行で進める（2026-09-25 ユーザー判断）。M1-b4 は b1〜b3 のマージ後に着手する。
 
 ## 変更対象ファイル
 
@@ -80,7 +84,7 @@
 6. **組み込み** … `auth-route-allowlist.ts`、`configure-app.ts`、`main.ts`。完了条件: 実 HTTP で sign-in POST の body・callback のクエリ・複数 Set-Cookie が欠けない（H-01〜H-03）
 7. **Guard の実装と適用** … OriginGuard（状態変更要求の Origin 完全一致 → Content-Type）、SessionGuard（Verifier → 403/401/503）。health に `@PublicRoute`。完了条件: foundation の既存 HTTP テストが「ログイン済み」前提で通り、未ログインでは 401
 8. **`/api/me`** … contracts の auth.json・`Me` 型、Controller → GetMeUseCase → IdentityReader。完了条件: sub・メール・トークンが応答に含まれない
-9. **ログ** … `nestjs-pino` と serializer・redact。例外は既知の code に変換。完了条件: L-01〜L-04（ログに秘密が出ない）が成功
+9. **ログ** … `nestjs-pino` と serializer・redact。例外は既知の code に変換。完了条件: U-17・U-18（ログに秘密が出ない）が成功
 
 ### M1-c: 管理 CLI
 
@@ -96,7 +100,7 @@
 
 ## 依存関係
 
-- 0 → 1 → 2 → 3（M1-a）→ 4〜9（M1-b）→ 10〜11（M1-c）→ 12〜15（M1-d）
+- 0 → 1 → 2 → 3（M1-a）→ M1-b1・b2・b3（並行）→ M1-b4 → 10〜11（M1-c）→ 12〜15（M1-d）
 - 5 は 0 のスパイク結果に依存する。0 で設計と違う挙動が見つかったら、設計書を直してユーザーに報告してから 1 へ進む
 - 10 は 2（ロール）と 5（スキーマ）に依存する
 - 15 はユーザーの OAuth クライアント作成に依存する。12〜14 は作成前に進められる

@@ -51,10 +51,17 @@ Devin のセッションで「使えるスキルの一覧」を尋ねて確か�
 
 - `.agents/skills/` のシンボリックリンク先（`.claude/skills/`）も読めている。共有スキルと `devin-workflow` が一覧に出た。
 - Devin には、組み込みのスキル（`managing-playbooks`・`managing-automations`・`managing-child-sessions` など）もある。
-- Devin に接続した他のリポジトリ（Cookpit）のスキルも一覧に出る。その中には Tomotabi に無いスキル（`create-codex-brief`・`review-codex-implementation`・`manual-browser-verify`）がある。Tomotabi の作業で使わないよう、`devin-workflow` の「やってはいけないこと」に書いた。
+- Devin に接続した他のリポジトリ（Cookpit）のスキルも一覧に出る。その中には Tomotabi に無いスキル（`create-codex-brief`・`review-codex-implementation`・`manual-browser-verify`）がある。Tomotabi の作業で使わないよう、`devin-workflow` の「やってはいけないこと」に書いた。Devin の Settings → Environment のリポジトリ欄で cookpit も Included になっているため。
+
+Devin の画面（Settings → Environment → Snapshots）のビルドログで確かめた。
+
+- blueprint が読み込まれ（`1 blueprint changed`）、`maintenance` の Node 22 の確認を通って `npm ci` が成功した（853 パッケージ）。Health Check も成功した。
+- `npm ci` は `16 vulnerabilities (13 moderate, 3 high)` を報告した。既存の依存によるもので、未対応。
+
+GitHub 側の設定。
+
+- main に Ruleset（`protect-main`）を設定した。PR 必須（承認 0）、CI の `quality`・`build`・`api-db` の成功が必須、force push と削除を禁止。バイパスは無し。Devin を含め、どのツールも main へ直接 push できない。
 
 ## 未確認のこと
 
 - Devin の VM で Docker（`npm run test:api-db`）が動くか。
-- blueprint で Node 22 が入り、`npm ci` が通るか（Devin の画面でビルド結果を確かめる）。
-- GitHub 連携で Devin に与える権限。GitHub のブランチ保護で main への直接 push を止めておくと安全。

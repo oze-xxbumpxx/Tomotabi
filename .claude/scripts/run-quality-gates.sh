@@ -13,9 +13,9 @@
 # - 1 つのゲート失敗で即終了せず、全ゲートを実行して最後に集計する（既存失敗の可視化）。
 # - 実在しないコマンドは実行せず unknown と報告する（推測で通過扱いにしない）。
 # - パッケージマネージャーは lockfile から検出する（pnpm 固定にしない）。
-# - ハーネス試験は package.json の test:harness が無ければ
-#   `node --test .claude/tests/*.test.mjs` に落ちる。既定では休眠中の
-#   review-readiness.test.mjs を除く（D-3）。全件は --all。
+# - ハーネス試験は既定では休眠中の review-readiness.test.mjs を除いて
+#   `node --test` で実行する（D-3）。--all のときだけ package.json の test:harness
+#   （全件実行）を使い、無ければ `node --test .claude/tests/*.test.mjs` に落ちる。
 set -uo pipefail
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
@@ -103,12 +103,14 @@ collect_harness_tests() {
 }
 
 run_harness() {
-  if has_script test:harness; then
-    run_pm_script harness test:harness
-    return
-  fi
   local include=0
-  if [ "$RUN_ALL" = "1" ]; then include=1; fi
+  if [ "$RUN_ALL" = "1" ]; then
+    include=1
+    if has_script test:harness; then
+      run_pm_script harness test:harness
+      return
+    fi
+  fi
   local -a tests=()
   local f
   while IFS= read -r f; do

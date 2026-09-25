@@ -73,6 +73,43 @@ test('package.json が無くても node --test に落ち、休眠テストは既
   }
 });
 
+test('package.json に test:harness があっても、既定では休眠テストを走らせない', () => {
+  const sb = sandbox();
+  try {
+    writeFileSync(
+      join(sb.root, 'package.json'),
+      JSON.stringify({ name: 'sandbox', scripts: { 'test:harness': 'node --test .claude/tests/*.test.mjs' } }),
+    );
+    writeTest(sb.root, 'alpha.test.mjs', PASSING);
+    writeTest(sb.root, 'review-readiness.test.mjs', FAILING);
+    const result = runGates(sb);
+    assert.equal(result.code, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /✓ PASS: harness/);
+    assert.doesNotMatch(result.stdout, /review-readiness\.test\.mjs/);
+    assert.doesNotMatch(result.stdout, /test:harness/);
+  } finally {
+    sb.cleanup();
+  }
+});
+
+test('package.json に test:harness があるとき、--all は test:harness で全件実行する', () => {
+  const sb = sandbox();
+  try {
+    writeFileSync(
+      join(sb.root, 'package.json'),
+      JSON.stringify({ name: 'sandbox', scripts: { 'test:harness': 'node --test .claude/tests/*.test.mjs' } }),
+    );
+    writeTest(sb.root, 'alpha.test.mjs', PASSING);
+    writeTest(sb.root, 'review-readiness.test.mjs', FAILING);
+    const result = runGates(sb, ['--all']);
+    assert.equal(result.code, 1);
+    assert.match(result.stdout, /npm run test:harness/);
+    assert.match(result.stdout, /✗ FAIL: harness/);
+  } finally {
+    sb.cleanup();
+  }
+});
+
 test('--all は休眠中の review-readiness 試験も含める', () => {
   const sb = sandbox();
   try {

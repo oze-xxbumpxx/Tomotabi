@@ -136,5 +136,4 @@ MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
 - 旅行・予定・支払い・精算・通知
 - Playwright E2E の有効化
 - Vercel / Neon の作成と公開（M0 対象外）
-- ハーネス quality-gates の `pnpm` 固定を npm に合わせる
 - GitHub Actions の action を commit SHA で固定する

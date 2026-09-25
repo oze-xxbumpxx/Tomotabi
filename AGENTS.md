@@ -7,7 +7,7 @@ Claude Code と Codex は、このリポジトリの同じハーネス・成果�
 - M0（開発基盤）まで。旅行・認証・精算などの業務機能は未実装。
 - 採用スタック: Node 22.x、npm workspaces、`apps/web`（Next.js App Router）、`apps/api`（NestJS モジュラーモノリス＋6区分）、`packages/contracts`（公開 API 契約のみ）、Drizzle＋pg、Vitest。詳細は README と `docs/decisions/ADR-0001-m0-workspace-and-stack.md`。
 - スタック固有の規約は、採用済み技術にだけ適用する。存在しない設計書・コマンド・レビュー結果をあるものとして扱わない。
-- ハーネスの `run-quality-gates.sh` はまだ `pnpm` 固定。アプリの品質確認は `npm run lint` / `npm run type-check` / `npm test` / `npm run build` を使う。
+- ハーネスの `run-quality-gates.sh` はロックファイルからパッケージマネージャーを検出して実行する（本リポジトリでは npm）。アプリの品質確認は `npm run lint` / `npm run type-check` / `npm test` / `npm run build` を使う。
 
 ## 現在有効なハーネス機能 / 休眠
 

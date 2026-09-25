@@ -36,7 +36,7 @@ packages/contracts/    wire 型と foundation OpenAPI
 
 ## 前提
 
-- Node 22.x（リポジトリは 22.23.2 で確認）
+- Node 22.18 以上の 22.x（orval の要件。リポジトリは 22.23.2 で確認）
 - Docker Desktop が動いていること（`npm run test:api-db` だけ。単体テストと build には不要）
 
 ## コマンド

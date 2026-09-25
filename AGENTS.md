@@ -58,6 +58,6 @@ Tomotabi は **AI 駆動開発を主とする**。AI が実装し、ユーザー
 - Codex でハーネスの状態を扱うコマンドには `HARNESS_NAMESPACE=tomotabi-harness` を付け、リポジトリルートで実行する。Claude Code には同じ値を settings の env で設定している。
 - スキルから参照される Cookpit 専用文書・専用スキルが無い場合は、本ファイルと実際の構成を使う。未採用の技術や架空の成果物を補わない。
 - Codex には Claude Code のフック（危険操作の遮断・成果物チェック）が無い。代替として、本ファイルの作業分担・ブランチ運用・破壊的操作の事前確認を守る。履歴改変・データ削除・本番操作は、ユーザー確認なしに実行しない。
-- Devin: 本ファイルと Devin の Knowledge（登録する文面は `docs/devin-setup.md`）を使う。担当は Issue 起点の L0 / L1 と PR レビュー。L2 / L3 は設計承認後だけ。ブランチは `devin/<内容>` を使い、他ツールのブランチに push しない。Claude Code のフックは動かないため、Codex と同じく破壊的操作の事前確認を守る。
+- Devin: 本ファイルと `.agents/skills/devin-workflow/SKILL.md`（背景は `docs/devin-setup.md`）を使う。担当は Issue 起点の L0 / L1 と PR レビュー。L2 / L3 は設計承認後だけ。ブランチは `devin/<内容>` を使い、他ツールのブランチに push しない。Claude Code のフックは動かないため、Codex と同じく破壊的操作の事前確認を守る。
 
 導入元・更新時の注意は `docs/harness-setup.md` を参照。

@@ -60,4 +60,4 @@ Codex のローカルスキルとシンボリックリンクの仕様: https://l
 
 ## Devin の追加（2026-09-25）
 
-Devin を 4 つ目のツールとして追加した。ハーネスのプラグインは入れず、`AGENTS.md` と Devin の Knowledge でルールを共有する。役割分担・環境・Knowledge に登録する文面・未確認事項は `docs/devin-setup.md` を参照。
+Devin を 4 つ目のツールとして追加した。ハーネスのプラグインは入れず、`AGENTS.md` と `.agents/skills/`（Devin 専用の `devin-workflow` を含む）でルールを共有する。役割分担・環境・未確認事項は `docs/devin-setup.md` を参照。

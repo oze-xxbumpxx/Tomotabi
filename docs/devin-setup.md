@@ -31,22 +31,19 @@ Claude Code のフック（危険操作の遮断・成果物チェック）は D
 
 Devin は `.mdc` のルールも読むため、Cursor 用の `.cursor/rules/pstack-default.mdc` も取り込まれることがある。Devin には pstack が無いので、スキルでは従わないよう書いている。画面の Rules 一覧に pstack が出ていたら無効にする。
 
-## Machine setup（環境）
+## 作業環境（blueprint）
 
-Devin の VM に次を入れてスナップショットを保存する。
+Devin の作業環境は `.devin/blueprint.yaml` で定める（画面で設定する旧方式は 2026-07 に廃止）。リポジトリで管理するので、変えるときも PR でレビューする。
 
-```bash
-# Node 22.x（.node-version / .nvmrc と同じ）
-npm ci
-npm run lint
-npm run type-check
-npm test
-npm run build
-```
+| 節            | Tomotabi での内容                                                                                        | いつ動くか                                         |
+| ------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `initialize`  | Node 22 が無ければ nodejs.org の公式配布物をチェックサムで確かめて入れる。最後に 22 でなければ失敗させる | 環境を一から作るとき。結果はスナップショットに残る |
+| `maintenance` | Node 22 であることを確かめてから `npm ci`（CI と同じ）                                                   | スナップショットを作り直すたび                     |
+| `knowledge`   | lint / type-check / test / build / api:check・db:check / dev の各コマンドと注意                          | 実行されない。Devin への参照情報                   |
 
 - `DATABASE_URL` は空のままでよい（API は in-memory で動く）。`.env` に本番の値を入れない。
-- `npm run test:api-db` は Docker（Testcontainers）が必要。Devin の VM で Docker が使えるかは未確認。使えない場合は CI の `api-db` ジョブで確かめる。
-- ハーネスのテストは `npm run test:harness`。
+- `npm run test:api-db` は Docker（Testcontainers）が必要。使えない場合は CI の `api-db` ジョブで確かめる。
+- 規約や作業手順は blueprint に書かず、`AGENTS.md` と `devin-workflow` スキルに置く。blueprint の `knowledge` は環境に結びついた短いコマンドの参照だけにする。
 
 ## 確認済みのこと（2026-09-25）
 
@@ -59,5 +56,5 @@ Devin のセッションで「使えるスキルの一覧」を尋ねて確か�
 ## 未確認のこと
 
 - Devin の VM で Docker（`npm run test:api-db`）が動くか。
-- Machine setup の画面の場所（旧 Settings → Devin's Machine。変わっている可能性がある）。
+- blueprint で Node 22 が入り、`npm ci` が通るか（Devin の画面でビルド結果を確かめる）。
 - GitHub 連携で Devin に与える権限。GitHub のブランチ保護で main への直接 push を止めておくと安全。

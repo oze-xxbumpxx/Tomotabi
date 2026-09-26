@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#E4E3E0;font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#141414;-webkit-font-smoothing:antialiased}
+a{color:#2346F5}a:hover{color:#1530B8}
+*{box-sizing:border-box}
+@keyframes ttPop{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes ttDraw{to{stroke-dashoffset:0}}
+@keyframes ttOut{to{opacity:0;transform:rotate(90deg) scale(.3)}}
+@keyframes ttSpin{to{transform:rotate(360deg)}}
+@keyframes ttFlow{0%{transform:translateX(-10px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes ttFill{from{fill-opacity:0}to{fill-opacity:1}}
+@media (prefers-reduced-motion:reduce){[data-anim] *{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important}}
+</style>
+</helmet>
+<div style="padding:64px;display:flex;flex-direction:column;gap:72px;max-width:1720px">
+
+<header style="display:flex;flex-direction:column;gap:10px;max-width:900px">
+<div style="font-size:13px;letter-spacing:.08em;color:#5E5C57">TOMOTABI · 第 1 弾 · 方向性 2a「ライブ — 今と次」</div>
+<h1 style="margin:0;font-size:34px;line-height:1.3;font-weight:800">デザインシステムと画面モックアップ</h1>
+<p style="margin:0;font-size:15px;line-height:1.8;color:#3D3B37;text-wrap:pretty">トークンは CSS カスタムプロパティ名と値の対応で示しています。書体は端末標準のみ（Web フォントなし）、ダークモードは端末設定に従います。</p>
+<nav style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><a href="#tokens" style="font-size:14px;font-weight:700">01 トークン</a><span style="color:#B5B3AE">/</span><a href="#components" style="font-size:14px;font-weight:700">02 基本部品</a><span style="color:#B5B3AE">/</span><a href="#motion" style="font-size:14px;font-weight:700">03 動くアイコン</a><span style="color:#B5B3AE">/</span><a href="#screens" style="font-size:14px;font-weight:700">04 画面</a></nav>
+</header>
+
+<section id="tokens" data-screen-label="01 トークン" style="display:flex;flex-direction:column;gap:24px">
+<h2 style="margin:0;font-size:24px;font-weight:800">01 トークン</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:20px;align-items:start">
+
+<div style="background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:4px">
+<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;font-size:12px;font-weight:700;color:#5E5C57;padding-bottom:8px;border-bottom:1px solid #ECEBE7"><span>色</span><span>ライト</span><span>ダーク</span></div>
+<sc-for list="{{ colors }}" as="c" hint-placeholder-count="16">
+<div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid #F3F2EF">
+<div style="display:flex;flex-direction:column"><code style="font-size:12px;font-family:ui-monospace,Menlo,monospace">{{ c.name }}</code><span style="font-size:12px;color:#5E5C57">{{ c.use }}</span></div>
+<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:ui-monospace,Menlo,monospace"><span style="width:28px;height:28px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);background:{{ c.light }}"></span>{{ c.light }}</span>
+<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:ui-monospace,Menlo,monospace"><span style="width:28px;height:28px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);background:{{ c.dark }}"></span>{{ c.dark }}</span>
+</div>
+</sc-for>
+<p style="margin:10px 0 0;font-size:12px;line-height:1.7;color:#5E5C57">主ボタンはオレンジ地に墨の文字（コントラスト 7:1）。オレンジを文字色にするときは --color-accent-text を使う。</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:4px">
+<div style="display:grid;grid-template-columns:1.3fr 1.4fr 1.6fr;gap:12px;font-size:12px;font-weight:700;color:#5E5C57;padding-bottom:8px;border-bottom:1px solid #ECEBE7"><span>文字</span><span>値</span><span>見本</span></div>
+<sc-for list="{{ type }}" as="t" hint-placeholder-count="9">
+<div style="display:grid;grid-template-columns:1.3fr 1.4fr 1.6fr;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #F3F2EF">
+<code style="font-size:12px;font-family:ui-monospace,Menlo,monospace">{{ t.name }}</code>
+<span style="font-size:12px;color:#5E5C57;font-family:ui-monospace,Menlo,monospace">{{ t.val }}</span>
+<span style="font-size:{{ t.size }};font-weight:{{ t.weight }};line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:{{ t.ls }};overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ t.sample }}</span>
+</div>
+</sc-for>
+<p style="margin:10px 0 0;font-size:12px;line-height:1.7;color:#5E5C57">書体は -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif。時刻と金額は必ず font-variant-numeric: tabular-nums。</p>
+</div>
+
+<div style="background:#fff;border-radius:24px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:12px;font-weight:700;color:#5E5C57">余白 --space-*</div>
+<sc-for list="{{ spaces }}" as="s" hint-placeholder-count="8"><div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace"><span style="width:70px">{{ s.name }}</span><span style="height:12px;background:#FF6A2B;border-radius:2px;width:{{ s.px }}"></span><span style="color:#5E5C57">{{ s.px }}</span></div></sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:12px;font-weight:700;color:#5E5C57">角丸 --radius-*</div>
+<sc-for list="{{ radii }}" as="r" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace"><span style="width:28px;height:28px;background:#F3F2EF;border:1.5px solid #141414;border-radius:{{ r.px }}"></span><span style="width:84px">{{ r.name }}</span><span style="color:#5E5C57">{{ r.px }}</span></div></sc-for>
+<div style="font-size:12px;font-weight:700;color:#5E5C57;margin-top:10px">影 --shadow-*</div>
+<div style="font-size:12px;line-height:1.7;font-family:ui-monospace,Menlo,monospace">dock: 0 0 0 1px rgba(0,0,0,.06), 0 10px 30px rgba(0,0,0,.12)<br>accent: 0 8px 24px rgba(255,106,43,.4)<br><span style="font-family:inherit;color:#5E5C57">カードは影なし（背景色の差で区切る）</span></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="components" data-screen-label="02 基本部品" style="display:flex;flex-direction:column;gap:24px">
+<h2 style="margin:0;font-size:24px;font-weight:800">02 基本部品</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;align-items:start">
+
+<div style="background:#F3F2EF;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:inset 0 0 0 1px #D6D4CF">
+<div style="font-size:13px;font-weight:800">ボタン</div>
+<div style="height:56px;border-radius:999px;background:#FF6A2B;color:#141414;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:800;box-shadow:0 8px 24px rgba(255,106,43,.4)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>支払いを記録</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;height:48px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">保存</div>
+<div style="flex:1;height:48px;border-radius:999px;background:#fff;color:#141414;box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">キャンセル</div>
+</div>
+<div style="height:48px;border-radius:999px;background:#B42318;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"></path></svg>記録を取り消す</div>
+<div style="height:48px;border-radius:999px;background:#141414;color:#fff;opacity:.72;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:700"><span style="width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff"></span>保存中</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="height:48px;border-radius:999px;background:#E4E2DD;color:#5E5C57;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">保存</div>
+<div style="font-size:12px;color:#5E5C57;display:flex;gap:4px;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>金額を入力すると保存できます</div>
+</div>
+<div style="font-size:12px;color:#5E5C57;line-height:1.6">高さ 主 56 / 通常 48。押せないときは理由を隣に出す。保存中は同じボタンの連打を止める。</div>
+</div>
+
+<div style="background:#F3F2EF;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:inset 0 0 0 1px #D6D4CF">
+<div style="font-size:13px;font-weight:800">入力欄</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<label style="font-size:13px;font-weight:700">金額</label>
+<div style="height:60px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1.5px #141414;display:flex;align-items:center;padding:0 16px;gap:6px"><span style="flex:1;font-size:28px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;letter-spacing:-.02em">999,999,999</span><span style="font-size:17px;font-weight:700">円</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<label style="font-size:13px;font-weight:700;color:#B42318">金額</label>
+<div style="height:60px;border-radius:16px;background:#FDE7E4;box-shadow:inset 0 0 0 2px #B42318;display:flex;align-items:center;padding:0 16px;gap:6px"><span style="flex:1;font-size:28px;font-weight:800;text-align:right;color:#8A8883">0</span><span style="font-size:17px;font-weight:700">円</span></div>
+<div style="font-size:13px;color:#B42318;font-weight:700;display:flex;gap:4px;align-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3l10 18H2z"></path><path d="M12 10v4M12 17h.01"></path></svg>1 円以上の金額を入力してください</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<label style="font-size:13px;font-weight:700">用途 <span style="font-weight:400;color:#5E5C57">任意</span></label>
+<div style="min-height:48px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;padding:0 16px;font-size:15px;color:#5E5C57">例：昼食</div>
+</div>
+</div>
+
+<div style="background:#F3F2EF;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:inset 0 0 0 1px #D6D4CF">
+<div style="font-size:13px;font-weight:800">状態バッジ（色＋アイコン＋文字）</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:#1B6B35;background:#E0F1E5;padding:4px 10px;border-radius:999px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>達成</span>
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:#1D3AC9;background:#E6EBFF;padding:4px 10px;border-radius:999px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16"></path></svg>予約</span>
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:#5E5C57;background:#E4E2DD;padding:4px 10px;border-radius:999px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="12" r="8"></circle><path d="M6.5 17.5l11-11"></path></svg>取りやめ</span>
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:#5E5C57;box-shadow:inset 0 0 0 1.5px #8A8883;padding:4px 10px;border-radius:999px;border:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"></path></svg>取り消し済み</span>
+</div>
+<div style="background:#fff;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;gap:10px;align-items:center"><span style="font-size:15px;font-weight:700;color:#5E5C57;text-decoration:line-through;flex:1">伏見稲荷大社</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#5E5C57;background:#E4E2DD;padding:3px 8px;border-radius:999px">取りやめ</span></div>
+<div style="font-size:12px;color:#5E5C57">取りやめ・達成・予約は独立。同時に付くときは 取りやめ → 予約 → 達成 の順に並べる</div>
+</div>
+<div style="font-size:13px;font-weight:800;margin-top:6px">予定の種類</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;font-size:13px;font-weight:600">
+<span style="padding:4px 10px;border-radius:999px;background:#fff">場所</span><span style="padding:4px 10px;border-radius:999px;background:#fff">食べ処</span><span style="padding:4px 10px;border-radius:999px;background:#fff">買い物</span><span style="padding:4px 10px;border-radius:999px;background:#fff">宿</span><span style="padding:4px 10px;border-radius:999px;background:#fff">移動</span>
+</div>
+<div style="font-size:12px;color:#5E5C57;line-height:1.6">2a では種類を文字で表示し、アイコンは使わない。</div>
+</div>
+
+<div style="background:#F3F2EF;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:inset 0 0 0 1px #D6D4CF">
+<div style="font-size:13px;font-weight:800">金額表示と「誰から誰へ」</div>
+<div style="background:#fff;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700"><span>ひなた</span><span style="font-size:12px;color:#5E5C57;font-weight:600">から</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 6l6 6-6 6"></path></svg><span>あおい</span><span style="font-size:12px;color:#5E5C57;font-weight:600">へ</span></div>
+<div style="font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere">999,999,999<span style="font-size:17px;margin-left:3px">円</span></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div style="background:#fff;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;color:#5E5C57">精算なし</span><span style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">0<span style="font-size:13px;margin-left:2px">円</span></span><span style="font-size:12px;font-weight:700">受け渡しはありません</span></div>
+<div style="background:#fff;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:2px;box-shadow:inset 0 0 0 1.5px dashed #B42318"><span style="font-size:12px;color:#B42318;font-weight:700">金額不明</span><span style="font-size:22px;font-weight:800;color:#8A8883;letter-spacing:.1em">— — 円</span><span style="font-size:12px;font-weight:700;color:#B42318">取得できませんでした</span></div>
+</div>
+<div style="font-size:12px;color:#5E5C57;line-height:1.6">向きは名前＋矢印＋「から／へ」の文字で示す（色や符号は使わない）。0 円には必ず「受け渡しはありません」を添え、不明は数字を出さずに「— —」を表示。長い金額は桁区切りの位置で折り返す。</div>
+</div>
+
+<div style="background:#F3F2EF;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 0 0 1px #D6D4CF">
+<div style="font-size:13px;font-weight:800">欄ごとの状態</div>
+<div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between"><span style="font-size:15px;font-weight:800">今日の予定</span><span style="font-size:12px;color:#5E5C57">読み込み中</span></div><span style="height:14px;border-radius:7px;background:#ECEBE7;width:80%"></span><span style="height:14px;border-radius:7px;background:#ECEBE7;width:60%"></span></div>
+<div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:800">最近の記録</span><span style="display:inline-flex;gap:4px;align-items:center;font-size:12px;color:#5E5C57"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"></path></svg>更新中</span></div><span style="font-size:13px;color:#5E5C57">前回の表示のまま閲覧できる</span></div>
+<div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 0 0 1.5px #E5B45C"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:800">最近の記録</span><span style="display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:700;color:#8A5300;background:#FFF1D6;padding:3px 8px;border-radius:999px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>更新できていません · 12:40 時点</span></div><div style="height:40px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">再試行</div></div>
+<div style="background:#fff;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:flex-start"><span style="display:inline-flex;gap:6px;align-items:center;font-size:14px;font-weight:700;color:#B42318"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3l10 18H2z"></path><path d="M12 10v4M12 17h.01"></path></svg>取得できませんでした</span><div style="height:44px;padding:0 20px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;font-size:14px;font-weight:700">再試行</div></div>
+<div style="background:#fff;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:flex-start"><span style="font-size:14px;font-weight:700">記録はまだありません</span><span style="font-size:13px;color:#5E5C57">支払いや達成を記録すると、ここに新しい順で並びます</span></div>
+</div>
+
+<div style="background:#F3F2EF;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:inset 0 0 0 1px #D6D4CF">
+<div style="font-size:13px;font-weight:800">確認ダイアログ・完了表示・注意</div>
+<div style="background:#fff;border-radius:28px;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.18)">
+<div style="font-size:18px;font-weight:800">この記録を取り消しますか？</div>
+<div style="font-size:14px;line-height:1.7;color:#3D3B37">支払い「錦市場で昼食 2,400 円」を取り消します。記録は消えず、「取り消し済み」として履歴に残ります。</div>
+<div style="display:flex;gap:10px;margin-top:4px"><div style="flex:1;height:48px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">やめる</div><div style="flex:1;height:48px;border-radius:999px;background:#B42318;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">取り消す</div></div>
+</div>
+<div style="align-self:center;display:inline-flex;align-items:center;gap:8px;background:#141414;color:#fff;padding:12px 18px;border-radius:999px;font-size:14px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8EE3A6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>支払いを記録しました</div>
+<div style="background:#FFF1D6;border-radius:16px;padding:12px 14px;display:flex;gap:10px"><svg style="flex-shrink:0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A5300" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg><div style="font-size:13px;line-height:1.6;color:#5A3700"><b>注意</b>　保存されたか確認できません。入力はそのまま残しています。「確認する」で保存状態を調べます。</div></div>
+<div style="background:#FDE7E4;border-radius:16px;padding:12px 14px;display:flex;gap:10px"><svg style="flex-shrink:0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.4" stroke-linecap="round"><path d="M12 3l10 18H2z"></path><path d="M12 10v4M12 17h.01"></path></svg><div style="font-size:13px;line-height:1.6;color:#7A1810"><b>警告</b>　対象の支払いが変わりました。最新の内容を確認してから完了を記録してください。</div></div>
+</div>
+
+<div style="background:#F3F2EF;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:inset 0 0 0 1px #D6D4CF">
+<div style="font-size:13px;font-weight:800">旅行ヘッダー（上部）</div>
+<div style="background:#F3F2EF;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/12 土 – 10/14 月</div><div style="font-size:24px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">秋の京都 2 泊 3 日と長い名前の旅行は末尾を省略</div></div><div style="height:44px;padding:0 12px 0 14px;border-radius:999px;background:#fff;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700;flex-shrink:0">切り替え<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:6px;background:#fff;box-shadow:inset 0 0 0 1.5px #141414;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>出発前</span>
+<span style="display:inline-flex;align-items:center;gap:6px;background:#141414;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px"><span style="width:7px;height:7px;border-radius:50%;background:#FF6A2B"></span>旅行中</span>
+<span style="display:inline-flex;align-items:center;gap:6px;background:#E4E2DD;color:#3D3B37;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>終了</span>
+</div>
+</div>
+<div style="font-size:12px;color:#5E5C57;line-height:1.6">旅行名は 1 行で末尾を省略（全文は旅行一覧で見られる）。予定名はカード内で 2 行まで表示し、3 行目以降を省略。メモは詳細画面で全文を折り返して表示。</div>
+<div style="font-size:13px;font-weight:800;margin-top:4px">下部ドック（4 タブ＋主操作）</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:linear-gradient(#F3F2EF,#E4E2DD);padding:16px 0 0;border-radius:16px">
+<div style="height:64px;border-radius:999px;background:rgba(255,255,255,.78);box-shadow:0 0 0 1px rgba(0,0,0,.06),0 10px 30px rgba(0,0,0,.12);display:grid;grid-template-columns:repeat(4,1fr);padding:6px">
+<div style="border-radius:999px;background:#141414;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:700"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>ホーム</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#3D3B37"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5"></path></svg>しおり</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#3D3B37"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>記録</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#3D3B37"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13l-4-4M17 17H4l4 4"></path></svg>精算</div>
+</div>
+</div>
+<div style="font-size:12px;color:#5E5C57;line-height:1.6">下端は padding-bottom: max(12px, env(safe-area-inset-bottom))。キーボード表示中はドックを隠し、保存ボタンをキーボードの直上に置く。</div>
+</div>
+
+</div>
+</section>
+
+<section id="motion" data-screen-label="03 動くアイコン" style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:24px;font-weight:800">03 動くアイコン</h2><p style="margin:0;font-size:14px;color:#3D3B37;line-height:1.7">SVG と CSS だけで作る。動きは 0.2〜0.4 秒で一度だけ（ループは「更新中」だけ）。端末で動きを減らす設定にしている場合は最終形を表示。</p></div>
+<button onClick="{{ replayAll }}" style="height:44px;padding:0 20px;border-radius:999px;border:none;background:#141414;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">すべて再生</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px">
+<sc-for list="{{ motions }}" as="m" hint-placeholder-count="5">
+<div style="background:#fff;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="height:120px;border-radius:18px;background:#F3F2EF;display:flex;align-items:center;justify-content:center">{{ m.icon }}</div>
+<div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:15px;font-weight:800">{{ m.title }}</div><div style="font-size:13px;line-height:1.6;color:#5E5C57">{{ m.desc }}</div></div>
+<button onClick="{{ m.onReplay }}" style="height:44px;border-radius:999px;border:none;box-shadow:inset 0 0 0 1.5px #D6D4CF;background:#fff;color:#141414;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">{{ m.btn }}</button>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section id="screens" data-screen-label="04 画面" style="display:flex;flex-direction:column;gap:24px">
+<h2 style="margin:0;font-size:24px;font-weight:800">04 画面モックアップ</h2>
+<div style="display:flex;flex-wrap:wrap;gap:48px 40px;align-items:flex-start">
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="font-size:14px;font-weight:800">サインイン · 通常</div>
+<div style="width:375px;height:812px;border-radius:48px;overflow:hidden;background:#F3F2EF;position:relative;box-shadow:0 0 0 10px #141414,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column">
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:15px;font-weight:600"><span>9:41</span><span style="width:120px;height:34px;background:#000;border-radius:20px;margin-top:6px"></span><span style="width:40px"></span></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 32px;gap:10px">
+<span style="width:14px;height:14px;border-radius:50%;background:#FF6A2B"></span>
+<div style="font-size:48px;font-weight:800;letter-spacing:-.04em;line-height:1">tomotabi</div>
+</div>
+<div style="padding:0 24px 56px;display:flex;flex-direction:column;gap:14px">
+<div style="height:52px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px #747775;display:flex;align-items:center;justify-content:center;gap:12px;font-size:15px;font-weight:600;color:#1F1F1F"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Google でログイン</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="font-size:14px;font-weight:800">サインイン · ログインできなかったとき</div>
+<div style="width:375px;height:812px;border-radius:48px;overflow:hidden;background:#F3F2EF;position:relative;box-shadow:0 0 0 10px #141414,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column">
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:15px;font-weight:600"><span>9:41</span><span style="width:120px;height:34px;background:#000;border-radius:20px;margin-top:6px"></span><span style="width:40px"></span></div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 32px;gap:10px">
+<span style="width:14px;height:14px;border-radius:50%;background:#FF6A2B"></span>
+<div style="font-size:48px;font-weight:800;letter-spacing:-.04em;line-height:1">tomotabi</div>
+</div>
+<div style="padding:0 24px 56px;display:flex;flex-direction:column;gap:14px">
+<div role="alert" style="background:#FDE7E4;border-radius:20px;padding:14px 16px;display:flex;gap:10px"><svg style="flex-shrink:0;margin-top:2px" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg><div style="font-size:14px;line-height:1.65;color:#7A1810"><b>ログインできませんでした</b><br>このアカウントでは利用できません。別の Google アカウントでお試しください。</div></div>
+<div style="height:52px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px #747775;display:flex;align-items:center;justify-content:center;gap:12px;font-size:15px;font-weight:600;color:#1F1F1F"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Google でログイン</div>
+</div>
+</div>
+</div>
+
+<sc-for list="{{ homes }}" as="h" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="font-size:14px;font-weight:800">{{ h.label }}</div>
+<div style="width:375px;height:812px;border-radius:48px;overflow:hidden;background:#F3F2EF;position:relative;box-shadow:0 0 0 10px #141414,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;color:#141414">
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:15px;font-weight:600"><span>9:41</span><span style="width:120px;height:34px;background:#000;border-radius:20px;margin-top:6px"></span><span style="width:40px"></span></div>
+
+<sc-if value="{{ h.unavailable }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 28px 180px;gap:14px">
+<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+<div style="font-size:24px;font-weight:800">一時的に利用できません</div>
+<div style="font-size:15px;line-height:1.7;color:#3D3B37">しばらく待ってから、もう一度お試しください。入力中の内容や記録は失われていません。</div>
+<div style="height:48px;padding:0 28px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;font-size:15px;font-weight:700;margin-top:6px">再試行</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ h.normal }}" hint-placeholder-val="{{ true }}">
+<div style="padding:6px 20px 0;display:flex;align-items:center;gap:10px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/12 土 – 10/14 月</div><div style="font-size:24px;font-weight:800;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">秋の京都 2 泊 3 日</div></div>
+<div style="height:44px;padding:0 12px 0 14px;border-radius:999px;background:#fff;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)">切り替え<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+</div>
+<div style="padding:12px 20px 0;display:flex;gap:8px;align-items:center">
+<sc-if value="{{ h.during }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:6px;background:#141414;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;flex-shrink:0"><span style="width:7px;height:7px;border-radius:50%;background:#FF6A2B"></span>旅行中</span></sc-if>
+<sc-if value="{{ h.before }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;background:#fff;box-shadow:inset 0 0 0 1.5px #141414;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>出発前</span></sc-if>
+<div style="flex:1;height:6px;border-radius:3px;background:#D6D4CF;overflow:hidden"><div style="height:6px;background:#141414;width:{{ h.pct }}"></div></div>
+<span style="font-size:12px;font-weight:700;flex-shrink:0">{{ h.dayText }}</span>
+</div>
+
+<div style="flex:1;overflow:auto;padding:18px 16px 170px;display:flex;flex-direction:column;gap:14px">
+<sc-if value="{{ h.hero }}" hint-placeholder-val="{{ true }}">
+<div style="flex-shrink:0;background:#141414;color:#fff;border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700;letter-spacing:.04em;color:#FF8A57">{{ h.heroLabel }}</span><span style="font-size:13px;color:#C9C7C2">{{ h.heroDate }}</span></div>
+<div style="display:flex;align-items:flex-end;gap:14px"><div style="font-size:52px;font-weight:800;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums">{{ h.heroTime }}</div><div style="padding-bottom:6px;min-width:0"><div style="font-size:18px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.heroTitle }}</div><div style="font-size:13px;color:#C9C7C2">{{ h.heroKind }}</div></div></div>
+<sc-if value="{{ h.heroReserved }}" hint-placeholder-val="{{ true }}"><div style="display:flex"><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;box-shadow:inset 0 0 0 1.5px #8FA8FF;color:#B9C8FF;padding:3px 9px;border-radius:999px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16"></path></svg>予約済み</span></div></sc-if>
+</div>
+</sc-if>
+
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:6px 16px">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 4px"><span style="font-size:15px;font-weight:800">{{ h.schedTitle }} <span style="font-size:12px;font-weight:600;color:#5E5C57">{{ h.schedDate }}</span></span><span style="font-size:14px;font-weight:700;color:#2346F5;padding:8px 0">すべて見る</span></div>
+<sc-for list="{{ h.items }}" as="it" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:14px 52px 1fr auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #ECEBE7">
+<span style="width:10px;height:10px;border-radius:50%;background:{{ it.dotBg }};box-shadow:inset 0 0 0 2.5px {{ it.dotRing }}"></span>
+<span style="font-size:{{ it.timeSize }};font-weight:700;font-variant-numeric:tabular-nums;color:{{ it.timeColor }}">{{ it.time }}</span>
+<span style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.name }}</span>
+<span style="display:flex;gap:4px">
+<sc-if value="{{ it.done }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#1B6B35;background:#E0F1E5;padding:3px 8px;border-radius:999px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>達成</span></sc-if>
+<sc-if value="{{ it.reserved }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#1D3AC9;background:#E6EBFF;padding:3px 8px;border-radius:999px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16"></path></svg>予約</span></sc-if>
+<sc-if value="{{ it.next }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:800;color:#C2410C">次</span></sc-if>
+</span>
+</div>
+</sc-for>
+<sc-if value="{{ h.schedEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="border-top:1px solid #ECEBE7;padding:18px 0 14px;display:flex;flex-direction:column;gap:12px;align-items:flex-start"><span style="font-size:15px;font-weight:700">この日の予定はまだありません</span><div style="height:44px;padding:0 18px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #141414;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>予定を追加</div></div>
+</sc-if>
+</div>
+
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:15px;font-weight:800">精算</span><span style="font-size:14px;font-weight:700;color:#2346F5">精算画面へ</span></div>
+<sc-if value="{{ h.settleOk }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700"><span>ひなた</span><span style="font-size:12px;color:#5E5C57;font-weight:600">から</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 6l6 6-6 6"></path></svg><span>あおい</span><span style="font-size:12px;color:#5E5C57;font-weight:600">へ</span><span style="margin-left:auto;font-size:12px;font-weight:600;color:#5E5C57">対象 5 件</span></div>
+<div style="font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums">3,450<span style="font-size:17px;margin-left:3px">円</span></div>
+</sc-if>
+<sc-if value="{{ h.settleErr }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start"><span style="display:inline-flex;gap:6px;align-items:center;font-size:15px;font-weight:700;color:#B42318"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3l10 18H2z"></path><path d="M12 10v4M12 17h.01"></path></svg>精算額を取得できませんでした</span><span style="font-size:22px;font-weight:800;color:#8A8883;letter-spacing:.1em">— — 円</span><div style="height:44px;padding:0 22px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;font-size:14px;font-weight:700">再試行</div></div>
+</sc-if>
+</div>
+
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:6px 16px">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 4px"><span style="font-size:15px;font-weight:800">最近の記録</span><span style="font-size:14px;font-weight:700;color:#2346F5;padding:8px 0">記録一覧へ</span></div>
+<sc-if value="{{ h.recordsOk }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #ECEBE7"><span style="font-size:14px;font-weight:600;flex:1;min-width:0">支払い · 錦市場で昼食</span><span style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums">2,400 円</span></div>
+<div style="display:flex;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #ECEBE7"><span style="font-size:14px;font-weight:600;flex:1">達成 · 伏見稲荷大社</span><span style="font-size:12px;color:#5E5C57">ひなた</span></div>
+<div style="display:flex;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #ECEBE7;color:#5E5C57"><span style="font-size:14px;flex:1;text-decoration:line-through">支払い · 稲荷の茶屋</span><span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;box-shadow:inset 0 0 0 1.5px #8A8883;padding:2px 7px;border-radius:999px">取り消し済み</span></div>
+</sc-if>
+<sc-if value="{{ h.recordsEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="border-top:1px solid #ECEBE7;padding:16px 0 14px;font-size:14px;font-weight:700">記録はまだありません</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<div style="position:absolute;left:12px;right:12px;bottom:26px;display:flex;flex-direction:column;gap:8px">
+<sc-if value="{{ h.normal }}" hint-placeholder-val="{{ true }}"><div style="height:58px;border-radius:999px;background:#FF6A2B;color:#141414;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:800;box-shadow:0 8px 24px rgba(255,106,43,.4)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>支払いを記録</div></sc-if>
+<div style="height:64px;border-radius:999px;background:rgba(255,255,255,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 0 0 1px rgba(0,0,0,.06),0 10px 30px rgba(0,0,0,.12);display:grid;grid-template-columns:repeat(4,1fr);padding:6px">
+<div style="border-radius:999px;background:#141414;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:700"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>ホーム</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#3D3B37"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5"></path></svg>しおり</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#3D3B37"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>記録</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:#3D3B37"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13l-4-4M17 17H4l4 4"></path></svg>精算</div>
+</div>
+</div>
+</div>
+</div>
+</sc-for>
+
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { t: [0, 0, 0, 0, 0], stale: false };
+  replay = i => this.setState(s => { const t = [...s.t]; t[i]++; return { t }; });
+  replayAll = () => this.setState(s => ({ t: s.t.map(x => x + 1) }));
+
+  icons() {
+    const h = React.createElement, t = this.state.t;
+    const fb = { transformBox: 'fill-box', transformOrigin: 'center' };
+    const svg = (k, size, kids, extra = {}) => h('svg', { key: k, 'data-anim': '', width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round', ...extra }, kids);
+    const tab = h('div', { key: 'tab' + t[0], 'data-anim': '', style: { width: 88, height: 60, borderRadius: 999, background: '#141414', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, fontSize: 11, fontWeight: 700 } },
+      h('svg', { width: 22, height: 22, viewBox: '0 0 24 24', style: { animation: 'ttPop .35s cubic-bezier(.3,1.6,.5,1)' } },
+        h('path', { d: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', fill: 'currentColor', stroke: 'currentColor', strokeWidth: 1.6, strokeLinejoin: 'round', style: { animation: 'ttFill .25s .1s both' } })), 'ホーム');
+    const save = h('div', { key: 'save' + t[1], 'data-anim': '', style: { height: 56, padding: '0 22px', borderRadius: 999, background: '#FF6A2B', color: '#141414', display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 800 } },
+      svg('s', 24, [
+        h('path', { key: 'p', d: 'M12 5v14M5 12h14', strokeWidth: 2.8, style: { ...fb, animation: 'ttOut .2s forwards' } }),
+        h('path', { key: 'c', d: 'M5 12.5l4.5 4.5L19 7.5', strokeWidth: 2.8, strokeDasharray: 24, strokeDashoffset: 24, style: { animation: 'ttDraw .3s .18s forwards' } })
+      ]), '記録しました');
+    const done = h('div', { key: 'done' + t[2], 'data-anim': '', style: { color: '#1B6B35' } },
+      svg('d', 56, [
+        h('circle', { key: 'o', cx: 12, cy: 12, r: 10, strokeWidth: 1.8, strokeDasharray: 63, strokeDashoffset: 63, style: { ...fb, transform: 'rotate(-90deg)', animation: 'ttDraw .35s forwards' } }),
+        h('path', { key: 'c', d: 'M7.5 12.5l3 3 6-6.5', strokeWidth: 2.2, strokeDasharray: 16, strokeDashoffset: 16, style: { animation: 'ttDraw .22s .3s forwards' } })
+      ]));
+    const sync = this.state.stale
+      ? h('div', { key: 'stale', style: { display: 'flex', alignItems: 'center', gap: 6, color: '#8A5300', background: '#FFF1D6', padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700 } },
+          svg('x', 18, [h('circle', { key: 'a', cx: 12, cy: 12, r: 9 }), h('path', { key: 'b', d: 'M12 7v5l3 2' })], { strokeWidth: 2.4 }), '更新できていません · 12:40 時点')
+      : h('div', { key: 'spin', 'data-anim': '', style: { display: 'flex', alignItems: 'center', gap: 6, color: '#5E5C57', background: '#fff', padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700 } },
+          svg('y', 18, h('path', { d: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4', style: { ...fb, animation: 'ttSpin 1s linear infinite' } }), { strokeWidth: 2.4 }), '更新中');
+    const flow = h('div', { key: 'flow' + t[4], 'data-anim': '', style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 700 } },
+      h('span', null, 'ひなた'),
+      h('span', { style: { display: 'flex', overflow: 'hidden', width: 30 } }, svg('f', 26, h('path', { d: 'M4 12h15M14 6l6 6-6 6', strokeWidth: 2.4 }), { style: { animation: 'ttFlow .4s cubic-bezier(.2,.8,.2,1) both' } })),
+      h('span', null, 'あおい'));
+    return [tab, save, done, sync, flow];
+  }
+
+  renderVals() {
+    const ic = this.icons();
+    const r = i => () => this.replay(i);
+    const motions = [
+      { icon: ic[0], title: 'タブの切り替え', desc: '選んだタブの線アイコンが塗りに変わり、小さく弾む。', btn: '再生', onReplay: r(0) },
+      { icon: ic[1], title: '支払いの保存成功', desc: '「＋」がチェックに変わる。短い完了表示と同時に使う。', btn: '再生', onReplay: r(1) },
+      { icon: ic[2], title: '達成の記録', desc: '円とチェックが順に描かれる。', btn: '再生', onReplay: r(2) },
+      { icon: ic[3], title: '更新中 → 更新できていません', desc: '更新中だけ回り続ける。失敗したら止め、形と文字を変える。', btn: this.state.stale ? '更新中に戻す' : '失敗にする', onReplay: () => this.setState(s => ({ stale: !s.stale })) },
+      { icon: ic[4], title: '精算の完了記録', desc: '矢印が「渡す人 → 受け取る人」の向きに一度だけ流れる。', btn: '再生', onReplay: r(4) }
+    ];
+    const it = (time, name, o = {}) => ({ time, name, done: false, reserved: false, next: false, dotBg: 'transparent', dotRing: '#B5B3AE', timeColor: '#141414', timeSize: time === '時刻未定' ? '12px' : '15px', ...o });
+    const today = [
+      it('9:00', '伏見稲荷大社', { done: true, dotBg: '#141414', dotRing: '#141414', timeColor: '#5E5C57' }),
+      it('12:00', '錦市場で昼食', { next: true, dotRing: '#FF6A2B' }),
+      it('時刻未定', '旅館にチェックイン', { timeColor: '#5E5C57' })
+    ];
+    const day1 = [
+      it('10:30', '京都駅に到着'),
+      it('13:00', '清水寺', {}),
+      it('時刻未定', '旅館にチェックイン', { reserved: true, timeColor: '#5E5C57' })
+    ];
+    const base = { normal: true, unavailable: false, during: true, before: false, pct: '55%', dayText: '2 / 3 日目', hero: true, heroLabel: '次の予定 · あと 2 時間 19 分', heroDate: '10/13 日', heroTime: '12:00', heroTitle: '錦市場で昼食', heroKind: '食べ処', heroReserved: true, schedTitle: '今日の予定', schedDate: '10/13 日', items: today, schedEmpty: false, settleOk: true, settleErr: false, recordsOk: true, recordsEmpty: false };
+    const homes = [
+      { ...base, label: 'ホーム · 旅行中' },
+      { ...base, label: 'ホーム · 出発前', during: false, before: true, pct: '0%', dayText: '出発まで 5 日', heroLabel: '最初の予定', heroDate: '10/12 土', heroTime: '10:30', heroTitle: '京都駅に到着', heroKind: '移動', heroReserved: false, schedTitle: '初日の予定', schedDate: '10/12 土', items: day1, settleOk: false, settleErr: false, recordsOk: false, recordsEmpty: true },
+      { ...base, label: 'ホーム · 予定 0 件', hero: false, items: [], schedEmpty: true },
+      { ...base, label: 'ホーム · 精算額の取得失敗', settleOk: false, settleErr: true },
+      { ...base, label: 'ホーム · 一時的に利用できない（503）', normal: false, unavailable: true }
+    ];
+    homes[1].settleOk = true;
+    const colors = [
+      { name: '--color-bg', use: '画面の背景', light: '#F3F2EF', dark: '#0F0F0E' },
+      { name: '--color-surface', use: 'カード', light: '#FFFFFF', dark: '#1C1C1A' },
+      { name: '--color-surface-inverse', use: '次の予定カード・選択中タブ', light: '#141414', dark: '#F3F2EF' },
+      { name: '--color-surface-muted', use: '押せないボタン・取りやめ', light: '#E4E2DD', dark: '#2B2A27' },
+      { name: '--color-text', use: '本文', light: '#141414', dark: '#F3F2EF' },
+      { name: '--color-text-muted', use: '補足（AA 5.9:1）', light: '#5E5C57', dark: '#A8A6A0' },
+      { name: '--color-line', use: '区切り線', light: '#ECEBE7', dark: '#2B2A27' },
+      { name: '--color-line-strong', use: '入力欄・副ボタンの枠', light: '#D6D4CF', dark: '#45433F' },
+      { name: '--color-accent', use: '主ボタン・現在地', light: '#FF6A2B', dark: '#FF7A40' },
+      { name: '--color-accent-text', use: 'オレンジの文字', light: '#C2410C', dark: '#FF9A6B' },
+      { name: '--color-link', use: 'リンク・「すべて見る」', light: '#2346F5', dark: '#8FA8FF' },
+      { name: '--color-success / -bg', use: '達成・完了', light: '#1B6B35', dark: '#8EE3A6' },
+      { name: '--color-info / -bg', use: '予約・お知らせ', light: '#1D3AC9', dark: '#B9C8FF' },
+      { name: '--color-warning / -bg', use: '注意・更新できていません', light: '#8A5300', dark: '#F5C66B' },
+      { name: '--color-danger / -bg', use: 'エラー・取り消す', light: '#B42318', dark: '#FF8A7A' },
+      { name: '--color-danger-bg', use: 'エラーの背景', light: '#FDE7E4', dark: '#3A1714' }
+    ];
+    const type = [
+      { name: '--text-display', val: '52 / 1.0 / 800', size: '40px', weight: 800, ls: '-.03em', sample: '12:00' },
+      { name: '--text-money-l', val: '34 / 1.1 / 800', size: '34px', weight: 800, ls: '-.02em', sample: '3,450 円' },
+      { name: '--text-title', val: '24 / 1.3 / 800', size: '24px', weight: 800, ls: '-.01em', sample: '秋の京都' },
+      { name: '--text-heading', val: '17 / 1.4 / 800', size: '17px', weight: 800, ls: '0', sample: '今日の予定' },
+      { name: '--text-body', val: '15 / 1.6 / 600', size: '15px', weight: 600, ls: '0', sample: '伏見稲荷大社' },
+      { name: '--text-body-regular', val: '15 / 1.7 / 400', size: '15px', weight: 400, ls: '0', sample: 'メモの本文' },
+      { name: '--text-caption', val: '13 / 1.5 / 400–700', size: '13px', weight: 600, ls: '0', sample: '対象 5 件' },
+      { name: '--text-badge', val: '12 / 1.3 / 700', size: '12px', weight: 700, ls: '0', sample: '達成・予約' },
+      { name: '--text-tab', val: '11 / 1.2 / 600–700', size: '11px', weight: 700, ls: '0', sample: 'ホーム' }
+    ];
+    const spaces = [4, 8, 12, 16, 20, 24, 32, 48].map((n, i) => ({ name: '--space-' + (i + 1), px: n + 'px' }));
+    const radii = [['--radius-sm', 8], ['--radius-md', 16], ['--radius-lg', 24], ['--radius-xl', 28], ['--radius-pill', 999]].map(([name, n]) => ({ name, px: n + 'px' }));
+    return { motions, homes, colors, type, spaces, radii, replayAll: this.replayAll };
+  }
+}
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 # 作業手順とルールは AGENTS.md と .agents/skills/devin-workflow/SKILL.md。背景は docs/devin-setup.md。
 
 # Node 22.x に揃える（.nvmrc / package.json の engines と同じ）。ベースイメージの Node は 22 と限らない。
-# 22 が無ければ nodejs.org の公式配布物をチェックサムで確かめて入れる。最後に 22 でなければ失敗させる。
+# One-time setup (e.g., install system tools, global CLIs).
 initialize: |
   set -eu
   if ! node --version 2>/dev/null | grep -q '^v22\.'; then
@@ -24,7 +24,7 @@ initialize: |
   fi
   node --version | grep -q '^v22\.' || { echo "Node 22 が必要です: $(node --version)" >&2; exit 1; }
 
-# lockfile どおりに入れる。CI（.github/workflows/ci.yml）と同じ。Node 22 以外では入れない。
+# Install project dependencies (runs during builds, surfaced to agent at session start).
 maintenance: |
   node --version | grep -q '^v22\.' || { echo "Node 22 が必要です: $(node --version)" >&2; exit 1; }
   npm ci
@@ -52,6 +52,7 @@ knowledge:
     contents: |
       npm run dev:api               # http://localhost:3001。DATABASE_URL が空なら in-memory
       npm run dev:web               # http://localhost:3000。/api を 3001 へ転送
+      # dev:api には PUBLIC_APP_ORIGIN=http://localhost:3000 を付ける。無いと /api/auth/* の POST が OriginGuard で 403 になる（DATABASE_URL 未設定時の 503 とは別物）。
   - name: notes
     contents: |
       .env は .env.example を元に作るが、DATABASE_URL は空のままでよい。本番の値や秘密情報を書かない。

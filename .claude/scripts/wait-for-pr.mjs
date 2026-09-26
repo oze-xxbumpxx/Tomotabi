@@ -13,8 +13,10 @@
 //
 // 方針:
 // - 「紐づく」の判定は findLinkedPr に閉じ込め、テストで固定する。
-//   PR 本文の Closes / Fixes / Resolves #N、または「Issue #N」、またはブランチ名の末尾 -N。
-//   Devin は本文に Closes を書き忘れることがあった（#33）ため、Issue #N とブランチ名も見る。
+//   GitHub が認識した紐づけ（closingIssuesReferences）、本文の Closes / Fixes / Resolves #N、
+//   またはブランチ名の末尾 -N。Devin は本文に Closes を書き忘れることがあった（#33）ため
+//   ブランチ名も見る。本文の「Issue #N」という言及だけでは紐づけとみなさない（別 PR の誤検出）。
+// - 対象は Issue の作成以降に作られた PR だけ。取得も作成日時で絞り、件数の上限で取りこぼさない。
 // - gh の一時的な失敗（ネットワーク等）では止めず、次の周期で再試行する。
 
 import { execFileSync } from 'node:child_process';
@@ -24,18 +26,22 @@ const DEFAULT_INTERVAL_SEC = 60;
 const DEFAULT_TIMEOUT_SEC = 8 * 60 * 60;
 
 /**
- * @param {Array<{number:number,title?:string,body?:string,headRefName?:string,url?:string}>} prs
+ * @param {Array<{number:number,title?:string,body?:string,headRefName?:string,url?:string,
+ *   createdAt?:string,closingIssuesReferences?:Array<{number:number}>}>} prs
  * @param {number} issue
+ * @param {string | null} since Issue の作成日時（ISO 8601）。これより前に作られた PR は対象外。
  * @returns {object | null} 紐づく PR のうち番号が最小のもの。無ければ null。
  */
-export function findLinkedPr(prs, issue) {
+export function findLinkedPr(prs, issue, since = null) {
   const n = String(issue);
   const bodyLink = new RegExp(`\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s+#${n}(?!\\d)`, 'i');
-  const issueMention = new RegExp(`\\bissue\\s*#${n}(?!\\d)`, 'i');
   const branchSuffix = new RegExp(`[-/]${n}$`);
+  const sinceMs = since === null ? null : Date.parse(since);
   const linked = prs.filter((pr) => {
+    if (sinceMs !== null && !(Date.parse(pr.createdAt ?? '') >= sinceMs)) return false;
+    const closes = (pr.closingIssuesReferences ?? []).some((ref) => ref.number === issue);
     const text = `${pr.title ?? ''}\n${pr.body ?? ''}`;
-    return bodyLink.test(text) || issueMention.test(text) || branchSuffix.test(pr.headRefName ?? '');
+    return closes || bodyLink.test(text) || branchSuffix.test(pr.headRefName ?? '');
   });
   if (linked.length === 0) return null;
   return linked.sort((a, b) => a.number - b.number)[0];
@@ -57,10 +63,22 @@ function parseArgs(argv) {
   return { issue, interval, timeout };
 }
 
-function listPrs() {
+function issueCreatedAt(issue) {
+  const out = execFileSync('gh', ['issue', 'view', String(issue), '--json', 'createdAt', '--jq', '.createdAt'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  return out.trim();
+}
+
+function listPrs(since) {
   const out = execFileSync(
     'gh',
-    ['pr', 'list', '--state', 'all', '--limit', '50', '--json', 'number,title,body,headRefName,url'],
+    [
+      'pr', 'list', '--state', 'all', '--limit', '100',
+      '--search', `created:>=${since}`,
+      '--json', 'number,title,body,headRefName,url,createdAt,closingIssuesReferences',
+    ],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   );
   return JSON.parse(out);
@@ -76,9 +94,11 @@ async function main() {
   }
   const deadline = Date.now() + args.timeout * 1000;
   console.log(`Issue #${args.issue} に紐づく PR を待っています（${args.interval} 秒ごと）`);
+  let since = null;
   for (;;) {
     try {
-      const pr = findLinkedPr(listPrs(), args.issue);
+      since ??= issueCreatedAt(args.issue);
+      const pr = findLinkedPr(listPrs(since), args.issue, since);
       if (pr !== null) {
         console.log(`PR #${pr.number} が見つかりました: ${pr.url}`);
         console.log(JSON.stringify({ issue: args.issue, number: pr.number, url: pr.url, title: pr.title, headRefName: pr.headRefName }));

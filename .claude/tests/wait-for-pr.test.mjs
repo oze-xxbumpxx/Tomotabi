@@ -15,24 +15,33 @@ test('本文の Closes / Fixes / Resolves #N で見つける', () => {
   }
 });
 
-test('本文の「Issue #N」とブランチ名の末尾 -N でも見つける（Closes の書き忘れ対策）', () => {
-  assert.equal(findLinkedPr([{ number: 33, body: 'Issue #32（M1-b3）。', headRefName: 'devin/m1b3' }], 32)?.number, 33);
-  assert.equal(findLinkedPr([{ number: 34, body: '', headRefName: 'devin/m1b1-guard-foundation-30' }], 30)?.number, 34);
+test('GitHub が認識した紐づけ（closingIssuesReferences）とブランチ名の末尾 -N で見つける', () => {
+  assert.equal(findLinkedPr([{ number: 39, body: '', headRefName: 'devin/m1-b4', closingIssuesReferences: [{ number: 37 }] }], 37)?.number, 39);
+  // #33 は本文に Closes が無かったが、ブランチ名の末尾で紐づく
+  assert.equal(findLinkedPr([{ number: 33, body: 'Issue #32（M1-b3）。', headRefName: 'devin/m1b3-me-contract-32' }], 32)?.number, 33);
 });
 
-test('番号の前方一致や無関係な参照では見つけない', () => {
+test('本文で「Issue #N」と言及しただけの別 PR は紐づけとみなさない', () => {
+  const prs = [{ number: 28, body: 'Issue #24 / #26 の作成と PR #25 のレビュー', headRefName: 'docs/log-devin-automation' }];
+  assert.equal(findLinkedPr(prs, 24), null);
+});
+
+test('Issue の作成より前に作られた PR は対象外', () => {
+  const since = '2026-09-25T22:57:13Z';
   const prs = [
-    { number: 50, body: 'Closes #370', headRefName: 'devin/foo-370' },
-    { number: 51, body: 'PR #37 を参照', headRefName: 'devin/bar' },
-    { number: 52, body: 'See #37', headRefName: 'fix/37-typo' },
+    { number: 20, body: 'Closes #37', headRefName: 'a', createdAt: '2026-09-20T00:00:00Z' },
+    { number: 39, body: 'Closes #37', headRefName: 'b', createdAt: '2026-09-26T00:20:27Z' },
   ];
-  assert.equal(findLinkedPr(prs, 37), null);
+  assert.equal(findLinkedPr(prs, 37, since)?.number, 39);
+  assert.equal(findLinkedPr(prs.slice(0, 1), 37, since), null);
+  // 作成日時が取れない PR も、since 指定時は対象外（安全側）
+  assert.equal(findLinkedPr([{ number: 41, body: 'Closes #37', headRefName: 'c' }], 37, since), null);
 });
 
 test('複数あれば番号が最小の PR を返す', () => {
   const prs = [
     { number: 45, body: 'Closes #37', headRefName: 'b' },
-    { number: 41, body: 'Issue #37 の続き', headRefName: 'a' },
+    { number: 41, body: 'Fixes #37', headRefName: 'a' },
   ];
   assert.equal(findLinkedPr(prs, 37)?.number, 41);
 });

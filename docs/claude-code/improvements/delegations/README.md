@@ -49,6 +49,10 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 | `missing-test` | 試験計画の観点 ID に対応するテストが無い |
 | `coding-standard` | `.claude/rules/coding-standards.md` の違反 |
 | `security` | セキュリティの指摘（severity も `security`） |
+| `design-gap` | 設計書・試験計画の側の穴で、実装どおりでも期待の動きにならない（#51 ログイン失敗時の戻り先） |
+| `error-feedback` | 失敗したときに利用者への表示・反応が無い（#51 サインインの失敗） |
+| `error-code-in-url` | URL のクエリに内部の失敗理由が残る（#55） |
+| `merge-conflict` | main との衝突で CI が走らない・マージできない（#48） |
 
 ## 昇格の閾値
 

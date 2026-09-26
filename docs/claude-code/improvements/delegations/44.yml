@@ -1,0 +1,34 @@
+issue: 44
+title: 'feat(api): M1-c 管理 CLI（初期登録と利用停止）'
+agent: 'devin'
+model: 'unknown'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-09-26T05:25:29Z'
+reviews:
+  - round: 0
+    reviewed_sha: '591016383e4d3bd749cfdd6ea7012b5d7b1f2c5a'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+  - round: 1
+    reviewed_sha: '9b5883dc2fd72bfa7604657c0ac2fef97f1faeb3'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: '漏れの確かめ方が JSON.stringify で message を見ていない・証明書の取得で外部通信する（#48 で対応）'
+escalations: 1
+outcome: 'merged'
+gh:
+  pr: 46
+  pr_created_at: '2026-09-26T05:42:59Z'
+  merged_at: '2026-09-26T07:30:46Z'
+  closed_at: '2026-09-26T07:30:46Z'
+  commits: 4
+  ci_first_pass: true
+  closes_linked: true

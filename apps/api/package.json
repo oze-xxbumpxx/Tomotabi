@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:check": "drizzle-kit check",
-    "cli:enroll": "nest build && node dist/cli/enroll-google-account.js"
+    "cli:enroll": "nest build && node dist/cli/enroll-google-account.js",
+    "cli:disable": "nest build && node dist/cli/disable-google-account.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

@@ -85,6 +85,31 @@ MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
 - 表を追加したら、`0001_app_runtime_grants.sql` と同じ形で GRANT の migration を追加し、`apps/api/tests/db/identity-schema.db.test.ts` と同じ形で権限テストを足します。
 - `DATABASE_URL` をローカル DB に向けると、検証用の foundation カウンタ（`infra.m0_probes`）は使えません。この表は migration に含めていないためです（M2 の開始時に撤去予定）。
 
+## 管理 CLI：Google アカウントの初期登録と利用停止（M1-c）
+
+管理者端末でだけ実行します。アプリの HTTP ルートには載せません。接続には `MIGRATION_DATABASE_URL`（migrator ロール）を使います。
+
+**初期登録（`cli:enroll`）**
+
+Google Cloud で **デスクトップ型** の OAuth クライアントを別途作り、`.env` の `ENROLL_GOOGLE_CLIENT_ID` / `ENROLL_GOOGLE_CLIENT_SECRET` に入れます（リダイレクト URI の登録は不要。クライアントは動作中のポートを自動で使います）。
+
+```bash
+MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
+ENROLL_GOOGLE_CLIENT_ID=... ENROLL_GOOGLE_CLIENT_SECRET=... \
+  npm run cli:enroll -w @tomotabi/api -- --slot 0   # スロットは 0 か 1
+```
+
+表示される URL をブラウザで開き（5 分以内）、表示名・メール・sub の末尾 4 文字を確認して `yes` と入力すると、users → accounts → allowlist を 1 トランザクションで登録します。重複（同じスロットや同じ Google アカウント）は失敗して何も残りません。
+
+**利用停止（`cli:disable`）**
+
+```bash
+MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
+  npm run cli:disable -w @tomotabi/api -- --slot 0
+```
+
+allowlist を `enabled = false` にして、そのユーザーの全セッションを削除します。再実行しても同じ結果で成功します。
+
 ## 検証用 HTTP
 
 | 方法 | 経路 | 意味 |

@@ -14,6 +14,10 @@ export function getPool(): Pool {
       idleTimeoutMillis: 5_000,
       connectionTimeoutMillis: 10_000,
     });
+    // アイドル接続の非同期エラー（DB 停止等）を握りつぶす。listener が無いと
+    // EventEmitter の error イベントがプロセスを落とす。実クエリの失敗は
+    // 各呼び出しの reject で処理する。
+    pool.on("error", () => {});
   }
   return pool;
 }

@@ -47,11 +47,12 @@ async function expectGuardError(
 }
 
 describe("SessionGuard", () => {
-  it("passes and sets the UserId on the request when authenticated (U-03)", async () => {
+  it("passes and sets the UserId and session expiry on the request when authenticated (U-03)", async () => {
+    const expiresAt = new Date("2026-10-02T00:00:00.000Z");
     const { guard, verify } = createGuard({
       kind: "authenticated",
       userId: USER_ID,
-      expiresAt: new Date("2026-10-02T00:00:00.000Z"),
+      expiresAt,
     });
     const request: Record<string, unknown> = { headers: HEADERS };
     const context = createHttpContext({ request });
@@ -59,12 +60,17 @@ describe("SessionGuard", () => {
     await expect(guard.canActivate(context)).resolves.toBe(true);
 
     expect(request.userId).toBe(USER_ID);
+    expect(request.sessionExpiresAt).toBe(expiresAt);
     expect(verify).toHaveBeenCalledWith(HEADERS);
   });
 
   it("rejects with 401 UNAUTHENTICATED when unauthenticated (U-04)", async () => {
     const { guard } = createGuard({ kind: "unauthenticated" });
-    const context = createHttpContext({ request: { headers: HEADERS } });
+    const response: { locals: Record<string, string> } = { locals: {} };
+    const context = createHttpContext({
+      request: { headers: HEADERS },
+      response,
+    });
 
     await expectGuardError(
       guard.canActivate(context),
@@ -72,11 +78,16 @@ describe("SessionGuard", () => {
       401,
       "UNAUTHENTICATED",
     );
+    expect(response.locals.code).toBe("UNAUTHENTICATED");
   });
 
   it("rejects with 403 FORBIDDEN_NOT_ALLOWED when forbidden (U-05)", async () => {
     const { guard } = createGuard({ kind: "forbidden" });
-    const context = createHttpContext({ request: { headers: HEADERS } });
+    const response: { locals: Record<string, string> } = { locals: {} };
+    const context = createHttpContext({
+      request: { headers: HEADERS },
+      response,
+    });
 
     await expectGuardError(
       guard.canActivate(context),
@@ -84,14 +95,20 @@ describe("SessionGuard", () => {
       403,
       "FORBIDDEN_NOT_ALLOWED",
     );
+    expect(response.locals.code).toBe("FORBIDDEN_NOT_ALLOWED");
   });
 
   it("rejects with 503 AUTH_UNAVAILABLE without Set-Cookie when unavailable (U-06)", async () => {
     const { guard } = createGuard({ kind: "unavailable" });
     const setHeader = vi.fn();
+    const response = {
+      locals: {} as Record<string, string>,
+      setHeader,
+      header: setHeader,
+    };
     const context = createHttpContext({
       request: { headers: HEADERS },
-      response: { setHeader, header: setHeader },
+      response,
     });
 
     await expectGuardError(
@@ -101,6 +118,7 @@ describe("SessionGuard", () => {
       "AUTH_UNAVAILABLE",
     );
     expect(setHeader).not.toHaveBeenCalled();
+    expect(response.locals.code).toBe("AUTH_UNAVAILABLE");
   });
 
   it("passes without calling the verifier on a public route (U-07)", async () => {

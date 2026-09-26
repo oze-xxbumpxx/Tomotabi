@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { UserId } from "../../src/common/domain/user-id";
 import type { IdentityReader } from "../../src/modules/identity/adapter/outbound/identity-reader";
 import { GetMeUseCase } from "../../src/modules/identity/usecase/get-me.usecase";
 
-const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
+const USER_ID = UserId.parse("550e8400-e29b-41d4-a716-446655440000");
 
 describe("GetMeUseCase", () => {
   // U-16: id・displayName・sessionExpiresAt だけを返す

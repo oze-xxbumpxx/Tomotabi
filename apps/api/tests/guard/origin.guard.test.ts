@@ -27,8 +27,13 @@ function expectGuardError(
   code: string,
 ): void {
   let result: unknown = null;
+  const response: { locals: Record<string, string> } = { locals: {} };
   try {
-    guard.canActivate(contextWith(method, headers));
+    const context = createHttpContext({
+      request: { method, headers },
+      response,
+    });
+    guard.canActivate(context);
   } catch (caught) {
     result = caught;
   }
@@ -36,6 +41,8 @@ function expectGuardError(
   const httpError = result as HttpException;
   expect(httpError.getStatus()).toBe(status);
   expect(httpError.getResponse()).toMatchObject({ code });
+  // M1-b2 の取り決め: 拒否コードを res.locals.code に書く
+  expect(response.locals.code).toBe(code);
 }
 
 describe("OriginGuard", () => {

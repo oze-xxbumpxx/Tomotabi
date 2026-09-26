@@ -8,6 +8,7 @@ import {
   type ExecutionContext,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import type { Response } from "express";
 import {
   SESSION_VERIFIER,
   type SessionVerifier,
@@ -37,27 +38,32 @@ export class SessionGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const http = context.switchToHttp();
+    const request = http.getRequest<AuthenticatedRequest>();
     const result = await this.sessionVerifier.verify(request.headers);
 
     switch (result.kind) {
       case "authenticated": {
         request.userId = result.userId;
+        request.sessionExpiresAt = result.expiresAt;
         return true;
       }
       case "unauthenticated": {
+        reject(context, "UNAUTHENTICATED");
         throw new UnauthorizedException({
           code: "UNAUTHENTICATED",
           message: "Authentication required",
         });
       }
       case "forbidden": {
+        reject(context, "FORBIDDEN_NOT_ALLOWED");
         throw new ForbiddenException({
           code: "FORBIDDEN_NOT_ALLOWED",
           message: "This account is not allowed",
         });
       }
       case "unavailable": {
+        reject(context, "AUTH_UNAVAILABLE");
         throw new ServiceUnavailableException({
           code: "AUTH_UNAVAILABLE",
           message: "Authentication is temporarily unavailable",
@@ -65,4 +71,10 @@ export class SessionGuard implements CanActivate {
       }
     }
   }
+}
+
+/** M1-b2 の取り決め: 拒否の結果コードを res.locals.code に書き、1 要求 1 行のログに出す。 */
+function reject(context: ExecutionContext, code: string): void {
+  const response = context.switchToHttp().getResponse<Response>();
+  (response.locals ??= {}).code = code;
 }

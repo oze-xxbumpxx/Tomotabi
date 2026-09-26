@@ -297,3 +297,31 @@ test('不明なサブコマンドは exit 2', () => {
   assert.equal(res.status, 2);
   assert.match(res.stderr, /usage/);
 });
+
+test('D-12: runner（実行場所）は既定 local、cloud を選べ、それ以外はエラー。古い記録は unknown として集計する', () => {
+  assert.equal(base(60).runner, 'local');
+  assert.equal(
+    newRecord({ issue: 61, title: 't', model: 'swe-2-high', runner: 'cloud', delegatedAt: '2026-09-26T00:00:00Z' }).runner,
+    'cloud',
+  );
+  assert.throws(
+    () => newRecord({ issue: 62, title: 't', model: 'swe-2-high', runner: 'remote', delegatedAt: '2026-09-26T00:00:00Z' }),
+    /--runner/,
+  );
+  withTmp((dir) => {
+    const common = ['--model', 'swe-2-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir];
+    assert.equal(cli(['init', '63', ...common]).status, 0);
+    assert.equal(parseYaml(readFileSync(join(dir, '63.yml'), 'utf8')).runner, 'local');
+    assert.equal(cli(['init', '64', '--runner', 'cloud', ...common]).status, 0);
+    assert.equal(parseYaml(readFileSync(join(dir, '64.yml'), 'utf8')).runner, 'cloud');
+    assert.equal(cli(['init', '65', '--runner', 'remote', ...common]).status, 2);
+    assert.equal(cli(['init', '66', '--runner', 'unknown', ...common]).status, 2);
+  });
+  const legacy = base(66);
+  delete legacy.runner;
+  const s = summarize([base(67), { ...base(68), runner: 'cloud' }, legacy]);
+  assert.equal(s.runners.local.count, 1);
+  assert.equal(s.runners.cloud.count, 1);
+  assert.equal(s.runners.unknown.count, 1);
+  assert.match(formatSummary(s), /実行場所別: .*\n {2}cloud: 1 \//);
+});

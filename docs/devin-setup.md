@@ -45,6 +45,20 @@ Devin の作業環境は `.devin/blueprint.yaml` で定める（画面で設定�
 - `npm run test:api-db` は Docker（Testcontainers）が必要。使えない場合は CI の `api-db` ジョブで確かめる。
 - 規約や作業手順は blueprint に書かず、`AGENTS.md` と `devin-workflow` スキルに置く。blueprint の `knowledge` は環境に結びついた短いコマンドの参照だけにする。
 
+## 実行場所（2026-09-26）
+
+Devin は、**既定でローカル**（手元の Mac の Devin CLI）で動かす。ユーザーが出先から指示したときだけクラウドを使う。起動と修正の手順は `.claude/skills/review-devin-pr/SKILL.md`。
+
+| | ローカル（既定） | クラウド（指示時のみ） |
+| --- | --- | --- |
+| 起動 | 専用クローン `/Users/siro/個人開発/devin-work/tomotabi` で `devin --model swe-2-<effort> --permission-mode dangerous -p …` | `devin --cloud -p …` |
+| モデル | `--model` で依頼ごとに SWE-2 の effort を選べる | `--model` は無視される。Devin Web の「セッションエージェント」の既定（SWE-2 High） |
+| PR の監視 | しない。直しは新しいローカルセッションを起動して頼む（`devin -c` は起動しなかった） | PR のコメントと CI の失敗に自動で対応する |
+| 注意 | 同じクローンで 2 つ同時に動かさない。`--sandbox` を付けると途中で止まる。書き込みは強制ではなくプロンプトでクローン内に限る | Mac を閉じても進む |
+
+- 専用クローンにしたのは、Devin のフォルダ信頼（初回だけ `devin` を対話で起動して許可）を 1 回で済ませるため。worktree は `.git` が元のリポジトリ側にあるため使わない。
+- クラウドで作業したセッションは、学んだことをスキルや blueprint に残す PR を自分から出すことがある（#53・#54）。Issue に紐づかないので、見つけたら通常の PR と同じくレビューする。
+
 ## 確認済みのこと（2026-09-25）
 
 Devin のセッションで「使えるスキルの一覧」を尋ねて確かめた。

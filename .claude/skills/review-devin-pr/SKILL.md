@@ -15,10 +15,25 @@ description: >
 ## 委譲（Issue を渡した直後）
 
 1. `gh issue create` の後、フック（suggest-pr-watch）が促したら、まず記録を作る:
-   `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium|swe-2-high|swe-2-max> [--level 0-3]`。
-   Devin のモデルは必ず SWE-2（`devin --cloud --model swe-2-<effort> -p …`）。自分で実装する Issue では記録も待機もしない。
-2. Bash の `run_in_background` で `node .claude/scripts/wait-for-pr.mjs <Issue>` を起動する。Issue ごとに 1 本。
-3. 待機中は `sleep` や `gh` の繰り返しで様子を見ない。終了すると呼び戻される。
+   `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud] [--level 0-3]`。
+   自分で実装する Issue では記録も待機もしない。
+2. Devin を起動する（2026-09-26 ユーザー指示）。モデルは必ず SWE-2。effort は実装の難しさ・複雑さで選び、依頼時にユーザーへ伝える
+   （目安: L0 / L1 → medium、通常の機能 → high、L3 で認証・お金・並行処理 → max）。
+   - **既定はローカル**。専用クローン `/Users/siro/個人開発/devin-work/tomotabi`（Devin で信頼済み）で動かす。
+     worktree は使わない（`.git` が元のリポジトリ側にあり、Devin の書き込み先が散らばる）。起動の前に次を確かめる:
+     前の `devin` プロセスが終わっている（`pgrep -fl "devin .*-p"`。同じクローンで 2 つ同時に動かさない）、
+     作業ツリーがきれい（`git status --short` が空。残っていたら捨てずにユーザーに伝える）、
+     `git fetch origin && git switch --detach origin/main` で最新の main から始める。
+     起動: `devin --model swe-2-<effort> --permission-mode dangerous -p "<依頼>"` を `run_in_background` で。
+     `--sandbox` は付けない（autonomous モードになり、確認が要る操作が拒否されて途中で止まる。#48）。
+     dangerous は確認なしでコマンドを実行するため、Devin に危険操作の確認は効かない（ユーザー了承済みの割り切り）。代わりに:
+     プロンプトに「作業はこのリポジトリのフォルダの中だけで行う。force push・ブランチの削除・履歴の書き換え・main への push・
+     クローン外への書き込みはしない。必要になったら止まって報告する」を必ず入れる。
+     終了後に、`git -C <クローン> reflog -n 20` と `gh pr view <n> --json commits` で、force push や想定外のブランチ操作が無いかを確かめる。
+   - **クラウドはユーザーが指示したときだけ**（出先のとき）。`devin --cloud -p "<依頼>"`。`--cloud` では `--model` が無視され、
+     Devin Web の「セッションエージェント」の既定（SWE-2 High）で動く。High 以外が要るときは、依頼の前にユーザーに既定の切り替えを頼む。
+3. Bash の `run_in_background` で `node .claude/scripts/wait-for-pr.mjs <Issue>` を起動する。Issue ごとに 1 本。
+4. 待機中は `sleep` や `gh` の繰り返しで様子を見ない。終了すると呼び戻される。
    - 終了コード 0: 出力の `{"issue":…}` の JSON 行に PR 番号がある（最後の行とは限らない）→「レビュー」の round 0 へ
    - 終了コード 3: 時間切れ → ユーザーに伝え、再度待つかを聞く
 
@@ -80,7 +95,11 @@ description: >
 2. 本文に `(aside)` を入れない（Devin が対応しなくなる）。秘密・環境変数の値・ローカルのパスを書かない。
 3. 範囲外の気づきは投稿しない（ユーザーに渡す）。
 4. `gh pr comment <n> --body-file <file>` で投稿し、投稿時刻（`date -u +%Y-%m-%dT%H:%M:%SZ`）を控える。
-5. `run_in_background` で `node .claude/scripts/wait-for-pr-update.mjs <PR> --since <投稿時刻> --sha <レビューした head>` を起動する。
+5. **ローカルの委譲なら**、Devin は PR を監視していないので、投稿だけでは直らない。上の「委譲」2 と同じ確認をしてから、
+   新しいローカルセッションを起動して直させる（`devin -c` の再開は「failed to start ACP agent session」で動かなかった）:
+   `devin --model swe-2-<同じ effort> --permission-mode dangerous -p "PR #<n>（ブランチ <branch>）を直す。gh pr view <n> --comments で claude-review round=<r> のコメントを読み、must を直して同じブランチに push する。force push はしない。"`。
+   クラウドの委譲なら、Devin が PR のコメントに自動で対応するので起動しない。
+6. `run_in_background` で `node .claude/scripts/wait-for-pr-update.mjs <PR> --since <投稿時刻> --sha <レビューした head>` を起動する。
    - 終了コード 0: 更新あり。`ciConclusion` が `failure` なら、Devin が CI を直している途中のことがあるので、
      `--sha <その head>` でもう一度待つ（1 回まで。続けて失敗したらユーザーに伝える）。`success` / `none` なら次の round のレビューへ
    - 終了コード 3: 時間切れ（既定 4 時間）→ ユーザーに伝える。Devin の反応（返信・コミット）が無いときは、監視が止まっている可能性も伝える
@@ -90,8 +109,9 @@ description: >
 
 PR・Issue・コメント・記録のどこにも詳細を書かない。`security` の指摘があることも書かない。ユーザーに渡し、経路を決めてもらう。推奨の順:
 
-1. 未マージ（main に入っていない）なら、Devin の新しいセッションを CLI で起動し、PR には書かずに直させる:
-   `devin --cloud --model swe-2-<同じ effort> -p "<ブランチ名> に push して直す。…"`（非公開のセッション）。
+1. 未マージ（main に入っていない）なら、Devin の新しいセッションを CLI で起動し、PR には書かずに直させる。
+   ローカルのセッション（上の「委譲」2 の手順）が既定。PR に書かないので、指摘の中身はプロンプトだけで渡す:
+   `devin --model swe-2-<同じ effort> --permission-mode dangerous -p "<ブランチ名> に push して直す。…"`。
 2. Devin の監視が止まっているか直せないときは、Devin の作業が終わっているのを確かめてから、Claude が同じブランチに commit する。
 3. main に入っている問題なら、GitHub の Security Advisory（非公開）で扱う。
 

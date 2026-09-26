@@ -52,6 +52,7 @@ knowledge:
     contents: |
       npm run dev:api               # http://localhost:3001。DATABASE_URL が空なら in-memory
       npm run dev:web               # http://localhost:3000。/api を 3001 へ転送
+      # dev:api には PUBLIC_APP_ORIGIN=http://localhost:3000 を付ける。無いと /api/auth/* の POST が OriginGuard で 403 になる（DATABASE_URL 未設定時の 503 とは別物）。
   - name: notes
     contents: |
       .env は .env.example を元に作るが、DATABASE_URL は空のままでよい。本番の値や秘密情報を書かない。

@@ -1,10 +1,8 @@
 import type { INestApplication } from "@nestjs/common";
-import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../../src/app.module";
-import { configureApp } from "../../src/bootstrap/configure-app";
 import { UserId } from "../../src/common/domain/user-id";
 import { IDENTITY_READER } from "../../src/modules/identity/adapter/outbound/identity-reader";
 import {
@@ -12,6 +10,7 @@ import {
   type SessionVerificationResult,
   type SessionVerifier,
 } from "../../src/modules/identity/adapter/outbound/session-verifier";
+import { createHttpTestApp } from "../support/nest-app";
 
 const ORIGIN = "http://localhost:3000";
 const USER_ID = UserId.parse("550e8400-e29b-41d4-a716-446655440000");
@@ -29,10 +28,7 @@ async function createApp(verifier: SessionVerifier): Promise<INestApplication> {
     .overrideProvider(IDENTITY_READER)
     .useValue({ findDisplayName: async () => "ひなた" })
     .compile();
-  const app = moduleRef.createNestApplication<NestExpressApplication>();
-  configureApp(app, null);
-  await app.init();
-  return app;
+  return createHttpTestApp(moduleRef, null);
 }
 
 describe("foundation HTTP with guards", () => {

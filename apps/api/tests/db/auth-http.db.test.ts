@@ -9,7 +9,6 @@ import type { Pool } from "pg";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../../src/app.module";
-import { configureApp } from "../../src/bootstrap/configure-app";
 import {
   closePool,
   getPool,
@@ -21,6 +20,7 @@ import {
   startPostgres,
   type TestDatabase,
 } from "../support/database";
+import { createHttpTestApp } from "../support/nest-app";
 
 const ORIGIN = "http://localhost:3000";
 const EVIL_ORIGIN = "http://evil.example.test";
@@ -176,9 +176,7 @@ beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
-  app = moduleRef.createNestApplication<NestExpressApplication>();
-  configureApp(app, auth);
-  await app.init();
+  app = await createHttpTestApp(moduleRef, auth);
 
   hinata = { userId: "", name: "ひなた", email: "hinata@example.test", sub: "test-sub-0" };
   hinata.userId = await insertUser(hinata.name, hinata.email);
@@ -221,6 +219,24 @@ describe("H: 実 HTTP と Better Auth の配線", () => {
       .send({ provider: "apple" });
 
     expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      code: "INVALID_REQUEST",
+      message: "Invalid sign-in request",
+    });
+  });
+
+  it("H-01c: JSON 以外の Content-Type は 415 で { code, message } を返す", async () => {
+    const response = await http()
+      .post("/api/auth/sign-in/social")
+      .set("Origin", ORIGIN)
+      .set("Content-Type", "text/plain")
+      .send("provider=google");
+
+    expect(response.status).toBe(415);
+    expect(response.body).toEqual({
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      message: "Content-Type must be application/json",
+    });
   });
 
   it("H-02: 不正な state の callback は 500 にならない", async () => {

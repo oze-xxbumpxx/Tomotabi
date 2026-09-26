@@ -1,4 +1,9 @@
-import { betterAuth, type Auth, type BetterAuthOptions } from "better-auth";
+import {
+  betterAuth,
+  type Auth,
+  type BetterAuthOptions,
+  type BetterAuthPlugin,
+} from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -55,6 +60,17 @@ const DISABLED_PATHS = [
 
 const SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 7;
 
+// エラー body は contracts の Error スキーマ（code と一般的な message）に揃える。
+// message に入力値や内部情報を含めない。
+const INVALID_REQUEST_ERROR = {
+  code: "INVALID_REQUEST",
+  message: "Invalid sign-in request",
+} as const;
+const UNSUPPORTED_MEDIA_TYPE_ERROR = {
+  code: "UNSUPPORTED_MEDIA_TYPE",
+  message: "Content-Type must be application/json",
+} as const;
+
 // better-auth の内部ロガーは例外オブジェクトをそのまま出力し、DB エラー時に
 // query params（= セッション token など）が stderr に流れる。ログに秘密を出さない
 // 完了条件のため、message だけを pino に流し args は捨てる。
@@ -72,15 +88,34 @@ const signInSocialBodyCheck = createAuthMiddleware(async (ctx) => {
     ? ctx.body
     : {}) as Record<string, unknown>;
   if (body.provider !== "google") {
-    throw new APIError("BAD_REQUEST", { message: "Invalid sign-in request" });
+    throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
   }
   if (body.idToken !== undefined && body.idToken !== null) {
-    throw new APIError("BAD_REQUEST", { message: "Invalid sign-in request" });
+    throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
   }
   if (body.callbackURL !== undefined && body.callbackURL !== "/") {
-    throw new APIError("BAD_REQUEST", { message: "Invalid sign-in request" });
+    throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
   }
 });
+
+/**
+ * better-call が返す 415 の body は受け取った Content-Type の値を message に含める。
+ * onResponse で body を差し替え、code と一般的な message だけにする。
+ */
+const unsupportedMediaTypeBody: BetterAuthPlugin = {
+  id: "tomotabi-unsupported-media-type-body",
+  onResponse: async (response) => {
+    if (response.status !== 415) {
+      return;
+    }
+    return {
+      response: new Response(JSON.stringify(UNSUPPORTED_MEDIA_TYPE_ERROR), {
+        status: 415,
+        headers: { "Content-Type": "application/json" },
+      }),
+    };
+  },
+};
 
 let currentAuth: Auth | null = null;
 
@@ -146,7 +181,7 @@ export function createAuth(
         },
       },
     },
-    plugins: options?.plugins ?? [],
+    plugins: [unsupportedMediaTypeBody, ...(options?.plugins ?? [])],
     logger: {
       log: (level, message) => {
         internalLogger[level](message);

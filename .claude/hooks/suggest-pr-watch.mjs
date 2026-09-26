@@ -43,7 +43,9 @@ export function createdIssues(input) {
 
 export function buildContext(issues) {
   const lines = issues.map(
-    (n) => `- Issue #${n}: Bash の run_in_background で \`node .claude/scripts/wait-for-pr.mjs ${n}\` を起動する`,
+    (n) =>
+      `- Issue #${n}: \`node .claude/scripts/delegation.mjs init ${n} --model <swe-2-medium|swe-2-high|swe-2-max>\` で記録を作り、` +
+      `Bash の run_in_background で \`node .claude/scripts/wait-for-pr.mjs ${n}\` を起動する`,
   );
   return [
     '📌 Issue を作成しました。この Issue を他のエージェント（Devin など）に渡す場合は、PR を待って自動レビューします。',

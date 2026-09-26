@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>
+body{margin:0;background:#E4E3E0;font-family:ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;color:#141414;-webkit-font-smoothing:antialiased}
+a{color:#2346F5}a:hover{color:#1530B8}
+*{box-sizing:border-box}
+</style>
+</helmet>
+<div style="padding:64px;display:flex;flex-direction:column;gap:64px;max-width:1760px">
+
+<header style="display:flex;flex-direction:column;gap:12px;max-width:960px">
+<div style="font-size:13px;letter-spacing:.08em;color:#5E5C57">TOMOTABI · v3 · 2026/9/23 のレビュー反映</div>
+<h1 style="margin:0;font-size:34px;line-height:1.3;font-weight:700">画面一式 v3</h1>
+<p style="margin:0;font-size:15px;line-height:1.8;color:#3D3B37;text-wrap:pretty">本人とパートナーの二人専用として作り直しました。見た目（色・書体・アイコン・タイムライン）は v2 のままです。サンプルデータは全画面で差し替え済みです（精算の結果 ひなた → あおい 1,285 円・対象 5 件）。第 2 弾・第 3 弾の画面は含みません。</p>
+<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:13px;color:#3D3B37">
+<span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:700;background:#FFF1D6;color:#8A5300;padding:3px 9px;border-radius:999px">v3 修正</span>v2 の画面を直したもの（変更点を画面の下に記載）</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:700;background:#E6EBFF;color:#1D3AC9;padding:3px 9px;border-radius:999px">v3 新規</span>今回追加した画面</span>
+<span>印なし：サンプルデータの差し替えのみ</span>
+</div>
+<nav style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px"><sc-for list="{{ groups }}" as="g" hint-placeholder-count="7"><a href="#{{ g.id }}" style="font-size:14px;font-weight:700">{{ g.title }}</a></sc-for></nav>
+</header>
+
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="7">
+<section id="{{ g.id }}" style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:24px;font-weight:700">{{ g.title }}</h2><span style="font-size:14px;color:#5E5C57">{{ g.sub }}</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:56px 40px;align-items:flex-start">
+<sc-for list="{{ g.screens }}" as="s" hint-placeholder-count="2">
+<div id="{{ s.id }}" data-screen-label="{{ s.no }} {{ s.label }}" style="display:flex;flex-direction:column;gap:14px;width:375px">
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:700;background:#141414;color:#fff;padding:3px 9px;border-radius:999px;font-variant-numeric:tabular-nums">{{ s.no }}</span><span style="font-size:15px;font-weight:700">{{ s.label }}</span><sc-if value="{{ s.isMod }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;background:#FFF1D6;color:#8A5300;padding:3px 9px;border-radius:999px">v3 修正</span></sc-if><sc-if value="{{ s.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;background:#E6EBFF;color:#1D3AC9;padding:3px 9px;border-radius:999px">v3 新規</span></sc-if></div>
+<div style="width:375px;height:812px;border-radius:48px;overflow:hidden;background:#F3F2EF;position:relative;box-shadow:0 0 0 10px #141414,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column">
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:15px;font-weight:600;font-family:-apple-system,sans-serif"><span>9:41</span><span style="width:120px;height:34px;background:#000;border-radius:20px;margin-top:6px"></span><span style="width:40px"></span></div>
+
+<sc-if value="{{ s.offline }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="margin:2px 16px 8px;padding:10px 14px;border-radius:16px;background:#FFF1D6;color:#8A5300;display:flex;gap:10px;align-items:center;flex-shrink:0"><i class="ph-bold ph-wifi-slash" style="font-size:18px"></i><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">インターネットに接続できません</span><span style="font-size:12px">表示は 9:38 時点の内容です。保存はできません。</span></div></div>
+</sc-if>
+
+<sc-if value="{{ s.signin }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 32px 40px;gap:10px">
+<div style="width:96px;height:96px;display:flex;align-items:center;justify-content:center"><svg width="96" height="96" viewBox="0 0 100 100" fill="none"><path d="M18 36H50" stroke="#141414" stroke-width="14"></path><path d="M33 14V56Q33 72 49 72H59" stroke="#141414" stroke-width="14" stroke-linejoin="round"></path><path d="M20 36H26M40 36H48" stroke="#fff" stroke-width="2"></path><path d="M33 16V29M33 43V56Q33 72 49 72H57" stroke="#fff" stroke-width="2" stroke-dasharray="5 4"></path><path d="M71 79C66.5 73 58.5 66.5 58.5 55.5A12.5 12.5 0 0 1 83.5 55.5C83.5 66.5 75.5 73 71 79Z" fill="#FF6A2B"></path><circle cx="71" cy="55.5" r="4.8" fill="#fff"></circle></svg></div>
+<div style="font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1">tomotabi</div>
+</div>
+<div style="height:200px;flex-shrink:0;padding:0 24px 48px;display:flex;flex-direction:column;justify-content:flex-end;gap:16px">
+<sc-if value="{{ s.signinErr }}" hint-placeholder-val="{{ false }}"><div role="alert" style="display:flex;gap:8px;align-items:flex-start;padding:0 4px"><i class="ph-bold ph-warning-circle" style="font-size:18px;color:#B42318;flex-shrink:0;margin-top:1px"></i><div style="font-size:13px;line-height:1.6;color:#B42318"><b>ログインできませんでした。</b>このアカウントでは利用できません。別の Google アカウントでお試しください。</div></div></sc-if>
+<div style="height:56px;border-radius:999px;background:#131314;box-shadow:inset 0 0 0 1px #8E918F;display:flex;align-items:center;justify-content:center;gap:12px;font-size:16px;font-weight:600;color:#E3E3E3;font-family:-apple-system,'Hiragino Sans',sans-serif" style-active="transform:scale(.97)"><svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.710 1.22 9.21 3.6l6.85-6.850C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.430 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.970-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.930-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Google でログイン</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.hasMsg }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 28px 180px;gap:14px">
+<i class="{{ s.msg.icon }}" style="font-size:44px"></i>
+<div style="font-size:24px;font-weight:700;line-height:1.4">{{ s.msg.title }}</div>
+<div style="font-size:15px;line-height:1.7;color:#3D3B37;text-wrap:pretty">{{ s.msg.body }}</div>
+<div style="height:48px;padding:0 24px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;margin-top:6px"><i class="{{ s.msg.btnIcon }}" style="font-size:16px"></i>{{ s.msg.btn }}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.home }}" hint-placeholder-val="{{ false }}">
+<div style="padding:6px 20px 0;display:flex;align-items:center;gap:8px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">{{ s.dateText }}</span><span style="font-size:24px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">秋の京都 2 泊 3 日</span></div>
+<div aria-label="旅行のメニュー" style="width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ph-bold ph-dots-three" style="font-size:20px"></i></div>
+<div style="height:40px;padding:0 12px 0 14px;border-radius:999px;background:#fff;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700;flex-shrink:0">切り替え<i class="ph-bold ph-caret-down" style="font-size:14px"></i></div>
+</div>
+<div style="padding:14px 20px 0;display:flex;gap:6px">
+<sc-for list="{{ s.bars }}" as="b" hint-placeholder-count="3"><span style="flex:1;height:4px;border-radius:2px;background:{{ b }}"></span></sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.tabTitle }}" hint-placeholder-val="{{ false }}">
+<div style="padding:6px 20px 0;display:flex;align-items:flex-end;gap:10px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;color:#5E5C57;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">秋の京都 2 泊 3 日</span><span style="font-size:28px;font-weight:700;line-height:1.2">{{ s.tabTitle }}</span></div>
+<sc-if value="{{ s.shiori }}" hint-placeholder-val="{{ false }}"><div style="height:40px;padding:0 14px 0 12px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700;flex-shrink:0"><i class="ph-bold ph-plus" style="font-size:14px"></i>予定を追加</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.back }}" hint-placeholder-val="{{ false }}">
+<div style="padding:4px 12px 0;display:flex;align-items:center;justify-content:space-between">
+<div style="height:44px;padding:0 10px 0 4px;display:flex;align-items:center;gap:2px;font-size:16px;font-weight:600;color:#2346F5"><i class="ph-bold ph-caret-left" style="font-size:20px"></i>{{ s.back }}</div>
+<sc-if value="{{ s.detail }}" hint-placeholder-val="{{ false }}"><div style="width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center"><i class="ph ph-pencil-simple" style="font-size:20px"></i></div></sc-if>
+</div>
+</sc-if>
+
+<div style="flex:{{ s.grow }};overflow:hidden;padding:{{ s.pad }};display:flex;flex-direction:column;gap:14px">
+<div style="flex-shrink:0;height:0;margin-top:{{ s.scrollY }}"></div>
+
+<sc-if value="{{ s.shiori }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex-shrink:0">
+<div style="height:52px;border-radius:16px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:#5E5C57;gap:1px"><span style="font-weight:700;color:#141414">1 日目</span>10/12 土</div>
+<div style="height:52px;border-radius:16px;background:#141414;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;gap:1px"><span style="font-weight:700">2 日目 · 今日</span>10/13 日</div>
+<div style="height:52px;border-radius:16px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:#5E5C57;gap:1px"><span style="font-weight:700;color:#141414">3 日目</span>10/14 月</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.noTrip }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 12px 120px;gap:14px">
+<i class="ph ph-suitcase-rolling" style="font-size:44px"></i>
+<div style="font-size:24px;font-weight:700">旅行はまだありません</div>
+<div style="font-size:15px;line-height:1.7;color:#3D3B37">旅行をつくると、しおり・記録・精算を使えるようになります。</div>
+<div style="height:48px;padding:0 22px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700;margin-top:6px"><i class="ph-bold ph-plus" style="font-size:16px"></i>新しい旅行をつくる</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.showTL }}" hint-placeholder-val="{{ false }}">
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:4px 16px 0;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 14px"><span style="font-size:17px;font-weight:700">{{ s.tlTitle }} <span style="font-size:12px;font-weight:600;color:#5E5C57">{{ s.tlDate }}</span></span><span style="font-size:14px;font-weight:700;color:#2346F5">{{ s.tlLink }}</span></div>
+<sc-for list="{{ s.items }}" as="it" hint-placeholder-count="4">
+<sc-if value="{{ it.isFold }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:44px 24px 1fr;gap:10px">
+<span></span>
+<div style="display:flex;flex-direction:column;align-items:center"><i class="{{ it.foldIcon }}" style="font-size:16px;color:#8A8883"></i><span style="flex:1;width:2px;min-height:8px;margin-top:3px;background:{{ it.line }}"></span></div>
+<span style="font-size:12px;font-weight:600;color:#5E5C57;padding:1px 0 14px">{{ it.foldText }}</span>
+</div>
+</sc-if>
+<sc-if value="{{ it.isNow }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:44px 24px 1fr;gap:10px;align-items:center;min-height:30px;margin-top:-6px;margin-bottom:6px">
+<span style="font-size:12px;font-weight:700;color:#C2410C;font-variant-numeric:tabular-nums">9:41</span>
+<div style="display:flex;justify-content:center;align-self:stretch;position:relative"><span style="width:2px;background:repeating-linear-gradient(#B5B3AE 0 4px,transparent 4px 8px)"></span><span style="position:absolute;top:50%;left:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#FF6A2B;box-shadow:0 0 0 4px rgba(255,106,43,.25)"></span></div>
+<span style="font-size:12px;font-weight:700;color:#C2410C">今 · 次まで 2 時間 19 分</span>
+</div>
+</sc-if>
+<sc-if value="{{ it.isItem }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:44px 24px 1fr;gap:10px">
+<span style="font-size:{{ it.tSize }};font-weight:{{ it.tWeight }};color:{{ it.tColor }};padding-top:{{ it.tPad }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.time }}</span>
+<div style="display:flex;flex-direction:column;align-items:center;padding-top:{{ it.mPad }}">
+<sc-if value="{{ it.mDone }}" hint-placeholder-val="{{ false }}"><i class="ph-fill ph-check-circle" style="font-size:22px;color:#1B6B35"></i></sc-if>
+<sc-if value="{{ it.mNext }}" hint-placeholder-val="{{ false }}"><span style="width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px #FF6A2B"></span></sc-if>
+<sc-if value="{{ it.mRing }}" hint-placeholder-val="{{ true }}"><span style="width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2.5px #B5B3AE;margin-top:4px"></span></sc-if>
+<sc-if value="{{ it.mCancel }}" hint-placeholder-val="{{ false }}"><i class="ph ph-prohibit" style="font-size:20px;color:#8A8883"></i></sc-if>
+<span style="flex:1;width:2px;min-height:10px;margin-top:3px;background:{{ it.line }}"></span>
+</div>
+<sc-if value="{{ it.mNext }}" hint-placeholder-val="{{ false }}">
+<div style="background:#FFF3EC;border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;margin-bottom:14px;min-width:0"><span style="font-size:17px;font-weight:700">{{ it.name }}</span><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#3D3B37"><i class="{{ it.kindCls }}" style="font-size:14px"></i>{{ it.kind }}</span><sc-if value="{{ it.reserved }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#1D3AC9;background:#E6EBFF;padding:2px 8px;border-radius:999px"><i class="ph-bold ph-calendar-check" style="font-size:12px"></i>予約</span></sc-if></div></div>
+</sc-if>
+<sc-if value="{{ it.plain }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:3px;padding-bottom:18px;min-width:0">
+<span style="font-size:15px;font-weight:600;color:{{ it.nameColor }};text-decoration:{{ it.deco }}">{{ it.name }}</span>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#5E5C57"><i class="{{ it.kindCls }}" style="font-size:14px"></i>{{ it.kind }}</span>
+<sc-if value="{{ it.doneBy }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:700;color:#1B6B35">達成 · {{ it.doneBy }}</span></sc-if>
+<sc-if value="{{ it.reserved }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#1D3AC9;background:#E6EBFF;padding:2px 8px;border-radius:999px"><i class="ph-bold ph-calendar-check" style="font-size:12px"></i>予約</span></sc-if>
+<sc-if value="{{ it.cancelled }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#5E5C57;background:#E4E2DD;padding:2px 8px;border-radius:999px"><i class="ph-bold ph-prohibit" style="font-size:12px"></i>取りやめ</span></sc-if>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</sc-for>
+<sc-if value="{{ s.tlEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:4px 0 18px;display:flex;flex-direction:column;gap:12px;align-items:flex-start"><span style="font-size:15px;font-weight:600;color:#3D3B37">この日の予定はまだありません</span><div style="height:44px;padding:0 18px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #141414;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700"><i class="ph-bold ph-plus" style="font-size:16px"></i>予定を追加</div></div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.settleCard }}" hint-placeholder-val="{{ false }}">
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:16px;display:flex;align-items:center;gap:12px">
+<div style="width:44px;height:44px;border-radius:50%;background:#F3F2EF;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ph ph-arrows-left-right" style="font-size:22px"></i></div>
+<sc-if value="{{ s.settleOk }}" hint-placeholder-val="{{ true }}"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;color:#3D3B37"><b>ひなた</b> から <b>あおい</b> へ</span><span style="font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums">1,285<span style="font-size:14px;margin-left:2px">円</span></span></div></sc-if>
+<sc-if value="{{ s.settleNone }}" hint-placeholder-val="{{ false }}"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;color:#5E5C57">精算</span><span style="font-size:15px;font-weight:700;line-height:1.5">現在、精算する対象はありません</span></div></sc-if>
+<sc-if value="{{ s.settleZero }}" hint-placeholder-val="{{ false }}"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:700">受け渡しは不要です</span><span style="font-size:13px;color:#3D3B37">未処理の対象が 2 件あります</span></div></sc-if>
+<sc-if value="{{ s.settleErr }}" hint-placeholder-val="{{ false }}"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="display:inline-flex;gap:4px;align-items:center;font-size:13px;font-weight:700;color:#B42318"><i class="ph-bold ph-warning" style="font-size:14px"></i>精算額を取得できませんでした</span><span style="font-size:20px;font-weight:700;color:#8A8883;letter-spacing:.1em">— — 円</span></div></sc-if>
+<sc-if value="{{ s.settleErr }}" hint-placeholder-val="{{ false }}"><span style="height:40px;padding:0 16px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;font-size:13px;font-weight:700;flex-shrink:0">再試行</span></sc-if>
+<sc-if value="{{ s.settleLink }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;font-weight:700;color:#2346F5;flex-shrink:0">精算へ</span></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.recent }}" hint-placeholder-val="{{ false }}">
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:4px 16px">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 4px"><span style="font-size:17px;font-weight:700">最近の記録</span><sc-if value="{{ s.recentHas }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;font-weight:700;color:#2346F5">記録一覧へ</span></sc-if></div>
+<sc-if value="{{ s.recentHas }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{ recentRows }}" as="r" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 0;border-top:{{ r.border }}">
+<span style="width:36px;height:36px;border-radius:50%;background:{{ r.iconBg }};display:flex;align-items:center;justify-content:center"><i class="{{ r.icon }}" style="font-size:18px;color:{{ r.iconColor }}"></i></span>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600;color:{{ r.nameColor }};text-decoration:{{ r.deco }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span><span style="font-size:12px;color:#5E5C57;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.meta }}</span></div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:{{ r.nameColor }};text-decoration:{{ r.deco }}">{{ r.amount }}</span><sc-if value="{{ r.voided }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;color:#5E5C57;box-shadow:inset 0 0 0 1.5px #8A8883;padding:1px 7px;border-radius:999px">取り消し済み</span></sc-if></div>
+</div>
+</sc-for>
+</sc-if>
+<sc-if value="{{ s.recentEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 0 18px;font-size:15px;font-weight:600;color:#3D3B37">記録はまだありません</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.detail }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:10px;padding:8px 4px 4px">
+<div style="display:flex;gap:8px;align-items:center"><span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:#3D3B37;background:#fff;padding:4px 10px;border-radius:999px"><i class="ph ph-fork-knife" style="font-size:15px"></i>食べ処</span><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#1D3AC9;background:#E6EBFF;padding:4px 10px;border-radius:999px"><i class="ph-bold ph-calendar-check" style="font-size:13px"></i>予約済み</span></div>
+<div style="font-size:28px;font-weight:700;line-height:1.3">錦市場で昼食</div>
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:40px;font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums">12:00</span><span style="font-size:13px;color:#5E5C57">10/13 日 · </span><span style="font-size:13px;font-weight:700;color:#C2410C;margin-left:-6px">あと 2 時間 19 分</span></div>
+</div>
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:4px 16px">
+<div style="display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:center;padding:14px 0"><i class="ph ph-calendar-check" style="font-size:20px;color:#1D3AC9"></i><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600">予約済み</span><span style="font-size:12px;color:#5E5C57;font-variant-numeric:tabular-nums">あおい が 10/10 木 20:14 に記録</span></div></div>
+<div style="display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;padding:14px 0;border-top:1px solid #F0EFEB"><i class="ph ph-note-pencil" style="font-size:20px"></i><span style="font-size:14px;line-height:1.75;color:#3D3B37">四条河原町の交差点で待ち合わせ。雨なら錦市場の入口で。</span></div>
+<div style="display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:center;padding:14px 0;border-top:1px solid #F0EFEB"><i class="ph ph-receipt" style="font-size:20px"></i><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600">関連する支払い</span><span style="font-size:12px;color:#5E5C57">まだありません</span></div></div>
+</div>
+<div style="height:48px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700;color:#3D3B37;flex-shrink:0"><i class="ph ph-prohibit" style="font-size:18px"></i>取りやめにする</div>
+</sc-if>
+
+<sc-if value="{{ s.kiroku }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:6px;flex-shrink:0">
+<span style="height:36px;padding:0 16px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;font-size:13px;font-weight:700">すべて</span>
+<span style="height:36px;padding:0 14px;border-radius:999px;background:#fff;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600"><i class="ph ph-receipt" style="font-size:15px"></i>支払い</span>
+<span style="height:36px;padding:0 14px;border-radius:999px;background:#fff;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600"><i class="ph ph-check-circle" style="font-size:15px"></i>達成</span>
+</div>
+<sc-for list="{{ recordDays }}" as="rd" hint-placeholder-count="2">
+<div style="flex-shrink:0;display:flex;flex-direction:column;gap:6px">
+<span style="font-size:13px;font-weight:700;color:#5E5C57;padding:0 4px">{{ rd.day }}</span>
+<div style="background:#fff;border-radius:24px;padding:0 16px">
+<sc-for list="{{ rd.rows }}" as="r" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 0;border-top:{{ r.border }}">
+<span style="width:36px;height:36px;border-radius:50%;background:{{ r.iconBg }};display:flex;align-items:center;justify-content:center"><i class="{{ r.icon }}" style="font-size:18px;color:{{ r.iconColor }}"></i></span>
+<div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600;color:{{ r.nameColor }};text-decoration:{{ r.deco }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span><span style="font-size:12px;color:#5E5C57;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.meta }}</span></div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:{{ r.nameColor }};text-decoration:{{ r.deco }}">{{ r.amount }}</span><sc-if value="{{ r.voided }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;color:#5E5C57;box-shadow:inset 0 0 0 1.5px #8A8883;padding:1px 7px;border-radius:999px">取り消し済み</span></sc-if></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</sc-if>
+
+<sc-if value="{{ s.seisan }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ s.seisanOk }}" hint-placeholder-val="{{ true }}">
+<span style="font-size:13px;color:#5E5C57;padding:0 4px;flex-shrink:0">対象 5 件 · 取り消し済みの 1 件は含みません</span>
+<div style="flex-shrink:0;background:#fff;border-radius:28px;padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:grid;grid-template-columns:1fr 32px 1fr;align-items:center;gap:6px">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;border-radius:50%;background:#FFE3D4;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">ひ</span><span style="font-size:15px;font-weight:700">ひなた <span style="font-size:12px;font-weight:600;color:#5E5C57">から</span></span></div>
+<i class="ph-bold ph-arrow-right" style="font-size:24px;justify-self:center"></i>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:48px;height:48px;border-radius:50%;background:#E6EBFF;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700">あ</span><span style="font-size:15px;font-weight:700">あおい <span style="font-size:12px;font-weight:600;color:#5E5C57">へ</span></span></div>
+</div>
+<div style="text-align:center;font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums">1,285<span style="font-size:18px;margin-left:3px">円</span></div>
+<div style="height:48px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700" style-active="transform:scale(.97)">受け渡しを確認する<i class="ph-bold ph-caret-right" style="font-size:16px"></i></div>
+</div>
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:4px 16px 8px">
+<div style="padding:12px 0 4px;font-size:17px;font-weight:700">内訳</div>
+<sc-for list="{{ people }}" as="bd" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:10px;padding:14px 0;border-top:{{ bd.border }}">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:32px;height:32px;border-radius:50%;background:{{ bd.av }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">{{ bd.i }}</span>
+<span style="flex:1;font-size:15px;font-weight:700">{{ bd.n }}</span>
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:5px 10px;border-radius:999px;background:{{ bd.pBg }};color:{{ bd.pC }};font-variant-numeric:tabular-nums;white-space:nowrap"><i class="{{ bd.pIcon }}" style="font-size:13px"></i>{{ bd.res }}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-variant-numeric:tabular-nums">
+<div style="background:#F3F2EF;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;color:#5E5C57">支払った額</span><span style="font-size:15px;font-weight:700">{{ bd.paid }}<span style="font-size:11px;margin-left:1px">円</span></span></div>
+<div style="background:#F3F2EF;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;color:#5E5C57">負担額</span><span style="font-size:15px;font-weight:700">{{ bd.owe }}<span style="font-size:11px;margin-left:1px">円</span></span></div>
+<div style="background:#F3F2EF;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;color:#5E5C57">差</span><span style="font-size:15px;font-weight:700">1,285<span style="font-size:11px;margin-left:1px">円</span></span></div>
+</div>
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:#3D3B37"><i class="ph ph-arrow-bend-down-right" style="font-size:14px;color:#5E5C57"></i>{{ bd.sentence }}</span>
+</div>
+</sc-for>
+<div style="font-size:12px;color:#5E5C57;padding:2px 0 10px;font-variant-numeric:tabular-nums">支払いの合計 21,001 円 ＝ 二人の負担額の合計 21,001 円</div>
+</div>
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:4px 16px 4px">
+<div style="padding:12px 0 4px;font-size:17px;font-weight:700">明細 <span style="font-size:12px;font-weight:600;color:#5E5C57">対象 5 件</span></div>
+<sc-for list="{{ ledger }}" as="lg" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;gap:2px;padding:11px 0;border-top:{{ lg.border }}">
+<div style="display:flex;justify-content:space-between;gap:10px"><span style="font-size:15px;font-weight:600;color:{{ lg.c }};text-decoration:{{ lg.deco }};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ lg.name }}</span><span style="font-size:15px;font-weight:700;color:{{ lg.c }};text-decoration:{{ lg.deco }};font-variant-numeric:tabular-nums;flex-shrink:0">{{ lg.amt }} 円</span></div>
+<span style="font-size:12px;color:#5E5C57">{{ lg.meta }}</span>
+<span style="font-size:12px;font-weight:600;color:#3D3B37;font-variant-numeric:tabular-nums">{{ lg.share }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ s.seisanNone }}" hint-placeholder-val="{{ false }}">
+<div style="flex-shrink:0;background:#fff;border-radius:28px;padding:28px 20px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center"><i class="ph ph-arrows-left-right" style="font-size:32px;color:#5E5C57"></i><span style="font-size:17px;font-weight:700">現在、精算する対象はありません</span><span style="font-size:13px;line-height:1.6;color:#3D3B37">支払いを記録すると、ここに受け渡しの額が出ます。</span></div>
+</sc-if>
+<sc-if value="{{ s.seisanZero }}" hint-placeholder-val="{{ false }}">
+<span style="font-size:13px;color:#5E5C57;padding:0 4px;flex-shrink:0">対象 2 件</span>
+<div style="flex-shrink:0;background:#fff;border-radius:28px;padding:22px 20px 20px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center">
+<span style="font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums">0<span style="font-size:18px;margin-left:3px">円</span></span>
+<span style="font-size:17px;font-weight:700">受け渡しは不要です</span>
+<span style="font-size:13px;color:#3D3B37">未処理の対象が 2 件あります</span>
+<div style="align-self:stretch;height:48px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700;margin-top:4px">受け渡し不要の対象を確認する<i class="ph-bold ph-caret-right" style="font-size:16px"></i></div>
+</div>
+</sc-if>
+<sc-if value="{{ s.seisanErr }}" hint-placeholder-val="{{ false }}">
+<div style="flex-shrink:0;background:#fff;border-radius:28px;padding:22px 20px 20px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center">
+<span style="display:inline-flex;gap:4px;align-items:center;font-size:14px;font-weight:700;color:#B42318"><i class="ph-bold ph-warning" style="font-size:16px"></i>精算額を取得できませんでした</span>
+<span style="font-size:32px;font-weight:700;color:#8A8883;letter-spacing:.1em">— — 円</span>
+<div style="align-self:stretch;height:48px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700;margin-top:4px"><i class="ph-bold ph-arrows-clockwise" style="font-size:16px"></i>再試行</div>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ s.confirm }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:4px;padding:6px 4px 0;flex-shrink:0"><span style="font-size:28px;font-weight:700;line-height:1.2">受け渡しの確認</span><span style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/13 日 9:48 に作成 · {{ s.cf.count }}</span></div>
+<sc-if value="{{ s.cf.added }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="flex-shrink:0;display:flex;gap:10px;padding:12px 14px;border-radius:16px;background:#E6EBFF;color:#1D3AC9"><i class="ph-bold ph-info" style="font-size:18px;flex-shrink:0;margin-top:1px"></i><span style="font-size:13px;line-height:1.6">確認を作ったあとに支払いが 1 件追加されました（抹茶パフェ 1,200 円）。<b>次回の精算に含まれます。</b>この画面の金額は変わりません。</span></div>
+</sc-if>
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:16px 18px;display:flex;flex-direction:column;gap:6px">
+<sc-if value="{{ s.cf.notZero }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;color:#3D3B37;display:inline-flex;gap:6px;align-items:center"><b style="color:#141414">ひなた</b> から <i class="ph-bold ph-arrow-right" style="font-size:14px"></i> <b style="color:#141414">あおい</b> へ</span><span style="font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums">1,285<span style="font-size:16px;margin-left:3px">円</span></span></sc-if>
+<sc-if value="{{ s.cf.zero }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:#3D3B37">受け渡しは不要です</span><span style="font-size:36px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums">0<span style="font-size:16px;margin-left:3px">円</span></span></sc-if>
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#5E5C57"><i class="ph-bold ph-lock-simple" style="font-size:12px"></i>作成した時点の対象と金額で固定しています</span>
+</div>
+<div style="flex-shrink:0;background:#fff;border-radius:24px;padding:4px 16px">
+<div style="padding:12px 0 2px;font-size:15px;font-weight:700">対象の明細</div>
+<sc-for list="{{ s.cf.items }}" as="ci" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:9px 0;border-top:{{ ci.border }};align-items:baseline"><div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ci.name }}</span><span style="font-size:11px;color:#5E5C57;font-variant-numeric:tabular-nums">{{ ci.share }}</span></div><span style="font-size:14px;font-weight:700;font-variant-numeric:tabular-nums">{{ ci.amt }} 円</span></div>
+</sc-for>
+</div>
+<sc-if value="{{ s.cf.notZero }}" hint-placeholder-val="{{ true }}">
+<div style="flex-shrink:0;background:#fff;border-radius:18px;padding:14px 16px;display:flex;gap:12px;align-items:center">
+<sc-if value="{{ s.cf.checked }}" hint-placeholder-val="{{ false }}"><span style="width:24px;height:24px;border-radius:7px;background:#141414;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ph-bold ph-check" style="font-size:15px;color:#fff"></i></span></sc-if>
+<sc-if value="{{ s.cf.unchecked }}" hint-placeholder-val="{{ true }}"><span style="width:24px;height:24px;border-radius:7px;box-shadow:inset 0 0 0 2px #141414;background:#fff;flex-shrink:0"></span></sc-if>
+<span style="font-size:15px;font-weight:600">表示の全額を受け渡しました</span>
+</div>
+</sc-if>
+</sc-if>
+
+</div>
+
+<sc-if value="{{ s.confirm }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:12px;right:12px;bottom:26px"><div style="height:56px;border-radius:999px;background:{{ s.cf.btnBg }};color:{{ s.cf.btnC }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:700"><i class="ph-bold ph-check" style="font-size:18px"></i>{{ s.cf.btnLabel }}</div></div>
+</sc-if>
+
+<sc-if value="{{ s.dock }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:12px;right:12px;bottom:26px;display:flex;flex-direction:column;gap:10px">
+<sc-if value="{{ s.mainBtn }}" hint-placeholder-val="{{ true }}"><div style="height:58px;border-radius:999px;background:#FF6A2B;color:#141414;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;box-shadow:0 8px 24px rgba(255,106,43,.35)" style-active="transform:scale(.97)"><i class="ph-bold ph-plus" style="font-size:22px"></i>支払いを記録</div></sc-if>
+<sc-if value="{{ s.mainOff }}" hint-placeholder-val="{{ false }}"><div aria-disabled="true" style="height:58px;border-radius:999px;background:#E4E2DD;color:#5E5C57;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700"><i class="ph-bold ph-wifi-slash" style="font-size:20px"></i>支払いを記録</div></sc-if>
+<sc-if value="{{ s.doneBtn }}" hint-placeholder-val="{{ false }}"><div style="height:58px;border-radius:999px;background:#FF6A2B;color:#141414;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;box-shadow:0 8px 24px rgba(255,106,43,.35)"><i class="ph-bold ph-check-circle" style="font-size:22px"></i>達成を記録</div></sc-if>
+<div style="height:64px;border-radius:999px;background:rgba(255,255,255,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 0 0 1px rgba(0,0,0,.05),0 10px 30px rgba(0,0,0,.1);display:grid;grid-template-columns:repeat(4,1fr);padding:6px">
+<sc-for list="{{ s.tabs }}" as="tb" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:{{ tb.w }};color:{{ tb.c }};position:relative"><i class="{{ tb.cls }}" style="font-size:24px"></i>{{ tb.label }}<span style="position:absolute;bottom:0;width:4px;height:4px;border-radius:50%;background:{{ tb.dot }}"></span></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.hasPay }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(20,20,20,.4);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="height:766px;background:#F3F2EF;border-radius:28px 28px 0 0;display:flex;flex-direction:column">
+<div style="display:flex;justify-content:center;padding-top:8px"><span style="width:36px;height:5px;border-radius:3px;background:#C9C7C2"></span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 16px 6px 20px"><span style="font-size:20px;font-weight:700">支払いを記録</span><span style="width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-x" style="font-size:18px"></i></span></div>
+<div style="flex:1;padding:4px 16px 0;display:flex;flex-direction:column;gap:11px;overflow:hidden">
+<sc-if value="{{ s.pay.locked }}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display:flex;gap:10px;padding:12px 14px;border-radius:16px;background:#FDE7E4;color:#B42318"><i class="ph-bold ph-warning" style="font-size:18px;flex-shrink:0;margin-top:1px"></i><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">保存されたか確認できません</span><span style="font-size:12px;line-height:1.6">通信が途中で切れました。二重に記録しないよう、入力は変更できません。</span></div></div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;padding-left:4px">金額</label><div style="height:58px;border-radius:18px;background:{{ s.pay.fbg }};box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;padding:0 18px;gap:6px;color:{{ s.pay.fc }}"><span style="flex:1;text-align:right;font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ s.pay.amount }}</span><span style="font-size:17px;font-weight:700">円</span></div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;padding-left:4px">払った人</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+<sc-for list="{{ s.pay.payers }}" as="p" hint-placeholder-count="2"><span style="height:42px;border-radius:999px;background:{{ p.bg }};color:{{ p.c }};display:flex;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:700">{{ p.n }}<span style="font-size:12px;font-weight:600">{{ p.me }}</span></span></sc-for>
+</div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;padding-left:4px">負担の分け方</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+<sc-for list="{{ s.pay.splits }}" as="sp" hint-placeholder-count="4"><span style="height:42px;border-radius:14px;background:{{ sp.bg }};color:{{ sp.c }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">{{ sp.t }}</span></sc-for>
+</div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;padding-left:4px">二人の負担</label>
+<div style="background:{{ s.pay.fbg }};border-radius:18px;padding:0 14px">
+<sc-for list="{{ s.pay.shares }}" as="sh" hint-placeholder-count="2">
+<div style="display:grid;grid-template-columns:28px minmax(0,1fr) auto 88px;gap:10px;align-items:center;min-height:52px;border-top:{{ sh.border }}">
+<span style="width:28px;height:28px;border-radius:50%;background:{{ sh.av }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ sh.i }}</span>
+<div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:14px;font-weight:700">{{ sh.n }}</span><span style="font-size:11px;color:#5E5C57">{{ sh.tag }}</span></div>
+<sc-if value="{{ sh.edit }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700"><span style="width:52px;height:36px;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 2px #141414;display:flex;align-items:center;justify-content:flex-end;padding:0 8px;font-size:17px;font-variant-numeric:tabular-nums">{{ sh.pct }}</span>%</span></sc-if>
+<sc-if value="{{ sh.fixed }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;font-weight:600;color:#5E5C57;font-variant-numeric:tabular-nums">{{ sh.pct }} %</span></sc-if>
+<span style="font-size:16px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;color:{{ s.pay.fc }}">{{ sh.yen }}<span style="font-size:12px;margin-left:2px">円</span></span>
+</div>
+</sc-for>
+</div>
+<span style="font-size:11px;color:#5E5C57;padding:0 4px">{{ s.pay.shareNote }}</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;padding-left:4px">用途 <span style="font-weight:400;color:#5E5C57">任意</span></label><div style="height:46px;border-radius:16px;background:{{ s.pay.fbg }};color:{{ s.pay.fc }};box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;padding:0 16px;font-size:15px">{{ s.pay.purpose }}</div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;padding-left:4px">関連する予定 <span style="font-weight:400;color:#5E5C57">任意</span></label><div style="height:46px;border-radius:16px;background:{{ s.pay.fbg }};color:{{ s.pay.fc }};box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;gap:8px;padding:0 12px 0 16px;font-size:15px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.pay.plan }}</span><i class="ph-bold ph-caret-right" style="font-size:16px;color:#5E5C57"></i></div></div>
+</div>
+<div style="padding:10px 12px 30px"><div style="height:56px;border-radius:999px;background:{{ s.pay.saveBg }};color:{{ s.pay.saveC }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700" style-active="transform:scale(.97)"><i class="{{ s.pay.saveIcon }}" style="font-size:18px"></i>{{ s.pay.saveLabel }}</div></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.planSheet }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(20,20,20,.4);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="background:#F3F2EF;border-radius:28px 28px 0 0;padding:8px 16px 30px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:center"><span style="width:36px;height:5px;border-radius:3px;background:#C9C7C2"></span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px"><span style="font-size:20px;font-weight:700">関連する予定</span><span style="width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-x" style="font-size:18px"></i></span></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+<div style="height:44px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">10/12 土</div>
+<div style="height:44px;border-radius:14px;background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">10/13 日</div>
+<div style="height:44px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">10/14 月</div>
+</div>
+<div style="background:#fff;border-radius:24px;padding:0 16px">
+<sc-for list="{{ planPick }}" as="pp" hint-placeholder-count="6">
+<div style="display:grid;grid-template-columns:22px 40px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:52px;border-top:{{ pp.border }}">
+<span style="width:22px;height:22px;border-radius:50%;box-shadow:{{ pp.ring }};background:#fff;display:flex;align-items:center;justify-content:center"><span style="width:10px;height:10px;border-radius:50%;background:{{ pp.dot }}"></span></span>
+<span style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">{{ pp.time }}</span>
+<span style="font-size:15px;font-weight:600;color:{{ pp.c }};text-decoration:{{ pp.deco }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pp.name }}</span>
+<sc-if value="{{ pp.cancelled }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#5E5C57;background:#E4E2DD;padding:2px 8px;border-radius:999px"><i class="ph-bold ph-prohibit" style="font-size:12px"></i>取りやめ</span></sc-if>
+<sc-if value="{{ pp.done }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:700;color:#1B6B35">達成</span></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="height:56px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">この予定にする</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.tripMenu }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(20,20,20,.4);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="background:#F3F2EF;border-radius:28px 28px 0 0;padding:8px 16px 40px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:center"><span style="width:36px;height:5px;border-radius:3px;background:#C9C7C2"></span></div>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:0 4px;gap:10px"><div style="display:flex;flex-direction:column;gap:6px;min-width:0"><span style="font-size:20px;font-weight:700">秋の京都 2 泊 3 日</span><div style="display:flex;gap:8px;align-items:center"><span style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/12 土 – 10/14 月</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:#141414;color:#fff"><i class="ph-fill ph-circle" style="font-size:10px;color:#FF6A2B"></i>旅行中</span></div></div><span style="width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ph-bold ph-x" style="font-size:18px"></i></span></div>
+<div style="background:#fff;border-radius:24px;padding:0 16px">
+<div style="display:grid;grid-template-columns:24px 1fr 20px;gap:12px;align-items:center;padding:16px 0"><i class="ph ph-flag-checkered" style="font-size:22px"></i><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700">旅行を終了する</span><span style="font-size:12px;color:#5E5C57">終了後も記録・編集・精算はできます</span></div><i class="ph-bold ph-caret-right" style="font-size:16px;color:#5E5C57"></i></div>
+</div>
+<span style="font-size:12px;line-height:1.6;color:#5E5C57;padding:0 4px">出発前の旅行では、同じ場所に「旅行を開始する」を表示します。</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.conflict }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(20,20,20,.4);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="height:740px;background:#F3F2EF;border-radius:28px 28px 0 0;padding:8px 16px 30px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:center"><span style="width:36px;height:5px;border-radius:3px;background:#C9C7C2"></span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px"><span style="font-size:20px;font-weight:700">予定を編集</span><span style="width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-x" style="font-size:18px"></i></span></div>
+<div role="alert" style="display:flex;gap:10px;padding:12px 14px;border-radius:16px;background:#FFF1D6;color:#8A5300"><i class="ph-bold ph-warning" style="font-size:18px;flex-shrink:0;margin-top:1px"></i><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">相手が先に変更しました</span><span style="font-size:12px;line-height:1.6">あおい が 9:52 にこの予定を変更しました。あなたの入力は消えていません。見比べてから保存してください。</span></div></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+<sc-for list="{{ conflictRows }}" as="cr" hint-placeholder-count="3">
+<div style="background:#fff;border-radius:20px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:700">{{ cr.label }}</span><span style="font-size:11px;font-weight:700;color:{{ cr.stC }}">{{ cr.status }}</span></div>
+<sc-if value="{{ cr.diff }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:84px 1fr;gap:4px 10px;font-size:14px;align-items:baseline">
+<span style="font-size:11px;color:#5E5C57">最新（あおい）</span><span style="color:#3D3B37;line-height:1.5">{{ cr.theirs }}</span>
+<span style="font-size:11px;font-weight:700;color:#141414">あなたの入力</span><span style="font-weight:700;line-height:1.5">{{ cr.mine }}</span>
+</div>
+</sc-if>
+<sc-if value="{{ cr.same }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:#3D3B37">{{ cr.mine }}</span></sc-if>
+</div>
+</sc-for>
+</div>
+<span style="font-size:12px;line-height:1.6;color:#3D3B37;padding:0 4px">「あなたの入力で保存」を押すと、違いのある項目はあなたの入力に置き換わります。</span>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="height:52px;border-radius:999px;background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">あなたの入力で保存</div>
+<div style="height:48px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">最新の内容で入力し直す</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.switchSheet }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(20,20,20,.4);display:flex;flex-direction:column;justify-content:flex-end">
+<div style="background:#F3F2EF;border-radius:28px 28px 0 0;padding:8px 16px 40px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:center"><span style="width:36px;height:5px;border-radius:3px;background:#C9C7C2"></span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 4px 0"><span style="font-size:20px;font-weight:700">旅行を切り替え</span><span style="width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-x" style="font-size:18px"></i></span></div>
+<div style="background:#fff;border-radius:24px;padding:0 16px">
+<sc-for list="{{ trips }}" as="tr" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) auto 24px;gap:10px;align-items:center;padding:14px 0;border-top:{{ tr.border }}">
+<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tr.name }}</span><span style="font-size:12px;color:#5E5C57;font-variant-numeric:tabular-nums">{{ tr.date }}</span></div>
+<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ tr.bBg }};color:{{ tr.bColor }};box-shadow:{{ tr.bRing }}"><i class="{{ tr.bIcon }}" style="font-size:12px;color:{{ tr.bIconColor }}"></i>{{ tr.status }}</span>
+<sc-if value="{{ tr.current }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check" style="font-size:20px;color:#C2410C"></i></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="height:48px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #141414;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700"><i class="ph-bold ph-plus" style="font-size:16px"></i>新しい旅行をつくる</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.hasDlg }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(20,20,20,.4);display:flex;align-items:center;padding:0 20px">
+<div style="background:#fff;border-radius:28px;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.18);width:100%">
+<div style="font-size:18px;font-weight:700;line-height:1.4">{{ s.dlg.title }}</div>
+<div style="font-size:14px;line-height:1.7;color:#3D3B37;text-wrap:pretty">{{ s.dlg.body }}</div>
+<div style="display:flex;gap:10px;margin-top:4px"><div style="flex:1;height:48px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #D6D4CF;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">やめる</div><div style="flex:1;height:48px;border-radius:999px;background:{{ s.dlg.okBg }};color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700"><i class="{{ s.dlg.okIcon }}" style="font-size:16px"></i>{{ s.dlg.ok }}</div></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ s.toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;right:0;top:60px;display:flex;justify-content:center"><div style="display:inline-flex;align-items:center;gap:8px;background:#141414;color:#fff;padding:12px 18px;border-radius:999px;font-size:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.2)"><i class="ph-bold ph-check" style="font-size:16px;color:#8EE3A6"></i>{{ s.toast }}</div></div>
+</sc-if>
+
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37;text-wrap:pretty">{{ s.note }}</div>
+<sc-if value="{{ s.diff }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;line-height:1.7;color:#8A5300;background:#FFF8EA;border-radius:12px;padding:10px 12px;text-wrap:pretty"><b>v2 から：</b>{{ s.diff }}</div></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-for>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const K = { '場所': 'map-pin', '食べ処': 'fork-knife', '買い物': 'shopping-bag', '宿': 'bed', '移動': 'train' };
+    const DOT = 'repeating-linear-gradient(#B5B3AE 0 4px,transparent 4px 8px)';
+    const base = { isItem: true, isNow: false, isFold: false, mDone: false, mNext: false, mRing: false, mCancel: false, plain: true, reserved: false, doneBy: '', cancelled: false, nameColor: '#141414', deco: 'none', tSize: '15px', tWeight: 600, tColor: '#141414', tPad: '1px', mPad: '0px', line: DOT };
+    const it = (time, name, kind, st, o = {}) => {
+      const v = { ...base, time, name, kind, kindCls: 'ph ph-' + K[kind], ...o };
+      if (st === 'done') Object.assign(v, { mDone: true, nameColor: '#5E5C57', tColor: '#5E5C57', tSize: '14px', line: '#141414' });
+      if (st === 'next') Object.assign(v, { mNext: true, plain: false, tSize: '17px', tWeight: 700, tPad: '10px', mPad: '12px' });
+      if (st === 'future') Object.assign(v, { mRing: true });
+      if (st === 'unset') Object.assign(v, { mRing: true, time: '未定', tSize: '12px', tColor: '#5E5C57', tPad: '3px' });
+      if (st === 'cancel') Object.assign(v, { mCancel: true, cancelled: true, nameColor: '#5E5C57', deco: 'line-through', tColor: '#5E5C57', tSize: '14px' });
+      return v;
+    };
+    const fold = (foldText, icon, line) => ({ ...base, isItem: false, isFold: true, foldText, foldIcon: icon, line });
+    const now = { isNow: true, isItem: false, isFold: false };
+    const last = a => { a[a.length - 1] = { ...a[a.length - 1], line: 'transparent' }; return a; };
+    const homeItems = last([fold('達成済み 1 件（伏見稲荷大社）', 'ph-fill ph-check-circle', '#141414'), now, it('12:00', '錦市場で昼食', '食べ処', 'next', { reserved: true }), it('18:30', '先斗町で夕食', '食べ処', 'future', { reserved: true }), it('', '旅館にチェックイン', '宿', 'unset')]);
+    const busyItems = [fold('達成済み 2 件', 'ph-fill ph-check-circle', '#141414'), now, it('12:00', '錦市場で昼食', '食べ処', 'next', { reserved: true }), it('14:00', '祇園を散歩', '場所', 'future'), it('16:00', '抹茶の店でおみやげ', '買い物', 'future'), fold('ほか 2 件 · 18:30 先斗町で夕食 から', 'ph-bold ph-dots-three', 'transparent')];
+    const shioriItems = last([it('9:00', '伏見稲荷大社', '場所', 'done', { doneBy: 'ひなた' }), now, it('12:00', '錦市場で昼食', '食べ処', 'next', { reserved: true }), it('15:00', '八坂神社', '場所', 'cancel'), it('18:30', '先斗町で夕食', '食べ処', 'future', { reserved: true }), it('', '旅館にチェックイン', '宿', 'unset')]);
+    const day1 = last([it('10:30', '京都駅に到着', '移動', 'future'), it('13:00', '清水寺', '場所', 'future'), it('', '旅館にチェックイン', '宿', 'unset', { reserved: true })]);
+    const day3 = last([it('10:00', '旅館をチェックアウト', '宿', 'done', { doneBy: 'あおい' }), it('11:30', '嵐山の竹林', '場所', 'done', { doneBy: 'ひなた' }), it('15:40', '京都駅から帰る', '移動', 'done', { doneBy: 'ひなた' })]);
+    const tabNames = [['house', 'ホーム'], ['book-open-text', 'しおり'], ['list-bullets', '記録'], ['arrows-left-right', '精算']];
+    const tabs = a => tabNames.map(([ic, label], i) => ({ label, cls: (i === a ? 'ph-fill' : 'ph') + ' ph-' + ic, c: i === a ? '#141414' : '#5E5C57', w: i === a ? 700 : 600, dot: i === a ? '#FF6A2B' : 'transparent' }));
+    const S = { signin: false, signinErr: false, hasMsg: false, home: false, noTrip: false, tabTitle: '', back: '', shiori: false, detail: false, kiroku: false, seisan: false, seisanOk: false, seisanNone: false, seisanZero: false, seisanErr: false, confirm: false, showTL: false, tlEmpty: false, settleCard: false, settleOk: false, settleNone: false, settleZero: false, settleErr: false, settleLink: false, recent: false, recentHas: false, recentEmpty: false, dock: false, mainBtn: false, mainOff: false, doneBtn: false, hasPay: false, planSheet: false, hasDlg: false, switchSheet: false, tripMenu: false, conflict: false, offline: false, toast: '', pad: '0', grow: '1', scrollY: '0px', tabs: tabs(0), items: [], bars: [], isMod: false, isNew: false, diff: '' };
+    const home = { ...S, home: true, showTL: true, settleCard: true, settleOk: true, settleLink: true, recent: true, recentHas: true, dock: true, mainBtn: true, pad: '18px 16px 180px', dateText: '10/13 日 · 2 / 3 日目', bars: ['#141414', 'linear-gradient(90deg,#FF6A2B 40%,#D6D4CF 40%)', '#D6D4CF'], tlTitle: '今日の予定', tlDate: '10/13 日 · 4 件', tlLink: 'すべて見る', items: homeItems };
+    const tabScreen = (a, title) => ({ ...S, tabTitle: title, dock: true, mainBtn: true, tabs: tabs(a), pad: '16px 16px 180px' });
+    const msg = (icon, title, body, btn, btnIcon) => ({ hasMsg: true, grow: '0', msg: { icon, title, body, btn, btnIcon } });
+    const dlg = (title, body, ok, okBg, okIcon) => ({ hasDlg: true, dlg: { title, body, ok, okBg, okIcon } });
+
+    const AV = { 'ひ': '#FFE3D4', 'あ': '#E6EBFF' };
+    const payers = (sel, locked) => [['ひなた', '（自分）'], ['あおい', '']].map(([n, me]) => { const on = n === sel; return { n, me, bg: on ? (locked ? '#8A8883' : '#141414') : (locked ? '#ECEBE7' : '#fff'), c: on ? '#fff' : (locked ? '#8A8883' : '#141414') }; });
+    const splits = (sel, locked) => ['折半', '払った人が全額', 'もう一人が全額', '割合を指定'].map(t => { const on = t === sel; return { t, bg: on ? (locked ? '#8A8883' : '#141414') : (locked ? '#ECEBE7' : '#fff'), c: on ? '#fff' : (locked ? '#8A8883' : '#141414') }; });
+    const share = (n, tag, pct, yen, o = {}) => ({ n, i: n[0], av: AV[n[0]], tag, pct, yen, edit: false, fixed: true, border: '1px solid #F0EFEB', ...o });
+    const pay = (o) => ({ fbg: '#fff', fc: '#141414', saveBg: '#FF6A2B', saveC: '#141414', saveLabel: '保存', saveIcon: 'ph-bold ph-check', locked: false, ...o });
+    const payHalf = pay({ amount: '7,001', payers: payers('ひなた'), splits: splits('折半'), shares: [share('ひなた', '払った人', '50', '3,501', { border: 'none' }), share('あおい', '', '50', '3,500')], shareNote: '割り切れない 1 円は払った人の負担になります', purpose: '湯豆腐の夕食', plan: '10/12 土 · 選択しない' });
+    const payRatio = pay({ amount: '7,600', payers: payers('あおい'), splits: splits('割合を指定'), shares: [share('ひなた', '自分', '60', '4,560', { border: 'none', edit: true, fixed: false }), share('あおい', '払った人', '40', '3,040')], shareNote: '払っていない人の負担は円未満切り捨て', purpose: '旅館の追加料金', plan: '10/12 土 · 旅館にチェックイン' });
+    const payLocked = pay({ amount: '2,400', payers: payers('ひなた', true), splits: splits('折半', true), shares: [share('ひなた', '払った人', '50', '1,200', { border: 'none' }), share('あおい', '', '50', '1,200')], shareNote: '入力は変更できません', purpose: '参道で朝ごはん', plan: '10/13 日 · 伏見稲荷大社', fbg: '#ECEBE7', fc: '#5E5C57', locked: true, saveBg: '#141414', saveC: '#fff', saveLabel: '同じ内容で確認する', saveIcon: 'ph-bold ph-arrows-clockwise' });
+
+    const cfItems = [['湯豆腐の夕食', '7,001', 'ひなた 3,501 · あおい 3,500'], ['旅館の追加料金', '7,600', 'ひなた 4,560 · あおい 3,040'], ['八ツ橋', '1,150', 'ひなた 1,150 · あおい 0'], ['京都駅からタクシー', '2,850', 'ひなた 1,425 · あおい 1,425'], ['参道で朝ごはん', '2,400', 'ひなた 1,200 · あおい 1,200']].map(([name, amt, sh], i) => ({ name, amt, share: '負担 ' + sh + ' 円', border: i ? '1px solid #F0EFEB' : 'none' }));
+    const cfZeroItems = [['錦市場で昼食', '3,000', 'ひなた 1,500 · あおい 1,500'], ['先斗町で夕食', '3,000', 'ひなた 1,500 · あおい 1,500']].map(([name, amt, sh], i) => ({ name, amt, share: '負担 ' + sh + ' 円 · ' + (i ? 'あおい' : 'ひなた') + ' が支払い', border: i ? '1px solid #F0EFEB' : 'none' }));
+    const cf = (o) => ({ items: cfItems, count: '対象 5 件', zero: false, notZero: true, checked: false, unchecked: true, added: false, btnBg: '#E4E2DD', btnC: '#8A8883', btnLabel: '受け渡し完了を記録', ...o });
+    const confirmScr = (o) => ({ ...S, back: '精算', confirm: true, pad: '8px 16px 110px', cf: cf(o) });
+    const cfOn = { checked: true, unchecked: false, btnBg: '#141414', btnC: '#fff' };
+
+    const sc = (no, id, label, o, note, mark, diff) => ({ no, id, label, note, ...o, isMod: mark === 'mod', isNew: mark === 'new', diff: diff || '' });
+    const groups = [
+      { id: 'g-signin', title: 'A サインイン', sub: '最優先の修正 5', screens: [
+        sc('01', 's01', 'サインイン · 通常', { ...S, signin: true, grow: '0' }, '中央にロゴ、下端に Google ボタンだけを置く。二人専用で一般の登録がないため、同意文は出さない。', 'mod', '利用規約・プライバシーポリシーの同意文を削除。ボタンの文言を「Google で続ける」から「Google でログイン」に変更。'),
+        sc('02', 's02', 'サインイン · ログインできなかったとき', { ...S, signin: true, signinErr: true, grow: '0' }, 'エラーは箱にせず、ボタンの直上に赤い文字で 1 段落。ボタンはそのまま押せる。', 'mod', 'ボタンの文言のみ変更。')
+      ]},
+      { id: 'g-home', title: 'B ホーム', sub: 'H-1 最近の記録 · H-2 今日の予定は最大 3 件 · H-3 精算欄の 0 件と 0 円', screens: [
+        sc('03', 's03', 'ホーム · 旅行中', home, '今日の予定は最大 3 件。達成していない予定を時刻順に優先して出し、達成済みは 1 行にまとめて先頭に置く（押すとしおりへ）。取りやめた予定はホームに出さない。スクロールすると「最近の記録」。', 'mod', '予定を 4 件から 3 件に。達成済みを「達成済み 1 件」の行にまとめた。精算額を 1,285 円に。旅行ヘッダーに「…」（旅行のメニュー）を追加。'),
+        sc('03a', 's03a', 'ホーム · 旅行中（スクロール後）', { ...home, scrollY: '-300px' }, '「最近の記録」は新しい順に最大 3 件。取り消した記録も線で消して出す。右上の「記録一覧へ」で記録タブへ。', 'new', 'H-1。v1 にあった欄を戻した。'),
+        sc('03b', 's03b', 'ホーム · 予定が多い日', { ...home, tlDate: '10/13 日 · 7 件', items: busyItems }, '達成していない予定が 3 件を超えるときは、時刻の早い 3 件を出し、残りを「ほか N 件 · 次の予定名 から」の 1 行にまとめる。時刻未定の予定は時刻ありの後ろに並べる。', 'new', 'H-2 の見せ方。'),
+        sc('04', 's04', 'ホーム · 出発前', { ...home, dateText: '出発まで 5 日 · 10/12 土 から', bars: ['#D6D4CF', '#D6D4CF', '#D6D4CF'], tlTitle: '初日の予定', tlDate: '10/12 土', items: day1, settleOk: false, settleNone: true, settleLink: false, recentHas: false, recentEmpty: true }, '「今」の線は出さない。精算の対象が 0 件なので「現在、精算する対象はありません」。記録が 0 件のときは「記録はまだありません」。', 'mod', '精算欄を「0 円＋受け渡しはありません」から「現在、精算する対象はありません」へ。最近の記録（0 件）を追加。'),
+        sc('04b', 's04b', 'ホーム · 対象はあるが 0 円', { ...home, settleOk: false, settleZero: true }, '対象があり差し引き 0 円のときは「受け渡しは不要です」と未処理の件数を出し、「精算へ」から記録できるようにする。', 'new', 'H-3。0 件と 0 円を別の表示にした。'),
+        sc('05', 's05', 'ホーム · 予定 0 件', { ...home, items: [], tlEmpty: true, tlDate: '10/13 日' }, '空のときは理由と次の操作（予定を追加）を出す。'),
+        sc('06', 's06', 'ホーム · 精算額の取得失敗', { ...home, settleOk: false, settleErr: true, settleLink: false }, '失敗した欄だけにエラーを出し、他の欄は通常どおり表示する。金額は数字を出さず「— —」。'),
+        sc('07', 's07', 'ホーム · 一時的に利用できない（503）', { ...S, ...msg('ph ph-clock-countdown', '一時的に利用できません', 'しばらく待ってから、もう一度お試しください。入力中の内容や記録は失われていません。', '再試行', 'ph-bold ph-arrows-clockwise'), dock: true, tabs: tabs(0) }, 'タブは残し、主ボタンは隠す。')
+      ]},
+      { id: 'g-trip', title: 'B2 旅行の操作', sub: 'H-4 開始・終了 · H-5 切り替えと 0 件', screens: [
+        sc('16', 's16', '旅行のメニュー', { ...home, tripMenu: true }, '旅行ヘッダーの「…」から開く。旅行中は「旅行を終了する」、出発前は同じ場所に「旅行を開始する」。切り替え（別の旅行へ）は右の「切り替え」に分けたまま。', 'new', 'H-4。'),
+        sc('17', 's17', '旅行の終了の確認', { ...home, ...dlg('旅行を終了しますか？', '「秋の京都 2 泊 3 日」を終了します。未精算分があっても、終了後に精算できます。記録や編集もこれまでどおりできます。', '終了する', '#141414', 'ph-bold ph-flag-checkered') }, '終了は取り消しではないので黒のボタン。', 'new', 'H-4。'),
+        sc('18', 's18', 'ホーム · 終了後', { ...home, dateText: '終了 · 10/12 土 – 10/14 月', bars: ['#141414', '#141414', '#141414'], tlTitle: '最終日の予定', tlDate: '10/14 月', tlLink: 'しおりへ', items: day3 }, '終了後も「支払いを記録」や精算は押せる（無効にしない）。日付の行に「終了」と出す。', 'new', 'H-4。'),
+        sc('15', 's15', '旅行の切り替え', { ...home, switchSheet: true }, 'ホーム右上の「切り替え」から開く。状態は色＋アイコン＋文字で表示。', 'mod', '「3 人」「4 人」の人数表示を削除。'),
+        sc('19', 's19', '旅行が 1 件もないとき', { ...S, noTrip: true, pad: '18px 16px 0' }, 'サインイン直後など、旅行が無いときの表示。タブと主ボタンは出さない。', 'new', 'H-5。')
+      ]},
+      { id: 'g-shiori', title: 'C しおり', sub: '最優先の修正 4', screens: [
+        sc('08', 's08', 'しおり · 2 日目（今日）', { ...tabScreen(1, 'しおり'), shiori: true, showTL: true, tlTitle: '10/13 日', tlDate: '5 件', tlLink: '', items: shioriItems }, '日ごとに切り替え。取りやめた予定は線で消して残す。予定を押すと詳細へ。'),
+        sc('09', 's09', '予定の詳細', { ...S, back: 'しおり', detail: true, dock: true, doneBtn: true, tabs: tabs(1), pad: '0 16px 180px' }, '予定が持つ項目（名前・種類・日付・時刻・メモ）だけを出す。予約は「誰が・いつ記録したか」だけ。操作の詳細は第 2 弾（P-4）で決める。', 'mod', '住所と「地図で開く」、予約番号、人数（3 名）を削除。予約の行を「あおい が 10/10 木 20:14 に記録」に。')
+      ]},
+      { id: 'g-kiroku', title: 'D 記録', sub: '最優先の修正 1・2', screens: [
+        sc('10', 's10', '記録一覧', { ...tabScreen(2, '記録'), kiroku: true }, '新しい順、日付ごと。取り消した記録は線で消し「取り消し済み」を付けて残す。', 'mod', '「· 3 人」を削除し、代わりに負担の分け方を表示。サンプルデータを差し替え。'),
+        sc('11', 's11', '支払いを記録 · 折半', { ...home, hasPay: true, pay: payHalf }, '払った人の初期値は自分、分け方の初期値は折半。分け方に関係なく、二人の名前・割合・円額を常に並べる。金額欄を押すと数字キーボード（v2 と同じ）が出て、保存ボタンはキーボードの直上に移る。', 'mod', '「割る人」の複数選択を「負担の分け方」4 択に置き換え。払った人は二人のどちらか。「二人の負担」と「関連する予定」を追加。'),
+        sc('11b', 's11b', '支払いを記録 · 割合を指定', { ...home, hasPay: true, pay: payRatio }, '「割合を指定」を選ぶと、自分の行の % が入力欄になる（0〜100 の整数）。相手の % は 100 から引いた値を表示。', 'new', '最優先の修正 2。'),
+        sc('11c', 's11c', '関連する予定を選ぶ', { ...home, hasPay: true, pay: payHalf, planSheet: true }, '日付 → その日の予定の順に選ぶ。取りやめた予定も選べるが、バッジで状態を出す。予定の詳細から開いたときはその予定を選んだ状態で開き、「選択しない」で外せる。', 'new', '最優先の修正 2。'),
+        sc('12', 's12', '記録の取り消し確認', { ...tabScreen(2, '記録'), kiroku: true, ...dlg('この記録を取り消しますか？', '支払い「参道で朝ごはん 2,400 円」を取り消します。記録は消えず、「取り消し済み」として履歴に残ります。', '取り消す', '#B42318', 'ph-bold ph-arrow-u-up-left') }, '取り消しは赤いボタン。記録は消さずに履歴へ残すことを本文で伝える。'),
+        sc('13', 's13', '保存したあと', { ...tabScreen(2, '記録'), kiroku: true, toast: '支払いを記録しました' }, '保存後はシートを閉じ、記録一覧の先頭に追加。完了表示は上部に 2 秒。')
+      ]},
+      { id: 'g-seisan', title: 'E 精算', sub: '最優先の修正 3 · 確認画面を挟む', screens: [
+        sc('14', 's14', '精算', { ...tabScreen(3, '精算'), seisan: true, seisanOk: true }, '精算は「アプリの外で済ませた受け渡しを記録する操作」。主操作は「受け渡しを確認する」で、押すとその時点の対象と金額を固定した確認画面へ。', 'mod', '主操作を「受け渡しを記録」から「受け渡しを確認する」に。そうたの行を削除。金額を 1,285 円に。'),
+        sc('14b', 's14b', '精算 · 内訳（スクロール後）', { ...tabScreen(3, '精算'), seisan: true, seisanOk: true, scrollY: '-318px' }, '二人それぞれに「支払った額」「負担額」「差」を並べる。明細は支払いごとに二人の負担額を出す。取り消し済みは線で消して「対象外」。', 'mod', '「合計 ÷ 人数 ＝ 1 人の負担」の式とバーを削除し、支払った額・負担額・差の 3 つに。支払いごとの明細を追加。'),
+        sc('14c', 's14c', '受け渡しの確認 · 未チェック', confirmScr({}), '固定した向き・金額・対象の明細・作成日時を出す。「表示の全額を受け渡しました」にチェックするまで、下のボタンは押せない。', 'new', '最優先の修正 3。'),
+        sc('14d', 's14d', '受け渡しの確認 · 記録の確認', { ...confirmScr(cfOn), ...dlg('受け渡し完了を記録しますか？', 'ひなた から あおい へ 1,285 円を受け渡したことを記録します。このアプリは送金を行いません。', '記録する', '#141414', 'ph-bold ph-check') }, 'チェック後にボタンを押すと確認ダイアログ。', 'new', '最優先の修正 3。'),
+        sc('14e', 's14e', '受け渡しの確認 · 後から支払いが追加', { ...confirmScr({ ...cfOn, added: true }), scrollY: '-96px' }, '確認を作ったあとに追加された支払いは「次回の精算に含まれます」と知らせる。金額と明細は書き換えない。', 'new', '最優先の修正 3。'),
+        sc('14f', 's14f', '精算 · 対象が 0 件', { ...tabScreen(3, '精算'), seisan: true, seisanNone: true }, '「現在、精算する対象はありません」。主操作は出さない。', 'new', '最優先の修正 3 の表。'),
+        sc('14g', 's14g', '精算 · 対象はあるが 0 円', { ...tabScreen(3, '精算'), seisan: true, seisanZero: true }, '「受け渡しは不要です。未処理の対象が N 件あります」。主操作は「受け渡し不要の対象を確認する」。', 'new', '最優先の修正 3 の表。'),
+        sc('14h', 's14h', '受け渡しの確認 · 0 円', confirmScr({ items: cfZeroItems, count: '対象 2 件', zero: true, notZero: false, btnBg: '#141414', btnC: '#fff', btnLabel: '受け渡し不要として精算を記録' }), '0 円の確認では受け渡しが無いのでチェック欄は出さない。押すと確認ダイアログ（14d と同じ形）。', 'new', '最優先の修正 3 の表。'),
+        sc('14i', 's14i', '精算 · 取得失敗', { ...tabScreen(3, '精算'), seisan: true, seisanErr: true }, '金額が不明なことを明示し、操作は再試行だけ。', 'new', '最優先の修正 3 の表。')
+      ]},
+      { id: 'g-state', title: 'F 共通の状態', sub: 'C-1〜C-5 · v1 の「読み込み」「更新できていません」「保存中」はそのまま使う', screens: [
+        sc('20', 's20', 'ログイン切れ', { ...S, ...msg('ph ph-lock-key', 'もう一度ログインしてください', 'ログインの有効期限が切れました。旅行の内容は、ログインし直すまで表示しません。入力中だった内容は送信していません。', 'ログイン画面へ', 'ph-bold ph-sign-in') }, 'どの画面でも、業務データを隠してこの画面に替える。ログイン後に入力中の内容を勝手に再送しない。', 'new', 'C-1。'),
+        sc('21', 's21', '開けない（403・404）', { ...S, ...msg('ph ph-eye-slash', 'この旅行を開けません', '削除されたか、開く権限がありません。', '旅行一覧へ', 'ph-bold ph-list') }, '予定・記録のときは「この項目を開けません」。他の旅行の名前や内容は出さない。403 と 404 で文言を分けない。', 'new', 'C-2。'),
+        sc('22', 's22', 'オフライン', { ...home, offline: true, mainBtn: false, mainOff: true, settleLink: false }, '上部に注意を出し、表示中の内容は残す。保存につながる操作（支払いを記録など）は押せない見た目にする。', 'new', 'C-3。'),
+        sc('23', 's23', '保存の結果が不明', { ...home, hasPay: true, pay: payLocked }, '入力欄をすべて固定し、「同じ内容で確認する」だけを出す。別の入力で保存し直させない。確認の結果、保存済みなら完了表示、未保存なら同じ内容で保存する。', 'new', 'C-4。'),
+        sc('24', 's24', '相手と同時に変更した（競合）', { ...S, back: 'しおり', detail: true, pad: '0 16px 180px', conflict: true }, '自分の入力を残したまま、違いのある項目だけ最新の内容と並べる。変わっていない項目は 1 行で示す。予定の編集フォーム自体は第 2 弾（P-2）で作る。', 'new', 'C-5。')
+      ]}
+    ];
+
+    const rrow = (kind, name, meta, amount, o = {}) => ({ name, meta, amount, voided: false, nameColor: '#141414', deco: 'none', border: '1px solid #F0EFEB', ...(kind === 'pay' ? { icon: 'ph ph-receipt', iconBg: '#F3F2EF', iconColor: '#141414' } : { icon: 'ph-fill ph-check-circle', iconBg: '#E0F1E5', iconColor: '#1B6B35' }), ...o });
+    const first = a => { a[0] = { ...a[0], border: 'none' }; return a; };
+    const today = first([
+      rrow('pay', '参道で朝ごはん', '9:20 · ひなた が支払い · 折半', '2,400 円'),
+      rrow('done', '伏見稲荷大社', '9:05 · ひなた が達成', ''),
+      rrow('pay', '稲荷の茶屋', '8:50 · あおい が支払い · 折半', '900 円', { voided: true, nameColor: '#5E5C57', deco: 'line-through' })
+    ]);
+    const recordDays = [
+      { day: '10/13 日 · 今日', rows: today },
+      { day: '10/12 土', rows: first([
+        rrow('pay', '湯豆腐の夕食', '19:10 · ひなた が支払い · 折半', '7,001 円'),
+        rrow('pay', '旅館の追加料金', '16:40 · あおい が支払い · 割合', '7,600 円'),
+        rrow('pay', '八ツ橋', '14:15 · ひなた が支払い · ひなたが全額', '1,150 円'),
+        rrow('pay', '京都駅からタクシー', '10:45 · あおい が支払い · 折半', '2,850 円')
+      ])}
+    ];
+    const people = [
+      { n: 'ひなた', i: 'ひ', av: '#FFE3D4', paid: '10,551', owe: '11,836', res: '渡す 1,285 円', pBg: '#FFF3EC', pC: '#C2410C', pIcon: 'ph-bold ph-arrow-up-right', sentence: '負担額のほうが多いので、あおい に渡します', border: 'none' },
+      { n: 'あおい', i: 'あ', av: '#E6EBFF', paid: '10,450', owe: '9,165', res: '受け取る 1,285 円', pBg: '#E0F1E5', pC: '#1B6B35', pIcon: 'ph-bold ph-arrow-down-left', sentence: '支払った額のほうが多いので、ひなた から受け取ります', border: '1px solid #F0EFEB' }
+    ];
+    const L = (name, amt, meta, share, o = {}) => ({ name, amt, meta, share, c: '#141414', deco: 'none', border: '1px solid #F0EFEB', ...o });
+    const ledger = [
+      L('参道で朝ごはん', '2,400', 'ひなた が支払い · 折半', 'ひなた 1,200 円 · あおい 1,200 円', { border: 'none' }),
+      L('湯豆腐の夕食', '7,001', 'ひなた が支払い · 折半', 'ひなた 3,501 円 · あおい 3,500 円'),
+      L('旅館の追加料金', '7,600', 'あおい が支払い · 割合（ひなた 60%・あおい 40%）', 'ひなた 4,560 円 · あおい 3,040 円'),
+      L('八ツ橋', '1,150', 'ひなた が支払い · ひなたが全額', 'ひなた 1,150 円 · あおい 0 円'),
+      L('京都駅からタクシー', '2,850', 'あおい が支払い · 折半', 'ひなた 1,425 円 · あおい 1,425 円'),
+      L('稲荷の茶屋', '900', 'あおい が支払い · 取り消し済み', '対象外', { c: '#5E5C57', deco: 'line-through' })
+    ];
+    const P = (time, name, o = {}) => ({ time, name, c: '#141414', deco: 'none', cancelled: false, done: false, ring: 'inset 0 0 0 2px #B5B3AE', dot: 'transparent', border: '1px solid #F0EFEB', ...o });
+    const planPick = [
+      P('', '選択しない', { border: 'none', c: '#3D3B37' }),
+      P('9:00', '伏見稲荷大社', { done: true }),
+      P('12:00', '錦市場で昼食', { ring: 'inset 0 0 0 2px #141414', dot: '#141414' }),
+      P('15:00', '八坂神社', { cancelled: true, c: '#5E5C57', deco: 'line-through' }),
+      P('18:30', '先斗町で夕食'),
+      P('未定', '旅館にチェックイン')
+    ];
+    const conflictRows = [
+      { label: '時刻', status: '違いあり', stC: '#8A5300', diff: true, same: false, theirs: '12:30', mine: '13:00' },
+      { label: 'メモ', status: '違いあり', stC: '#8A5300', diff: true, same: false, theirs: '四条河原町の交差点で待ち合わせ。雨なら錦市場の入口で。混んでいたら先に並ぶ。', mine: '四条河原町の交差点で待ち合わせ。雨なら大丸の入口で。' },
+      { label: '名前・種類', status: '変更なし', stC: '#5E5C57', diff: false, same: true, mine: '錦市場で昼食 · 食べ処' }
+    ];
+    const trips = [
+      { name: '秋の京都 2 泊 3 日', date: '10/12 – 10/14', status: '旅行中', current: true, border: 'none', bBg: '#141414', bColor: '#fff', bRing: 'none', bIcon: 'ph-fill ph-circle', bIconColor: '#FF6A2B' },
+      { name: '冬の金沢', date: '12/20 – 12/22', status: '出発前', current: false, border: '1px solid #F0EFEB', bBg: '#fff', bColor: '#141414', bRing: 'inset 0 0 0 1.5px #141414', bIcon: 'ph-bold ph-clock', bIconColor: '#141414' },
+      { name: '夏の沖縄 3 泊 4 日', date: '7/19 – 7/22', status: '終了', current: false, border: '1px solid #F0EFEB', bBg: '#E4E2DD', bColor: '#3D3B37', bRing: 'none', bIcon: 'ph-bold ph-check', bIconColor: '#3D3B37' }
+    ];
+    return { groups, recordDays, recentRows: today, people, ledger, planPick, conflictRows, trips };
+  }
+}
+</script>
+</body>
+</html>

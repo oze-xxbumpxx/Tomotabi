@@ -1,0 +1,25 @@
+issue: 32
+title: 'feat(api): M1-b3 /me の契約と GetMeUseCase'
+agent: 'devin'
+model: 'unknown'
+change_level: null
+delegated_at: '2026-09-25T10:25:14Z'
+reviews:
+  - round: 0
+    reviewed_sha: '19d0ebb150'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'pr-metadata'
+        summary: 'PR 本文に Closes #32 が無い（ブランチ名で紐づけた）'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 33
+  pr_created_at: '2026-09-25T10:37:00Z'
+  merged_at: '2026-09-25T22:55:26Z'
+  closed_at: '2026-09-25T22:55:26Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true

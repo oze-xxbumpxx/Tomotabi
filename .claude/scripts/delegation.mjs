@@ -34,8 +34,8 @@ const DEFAULT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../docs/cl
 const GH_TIMEOUT_MS = 30_000;
 
 export const MODELS = ['swe-2-medium', 'swe-2-high', 'swe-2-max', 'unknown'];
-// unknown は runner を記録し始める前の記録（読み込み時に補う）。
-export const RUNNERS = ['local', 'cloud', 'unknown'];
+// 新しい記録で指定できる実行場所。runner の無い古い記録は、集計のときだけ unknown として扱う。
+export const RUNNERS = ['local', 'cloud'];
 export const SEVERITIES = ['must', 'nit', 'security', 'decision'];
 export const VERDICTS = ['merge', 'fix', 'escalate'];
 export const PRIVATE_SUMMARY = '(非公開)';

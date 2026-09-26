@@ -25,8 +25,11 @@ description: >
      作業ツリーがきれい（`git status --short` が空。残っていたら捨てずにユーザーに伝える）、
      `git fetch origin && git switch --detach origin/main` で最新の main から始める。
      起動: `devin --model swe-2-<effort> --permission-mode dangerous -p "<依頼>"` を `run_in_background` で。
-     プロンプトに「作業はこのリポジトリのフォルダの中だけで行う」を入れる。
      `--sandbox` は付けない（autonomous モードになり、確認が要る操作が拒否されて途中で止まる。#48）。
+     dangerous は確認なしでコマンドを実行するため、Devin に危険操作の確認は効かない（ユーザー了承済みの割り切り）。代わりに:
+     プロンプトに「作業はこのリポジトリのフォルダの中だけで行う。force push・ブランチの削除・履歴の書き換え・main への push・
+     クローン外への書き込みはしない。必要になったら止まって報告する」を必ず入れる。
+     終了後に、`git -C <クローン> reflog -n 20` と `gh pr view <n> --json commits` で、force push や想定外のブランチ操作が無いかを確かめる。
    - **クラウドはユーザーが指示したときだけ**（出先のとき）。`devin --cloud -p "<依頼>"`。`--cloud` では `--model` が無視され、
      Devin Web の「セッションエージェント」の既定（SWE-2 High）で動く。High 以外が要るときは、依頼の前にユーザーに既定の切り替えを頼む。
 3. Bash の `run_in_background` で `node .claude/scripts/wait-for-pr.mjs <Issue>` を起動する。Issue ごとに 1 本。

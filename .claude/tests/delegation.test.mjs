@@ -315,6 +315,7 @@ test('D-12: runner（実行場所）は既定 local、cloud を選べ、それ�
     assert.equal(cli(['init', '64', '--runner', 'cloud', ...common]).status, 0);
     assert.equal(parseYaml(readFileSync(join(dir, '64.yml'), 'utf8')).runner, 'cloud');
     assert.equal(cli(['init', '65', '--runner', 'remote', ...common]).status, 2);
+    assert.equal(cli(['init', '66', '--runner', 'unknown', ...common]).status, 2);
   });
   const legacy = base(66);
   delete legacy.runner;

@@ -79,6 +79,15 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-agent-config.mjs\""
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/suggest-pr-watch.mjs\""
+          }
+        ]
       }
     ],
     "SubagentStop": [

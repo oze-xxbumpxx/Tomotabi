@@ -96,7 +96,7 @@ export default defineConfig(
       "logs/**",
       ".claude/**",
       "docs/**",
-      "coverage/**",
+      "**/coverage/**",
       "**/tests/fixtures/boundaries/**",
       "apps/web/src/shared/api/generated/**",
     ],

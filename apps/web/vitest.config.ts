@@ -13,5 +13,16 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    coverage: {
+      provider: "v8",
+      include: ["src/**"],
+      exclude: [
+        "src/app/layout.tsx",
+        "src/app/page.tsx",
+        "src/shared/api/generated/**",
+      ],
+      reporter: ["text", "html", "json-summary"],
+      reportsDirectory: "./coverage",
+    },
   },
 });

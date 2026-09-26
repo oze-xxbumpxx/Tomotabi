@@ -12,7 +12,9 @@
     "test:db": "vitest run --config vitest.db.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:check": "drizzle-kit check"
+    "db:check": "drizzle-kit check",
+    "cli:enroll": "nest build && node dist/cli/enroll-google-account.js",
+    "cli:disable": "nest build && node dist/cli/disable-google-account.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",
@@ -21,6 +23,7 @@
     "@tomotabi/contracts": "0.0.0",
     "better-auth": "^1.7.5",
     "drizzle-orm": "^0.45.2",
+    "google-auth-library": "^11.1.0",
     "nestjs-pino": "^5.2.0",
     "pg": "^8.23.0",
     "pino-http": "^11.0.0",

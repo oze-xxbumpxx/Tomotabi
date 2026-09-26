@@ -1,0 +1,22 @@
+issue: 30
+title: 'feat(api): M1-b1 Guard の土台（UserId・デコレーター・SessionVerifier IF・Guard の判定）'
+agent: 'devin'
+model: 'unknown'
+change_level: null
+delegated_at: '2026-09-25T10:25:11Z'
+reviews:
+  - round: 0
+    reviewed_sha: 'aa87175368'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 34
+  pr_created_at: '2026-09-25T10:41:26Z'
+  merged_at: '2026-09-25T11:55:03Z'
+  closed_at: '2026-09-25T11:55:03Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

@@ -30,6 +30,8 @@ test('gh issue create の出力に Issue の URL があれば、待機コマン�
   assert.equal(out.hookSpecificOutput.hookEventName, 'PostToolUse');
   assert.match(out.hookSpecificOutput.additionalContext, /wait-for-pr\.mjs 37/);
   assert.match(out.hookSpecificOutput.additionalContext, /review-devin-pr/);
+  // H-01: 委譲の記録（docs/designs/devin-delegation-loop.md）
+  assert.match(out.hookSpecificOutput.additionalContext, /delegation\.mjs init 37 --model/);
 });
 
 test('複数作成したら全番号を 1 回ずつ挙げる', () => {

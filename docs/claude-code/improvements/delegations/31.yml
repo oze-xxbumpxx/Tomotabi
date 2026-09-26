@@ -1,0 +1,33 @@
+issue: 31
+title: 'feat(api): M1-b2 ログ（nestjs-pino・許可項目の serializer・redact）'
+agent: 'devin'
+model: 'unknown'
+change_level: null
+delegated_at: '2026-09-25T10:25:12Z'
+reviews:
+  - round: 0
+    reviewed_sha: 'fabc067491'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'must'
+        category: 'test-path-mismatch'
+        summary: 'ログの試験（U-18）が素の http サーバーで、Nest の ExceptionsHandler の経路を通っていない'
+  - round: 1
+    reviewed_sha: '2c8ca35ef5'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 35
+  pr_created_at: '2026-09-25T10:53:15Z'
+  merged_at: '2026-09-25T22:52:34Z'
+  closed_at: '2026-09-25T22:52:34Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true

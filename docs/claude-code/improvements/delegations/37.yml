@@ -1,0 +1,31 @@
+issue: 37
+title: 'feat(api): M1-b4 認証の組み込み（Better Auth・経路制限・Guard の全体適用・/api/me）'
+agent: 'devin'
+model: 'unknown'
+change_level: null
+delegated_at: '2026-09-25T22:57:13Z'
+reviews:
+  - round: 0
+    reviewed_sha: 'e0664929e7'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'test-path-mismatch'
+        summary: 'HTTP テストのアプリ生成が本番と違い bodyParser: false でない'
+      - severity: 'nit'
+        category: 'error-shape'
+        summary: 'sign-in の 400 / 415 が {code, message} 形式でない'
+      - severity: 'nit'
+        category: 'logging-gap'
+        summary: '/api/auth/* の要求が 1 要求 1 行のログに出ない'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 39
+  pr_created_at: '2026-09-26T00:20:27Z'
+  merged_at: '2026-09-26T05:01:41Z'
+  closed_at: '2026-09-26T05:01:41Z'
+  commits: 4
+  ci_first_pass: true
+  closes_linked: true

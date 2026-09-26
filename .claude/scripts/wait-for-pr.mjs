@@ -63,7 +63,7 @@ function parseArgs(argv) {
   return { issue, interval, timeout };
 }
 
-function issueCreatedAt(issue) {
+export function issueCreatedAt(issue) {
   const out = execFileSync('gh', ['issue', 'view', String(issue), '--json', 'createdAt', '--jq', '.createdAt'], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -71,7 +71,7 @@ function issueCreatedAt(issue) {
   return out.trim();
 }
 
-function listPrs(since) {
+export function listPrs(since) {
   const out = execFileSync(
     'gh',
     [

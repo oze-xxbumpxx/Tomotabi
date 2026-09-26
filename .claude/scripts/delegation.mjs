@@ -4,7 +4,8 @@
 //
 // 使い方:
 //   node .claude/scripts/delegation.mjs init <issue> --model <swe-2-medium|swe-2-high|swe-2-max|unknown>
-//     [--level 0-3] [--title <題>] [--delegated-at <ISO 8601>]
+//     [--runner <local|cloud>] [--level 0-3] [--title <題>] [--delegated-at <ISO 8601>]
+//       --runner は Devin を動かした場所。既定は local（2026-09-26 ユーザー指示: 既定はローカル、出先の指示時だけクラウド）。
 //       記録を作る。--title と --delegated-at を省くと gh から Issue の題と作成日時を取る。
 //   node .claude/scripts/delegation.mjs review <issue> --round <n> --sha <sha> --verdict <merge|fix|escalate>
 //     [--posted] [--finding '<must|nit|security|decision>:<category>:<summary>' ...]
@@ -33,6 +34,8 @@ const DEFAULT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../docs/cl
 const GH_TIMEOUT_MS = 30_000;
 
 export const MODELS = ['swe-2-medium', 'swe-2-high', 'swe-2-max', 'unknown'];
+// unknown は runner を記録し始める前の記録（読み込み時に補う）。
+export const RUNNERS = ['local', 'cloud', 'unknown'];
 export const SEVERITIES = ['must', 'nit', 'security', 'decision'];
 export const VERDICTS = ['merge', 'fix', 'escalate'];
 export const PRIVATE_SUMMARY = '(非公開)';
@@ -160,9 +163,10 @@ export function parseYaml(text) {
 
 // ---------------------------------------------------------------- 記録の操作（純粋関数）
 
-export function newRecord({ issue, title, model, level = null, delegatedAt }) {
+export function newRecord({ issue, title, model, runner = 'local', level = null, delegatedAt }) {
   if (!Number.isInteger(issue) || issue <= 0) throw new UsageError('Issue 番号が不正です');
   if (!MODELS.includes(model)) throw new UsageError(`--model は ${MODELS.join(' | ')} のどれか`);
+  if (!RUNNERS.includes(runner)) throw new UsageError(`--runner は ${RUNNERS.join(' | ')} のどれか`);
   if (level !== null && ![0, 1, 2, 3].includes(level)) throw new UsageError('--level は 0〜3');
   if (Number.isNaN(Date.parse(delegatedAt))) throw new UsageError('委譲の日時が ISO 8601 ではありません');
   return {
@@ -170,6 +174,7 @@ export function newRecord({ issue, title, model, level = null, delegatedAt }) {
     title,
     agent: 'devin',
     model,
+    runner,
     change_level: level,
     delegated_at: delegatedAt,
     reviews: [],
@@ -258,11 +263,10 @@ function median(values) {
 /** 投稿した回数 = 手戻りの回数。 */
 export const roundsOf = (record) => record.reviews.filter((r) => r.posted).length;
 
-export function summarize(records, { threshold = 3, securityThreshold = 2 } = {}) {
-  const byModel = {};
-  const categories = new Map();
+function groupStats(records, keyOf) {
+  const groups = {};
   for (const rec of records) {
-    const m = (byModel[rec.model] ??= {
+    const m = (groups[keyOf(rec)] ??= {
       count: 0,
       merged: 0,
       finished: 0,
@@ -290,17 +294,10 @@ export function summarize(records, { threshold = 3, securityThreshold = 2 } = {}
     }
     m.issueToPr.push(minutesBetween(rec.delegated_at, rec.gh?.pr_created_at));
     m.prToMerge.push(minutesBetween(rec.gh?.pr_created_at, rec.gh?.merged_at));
-
-    for (const review of rec.reviews) {
-      for (const f of review.findings ?? []) {
-        if (!categories.has(f.category)) categories.set(f.category, new Set());
-        categories.get(f.category).add(rec.issue);
-      }
-    }
   }
-  const models = Object.fromEntries(
-    Object.entries(byModel).map(([model, m]) => [
-      model,
+  return Object.fromEntries(
+    Object.entries(groups).map(([key, m]) => [
+      key,
       {
         count: m.count,
         merged: m.merged,
@@ -316,6 +313,18 @@ export function summarize(records, { threshold = 3, securityThreshold = 2 } = {}
       },
     ]),
   );
+}
+
+export function summarize(records, { threshold = 3, securityThreshold = 2 } = {}) {
+  const categories = new Map();
+  for (const rec of records) {
+    for (const review of rec.reviews) {
+      for (const f of review.findings ?? []) {
+        if (!categories.has(f.category)) categories.set(f.category, new Set());
+        categories.get(f.category).add(rec.issue);
+      }
+    }
+  }
   const byCategory = [...categories]
     .map(([category, issues]) => {
       const limit = category === 'security' ? securityThreshold : threshold;
@@ -329,7 +338,8 @@ export function summarize(records, { threshold = 3, securityThreshold = 2 } = {}
       closed: records.filter((r) => r.outcome === 'closed').length,
       open: records.filter((r) => r.outcome !== 'merged' && r.outcome !== 'closed').length,
     },
-    models,
+    models: groupStats(records, (rec) => rec.model),
+    runners: groupStats(records, (rec) => rec.runner ?? 'unknown'),
     byCategory,
     candidates: byCategory.filter((c) => c.candidate).map((c) => c.category),
   };
@@ -344,17 +354,23 @@ function formatDuration(min) {
 
 const ratio = (a, b) => (b === 0 ? '-' : `${a}/${b}`);
 
-export function formatSummary(s) {
-  const out = [`委譲 ${s.total} 件（merged ${s.outcomes.merged} / closed ${s.outcomes.closed} / open ${s.outcomes.open}）`];
-  if (s.total === 0) return out.join('\n');
-  out.push('', 'モデル別: 件数 / マージ / 一発合格 / 平均round / CI初回成功 / 引き渡し / Issue→PR中央値 / PR→マージ中央値');
-  for (const [model, m] of Object.entries(s.models).sort()) {
-    out.push(
-      `  ${model}: ${m.count} / ${ratio(m.merged, m.finished)} / ${ratio(m.firstPass, m.reviewed)} / ` +
+function formatGroupRows(groups) {
+  return Object.entries(groups)
+    .sort()
+    .map(
+      ([key, m]) =>
+        `  ${key}: ${m.count} / ${ratio(m.merged, m.finished)} / ${ratio(m.firstPass, m.reviewed)} / ` +
         `${m.avgRounds === null ? '-' : m.avgRounds.toFixed(1)} / ${ratio(m.ciPass, m.ciKnown)} / ${m.escalations} / ` +
         `${formatDuration(m.medianIssueToPrMin)} / ${formatDuration(m.medianPrToMergeMin)}`,
     );
-  }
+}
+
+export function formatSummary(s) {
+  const out = [`委譲 ${s.total} 件（merged ${s.outcomes.merged} / closed ${s.outcomes.closed} / open ${s.outcomes.open}）`];
+  if (s.total === 0) return out.join('\n');
+  const columns = '件数 / マージ / 一発合格 / 平均round / CI初回成功 / 引き渡し / Issue→PR中央値 / PR→マージ中央値';
+  out.push('', `モデル別: ${columns}`, ...formatGroupRows(s.models));
+  out.push('', `実行場所別: ${columns}`, ...formatGroupRows(s.runners));
   out.push('', '分類別（指摘が出た Issue の数 / 昇格の閾値）');
   for (const c of s.byCategory) {
     const note = c.candidate ? '  ← 昇格候補' : `  あと ${c.threshold - c.issues.length} 件`;
@@ -471,7 +487,7 @@ export function runCli(argv) {
   const [issueText, ...optArgs] = rest;
   if (command === 'init') {
     const issue = issueArg(issueText);
-    const opts = parseOptions(optArgs, { values: ['model', 'level', 'title', 'delegated-at'] });
+    const opts = parseOptions(optArgs, { values: ['model', 'runner', 'level', 'title', 'delegated-at'] });
     const dir = opts.dir ?? DEFAULT_DIR;
     if (opts.model === undefined) throw new UsageError('--model が必要です');
     if (!MODELS.includes(opts.model)) throw new UsageError(`--model は ${MODELS.join(' | ')} のどれか`);
@@ -483,7 +499,7 @@ export function runCli(argv) {
       delegatedAt ??= info.createdAt;
     }
     const level = opts.level === undefined ? null : toInt(opts.level, '--level');
-    console.log(writeRecord(dir, newRecord({ issue, title, model: opts.model, level, delegatedAt })));
+    console.log(writeRecord(dir, newRecord({ issue, title, model: opts.model, runner: opts.runner ?? 'local', level, delegatedAt })));
     return;
   }
   if (command === 'review') {

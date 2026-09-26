@@ -44,7 +44,7 @@ export function createdIssues(input) {
 export function buildContext(issues) {
   const lines = issues.map(
     (n) =>
-      `- Issue #${n}: \`node .claude/scripts/delegation.mjs init ${n} --model <swe-2-medium|swe-2-high|swe-2-max>\` で記録を作り、` +
+      `- Issue #${n}: \`node .claude/scripts/delegation.mjs init ${n} --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud]\` で記録を作り（既定はローカル実行）、` +
       `Bash の run_in_background で \`node .claude/scripts/wait-for-pr.mjs ${n}\` を起動する`,
   );
   return [

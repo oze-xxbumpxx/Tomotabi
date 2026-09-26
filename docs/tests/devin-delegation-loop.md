@@ -34,6 +34,7 @@
 | D-09 | 〃 | 分類の数え方: 同じ Issue で複数回出ても 1 件 | 1 件 | 境界 |
 | D-10 | 〃 | 昇格候補: 3 件で候補・2 件は候補外・security は 2 件で候補 | 期待どおり | 境界 |
 | D-11 | 〃 | 記録 0 件 | 空の集計 | 境界 |
+| D-12 | init / summary | runner の既定 local・cloud の指定・不正な値・runner の無い古い記録 | local / cloud / exit 2 / unknown として集計 | 正常・異常 |
 | H-01 | suggest-pr-watch | 促す文に `delegation.mjs init <n>` | 含まれる | 正常 |
 
 ## 完了条件

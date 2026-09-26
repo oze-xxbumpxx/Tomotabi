@@ -9,7 +9,7 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 
 | いつ | コマンド |
 | --- | --- |
-| Issue を渡したとき | `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium\|swe-2-high\|swe-2-max> [--level 0-3]` |
+| Issue を渡したとき | `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium\|swe-2-high\|swe-2-max> [--runner cloud] [--level 0-3]` |
 | レビューの round ごと | `node .claude/scripts/delegation.mjs review <Issue> --round <n> --sha <head> --verdict <merge\|fix\|escalate> [--posted] --finding '<severity>:<category>:<summary>' …` |
 | マージ・クローズの後 | `node .claude/scripts/delegation.mjs finalize <Issue> [--pr <n>]` |
 | 集計 | `node .claude/scripts/delegation.mjs summary` |
@@ -23,6 +23,7 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 | `issue` / `title` / `delegated_at` | init（gh） | Issue の番号・題・作成日時 |
 | `agent` | init | いまは常に `devin` |
 | `model` | init | `swe-2-medium` / `swe-2-high` / `swe-2-max` / `unknown`（記録を始める前の委譲） |
+| `runner` | init | Devin を動かした場所。`local`（既定）/ `cloud`。項目が無い古い記録は集計で `unknown` |
 | `change_level` | init | 0〜3。分からなければ `null` |
 | `reviews[]` | review | round ごとの `reviewed_sha`・`verdict`（merge / fix / escalate）・`posted`（PR に投稿したか）・`findings[]` |
 | `findings[]` | review | `severity`（must / nit / security / decision）・`category`・`summary` |

@@ -1,17 +1,19 @@
 import { HttpException } from "@nestjs/common";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { LogFn, Logger } from "pino";
-import type { Options } from "pino-http";
+import type { DestinationStream, LogFn, Logger } from "pino";
+import { pinoHttp, type HttpLogger, type Options } from "pino-http";
 
 const INTERNAL_ERROR_CODE = "INTERNAL_ERROR";
 
-// 設計書で許可された Guard の結果コード。それ以外の値は code に出さない。
+// 設計書で許可された Guard の結果コードと、認証経路の経路制限が返す NOT_FOUND。
+// それ以外の値は code に出さない。
 const KNOWN_LOG_CODES: ReadonlySet<string> = new Set([
   "UNAUTHENTICATED",
   "FORBIDDEN_NOT_ALLOWED",
   "FORBIDDEN_ORIGIN",
   "UNSUPPORTED_MEDIA_TYPE",
   "AUTH_UNAVAILABLE",
+  "NOT_FOUND",
 ]);
 
 // redact は防御の二重化。主の対策は、出力項目を絞る customProps / customObject 側にある。
@@ -27,12 +29,21 @@ const REDACT_PATHS = [
   "*.sub",
 ];
 
-// Guard が結果コードを渡すための取り決め（M1-b4 の Guard / 例外フィルタが res.locals.code に書く）。
+// Guard・経路制限が結果コードを渡すための取り決め（res.locals.code に書く）。
 // pino-http はエラー時に res.err を参照する。
 type ResponseWithInternals = ServerResponse & {
   err?: unknown;
   locals?: { code?: unknown };
 };
+
+// express は mount 先（app.use("/api/auth", ...)）の中で req.url を相対パスに書き換える。
+// その中で応答が終わると req.url が相対のままなので、元の URL を持つ originalUrl を優先する。
+type RequestWithOriginalUrl = IncomingMessage & { originalUrl?: unknown };
+
+function requestUrl(req: IncomingMessage): string | undefined {
+  const { originalUrl } = req as RequestWithOriginalUrl;
+  return typeof originalUrl === "string" ? originalUrl : req.url;
+}
 
 function pathWithoutQuery(url: string | undefined): string {
   if (url === undefined) {
@@ -84,7 +95,7 @@ function resolveCode(res: ServerResponse): string | null {
 function requestLogFields(req: IncomingMessage, res: ServerResponse): Record<string, unknown> {
   const fields: Record<string, unknown> = {
     method: req.method,
-    path: pathWithoutQuery(req.url),
+    path: pathWithoutQuery(requestUrl(req)),
     statusCode: res.statusCode,
   };
   const code = resolveCode(res);
@@ -188,4 +199,16 @@ export function createPinoHttpOptions(): Options {
     hooks: { logMethod: suppressErrorMessageAutofill },
     redact: { paths: [...REDACT_PATHS], censor: "[Redacted]" },
   };
+}
+
+/**
+ * 1 要求 1 行を書く pino-http ミドルウェア。configureApp が express の先頭に載せ、
+ * 認証経路（/api/auth/*。Nest に入る前に allowlist / Better Auth が応答する）も
+ * 同じ 1 行ログに乗せる。Nest 側は nestjs-pino の useExisting で req.log を共有する。
+ * stream はテストが出力を捕まえるために渡す。
+ */
+export function createRequestLogger(stream?: DestinationStream): HttpLogger {
+  return stream === undefined
+    ? pinoHttp(createPinoHttpOptions())
+    : pinoHttp(createPinoHttpOptions(), stream);
 }

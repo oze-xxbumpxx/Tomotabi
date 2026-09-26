@@ -36,7 +36,7 @@ export function authRouteAllowlist(
   return (req, res, next) => {
     const route = PUBLIC_ROUTES[`${req.method} ${req.path}`];
     if (route === undefined) {
-      res.status(404).json({ code: "NOT_FOUND", message: "Not Found" });
+      sendJson(res, 404, "NOT_FOUND", "Not Found");
       return;
     }
     if (

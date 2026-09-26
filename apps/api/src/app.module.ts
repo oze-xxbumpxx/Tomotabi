@@ -9,7 +9,9 @@ import { IdentityModule } from "./modules/identity/identity.module";
 
 @Module({
   imports: [
-    LoggerModule.forRoot({ pinoHttp: createPinoHttpOptions() }),
+    // 要求ログの middleware は configureApp が express の先頭に載せる（認証経路も含めるため）。
+    // useExisting で Nest 側はその req.log を使い、二重に出さない。
+    LoggerModule.forRoot({ pinoHttp: createPinoHttpOptions(), useExisting: true }),
     FoundationModule,
     IdentityModule,
   ],

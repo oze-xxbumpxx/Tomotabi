@@ -34,6 +34,9 @@ description: >
      環境でもコミットがあれば動く。
 3. **日次ログ**: write-work-log Skill の手順で `logs/YYYY-MM-DD.md` を作成・追記する。
    kickoff-session で雛形を作っていれば残りの節を埋める。
+3a. **委譲の記録**（Devin に渡した Issue があるときだけ）: このセッションでマージ・クローズされた委譲に
+   `node .claude/scripts/delegation.mjs finalize <Issue>` を実行し、`docs/claude-code/improvements/delegations/` の
+   変更を手順 6 のコミットに含める。`delegation.mjs summary` で昇格候補が出たらログの「気づき・メモ」に書く。
 4. **メトリクス・振り返り**（L2/L3 のみ）: `record-metrics-and-reflect` Skill が
    利用可能なら実行する（改善サイクルを運用しているプロジェクト）。
    - **利用できない環境ではスキップし、ログにスキップした旨を書く。** セッション終了作業を

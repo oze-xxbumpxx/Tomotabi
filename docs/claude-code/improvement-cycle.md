@@ -65,6 +65,25 @@ agent-improvement-manager を起動するのは次のいずれか。**毎タス�
 - セッション終了時、可能なら `process.meta_work_ratio` を metrics に記録し、メタ作業の
   再増殖を数字で監視する。
 
+## 委譲ループの軽量サイクル（devin-delegation-loop）
+
+Devin に委譲した Issue のレビュー指摘は、上の 11 ステップ（reflection → manager → evaluator）を通さず、
+軽い経路でハーネスに戻す。設計と比較は `docs/designs/devin-delegation-loop.md`。
+
+- **入力**: 委譲ごとの記録 `improvements/delegations/<issue>.yml`（`review-devin-pr` がレビューの副産物として残す）。
+- **数え方**: `node .claude/scripts/delegation.mjs summary` が、指摘の `category` を「指摘が出た Issue の数」で数える。
+  1 つの委譲の中の繰り返しは数えない（1 つの PR の癖への過剰適応を避ける）。
+- **閾値**: 異なる Issue で **3 件**（既存の昇格条件と同じ）。`security` だけ **2 件**
+  （memory-policy の「重大な試験不具合」に当たると読む）。
+- **起票**: 昇格候補が出たら、その日の締めか次の委譲の前に `candidates/delegation-<category>.md` と backlog の 1 行を
+  既存のテンプレートで作る。出典に Issue / PR 番号を並べる。
+- **変更先**: Devin の実装の癖 → `.agents/skills/devin-workflow/SKILL.md`、Issue の書き方の不足 → `review-devin-pr` の
+  「委譲」節、Claude のレビューの見落とし → `review-devin-pr` のチェック項目。
+- **承認**: 既存の承認境界どおり、ハーネスの PR でユーザーがレビュー・マージする。
+- **事後評価**: evals の代わりに、昇格後の 3 委譲でその `category` が 0 件かを `summary` で見る。再発したら proposal に追記する。
+- **減速ルールとの関係**: 早期昇格はしない（例外は「確証あり・修正極小」だけ）。閾値は機械で数えるため、判断の揺れで早まらない。
+  委譲が増え Tomotabi 用の evals が整ったら、記録を reflection-agent の入力にして 11 ステップに合流させる。
+
 ## 計測の原則（セッション内確定 / IMP-2026-019 方針 A）
 
 計測データは**セッション終了前にコミット対象ファイルへ確定する**。リモート（エフェメラル）

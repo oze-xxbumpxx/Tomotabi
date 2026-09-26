@@ -48,6 +48,7 @@ npm run dev:web    # http://localhost:3000  （/api を 3001 へ転送）
 npm run lint
 npm run type-check
 npm test           # web / api の単体・HTTP。Testcontainers は含まない
+npm run test:coverage  # web / api のカバレッジを計測（apps/*/coverage/ に html と coverage-summary.json）
 npm run test:api-db
 npm run build
 npm run test:harness

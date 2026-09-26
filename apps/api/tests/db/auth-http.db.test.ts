@@ -221,6 +221,24 @@ describe("H: 実 HTTP と Better Auth の配線", () => {
       .send({ provider: "apple" });
 
     expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      code: "INVALID_REQUEST",
+      message: "Invalid sign-in request",
+    });
+  });
+
+  it("H-01c: JSON 以外の Content-Type は 415 で { code, message } を返す", async () => {
+    const response = await http()
+      .post("/api/auth/sign-in/social")
+      .set("Origin", ORIGIN)
+      .set("Content-Type", "text/plain")
+      .send("provider=google");
+
+    expect(response.status).toBe(415);
+    expect(response.body).toEqual({
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      message: "Content-Type must be application/json",
+    });
   });
 
   it("H-02: 不正な state の callback は 500 にならない", async () => {

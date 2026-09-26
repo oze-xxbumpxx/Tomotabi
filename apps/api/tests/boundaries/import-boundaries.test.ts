@@ -60,6 +60,10 @@ const boundaryCases = [
   ["apps/web/src/shared/lib/check.ts", "@/shared/api/generated/foundation", true],
   ["apps/web/src/shared/api/check.ts", "./http-client", false],
   ["apps/api/src/modules/foundation/usecase/check.ts", "../adapter/service/increment-probe.port", false],
+  ["apps/api/src/main.ts", "better-auth/plugins", true],
+  ["apps/api/src/modules/identity/infrastructure/check.ts", "better-auth/plugins", true],
+  ["apps/api/src/modules/foundation/domain/check.ts", "better-auth/plugins", true],
+  ["apps/api/tests/identity/check.ts", "better-auth/plugins", false],
 ] as const;
 
 describe("production-path import boundaries", () => {

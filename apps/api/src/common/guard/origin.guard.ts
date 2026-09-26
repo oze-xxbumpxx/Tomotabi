@@ -6,7 +6,7 @@ import {
   type CanActivate,
   type ExecutionContext,
 } from "@nestjs/common";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 
 export const ALLOWED_ORIGINS = Symbol("ALLOWED_ORIGINS");
 
@@ -32,6 +32,7 @@ export class OriginGuard implements CanActivate {
 
     const origin = request.headers.origin;
     if (typeof origin !== "string" || !this.allowedOrigins.includes(origin)) {
+      reject(context, "FORBIDDEN_ORIGIN");
       throw new ForbiddenException({
         code: "FORBIDDEN_ORIGIN",
         message: "Origin is not allowed",
@@ -44,6 +45,7 @@ export class OriginGuard implements CanActivate {
         ? contentType.split(";")[0]?.trim().toLowerCase()
         : null;
     if (mediaType !== JSON_MEDIA_TYPE) {
+      reject(context, "UNSUPPORTED_MEDIA_TYPE");
       throw new UnsupportedMediaTypeException({
         code: "UNSUPPORTED_MEDIA_TYPE",
         message: "Content-Type must be application/json",
@@ -52,4 +54,10 @@ export class OriginGuard implements CanActivate {
 
     return true;
   }
+}
+
+/** M1-b2 の取り決め: 拒否の結果コードを res.locals.code に書き、1 要求 1 行のログに出す。 */
+function reject(context: ExecutionContext, code: string): void {
+  const response = context.switchToHttp().getResponse<Response>();
+  (response.locals ??= {}).code = code;
 }

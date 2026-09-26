@@ -87,7 +87,46 @@ describe("sign-in/social の body 検査 (U-15)", () => {
     await expect(auth.api.signInSocial({ body })).rejects.toMatchObject({
       name: "APIError",
       status: "BAD_REQUEST",
+      body: { code: "INVALID_REQUEST", message: "Invalid sign-in request" },
     });
+  });
+
+  function signIn(contentType: string, body: string): Promise<Response> {
+    return auth.handler(
+      new Request(`${CONFIG.baseURL}/api/auth/sign-in/social`, {
+        method: "POST",
+        headers: { origin: CONFIG.baseURL, "content-type": contentType },
+        body,
+      }),
+    );
+  }
+
+  it("HTTP の 400 body は { code, message } だけで、入力値を含まない", async () => {
+    const response = await signIn(
+      "application/json",
+      JSON.stringify({ provider: "apple", callbackURL: "http://evil.example.test" }),
+    );
+
+    expect(response.status).toBe(400);
+    const text = await response.text();
+    expect(JSON.parse(text)).toEqual({
+      code: "INVALID_REQUEST",
+      message: "Invalid sign-in request",
+    });
+    expect(text).not.toContain("apple");
+    expect(text).not.toContain("evil.example.test");
+  });
+
+  it("HTTP の 415 body は { code: UNSUPPORTED_MEDIA_TYPE, message } だけで、Content-Type を含まない", async () => {
+    const response = await signIn("text/plain", "provider=google");
+
+    expect(response.status).toBe(415);
+    const text = await response.text();
+    expect(JSON.parse(text)).toEqual({
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      message: "Content-Type must be application/json",
+    });
+    expect(text).not.toContain("text/plain");
   });
 });
 

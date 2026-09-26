@@ -129,6 +129,104 @@ async function login(userId: string): Promise<string> {
   return cookie;
 }
 
+// Set-Cookie 一覧から Cookie ヘッダ用の `name=value; …` を作る。
+function cookieHeader(setCookies: string[] | string | undefined): string {
+  const list = Array.isArray(setCookies)
+    ? setCookies
+    : setCookies === undefined
+      ? []
+      : [setCookies];
+  return list.map((value) => value.split(";")[0] ?? "").join("; ");
+}
+
+// 正規の sign-in で state と署名済み state Cookie を取得する
+// （callback は Cookie の state とクエリの state の一致を検査する）。
+async function startGoogleSignIn(): Promise<{ state: string; cookie: string }> {
+  const response = await http()
+    .post("/api/auth/sign-in/social")
+    .set("Origin", ORIGIN)
+    .set("Content-Type", "application/json")
+    .send({ provider: "google", callbackURL: "/" });
+  expect(response.status).toBe(200);
+  const state = new URL(response.body.url).searchParams.get("state");
+  if (!state) {
+    throw new Error("authorization URL has no state");
+  }
+  return { state, cookie: cookieHeader(response.headers["set-cookie"]) };
+}
+
+/**
+ * Google のトークン交換だけを差し替える（better-fetch は呼び出し時に
+ * globalThis.fetch を解決する）。id_token は getUserInfo が署名を見ずに
+ * decodeJwt で読むだけなので、payload だけの偽 JWT で足りる。
+ * 戻り値の関数で元に戻す。
+ */
+function stubGoogleTokenEndpoint(account: {
+  sub: string;
+  email: string;
+  name: string;
+}): () => void {
+  const originalFetch = globalThis.fetch;
+  const idToken = [
+    { alg: "RS256", typ: "JWT" },
+    {
+      sub: account.sub,
+      email: account.email,
+      email_verified: true,
+      name: account.name,
+      iss: "https://accounts.google.com",
+      aud: AUTH_ENV.GOOGLE_CLIENT_ID,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    },
+    "fake-signature",
+  ]
+    .map((part) =>
+      Buffer.from(typeof part === "string" ? part : JSON.stringify(part))
+        .toString("base64url"),
+    )
+    .join(".");
+  globalThis.fetch = (async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    if (url === "https://oauth2.googleapis.com/token") {
+      return new Response(
+        JSON.stringify({
+          access_token: "fake-access-token",
+          id_token: idToken,
+          token_type: "Bearer",
+          expires_in: 3600,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+    return originalFetch(input, init);
+  }) as typeof fetch;
+  return () => {
+    globalThis.fetch = originalFetch;
+  };
+}
+
+function expectSignInRedirect(response: request.Response): void {
+  expect(response.status).toBe(302);
+  const location = response.headers.location as string;
+  expect(location.startsWith(`${ORIGIN}/sign-in?error=`)).toBe(true);
+}
+
+function expectNoSecretsInLocation(response: request.Response): void {
+  const location = response.headers.location as string;
+  expect(location).not.toContain("access_token");
+  expect(location).not.toContain("id_token");
+  expect(location).not.toContain("refresh_token");
+}
+
 beforeAll(async () => {
   db = await startPostgres();
   await createRoles(db);
@@ -239,13 +337,87 @@ describe("H: 実 HTTP と Better Auth の配線", () => {
     });
   });
 
-  it("H-02: 不正な state の callback は 500 にならない", async () => {
+  it("H-02: 不正な state の callback は /sign-in?error=… へリダイレクトする", async () => {
     const response = await http().get(
       "/api/auth/callback/google?state=bogus-state&code=bogus-code",
     );
 
-    expect(response.status).not.toBe(500);
-    expect([200, 302, 400, 401]).toContain(response.status);
+    expectSignInRedirect(response);
+  });
+
+  it("H-04: 未登録アカウントの callback は 302 で /sign-in?error=… へ戻る", async () => {
+    const restore = stubGoogleTokenEndpoint({
+      sub: "unregistered-sub",
+      email: "outsider@example.test",
+      name: "外部の人",
+    });
+    try {
+      const { state, cookie } = await startGoogleSignIn();
+      const response = await http()
+        .get(`/api/auth/callback/google?state=${state}&code=fake-code`)
+        .set("Cookie", cookie);
+
+      expectSignInRedirect(response);
+      const location = response.headers.location as string;
+      expect(location).not.toContain("unregistered-sub");
+      expect(location).not.toContain("outsider%40example.test");
+      expect(location).not.toContain("outsider@example.test");
+      expectNoSecretsInLocation(response);
+    } finally {
+      restore();
+    }
+  });
+
+  it("H-05: 許可リスト外アカウントの callback は 302 で /sign-in?error=… へ戻り、セッション行は残らない", async () => {
+    const sotaId = await insertUser("そうた", "sota-callback@example.test");
+    await insertGoogleAccount(sotaId, "test-sub-denied");
+    const restore = stubGoogleTokenEndpoint({
+      sub: "test-sub-denied",
+      email: "sota-callback@example.test",
+      name: "そうた",
+    });
+    try {
+      const { state, cookie } = await startGoogleSignIn();
+      const response = await http()
+        .get(`/api/auth/callback/google?state=${state}&code=fake-code`)
+        .set("Cookie", cookie);
+
+      expectSignInRedirect(response);
+      const location = response.headers.location as string;
+      expect(location).not.toContain("test-sub-denied");
+      expect(location).not.toContain("sota-callback%40example.test");
+      expect(location).not.toContain("sota-callback@example.test");
+      expectNoSecretsInLocation(response);
+      expect(await sessionCount(sotaId)).toBe(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it("H-06: body の errorCallbackURL / newUserCallbackURL は 400", async () => {
+    for (const extra of [
+      { errorCallbackURL: "http://evil.example.test/" },
+      { newUserCallbackURL: "http://evil.example.test/" },
+    ]) {
+      const response = await http()
+        .post("/api/auth/sign-in/social")
+        .set("Origin", ORIGIN)
+        .set("Content-Type", "application/json")
+        .send({ provider: "google", callbackURL: "/", ...extra });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        code: "INVALID_REQUEST",
+        message: "Invalid sign-in request",
+      });
+    }
+  });
+
+  it("H-07: GET /api/auth/error は 404", async () => {
+    const response = await http().get("/api/auth/error?error=access_denied");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("H-03: sign-out は session_token の失効 Set-Cookie を返す", async () => {

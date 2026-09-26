@@ -28,7 +28,7 @@ export type AuthConfig = {
  */
 export type AuthOverrides = Pick<BetterAuthOptions, "plugins">;
 
-// 公開するのは 4 経路だけ（設計書「API 設計」）。残りの既知経路を Better Auth 側でも止める。
+// 公開するのは 3 経路だけ（設計書「API 設計」）。残りの既知経路を Better Auth 側でも止める。
 // 主の防御は bootstrap/auth-route-allowlist で、こちらは二重防御。
 const DISABLED_PATHS = [
   "/account-info",
@@ -36,6 +36,7 @@ const DISABLED_PATHS = [
   "/change-password",
   "/delete-user",
   "/delete-user/callback",
+  "/error",
   "/get-access-token",
   "/get-session",
   "/link-social",
@@ -94,6 +95,14 @@ const signInSocialBodyCheck = createAuthMiddleware(async (ctx) => {
     throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
   }
   if (body.callbackURL !== undefined && body.callbackURL !== "/") {
+    throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
+  }
+  // 失敗時・新規登録時の戻り先はサーバー側の設定（onAPIError.errorURL）だけで決める。
+  // クライアントから受け取ると open redirect になるため、値の指定自体を拒否する。
+  if (body.errorCallbackURL !== undefined && body.errorCallbackURL !== null) {
+    throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
+  }
+  if (body.newUserCallbackURL !== undefined && body.newUserCallbackURL !== null) {
     throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
   }
 });
@@ -168,6 +177,8 @@ export function createAuth(
       database: { generateId: "uuid" },
     },
     disabledPaths: [...DISABLED_PATHS],
+    // OAuth 失敗時の戻り先。ライブラリが ?error=… を付けて 302 し、web の /sign-in が表示する
+    onAPIError: { errorURL: `${config.baseURL}/sign-in` },
     hooks: { before: signInSocialBodyCheck },
     databaseHooks: {
       session: {

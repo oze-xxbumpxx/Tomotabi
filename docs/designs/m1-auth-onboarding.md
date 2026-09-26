@@ -86,13 +86,16 @@ identity モジュールの Domain / Service 層は作らない。業務ルー�
 
 1. web の /sign-in で「Google でログイン」を押す。Better Auth の React クライアントで `signIn.social({ provider: "google", callbackURL: "/" })` を呼ぶ。
 2. `POST /api/auth/sign-in/social` が Next の rewrite を通って NestJS へ届く。
-3. Express の経路制限ミドルウェアが「公開 4 経路のメソッドとパス」だけを通す。
-4. Better Auth の before フックが body を検査する。provider が google 以外、idToken あり、callbackURL が許可リスト（`/` のみ）外なら 400。
+3. Express の経路制限ミドルウェアが「公開 3 経路のメソッドとパス」だけを通す。
+4. Better Auth の before フックが body を検査する。provider が google 以外、idToken あり、callbackURL が許可リスト（`/` のみ）外、errorCallbackURL / newUserCallbackURL の指定ありなら 400（戻り先はサーバー側の設定だけで決め、open redirect を作らない）。
+
 5. Google へリダイレクトし、`GET /api/auth/callback/google` に戻る。state / PKCE の検証はライブラリが行う。
 6. ライブラリが accountId=sub で既存 account を探す。disableSignUp なので未登録なら失敗する（E-01）。
 7. `databaseHooks.session.create.before` で allowlist を確認する。`allowlist-query` で userId・sub・enabled が一致しなければ `false` を返し、発行を中止する（E-02、E-05）。
 8. `account.updateAccountOnSignIn: false` により、ログイン時に Google の access / refresh / id token を accounts へ書き込まない。初期登録 CLI もトークンを保存しないため、トークン列は常に null になる（スパイクで確認。DB フックは使わない）。
 9. Cookie を設定して `/` へリダイレクトする。web が `GET /api/me` で表示名を取得する。
+
+途中で失敗したとき（state 不一致・コード交換失敗・未登録・許可リスト拒否など）は、ライブラリが `onAPIError.errorURL` に設定した `<公開アプリのオリジン>/sign-in?error=…` へ 302 で戻す。web の /sign-in が `?error=` の有無で原因を問わない一般的な文を出す（W-03）。ライブラリの既定の戻り先 `GET /api/auth/error` は使わず、経路制限で 404 にする。
 
 ### 業務 API（N-02、E-03〜E-07）
 
@@ -117,8 +120,7 @@ SessionVerifier の結果は `authenticated(userId, expiresAt)`、`unauthenticat
 | POST /api/auth/sign-in/social | ○ | 不要 | 必須 | 200（リダイレクト URL）/ 400 / 403 / 503 |
 | GET /api/auth/callback/google | ○ | 不要 | 対象外（state / PKCE に委ねる） | 302 / 400 / 503 |
 | POST /api/auth/sign-out | ○ | 任意 | 必須 | 200 / 403 / 503 |
-| GET /api/auth/error | ○ | 不要 | 対象外 | 200（一般的な説明のみ） |
-| その他 /api/auth/* | × | — | — | 404 |
+| その他 /api/auth/*（GET /api/auth/error を含む） | × | — | — | 404 |
 | GET /api/me | ○ | 必須 | 対象外（GET） | 200 `Me` / 401 / 403 / 503 |
 | GET /api/health | ○ | 不要（@PublicRoute） | 対象外 | 200（変更なし） |
 | /api/foundation/* | ○ | 必須（新規） | POST は必須 | 既存 + 401 / 403 |
@@ -181,7 +183,7 @@ users / accounts / allowlist への INSERT は、初期登録 CLI（管理者接
 ```ts
 const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
 const http = app.getHttpAdapter().getInstance();
-http.use("/api/auth", authRouteAllowlist(publicOrigin));   // 4 経路以外は 404。POST は Origin 必須
+http.use("/api/auth", authRouteAllowlist(publicOrigin));   // 3 経路以外は 404。POST は Origin 必須
 http.all("/api/auth/*splat", toNodeHandler(auth));        // Express 5 の書式
 app.useBodyParser("json");                                 // 認証経路の後で Nest 用に有効化
 app.setGlobalPrefix("api");
@@ -205,6 +207,7 @@ betterAuth({
   session: { expiresIn: 60 * 60 * 24 * 7, disableSessionRefresh: true, cookieCache: { enabled: false } },
   advanced: { cookiePrefix: "travel", useSecureCookies: isProduction, database: { generateId: "uuid" } },
   disabledPaths: [/* 非公開経路 */],
+  onAPIError: { errorURL: `${env.PUBLIC_APP_ORIGIN}/sign-in` },
   hooks: { before: /* sign-in/social の body 検査 */ },
   databaseHooks: { session: { create: { before: /* allowlist */ } }, account: { update: { before: /* token null */ } } },
 });

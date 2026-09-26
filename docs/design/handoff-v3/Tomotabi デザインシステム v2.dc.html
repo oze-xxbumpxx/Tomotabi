@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>
+body{margin:0;background:#E4E3E0;font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;color:#141414;-webkit-font-smoothing:antialiased}
+a{color:#2346F5}a:hover{color:#1530B8}
+*{box-sizing:border-box}
+</style>
+</helmet>
+<div style="padding:64px;display:flex;flex-direction:column;gap:80px;max-width:1720px">
+
+<header style="display:flex;flex-direction:column;gap:10px;max-width:920px">
+<div style="font-size:13px;letter-spacing:.08em;color:#5E5C57">TOMOTABI · 方向性 2a「ライブ — 今と次」· v2 洗練版</div>
+<h1 style="margin:0;font-size:34px;line-height:1.3;font-weight:800">参考アプリの分析と、書体・アイコン・画面の洗練</h1>
+<p style="margin:0;font-size:15px;line-height:1.8;color:#3D3B37;text-wrap:pretty">書体は端末標準のみで 3 案、アイコンは既存セット（Phosphor）を採用、アプリアイコンは 3 案。画面は「ホーム · 旅行中」を 3 案で比較します。タブ構成（ホーム / しおり / 記録 / 精算）は変えていません。</p>
+<nav style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><a href="#analysis" style="font-size:14px;font-weight:700">01 分析</a><span style="color:#B5B3AE">/</span><a href="#fonts" style="font-size:14px;font-weight:700">02 書体</a><span style="color:#B5B3AE">/</span><a href="#icons" style="font-size:14px;font-weight:700">03 アイコン</a><span style="color:#B5B3AE">/</span><a href="#screens" style="font-size:14px;font-weight:700">04 画面</a><span style="color:#B5B3AE">/</span><a href="#diff" style="font-size:14px;font-weight:700">05 変更点</a></nav>
+</header>
+
+<section id="analysis" data-screen-label="01 分析" style="display:flex;flex-direction:column;gap:24px">
+<h2 style="margin:0;font-size:24px;font-weight:800">01 参考アプリの分析</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px">
+<sc-for list="{{ refs }}" as="r" hint-placeholder-count="5">
+<div style="background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="font-size:19px;font-weight:800">{{ r.app }}</span><span style="font-size:12px;font-weight:700;color:#5E5C57">{{ r.area }}</span></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:#5E5C57">よくできている点</span><span style="font-size:14px;line-height:1.7;text-wrap:pretty">{{ r.good }}</span></div>
+<div style="display:flex;flex-direction:column;gap:4px;padding-top:12px;border-top:1px solid #ECEBE7"><span style="font-size:12px;font-weight:700;color:#C2410C">Tomotabi への反映</span><span style="font-size:14px;line-height:1.7;text-wrap:pretty">{{ r.apply }}</span></div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section id="fonts" data-screen-label="02 書体" style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:24px;font-weight:800">02 書体 · 端末標準の 3 案</h2><p style="margin:0;font-size:14px;line-height:1.7;color:#3D3B37">どれも追加ダウンロードなし。iOS / Mac はヒラギノと SF、Android は Noto Sans JP（C 案の見出しは Noto Serif CJK）で表示されます。</p></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:20px;align-items:start">
+
+<div id="1a" style="background:#fff;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">1a</span><span style="font-size:16px;font-weight:800">標準ゴシック</span></div>
+<div style="font-family:-apple-system,'SF Pro Display','Hiragino Sans','Noto Sans JP',sans-serif;display:flex;flex-direction:column;gap:10px;padding:20px;background:#F3F2EF;border-radius:18px">
+<span style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/12 土 – 10/14 月</span>
+<span style="font-size:28px;font-weight:700;letter-spacing:-.01em;line-height:1.25">秋の京都 2 泊 3 日</span>
+<span style="font-size:56px;font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums">12:00</span>
+<span style="font-size:15px;font-weight:600">錦市場で昼食 · 食べ処</span>
+<span style="font-size:32px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums">3,450<span style="font-size:16px;margin-left:3px">円</span></span>
+<span style="font-size:14px;line-height:1.75;color:#3D3B37">集合は四条河原町の交差点。雨なら屋根のある錦市場の入口で待ち合わせ。</span>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">Airbnb・Google マップに近い、癖のない読みやすさ。数字が SF で締まり、時刻と金額が一番きれいに見えます。太さは 800 をやめ 700 を上限にすると上品になります。</div>
+<code style="font-size:11px;line-height:1.6;color:#5E5C57;font-family:ui-monospace,Menlo,monospace">-apple-system, "SF Pro Display", "Hiragino Sans", "Noto Sans JP", sans-serif</code>
+</div>
+
+<div id="1b" style="background:#fff;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">1b</span><span style="font-size:16px;font-weight:800">丸ゴシック</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:#FF6A2B;padding:3px 9px;border-radius:999px">採用</span></div>
+<div style="font-family:ui-rounded,'SF Pro Rounded','Hiragino Maru Gothic ProN','Hiragino Sans','Noto Sans JP',sans-serif;display:flex;flex-direction:column;gap:10px;padding:20px;background:#F3F2EF;border-radius:18px">
+<span style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/12 土 – 10/14 月</span>
+<span style="font-size:28px;font-weight:700;letter-spacing:-.01em;line-height:1.25">秋の京都 2 泊 3 日</span>
+<span style="font-size:56px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums">12:00</span>
+<span style="font-size:15px;font-weight:600">錦市場で昼食 · 食べ処</span>
+<span style="font-size:32px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums">3,450<span style="font-size:16px;margin-left:3px">円</span></span>
+<span style="font-size:14px;line-height:1.75;color:#3D3B37">集合は四条河原町の交差点。雨なら屋根のある錦市場の入口で待ち合わせ。</span>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">PayPay のような親しみ。友だち同士の旅行らしい柔らかさが出ます。注意点：ヒラギノ丸ゴは太さが 1 種類のみで、太字は端末が擬似的に太らせます。Android では通常のゴシックになります。</div>
+<code style="font-size:11px;line-height:1.6;color:#5E5C57;font-family:ui-monospace,Menlo,monospace">ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Noto Sans JP", sans-serif</code>
+</div>
+
+<div id="1c" style="background:#fff;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">1c</span><span style="font-size:16px;font-weight:800">見出しだけ明朝</span></div>
+<div style="font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;display:flex;flex-direction:column;gap:10px;padding:20px;background:#F3F2EF;border-radius:18px">
+<span style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/12 土 – 10/14 月</span>
+<span style="font-family:ui-serif,'New York','Hiragino Mincho ProN','Noto Serif JP',serif;font-size:28px;font-weight:600;line-height:1.3">秋の京都 2 泊 3 日</span>
+<span style="font-size:56px;font-weight:600;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums">12:00</span>
+<span style="font-size:15px;font-weight:600">錦市場で昼食 · 食べ処</span>
+<span style="font-size:32px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums">3,450<span style="font-size:16px;margin-left:3px">円</span></span>
+<span style="font-size:14px;line-height:1.75;color:#3D3B37">集合は四条河原町の交差点。雨なら屋根のある錦市場の入口で待ち合わせ。</span>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">Notion の見出しのような、旅のしおりらしい落ち着き。旅行名と画面タイトルだけ明朝、時刻・金額・本文はゴシックのまま。小さい文字には使いません。</div>
+<code style="font-size:11px;line-height:1.6;color:#5E5C57;font-family:ui-monospace,Menlo,monospace">見出し ui-serif, "New York", "Hiragino Mincho ProN", "Noto Serif JP", serif</code>
+</div>
+
+</div>
+</section>
+
+<section id="icons" data-screen-label="03 アイコン" style="display:flex;flex-direction:column;gap:32px">
+<h2 style="margin:0;font-size:24px;font-weight:800">03 アイコン</h2>
+
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:6px"><h3 style="margin:0;font-size:18px;font-weight:800">アプリアイコン 3 案</h3><p style="margin:0;font-size:14px;line-height:1.7;color:#3D3B37">ホーム画面では 60px 前後で見られるため、形はひとつ、色は 2 色までに絞っています。</p></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px">
+
+<div id="2a" style="background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">2a</span><span style="font-size:16px;font-weight:800">現在地の点</span></div>
+<div style="display:flex;align-items:flex-end;gap:24px;padding:24px;background:#F3F2EF;border-radius:18px">
+<div style="width:128px;height:128px;border-radius:29px;background:#141414;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.18)"><span style="width:44px;height:44px;border-radius:50%;background:#FF6A2B;box-shadow:0 0 0 12px rgba(255,106,43,.22)"></span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:60px;height:60px;border-radius:14px;background:#141414;display:flex;align-items:center;justify-content:center"><span style="width:21px;height:21px;border-radius:50%;background:#FF6A2B;box-shadow:0 0 0 6px rgba(255,106,43,.22)"></span></div><span style="font-size:11px;color:#3D3B37">Tomotabi</span></div>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">画面内の「旅行中」の点と同じ形。Google マップの現在地を思わせ、「今どこ・次どこ」の方向性をそのまま表します。</div>
+</div>
+
+<div id="2b" style="background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">2b</span><span style="font-size:16px;font-weight:800">ふたつの点（友と旅）</span></div>
+<div style="display:flex;align-items:flex-end;gap:24px;padding:24px;background:#F3F2EF;border-radius:18px">
+<div style="width:128px;height:128px;border-radius:29px;background:#FF6A2B;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 24px rgba(255,106,43,.35)"><span style="width:36px;height:36px;border-radius:50%;background:#141414"></span><span style="width:36px;height:36px;border-radius:50%;background:#fff"></span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:60px;height:60px;border-radius:14px;background:#FF6A2B;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:17px;height:17px;border-radius:50%;background:#141414"></span><span style="width:17px;height:17px;border-radius:50%;background:#fff"></span></div><span style="font-size:11px;color:#3D3B37">Tomotabi</span></div>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">並んだ 2 人。オレンジ地はホーム画面で目立ち、PayPay のように「すぐ見つかる」アイコンになります。</div>
+</div>
+
+<div id="2c" style="background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">2c</span><span style="font-size:16px;font-weight:800">頭文字 t</span></div>
+<div style="display:flex;align-items:flex-end;gap:24px;padding:24px;background:#F3F2EF;border-radius:18px">
+<div style="width:128px;height:128px;border-radius:29px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center"><svg width="128" height="128" viewBox="0 0 100 100" fill="none"><path d="M42 24V60Q42 74 56 74" stroke="#141414" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"></path><path d="M29 39H60" stroke="#141414" stroke-width="13" stroke-linecap="round"></path><circle cx="73.5" cy="74" r="6.5" fill="#FF6A2B"></circle></svg></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:60px;height:60px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center"><svg width="60" height="60" viewBox="0 0 100 100" fill="none"><path d="M42 24V60Q42 74 56 74" stroke="#141414" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"></path><path d="M29 39H60" stroke="#141414" stroke-width="13" stroke-linecap="round"></path><circle cx="73.5" cy="74" r="6.5" fill="#FF6A2B"></circle></svg></div><span style="font-size:11px;color:#3D3B37">Tomotabi</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:60px;height:60px;border-radius:14px;background:#1C1C1A;display:flex;align-items:center;justify-content:center"><svg width="60" height="60" viewBox="0 0 100 100" fill="none"><path d="M42 24V60Q42 74 56 74" stroke="#F3F2EF" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"></path><path d="M29 39H60" stroke="#F3F2EF" stroke-width="13" stroke-linecap="round"></path><circle cx="73.5" cy="74" r="6.5" fill="#FF7A40"></circle></svg></div><span style="font-size:11px;color:#3D3B37">ダーク</span></div>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">文字を線で描き直し、点は線と同じ太さ・同じ高さに置いて、t のはねの先に続くようにしました。「t」と、その先へ進む現在地の点で 1 つの形になります。</div>
+</div>
+
+<div id="2d" style="background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">2d</span><span style="font-size:16px;font-weight:800">道になる t と行き先</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:#FF6A2B;padding:3px 9px;border-radius:999px">採用 · 上から見た道路 × ピン</span></div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ roadIcons }}" as="ri" hint-placeholder-count="3">
+<div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px 20px;padding:20px 24px;background:#F3F2EF;border-radius:18px">
+<div style="width:128px;height:128px;border-radius:29px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center">{{ ri.lg }}</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:60px;height:60px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center">{{ ri.sm }}</div><span style="font-size:11px;color:#3D3B37">Tomotabi</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:60px;height:60px;border-radius:14px;background:#1C1C1A;display:flex;align-items:center;justify-content:center">{{ ri.dk }}</div><span style="font-size:11px;color:#3D3B37">ダーク</span></div>
+<div style="flex-basis:100%;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:800">{{ ri.name }}</span><span style="font-size:12px;line-height:1.5;color:#5E5C57">{{ ri.desc }}</span></div>
+</div>
+</sc-for>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">t の線を細くして 1 本の道に見立て、はねを右へ長く伸ばしました。道の先のオレンジは、薄い輪を付けて「行き先」を示しています。</div>
+</div>
+
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:6px"><h3 style="margin:0;font-size:18px;font-weight:800">画面内アイコン · Phosphor Icons を採用</h3><p style="margin:0;font-size:14px;line-height:1.7;color:#3D3B37;max-width:900px;text-wrap:pretty">Lucide には塗りの形がないため、同じ形で「線 / 塗り / 太線」を持つ Phosphor（MIT）を選びました。実装は <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px">phosphor-react-native</code> または <code style="font-family:ui-monospace,Menlo,monospace;font-size:13px">@phosphor-icons/react</code>。</p></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+<div style="background:#fff;border-radius:20px;padding:18px;display:flex;gap:14px;align-items:center"><i class="ph ph-house" style="font-size:28px"></i><i class="ph-fill ph-house" style="font-size:28px"></i><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:800">線 → 塗り</span><span style="font-size:12px;color:#5E5C57;line-height:1.5">タブは未選択が線、選択中が塗り</span></div></div>
+<div style="background:#fff;border-radius:20px;padding:18px;display:flex;gap:14px;align-items:center"><i class="ph ph-check" style="font-size:28px"></i><i class="ph-bold ph-check" style="font-size:28px"></i><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:800">16px 以下は太線</span><span style="font-size:12px;color:#5E5C57;line-height:1.5">バッジ・小さなボタンは bold</span></div></div>
+<div style="background:#fff;border-radius:20px;padding:18px;display:flex;gap:14px;align-items:center"><div style="display:flex;align-items:flex-end;gap:10px"><i class="ph ph-map-pin" style="font-size:16px"></i><i class="ph ph-map-pin" style="font-size:20px"></i><i class="ph ph-map-pin" style="font-size:24px"></i></div><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:800">大きさは 3 段</span><span style="font-size:12px;color:#5E5C57;line-height:1.5">16 バッジ / 20 行 / 24 タブ・ボタン</span></div></div>
+</div>
+<div style="background:#fff;border-radius:24px;padding:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
+<sc-for list="{{ iconSet }}" as="ic" hint-placeholder-count="24">
+<div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:16px;background:#F3F2EF">
+<i class="{{ ic.cls }}" style="font-size:26px;color:{{ ic.color }}"></i>
+<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:700">{{ ic.use }}</span><code style="font-size:11px;color:#5E5C57;font-family:ui-monospace,Menlo,monospace">{{ ic.name }}</code></div>
+</div>
+</sc-for>
+</div>
+<div style="font-size:12px;line-height:1.7;color:#5E5C57">予定の種類（場所・食べ処・買い物・宿・移動）は v2 からアイコン＋文字で表示。アイコンだけで意味を伝えないルールは継続します。</div>
+</div>
+</section>
+
+<section id="screens" data-screen-label="04 画面" style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px"><h2 style="margin:0;font-size:24px;font-weight:800">04 画面 · ホーム（旅行中）3 案</h2><p style="margin:0;font-size:14px;line-height:1.7;color:#3D3B37">既定では 3a = 書体 <a href="#1a">1a</a>、3b = <a href="#1b">1b</a>、3c = <a href="#1c">1c</a> で表示。Tweaks の「画面の書体」で 3 画面まとめて切り替えられます。</p></div>
+<div style="display:flex;flex-wrap:wrap;gap:48px 40px;align-items:flex-start">
+
+<div id="3a" style="display:flex;flex-direction:column;gap:14px;width:375px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">3a</span><span style="font-size:15px;font-weight:800">ゆとり</span><span style="font-size:12px;color:#5E5C57">Airbnb × PayPay</span></div>
+<div style="width:375px;height:812px;border-radius:48px;overflow:hidden;background:#F7F6F3;position:relative;box-shadow:0 0 0 10px #141414,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;font-family:{{ fa_b }}">
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:15px;font-weight:600"><span>9:41</span><span style="width:120px;height:34px;background:#000;border-radius:20px;margin-top:6px"></span><span style="width:40px"></span></div>
+<div style="flex:1;overflow:hidden;padding:10px 20px 180px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:flex-start;gap:10px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#C2410C"><span style="width:7px;height:7px;border-radius:50%;background:#FF6A2B;box-shadow:0 0 0 3px rgba(255,106,43,.22)"></span>旅行中 · 2 / 3 日目</span></div>
+<div style="font-family:{{ fa_h }};font-size:30px;font-weight:700;letter-spacing:-.015em;line-height:1.2">秋の京都 2 泊 3 日</div>
+<div style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/12 土 – 10/14 月</div>
+</div>
+<div style="width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0" style-active="transform:scale(.94)"><i class="ph ph-caret-up-down" style="font-size:20px"></i></div>
+</div>
+<div style="background:#fff;border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06)">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:700;color:#C2410C">次の予定 · あと 2 時間 19 分</span><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#1D3AC9;background:#E6EBFF;padding:3px 8px;border-radius:999px"><i class="ph-bold ph-calendar-check" style="font-size:13px"></i>予約済み</span></div>
+<div style="display:flex;align-items:flex-end;gap:14px"><span style="font-size:52px;font-weight:700;line-height:.95;letter-spacing:-.04em;font-variant-numeric:tabular-nums">12:00</span><div style="display:flex;flex-direction:column;gap:2px;padding-bottom:2px;min-width:0"><span style="font-size:18px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">錦市場で昼食</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#5E5C57"><i class="ph ph-fork-knife" style="font-size:15px"></i>食べ処</span></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 6px"><span style="font-family:{{ fa_h }};font-size:19px;font-weight:700">今日の予定</span><span style="font-size:14px;font-weight:600;color:#2346F5">すべて見る</span></div>
+<div style="background:#fff;border-radius:24px;padding:4px 16px">
+<div style="display:grid;grid-template-columns:28px 48px 1fr auto;gap:8px;align-items:center;padding:13px 0"><i class="ph-fill ph-check-circle" style="font-size:22px;color:#1B6B35"></i><span style="font-size:15px;font-weight:600;color:#5E5C57;font-variant-numeric:tabular-nums">9:00</span><span style="font-size:15px;font-weight:600;color:#5E5C57">伏見稲荷大社</span><span style="font-size:12px;font-weight:700;color:#1B6B35">達成</span></div>
+<div style="display:grid;grid-template-columns:28px 48px 1fr auto;gap:8px;align-items:center;padding:13px 0;border-top:1px solid #F0EFEB"><i class="ph ph-circle" style="font-size:22px;color:#FF6A2B"></i><span style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums">12:00</span><span style="font-size:15px;font-weight:600">錦市場で昼食</span><span style="font-size:12px;font-weight:800;color:#C2410C">次</span></div>
+<div style="display:grid;grid-template-columns:28px 48px 1fr auto;gap:8px;align-items:center;padding:13px 0;border-top:1px solid #F0EFEB"><i class="ph ph-circle" style="font-size:22px;color:#B5B3AE"></i><span style="font-size:12px;font-weight:600;color:#5E5C57">未定</span><span style="font-size:15px;font-weight:600">旅館にチェックイン</span><span></span></div>
+</div>
+</div>
+<div style="background:#fff;border-radius:24px;padding:18px 20px;display:flex;align-items:center;gap:12px" style-active="transform:scale(.98)">
+<div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#5E5C57">ひなた から あおい へ</span><span style="font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums">3,450<span style="font-size:15px;margin-left:2px">円</span></span></div>
+<i class="ph ph-caret-right" style="font-size:20px;color:#5E5C57"></i>
+</div>
+</div>
+<div style="position:absolute;left:12px;right:12px;bottom:26px;display:flex;flex-direction:column;gap:10px">
+<div style="height:58px;border-radius:999px;background:#FF6A2B;color:#141414;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;box-shadow:0 8px 24px rgba(255,106,43,.35);transition:transform .15s" style-active="transform:scale(.97)"><i class="ph-bold ph-plus" style="font-size:22px"></i>支払いを記録</div>
+<div style="height:64px;border-radius:999px;background:rgba(255,255,255,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 0 0 1px rgba(0,0,0,.05),0 10px 30px rgba(0,0,0,.1);display:grid;grid-template-columns:repeat(4,1fr);padding:6px">
+<div style="border-radius:999px;background:#141414;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:700"><i class="ph-fill ph-house" style="font-size:22px"></i>ホーム</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:#3D3B37"><i class="ph ph-book-open-text" style="font-size:22px"></i>しおり</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:#3D3B37"><i class="ph ph-list-bullets" style="font-size:22px"></i>記録</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:#3D3B37"><i class="ph ph-arrows-left-right" style="font-size:22px"></i>精算</div>
+</div>
+</div>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">カードは白・柔らかい影・広い余白。黒い「次の予定」カードをやめ、時刻の大きさだけで主役を示します。精算は Splitwise 風に一文で。</div>
+</div>
+
+<div id="3b" style="display:flex;flex-direction:column;gap:14px;width:375px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">3b</span><span style="font-size:15px;font-weight:800">タイムライン</span><span style="font-size:12px;color:#5E5C57">Google マップ × Splitwise</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:#FF6A2B;padding:3px 9px;border-radius:999px">採用</span></div>
+<div style="width:375px;height:812px;border-radius:48px;overflow:hidden;background:#F3F2EF;position:relative;box-shadow:0 0 0 10px #141414,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;font-family:{{ fb_b }}">
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:15px;font-weight:600"><span>9:41</span><span style="width:120px;height:34px;background:#000;border-radius:20px;margin-top:6px"></span><span style="width:40px"></span></div>
+<div style="padding:6px 20px 0;display:flex;align-items:center;gap:10px">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/13 日 · 2 / 3 日目</span><span style="font-family:{{ fb_h }};font-size:24px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">秋の京都 2 泊 3 日</span></div>
+<div style="height:40px;padding:0 12px 0 14px;border-radius:999px;background:#fff;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700">切り替え<i class="ph-bold ph-caret-down" style="font-size:14px"></i></div>
+</div>
+<div style="padding:14px 20px 0;display:flex;gap:6px">
+<span style="flex:1;height:4px;border-radius:2px;background:#141414"></span><span style="flex:1;height:4px;border-radius:2px;background:linear-gradient(90deg,#FF6A2B 40%,#D6D4CF 40%)"></span><span style="flex:1;height:4px;border-radius:2px;background:#D6D4CF"></span>
+</div>
+<div style="flex:1;overflow:hidden;padding:20px 16px 180px;display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border-radius:24px;padding:18px 16px 8px;display:flex;flex-direction:column">
+<div style="display:grid;grid-template-columns:44px 24px 1fr;gap:10px;align-items:start;min-height:64px">
+<span style="font-size:14px;font-weight:600;color:#5E5C57;font-variant-numeric:tabular-nums;padding-top:2px">9:00</span>
+<div style="display:flex;flex-direction:column;align-items:center;align-self:stretch"><i class="ph-fill ph-check-circle" style="font-size:22px;color:#1B6B35"></i><span style="flex:1;width:2px;background:#141414;margin-top:2px"></span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding-top:1px"><span style="font-size:15px;font-weight:600;color:#5E5C57">伏見稲荷大社</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#5E5C57"><i class="ph ph-map-pin" style="font-size:14px"></i>場所 · 達成 ひなた</span></div>
+</div>
+<div style="display:grid;grid-template-columns:44px 24px 1fr;gap:10px;align-items:center;min-height:28px">
+<span style="font-size:12px;font-weight:800;color:#C2410C;font-variant-numeric:tabular-nums">9:41</span>
+<div style="display:flex;justify-content:center;align-self:stretch;position:relative"><span style="width:2px;background:repeating-linear-gradient(#B5B3AE 0 4px,transparent 4px 8px)"></span><span style="position:absolute;top:50%;left:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#FF6A2B;box-shadow:0 0 0 4px rgba(255,106,43,.25)"></span></div>
+<span style="font-size:12px;font-weight:700;color:#C2410C">今 · 次まで 2 時間 19 分</span>
+</div>
+<div style="display:grid;grid-template-columns:44px 24px 1fr;gap:10px;align-items:start;min-height:96px">
+<span style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;padding-top:10px">12:00</span>
+<div style="display:flex;flex-direction:column;align-items:center;align-self:stretch"><span style="width:2px;height:12px;background:repeating-linear-gradient(#B5B3AE 0 4px,transparent 4px 8px)"></span><span style="width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px #FF6A2B"></span><span style="flex:1;width:2px;background:repeating-linear-gradient(#B5B3AE 0 4px,transparent 4px 8px)"></span></div>
+<div style="background:#FFF3EC;border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;margin-bottom:10px"><span style="font-size:17px;font-weight:700">錦市場で昼食</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#3D3B37"><i class="ph ph-fork-knife" style="font-size:14px"></i>食べ処</span><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#1D3AC9;background:#E6EBFF;padding:2px 8px;border-radius:999px"><i class="ph-bold ph-calendar-check" style="font-size:12px"></i>予約</span></div></div>
+</div>
+<div style="display:grid;grid-template-columns:44px 24px 1fr;gap:10px;align-items:start;min-height:52px">
+<span style="font-size:12px;font-weight:600;color:#5E5C57;padding-top:2px">未定</span>
+<div style="display:flex;justify-content:center"><span style="width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2.5px #B5B3AE;margin-top:3px"></span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">旅館にチェックイン</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#5E5C57"><i class="ph ph-bed" style="font-size:14px"></i>宿</span></div>
+</div>
+</div>
+<div style="background:#fff;border-radius:24px;padding:16px;display:flex;align-items:center;gap:12px">
+<div style="width:44px;height:44px;border-radius:50%;background:#F3F2EF;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ph ph-arrows-left-right" style="font-size:22px"></i></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;color:#3D3B37"><b>ひなた</b> から <b>あおい</b> へ</span><span style="font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums">3,450<span style="font-size:14px;margin-left:2px">円</span></span></div>
+<span style="font-size:14px;font-weight:700;color:#2346F5">精算へ</span>
+</div>
+</div>
+<div style="position:absolute;left:12px;right:12px;bottom:26px;display:flex;flex-direction:column;gap:10px">
+<div style="height:58px;border-radius:999px;background:#FF6A2B;color:#141414;display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;box-shadow:0 8px 24px rgba(255,106,43,.35)" style-active="transform:scale(.97)"><i class="ph-bold ph-plus" style="font-size:22px"></i>支払いを記録</div>
+<div style="height:64px;border-radius:999px;background:rgba(255,255,255,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 0 0 1px rgba(0,0,0,.05),0 10px 30px rgba(0,0,0,.1);display:grid;grid-template-columns:repeat(4,1fr);padding:6px">
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:700;color:#141414;position:relative"><i class="ph-fill ph-house" style="font-size:24px"></i>ホーム<span style="position:absolute;bottom:0;width:4px;height:4px;border-radius:50%;background:#FF6A2B"></span></div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:#5E5C57"><i class="ph ph-book-open-text" style="font-size:24px"></i>しおり</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:#5E5C57"><i class="ph ph-list-bullets" style="font-size:24px"></i>記録</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:#5E5C57"><i class="ph ph-arrows-left-right" style="font-size:24px"></i>精算</div>
+</div>
+</div>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">「次の予定」カードを廃止し、縦のタイムラインに「今」の線を差し込む。達成済みは実線、これからは点線。選択中タブは塗りアイコン＋小さな点。</div>
+</div>
+
+<div id="3c" style="display:flex;flex-direction:column;gap:14px;width:375px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:800;background:#141414;color:#fff;padding:3px 9px;border-radius:999px">3c</span><span style="font-size:15px;font-weight:800">静か</span><span style="font-size:12px;color:#5E5C57">Notion × Splitwise</span></div>
+<div style="width:375px;height:812px;border-radius:48px;overflow:hidden;background:#FFFFFF;position:relative;box-shadow:0 0 0 10px #141414,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;font-family:{{ fc_b }}">
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:15px;font-weight:600"><span>9:41</span><span style="width:120px;height:34px;background:#000;border-radius:20px;margin-top:6px"></span><span style="width:40px"></span></div>
+<div style="flex:1;overflow:hidden;padding:14px 24px 200px;display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#3D3B37"><span style="width:6px;height:6px;border-radius:50%;background:#FF6A2B"></span>旅行中 · 2 / 3 日目</span><span style="display:inline-flex;align-items:center;gap:2px;font-size:13px;font-weight:600;color:#5E5C57">切り替え<i class="ph ph-caret-down" style="font-size:14px"></i></span></div>
+<div style="font-family:{{ fc_h }};font-size:30px;font-weight:600;line-height:1.3">秋の京都 2 泊 3 日</div>
+<div style="font-size:13px;color:#5E5C57;font-variant-numeric:tabular-nums">10/12 土 – 10/14 月</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:12px;font-weight:700;color:#5E5C57">次の予定 · あと 2 時間 19 分</span>
+<div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:44px;font-weight:600;letter-spacing:-.04em;line-height:1.05;font-variant-numeric:tabular-nums">12:00</span><span style="font-size:19px;font-weight:600">錦市場で昼食</span></div>
+<div style="display:flex;gap:12px;font-size:12px;color:#3D3B37"><span style="display:inline-flex;align-items:center;gap:4px"><i class="ph ph-fork-knife" style="font-size:14px"></i>食べ処</span><span style="display:inline-flex;align-items:center;gap:4px;color:#1D3AC9;font-weight:700"><i class="ph-bold ph-calendar-check" style="font-size:13px"></i>予約済み</span></div>
+</div>
+<div style="display:flex;flex-direction:column">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px;border-bottom:1px solid #141414"><span style="font-family:{{ fc_h }};font-size:17px;font-weight:600">今日の予定</span><span style="font-size:13px;font-weight:600;color:#2346F5">すべて</span></div>
+<div style="display:grid;grid-template-columns:48px 1fr auto;gap:8px;padding:12px 0;border-bottom:1px solid #ECEBE7;align-items:center;color:#5E5C57"><span style="font-size:14px;font-variant-numeric:tabular-nums">9:00</span><span style="font-size:15px">伏見稲荷大社</span><i class="ph-bold ph-check" style="font-size:16px;color:#1B6B35"></i></div>
+<div style="display:grid;grid-template-columns:48px 1fr auto;gap:8px;padding:12px 0;border-bottom:1px solid #ECEBE7;align-items:center"><span style="font-size:14px;font-weight:700;font-variant-numeric:tabular-nums">12:00</span><span style="font-size:15px;font-weight:600">錦市場で昼食</span><span style="font-size:12px;font-weight:800;color:#C2410C">次</span></div>
+<div style="display:grid;grid-template-columns:48px 1fr auto;gap:8px;padding:12px 0;border-bottom:1px solid #ECEBE7;align-items:center"><span style="font-size:12px;color:#5E5C57">未定</span><span style="font-size:15px">旅館にチェックイン</span><span></span></div>
+</div>
+<div style="display:flex;flex-direction:column">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px;border-bottom:1px solid #141414"><span style="font-family:{{ fc_h }};font-size:17px;font-weight:600">精算</span><span style="font-size:13px;font-weight:600;color:#2346F5">詳しく</span></div>
+<div style="display:flex;align-items:center;gap:8px;padding:14px 0"><span style="font-size:15px">ひなた</span><i class="ph ph-arrow-right" style="font-size:16px"></i><span style="font-size:15px">あおい</span><span style="margin-left:auto;font-size:22px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums">3,450<span style="font-size:13px;margin-left:2px">円</span></span></div>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:12px">
+<div style="margin:0 16px;height:54px;border-radius:16px;background:#FF6A2B;color:#141414;display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:700" style-active="transform:scale(.97)"><i class="ph-bold ph-plus" style="font-size:20px"></i>支払いを記録</div>
+<div style="height:84px;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid #ECEBE7;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px 30px">
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:700;color:#141414"><i class="ph-fill ph-house" style="font-size:24px"></i>ホーム</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:600;color:#8A8883"><i class="ph ph-book-open-text" style="font-size:24px"></i>しおり</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:600;color:#8A8883"><i class="ph ph-list-bullets" style="font-size:24px"></i>記録</div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:600;color:#8A8883"><i class="ph ph-arrows-left-right" style="font-size:24px"></i>精算</div>
+</div>
+</div>
+</div>
+<div style="font-size:13px;line-height:1.7;color:#3D3B37">カードをなくし、白地・細線・見出しの下の黒線で区切る。色は「次」「達成」「予約」と主ボタンだけ。タブは iOS 標準に近い全幅バー。</div>
+</div>
+
+</div>
+</section>
+
+<section id="diff" data-screen-label="05 変更点" style="display:flex;flex-direction:column;gap:24px">
+<h2 style="margin:0;font-size:24px;font-weight:800">05 v1 からの変更点（全案共通）</h2>
+<div style="background:#fff;border-radius:24px;padding:8px 24px;display:flex;flex-direction:column;max-width:1100px">
+<sc-for list="{{ diffs }}" as="d" hint-placeholder-count="7">
+<div style="display:grid;grid-template-columns:160px minmax(0,1fr) minmax(0,1.3fr);gap:20px;padding:16px 0;border-bottom:1px solid #F0EFEB;align-items:start">
+<span style="font-size:14px;font-weight:800">{{ d.k }}</span>
+<span style="font-size:14px;line-height:1.6;color:#5E5C57">{{ d.before }}</span>
+<span style="font-size:14px;line-height:1.6;font-weight:600">{{ d.after }}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;screenFont&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;案ごと&quot;,&quot;A 標準ゴシック&quot;,&quot;B 丸ゴシック&quot;,&quot;C 明朝見出し&quot;],&quot;default&quot;:&quot;案ごと&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;画面&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const A = '-apple-system,"SF Pro Text","Hiragino Sans","Noto Sans JP",sans-serif';
+    const F = {
+      A: { b: A, h: '-apple-system,"SF Pro Display","Hiragino Sans","Noto Sans JP",sans-serif' },
+      B: { b: 'ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif' },
+      C: { b: A, h: 'ui-serif,"New York","Hiragino Mincho ProN","Noto Serif JP",serif' }
+    };
+    F.B.h = F.B.b;
+    const sel = this.props.screenFont ?? '案ごと';
+    const k = sel[0];
+    const pick = d => F[F[k] ? k : d];
+    const refs = [
+      { app: 'Airbnb', area: '余白・階層', good: '1 画面の主題がひとつで、見出しは大きく、それ以外は小さく静か。影はごく薄く、白い面と広い余白で区切る。', apply: '見出しを 3 段（画面タイトル / 欄見出し / 本文）に絞り、カード内余白を 20px に。太さの上限を 800 から 700 へ。' },
+      { app: 'Splitwise', area: '精算', good: '貸し借りを「A が B に ¥X」という一文で見せ、数字の意味を説明なしで伝える。', apply: '精算欄を「ひなた から あおい へ 3,450 円」の一文＋金額に統一。符号や色で向きを表さない方針はそのまま。' },
+      { app: 'Google マップ', area: '時系列・現在地', good: '経路やタイムラインを縦線と点で描き、現在地を光る点で示す。過去と未来の線の描き分けが明快。', apply: '今日の予定を縦のタイムラインに（3b）。「今」の位置をオレンジの点で示し、アプリアイコン 2a にも同じ点を使う。' },
+      { app: 'Notion', area: '色・書体', good: '色をほぼ使わず、灰色の階調と細線だけで構造を作る。アイコンは線で統一され、情報が騒がしくならない。', apply: '色は状態（達成・予約・注意・エラー）と主ボタンだけに限定。アイコンは Phosphor の線で統一（3c が最も近い）。' },
+      { app: 'PayPay', area: '主操作・手触り', good: '一番使う操作が画面下に大きくあり、押したときの縮みや完了表示が気持ちいい。金額が大きく読みやすい。', apply: '「支払いを記録」は下部に固定のまま、押下時に 0.97 倍へ縮む。保存完了は v1 の「＋→✓」の動きを継続。' }
+    ];
+    const ic = (name, use, w = 'ph', color = '#141414') => ({ cls: w + ' ph-' + name, name: name + (w === 'ph' ? '' : ' · ' + w.replace('ph-', '')), use, color });
+    const iconSet = [
+      ic('house', 'ホーム'), ic('book-open-text', 'しおり'), ic('list-bullets', '記録'), ic('arrows-left-right', '精算'),
+      ic('plus', '支払いを記録', 'ph-bold'), ic('caret-down', '旅行を切り替え'), ic('arrow-right', 'から → へ'), ic('caret-right', '詳細へ'),
+      ic('check-circle', '達成', 'ph-fill', '#1B6B35'), ic('calendar-check', '予約', 'ph', '#1D3AC9'), ic('prohibit', '取りやめ', 'ph', '#5E5C57'), ic('arrow-u-up-left', '取り消し'),
+      ic('map-pin', '場所'), ic('fork-knife', '食べ処'), ic('shopping-bag', '買い物'), ic('bed', '宿'), ic('train', '移動'),
+      ic('arrows-clockwise', '更新中'), ic('clock', '出発前・時刻', 'ph', '#8A5300'), ic('info', 'お知らせ', 'ph', '#8A5300'), ic('warning', 'エラー・警告', 'ph', '#B42318'),
+      ic('receipt', '支払いの記録'), ic('users-three', '参加メンバー'), ic('note-pencil', 'メモ')
+    ];
+    const diffs = [
+      { k: '見出しの太さ', before: '800 を多用', after: '700 を上限。時刻・金額は 700＋字間を詰めて締める' },
+      { k: '次の予定カード', before: '黒地の大きなカード', after: '白地＋時刻の大きさで主役を示す（3a）/ タイムラインに統合（3b）/ カードなし（3c）' },
+      { k: 'カードの質感', before: '影なし、背景色の差のみ', after: '3a は薄い影 0 1px 2px / 0 8px 24px（各 4–6%）、3b は v1 のまま、3c はカードなしで細線' },
+      { k: 'アイコン', before: '手描き SVG、種類は文字のみ', after: 'Phosphor に統一。タブは線→塗り、16px 以下は bold、予定の種類はアイコン＋文字' },
+      { k: 'タブ', before: '選択中は黒いピル', after: '構成は同じ。3a 黒ピル＋塗り / 3b 塗り＋オレンジの点 / 3c 全幅バー' },
+      { k: '精算の表示', before: '名前＋矢印＋「から/へ」＋金額', after: '一文にまとめて 1 行で読める形に。ルール（符号・色で向きを示さない）は同じ' },
+      { k: '押したときの反応', before: '指定なし', after: 'ボタン・カードは押下中 0.97 倍（0.15 秒）。動きを減らす設定では無効' }
+    ];
+    const h = React.createElement;
+    const road = (size, ink, acc, dotted) => h('svg', { width: size, height: size, viewBox: '0 0 100 100', fill: 'none' },
+      h('path', { d: dotted ? 'M40 20V58Q40 72 54 72' : 'M40 20V58Q40 72 54 72H62', stroke: ink, strokeWidth: 8, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+      h('path', { d: 'M28 37H54', stroke: ink, strokeWidth: 8, strokeLinecap: 'round' }),
+      dotted ? h('path', { d: 'M61 72H66', stroke: ink, strokeWidth: 5, strokeLinecap: 'round', strokeDasharray: '0 5' }) : null,
+      h('circle', { cx: 76, cy: 72, r: 12.5, stroke: acc, strokeOpacity: .3, strokeWidth: 3.5 }),
+      h('circle', { cx: 76, cy: 72, r: 7, fill: acc }));
+    const street = (size, ink, line, acc, hole) => h('svg', { width: size, height: size, viewBox: '0 0 100 100', fill: 'none' },
+      h('path', { d: 'M18 36H50', stroke: ink, strokeWidth: 14 }),
+      h('path', { d: 'M33 14V56Q33 72 49 72H59', stroke: ink, strokeWidth: 14, strokeLinejoin: 'round' }),
+      h('path', { d: 'M20 36H26M40 36H48', stroke: line, strokeWidth: 2 }),
+      h('path', { d: 'M33 16V29M33 43V56Q33 72 49 72H57', stroke: line, strokeWidth: 2, strokeDasharray: '5 4' }),
+      h('path', { d: 'M71 79C66.5 73 58.5 66.5 58.5 55.5A12.5 12.5 0 0 1 83.5 55.5C83.5 66.5 75.5 73 71 79Z', fill: acc }),
+      h('circle', { cx: 71, cy: 55.5, r: 4.8, fill: hole }));
+    const roadIcons = [
+      { name: '上から見た道路 × ピン（採用）', desc: '道路は角を落とさず、中央線を等間隔の白い破線に。横棒は交差点で、交差部分は線を入れていません。ピンは上端を横棒の下端、先端を道路の下端にそろえています。', lg: street(128, '#141414', '#fff', '#FF6A2B', '#fff'), sm: street(60, '#141414', '#fff', '#FF6A2B', '#fff'), dk: street(60, '#F3F2EF', '#1C1C1A', '#FF7A40', '#1C1C1A') },
+      { name: 'つながる道', desc: '道がそのまま行き先に着く。形がはっきりし、小さくても潰れにくい。', lg: road(128, '#141414', '#FF6A2B', false), sm: road(60, '#141414', '#FF6A2B', false), dk: road(60, '#F3F2EF', '#FF7A40', false) },
+      { name: 'これからの道', desc: '最後だけ点線にして「まだ向かっている途中」を表す。3b のタイムラインの点線と同じ表現。', lg: road(128, '#141414', '#FF6A2B', true), sm: road(60, '#141414', '#FF6A2B', true), dk: road(60, '#F3F2EF', '#FF7A40', true) }
+    ];
+    return { roadIcons, refs, iconSet, diffs, fa_b: pick('A').b, fa_h: pick('A').h, fb_b: pick('B').b, fb_h: pick('B').h, fc_b: pick('C').b, fc_h: pick('C').h };
+  }
+}
+</script>
+</body>
+</html>

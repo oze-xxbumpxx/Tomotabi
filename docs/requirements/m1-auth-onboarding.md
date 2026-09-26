@@ -32,7 +32,7 @@ M0（PR #9）で Next.js / NestJS / Drizzle + pg / Vitest / Testcontainers の�
 | F-03 | セッションは DB で管理し、Cookie で運ぶ。有効期間は発行から 7 日、自動延長なし、Cookie キャッシュなし（2026-09-23 ユーザー決定。旅行期間を考えて 7 日で足りると判断。リフレッシュトークンは持たない） |
 | F-04 | 業務 API は Guard で「セッション検証 → 利用許可」を毎回確認し、検証済みの userId だけを UseCase へ渡す。リクエスト body やヘッダーの userId を操作主体にしない |
 | F-05 | 状態を変える要求（POST / PUT / PATCH / DELETE）は、Origin が公開オリジンと完全一致することを必須とする。body を持つ操作と POST は Content-Type: application/json を必須とする |
-| F-06 | 公開する認証経路は次の 4 つに限る: POST /api/auth/sign-in/social、GET /api/auth/callback/google、POST /api/auth/sign-out、GET /api/auth/error。get-session などライブラリの他の経路は公開しない（404） |
+| F-06 | 公開する認証経路は次の 3 つに限る: POST /api/auth/sign-in/social、GET /api/auth/callback/google、POST /api/auth/sign-out。get-session などライブラリの他の経路は公開しない（404）。ログイン失敗時の戻り先は web の /sign-in?error=… とし、ライブラリの GET /api/auth/error は使わない |
 | F-07 | GET /api/me で表示用の最小情報（user.id、displayName、sessionExpiresAt）を返す。Google sub・メール・トークンは返さない |
 | F-08 | ログアウトは現在のセッションをサーバーで削除し、Cookie を失効させる（通知停止の前処理は M5） |
 | F-09 | 初期登録 CLI: 管理者端末で Google 本人確認（state / PKCE / nonce、ID トークンの署名・iss・aud・exp 検証）を行い、確認後に users / accounts / allowlist を 1 トランザクションで登録する。本番の HTTP ルートには含めない |

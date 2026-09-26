@@ -11,7 +11,6 @@ const PUBLIC_ROUTES: Readonly<Record<string, PublicAuthRoute>> = {
   "POST /sign-in/social": { requiresOrigin: true },
   "GET /callback/google": { requiresOrigin: false },
   "POST /sign-out": { requiresOrigin: true },
-  "GET /error": { requiresOrigin: false },
 };
 
 function sendJson(
@@ -25,7 +24,7 @@ function sendJson(
 }
 
 /**
- * 公開 4 経路以外の /api/auth/* を 404 にする経路制限ミドルウェア。
+ * 公開 3 経路以外の /api/auth/* を 404 にする経路制限ミドルウェア。
  * sign-in / sign-out の POST は Origin が公開オリジンと完全一致しなければ 403。
  * auth が生成されていない（DATABASE_URL なし）ときは公開経路を 503 にする。
  */

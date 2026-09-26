@@ -20,7 +20,7 @@ const UNREACHABLE_POOL = () =>
   new Pool({ connectionString: "postgres://127.0.0.1:1/nowhere" });
 
 describe("createAuth の設定", () => {
-  it("公開 4 経路以外の core endpoint を disabledPaths で塞ぐ", () => {
+  it("公開 3 経路以外の core endpoint を disabledPaths で塞ぐ", () => {
     const auth = createAuth(CONFIG, UNREACHABLE_POOL());
     const disabled = new Set(auth.options.disabledPaths ?? []);
 
@@ -35,18 +35,14 @@ describe("createAuth の設定", () => {
       "/update-user",
       "/link-social",
       "/change-password",
+      "/error",
     ]) {
       expect(disabled.has(path), `disabledPaths should contain ${path}`).toBe(
         true,
       );
     }
     // 公開経路は塞がない
-    for (const path of [
-      "/sign-in/social",
-      "/callback/:id",
-      "/sign-out",
-      "/error",
-    ]) {
+    for (const path of ["/sign-in/social", "/callback/:id", "/sign-out"]) {
       expect(disabled.has(path)).toBe(false);
     }
   });
@@ -82,6 +78,14 @@ describe("sign-in/social の body 検査 (U-15)", () => {
     [
       { provider: "google", callbackURL: "/dashboard" },
       "callbackURL が / 以外",
+    ],
+    [
+      { provider: "google", errorCallbackURL: "http://evil.example.test/" },
+      "errorCallbackURL の指定",
+    ],
+    [
+      { provider: "google", newUserCallbackURL: "http://evil.example.test/" },
+      "newUserCallbackURL の指定",
     ],
   ])("rejects with BAD_REQUEST: %j (%s)", async (body, _reason) => {
     await expect(auth.api.signInSocial({ body })).rejects.toMatchObject({

@@ -17,12 +17,11 @@ function createApp(authAvailable = true): Express {
 }
 
 describe("authRouteAllowlist", () => {
-  // U-11: 公開 4 経路は次の handler（Better Auth 本体）へ渡す
+  // U-11: 公開 3 経路は次の handler（Better Auth 本体）へ渡す
   it.each([
     ["post", "/api/auth/sign-in/social", { origin: PUBLIC_ORIGIN }],
     ["get", "/api/auth/callback/google", {}],
     ["post", "/api/auth/sign-out", { origin: PUBLIC_ORIGIN }],
-    ["get", "/api/auth/error", {}],
   ] as const)("passes %s %s (U-11)", async (method, path, headers) => {
     const agent = request(createApp());
     const response = await agent[method](path).set(headers);
@@ -40,6 +39,7 @@ describe("authRouteAllowlist", () => {
     "/api/auth/delete-user",
     "/api/auth/update-user",
     "/api/auth/sign-in/email",
+    "/api/auth/error",
     "/api/auth/unknown/path",
   ])("returns 404 for %s (U-12)", async (path) => {
     const app = createApp();

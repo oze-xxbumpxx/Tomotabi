@@ -30,11 +30,11 @@
 | U-08 | OriginGuard: GET / HEAD | Origin なし | 要求 | 通過 | 境界 | B-05 |
 | U-09 | OriginGuard: Origin 欠落・`null`・別 Origin・末尾スラッシュ違い | POST | 要求 | 403 `FORBIDDEN_ORIGIN` | 異常 | E-06 |
 | U-10 | OriginGuard: Content-Type 違い | POST、Origin 一致、`text/plain` | 要求 | 415 `UNSUPPORTED_MEDIA_TYPE` | 異常 | E-07 |
-| U-11 | 経路制限: 公開 4 経路 | なし | 4 経路をそれぞれ正しいメソッドで | 次へ渡す | 正常 | F-06 |
-| U-12 | 経路制限: 非公開経路 | なし | get-session、list-sessions、list-accounts、link-social、delete-user、update-user など | 404 | 異常 | E-08 |
+| U-11 | 経路制限: 公開 3 経路 | なし | 3 経路をそれぞれ正しいメソッドで | 次へ渡す | 正常 | F-06 |
+| U-12 | 経路制限: 非公開経路 | なし | get-session、list-sessions、list-accounts、link-social、delete-user、update-user、/error など | 404 | 異常 | E-08 |
 | U-13 | 経路制限: メソッド違い | なし | `GET /api/auth/sign-out` など | 404 | 異常 | E-08 |
 | U-14 | 経路制限: POST の Origin | sign-in / sign-out | 別 Origin | 403 | 異常 | E-06 |
-| U-15 | sign-in の body 検査 | before フック | provider が google 以外 / idToken あり / callbackURL が `/` 以外 | 400 | 異常 | E-09 |
+| U-15 | sign-in の body 検査 | before フック | provider が google 以外 / idToken あり / callbackURL が `/` 以外 / errorCallbackURL・newUserCallbackURL あり | 400 | 異常 | E-09 |
 | U-16 | GetMeUseCase | IdentityReader の fake | 実行 | id・displayName・sessionExpiresAt だけを返す | 正常 | F-07 |
 | U-17 | ログ serializer | cookie・authorization・set-cookie・code・sub を含む要求 | 1 行出力 | 許可項目だけ。path からクエリを除く | 異常 | 非機能 |
 | U-18 | ログ: 例外 | message に DB URL を含む例外 | 出力 | 既知の code だけ。URL を含まない | 異常 | 非機能 |
@@ -65,8 +65,12 @@
 | # | 観点 | 前提 | 操作 | 期待結果 | 分類 | 要件 |
 |---|---|---|---|---|---|---|
 | H-01 | sign-in の body が壊れない | 実アプリ | 正しい POST sign-in/social | 200 とリダイレクト URL | 正常 | R-1 |
-| H-02 | callback のクエリ | 実アプリ | `GET /api/auth/callback/google?state=…&code=…`（不正な state） | Better Auth のエラーとして処理される。500 にならない | 異常 | R-1 |
+| H-02 | callback のクエリ | 実アプリ | `GET /api/auth/callback/google?state=…&code=…`（不正な state） | 302 で `/sign-in?error=…` へ。500 にならない | 異常 | R-1 |
 | H-03 | 複数 Set-Cookie | fixture のセッション | sign-out | Set-Cookie がすべて返る | 正常 | R-1 |
+| H-04 | callback 失敗時の戻り先 | 実アプリ、Google のトークン交換は fetch を差し替え | 未登録アカウントで sign-in → callback | 302 で `<オリジン>/sign-in?error=…` へ。Location に sub・メール・token を含まない | 異常 | E-01 |
+| H-05 | 許可リスト外の callback | H-04 と同じ | user / account あり・allowlist なしで sign-in → callback | 同上。セッション行も残らない | 異常 | E-02 |
+| H-06 | sign-in body の戻り先指定 | 実アプリ | errorCallbackURL / newUserCallbackURL を body に含む POST | 400 | 異常 | E-09 |
+| H-07 | /api/auth/error の廃止 | 実アプリ | `GET /api/auth/error` | 404 | 異常 | F-06 |
 | A-01 | 二人とも利用できる | slot 0 / 1 を登録、各セッション | `GET /api/me` | 200、それぞれ自分の id・表示名 | 正常 | N-02 |
 | A-02 | 第三者にはセッションを発行しない | 未登録の user / account | セッション作成 | 失敗し、sessions に行が残らない | 異常 | E-01 |
 | A-03 | 許可停止中の発行拒否 | enabled=false | セッション作成 | 失敗、行が残らない | 異常 | E-02 |

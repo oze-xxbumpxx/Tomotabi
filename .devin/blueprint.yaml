@@ -2,7 +2,7 @@
 # 作業手順とルールは AGENTS.md と .agents/skills/devin-workflow/SKILL.md。背景は docs/devin-setup.md。
 
 # Node 22.x に揃える（.nvmrc / package.json の engines と同じ）。ベースイメージの Node は 22 と限らない。
-# One-time setup (e.g., install system tools, global CLIs).
+# 22 が無ければ nodejs.org の公式配布物をチェックサムで確かめて入れる。最後に 22 でなければ失敗させる。
 initialize: |
   set -eu
   if ! node --version 2>/dev/null | grep -q '^v22\.'; then
@@ -24,7 +24,7 @@ initialize: |
   fi
   node --version | grep -q '^v22\.' || { echo "Node 22 が必要です: $(node --version)" >&2; exit 1; }
 
-# Install project dependencies (runs during builds, surfaced to agent at session start).
+# lockfile どおりに入れる。CI（.github/workflows/ci.yml）と同じ。Node 22 以外では入れない。
 maintenance: |
   node --version | grep -q '^v22\.' || { echo "Node 22 が必要です: $(node --version)" >&2; exit 1; }
   npm ci

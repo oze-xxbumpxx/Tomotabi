@@ -44,6 +44,14 @@ const generatedClientPattern = {
   message: "生成クライアントは未検証の応答を返す。features/<name>/api で callApi を通して使う。",
 };
 
+// createAuth に渡す better-auth プラグイン（testUtils など）はテスト専用。
+// no-restricted-imports は後勝ちで置き換わるため、層別 paths と src 全体ブロックの両方に含める。
+const betterAuthPluginsForbidden = {
+  name: "better-auth/plugins",
+  message:
+    "better-auth プラグインはテストが createAuth の options で渡す。src から import しない。",
+};
+
 const featureBoundaries = {
   rules: {
     "no-cross-feature": {
@@ -150,12 +158,17 @@ export default defineConfig(
     ]),
   },
   {
+    files: ["apps/api/src/**/*.ts"],
+    rules: restrict([betterAuthPluginsForbidden], []),
+  },
+  {
     files: [
       "apps/api/src/**/domain/**/*.ts",
       "apps/api/tests/fixtures/boundaries/domain-imports-nestjs.ts",
     ],
     rules: restrict(
       [
+        betterAuthPluginsForbidden,
         ...nestForbidden.map((name) => ({
           name,
           message: "Domain は NestJS に依存しない。",
@@ -180,6 +193,7 @@ export default defineConfig(
     ],
     rules: restrict(
       [
+        betterAuthPluginsForbidden,
         ...nestForbidden.map((name) => ({
           name,
           message: "UseCase に Nest decorator を付けない。IF へ依存する。",
@@ -205,6 +219,7 @@ export default defineConfig(
     files: ["apps/api/src/**/service/**/*.ts"],
     rules: restrict(
       [
+        betterAuthPluginsForbidden,
         ...nestForbidden.map((name) => ({
           name,
           message: "Service は NestJS に依存しない。副作用のない業務計算だけを置く。",
@@ -226,6 +241,7 @@ export default defineConfig(
     files: ["apps/api/src/**/adapter/**/*.ts"],
     rules: restrict(
       [
+        betterAuthPluginsForbidden,
         ...nestForbidden.map((name) => ({
           name,
           message: "Adapter は IF 定義のみ。Nest の型を契約に混ぜない。",

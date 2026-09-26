@@ -9,7 +9,6 @@ import type { Pool } from "pg";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../../src/app.module";
-import { configureApp } from "../../src/bootstrap/configure-app";
 import {
   closePool,
   getPool,
@@ -21,6 +20,7 @@ import {
   startPostgres,
   type TestDatabase,
 } from "../support/database";
+import { createHttpTestApp } from "../support/nest-app";
 
 const ORIGIN = "http://localhost:3000";
 const EVIL_ORIGIN = "http://evil.example.test";
@@ -176,9 +176,7 @@ beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
-  app = moduleRef.createNestApplication<NestExpressApplication>();
-  configureApp(app, auth);
-  await app.init();
+  app = await createHttpTestApp(moduleRef, auth);
 
   hinata = { userId: "", name: "ひなた", email: "hinata@example.test", sub: "test-sub-0" };
   hinata.userId = await insertUser(hinata.name, hinata.email);

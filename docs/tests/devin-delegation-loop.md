@@ -17,6 +17,8 @@
 | W-02 | 〃 | since より後の head で CI 実行中 | 未更新 | 正常 |
 | W-03 | 〃 | since より後の head で CI 完了（成功） | 更新あり・success | 正常 |
 | W-04 | 〃 | 〃（失敗を含む） | 更新あり・failure | 正常 |
+| W-04b | 〃 | 想定外の結論（STALE・null）と StatusContext の SUCCESS 以外 | failure（成功扱いは SUCCESS / SKIPPED / NEUTRAL だけ） | 異常 |
+| W-09 | 〃 | 投稿前に作ったコミットを投稿後に push | --sha より後ろで数える。SHA が無ければ時刻で数える | 境界 |
 | W-05 | 〃 | チェックが 0 件 | 完了とみなす（none） | 境界 |
 | W-06 | 〃 | PR が CLOSED / MERGED | closed | 正常 |
 | W-07 | 〃 | StatusContext（PENDING / SUCCESS）と CheckRun の混在 | PENDING があれば未完了 | 境界 |

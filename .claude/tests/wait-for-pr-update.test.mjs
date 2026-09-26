@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checksComplete, ciConclusion, detectUpdate, parseArgs } from '../scripts/wait-for-pr-update.mjs';
+import { checksComplete, ciConclusion, countNewCommits, detectUpdate, parseArgs } from '../scripts/wait-for-pr-update.mjs';
 
 const scriptPath = join(dirname(fileURLToPath(import.meta.url)), '../scripts/wait-for-pr-update.mjs');
 
@@ -72,6 +72,34 @@ test('W-07: StatusContext と CheckRun の混在。PENDING があれば未完了
   assert.equal(ciConclusion([run('COMPLETED', 'SUCCESS'), ctx('ERROR')]), 'failure');
   assert.equal(ciConclusion([ctx('SUCCESS')]), 'success');
   assert.equal(ciConclusion([]), 'none');
+});
+
+test('W-04b: 成功扱いは SUCCESS / SKIPPED / NEUTRAL だけ。STALE など想定外の結論は失敗', () => {
+  assert.equal(ciConclusion([run('COMPLETED', 'NEUTRAL'), run('COMPLETED', 'SKIPPED')]), 'success');
+  assert.equal(ciConclusion([run('COMPLETED', 'STALE')]), 'failure');
+  assert.equal(ciConclusion([run('COMPLETED', 'SUCCESS'), run('COMPLETED', null)]), 'failure');
+  assert.equal(ciConclusion([ctx('PENDING_UNKNOWN')]), 'failure');
+  const r = detectUpdate(pr({ rollup: [run('COMPLETED', 'STALE')] }), { since: SINCE, nowMs: NOW });
+  assert.equal(r.ciConclusion, 'failure');
+});
+
+test('W-09: 新しいコミットの数は --sha より後ろで数える（投稿前に作ったコミットを投稿後に push しても数える）', () => {
+  const commits = [
+    { oid: 'aaaaaaa1', committedDate: '2026-09-26T09:00:00Z' },
+    { oid: 'ccccccc1', committedDate: '2026-09-26T09:50:00Z' }, // 投稿（10:00）より前に作り、後で push
+    { oid: 'ddddddd1', committedDate: '2026-09-26T09:55:00Z' },
+  ];
+  assert.equal(countNewCommits(commits, { since: SINCE, sha: 'aaaaaaa' }), 2);
+  const r = detectUpdate(pr({ head: 'ddddddd1', commits, rollup: [run('COMPLETED', 'SUCCESS')] }), {
+    since: SINCE,
+    sha: 'aaaaaaa1',
+    nowMs: NOW,
+  });
+  assert.equal(r.status, 'updated');
+  assert.equal(r.newCommits, 2);
+  // SHA が一覧に無い（force push）か --sha が無いときは時刻で数える
+  assert.equal(countNewCommits(commits, { since: '2026-09-26T09:52:00Z', sha: 'eeeeeee' }), 1);
+  assert.equal(countNewCommits(commits, { since: '2026-09-26T09:52:00Z' }), 1);
 });
 
 test('W-08: 引数の誤りは null、CLI は exit 2', () => {

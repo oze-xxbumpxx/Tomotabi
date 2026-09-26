@@ -31,9 +31,10 @@ const DEFAULT_TIMEOUT_SEC = 4 * 60 * 60;
 const DEFAULT_GRACE_SEC = 180;
 const GH_TIMEOUT_MS = 30_000;
 
-const FAILED_CHECK_RUN = new Set(['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED', 'STARTUP_FAILURE']);
+// 成功とみなす結論だけを列挙する。それ以外（FAILURE・TIMED_OUT・CANCELLED・STALE など）は失敗。
+// 失敗を列挙する方式だと、STALE のような想定外の結論が成功に倒れる。
+const PASSING_CHECK_RUN = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);
 const PENDING_STATUS = new Set(['PENDING', 'EXPECTED']);
-const FAILED_STATUS = new Set(['FAILURE', 'ERROR']);
 
 const isCheckRun = (item) => item.__typename === 'CheckRun' || 'conclusion' in item;
 
@@ -46,7 +47,7 @@ export function checksComplete(rollup) {
 export function ciConclusion(rollup) {
   if (rollup.length === 0) return 'none';
   const failed = rollup.some((item) =>
-    isCheckRun(item) ? FAILED_CHECK_RUN.has(item.conclusion) : FAILED_STATUS.has(item.state),
+    isCheckRun(item) ? !PASSING_CHECK_RUN.has(item.conclusion) : item.state !== 'SUCCESS',
   );
   return failed ? 'failure' : 'success';
 }
@@ -58,10 +59,24 @@ export function ciConclusion(rollup) {
  *   headSeenAtMs はこの head を初めて見た時刻（チェック 0 件の猶予の起点）。
  * @returns {{status:'waiting'|'updated'|'closed', headSha:string, ciConclusion:string|null, newCommits:number}}
  */
+/**
+ * 新しいコミットの数。--sha があれば、その SHA より後ろのコミットを数える（コミットの作成時刻と push の時刻は
+ * 一致しないため、時刻では数え落とす）。SHA が一覧に無い（force push で履歴が変わった）か --sha が無いときだけ、
+ * コミット時刻が since より後のものを数える。
+ */
+export function countNewCommits(commits, { since, sha = null }) {
+  if (sha !== null) {
+    const index = commits.findIndex((c) => c.oid.startsWith(sha));
+    if (index !== -1) return commits.length - index - 1;
+  }
+  const sinceMs = Date.parse(since);
+  return commits.filter((c) => Date.parse(c.committedDate) > sinceMs).length;
+}
+
 export function detectUpdate(pr, { since, sha = null, headSeenAtMs = null, nowMs, graceSec = DEFAULT_GRACE_SEC }) {
   const sinceMs = Date.parse(since);
   const commits = pr.commits ?? [];
-  const newCommits = commits.filter((c) => Date.parse(c.committedDate) > sinceMs).length;
+  const newCommits = countNewCommits(commits, { since, sha });
   const base = { headSha: pr.headRefOid, newCommits };
   if (pr.state !== 'OPEN') return { status: 'closed', ciConclusion: null, ...base };
 

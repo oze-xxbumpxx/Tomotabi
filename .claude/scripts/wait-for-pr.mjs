@@ -7,7 +7,7 @@
 //   Claude Code からは Bash の run_in_background で起動する。終了するとセッションが呼び戻される。
 //
 // 終了コード:
-//   0 … 見つかった。標準出力の最後の行に {"issue","number","url","title","headRefName"} を出す
+//   0 … 見つかった。標準出力に {"issue","number","url","title","headRefName"} の JSON を 1 行出す
 //   2 … 引数の誤り
 //   3 … 時間切れ
 //

@@ -1,4 +1,6 @@
 import { Pool } from "pg";
+import { SlotNotEnrolledError } from "../disable/disable-google-account";
+import { EnrollmentError } from "../enroll/enrollment-error";
 import { CliUsageError, requireEnv } from "./slot";
 
 type PgError = Error & { code: string; constraint?: string };
@@ -7,10 +9,20 @@ const isPgError = (error: unknown): error is PgError =>
   error instanceof Error && typeof (error as { code?: unknown }).code === "string";
 
 /**
- * 標準出力に出して安全な説明だけを返す。pg のエラーは detail に行の値（sub など）を含むため、
- * SQLSTATE と制約名だけにする。
+ * 標準出力に出して安全な説明だけを返す。
+ * message をそのまま出せるのは、秘密情報を含まないことが保証されたエラークラスだけ
+ * （google-auth-library など外部ライブラリの例外は message にトークンや入力値が入りうる）。
+ * pg のエラーは detail に行の値（sub など）を含むため、SQLSTATE と制約名だけにする。
  */
 export function describeFailure(error: unknown): string {
+  // EnrollmentError にも code があるので、先に既知クラスを判定する
+  if (
+    error instanceof EnrollmentError ||
+    error instanceof CliUsageError ||
+    error instanceof SlotNotEnrolledError
+  ) {
+    return error.message;
+  }
   if (isPgError(error)) {
     const constraint = error.constraint ? ` (${error.constraint})` : "";
     if (error.code === "23505") {
@@ -19,7 +31,7 @@ export function describeFailure(error: unknown): string {
     return `DB エラー SQLSTATE ${error.code}${constraint}`;
   }
   if (error instanceof Error) {
-    return error.message;
+    return `予期しないエラーが発生しました (${error.name})`;
   }
   return "不明なエラー";
 }

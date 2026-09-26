@@ -3,6 +3,7 @@ export type EnrollmentErrorCode =
   | "NONCE_MISMATCH"
   | "AUTHORIZATION_DENIED"
   | "CALLBACK_TIMEOUT"
+  | "CODE_EXCHANGE_FAILED"
   | "ID_TOKEN_MISSING"
   | "ID_TOKEN_INVALID"
   | "CANCELLED";

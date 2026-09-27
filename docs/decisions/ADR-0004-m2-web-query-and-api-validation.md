@@ -1,6 +1,6 @@
 # ADR-0004: web の取得状態ライブラリと API の入力検証
 
-- Status: Proposed（ユーザー承認待ち。2026-09-27 の確認で web のライブラリは「TanStack Query＋フォームは自前」を選択済み）
+- Status: Accepted（2026-09-27 ユーザー承認）
 - Date: 2026-09-27
 - 関連 feature: m2-trips-and-plans
 
@@ -43,4 +43,4 @@ API 側で必要なこと: 旅行・予定の body・クエリ・ヘッダーの
 
 ## Status（状態）
 
-Proposed。承認後に Accepted（承認日）へ更新する。
+Accepted（2026-09-27）。

@@ -1,6 +1,6 @@
 # 設計書: m2-trips-and-plans
 
-- ステータス: draft（ユーザー承認待ち）
+- ステータス: confirmed（2026-09-27 ユーザー承認。未決事項 1〜3 は推奨どおり、4 は「できるだけ Devin」）
 - レベル: L3 / ユーザー承認: 必要
 - 関連: docs/requirements/m2-trips-and-plans.md / docs/decisions/ADR-0004-m2-web-query-and-api-validation.md
 - 前提: M1（docs/designs/m1-auth-onboarding.md）が main に入っていること

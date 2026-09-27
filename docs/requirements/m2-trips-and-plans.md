@@ -2,7 +2,7 @@
 
 - task-id / 変更レベル: M2 / L3（DB スキーマと本番 migration、排他・再送制御、公開 API の追加、画面の新設）
 - 作成日: 2026-09-27
-- ステータス: draft（ユーザー承認待ち）
+- ステータス: confirmed（2026-09-27 ユーザー承認）
 - 正本: `docs/旅行アプリ設計 3/詳細設計/04_予定と達成予約.md`、`05_旅行とホーム.md`、`07_画面状態と入力操作.md`、`02_ORMとDB_API.md`、`11_フロントとバックのアーキテクチャ.md`、`10_Cursor実装順序.md` の M2 行、`sql/03_planning_records.sql`・`sql/04_trip_lifecycle.sql`・`sql/01_finance.sql`（command_receipts・trip_finance_guards）、`openapi.trips.json`・`openapi.planning.json`、`docs/design/handoff-v3/`
 
 ## 背景

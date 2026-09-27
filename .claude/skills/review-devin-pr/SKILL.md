@@ -47,7 +47,12 @@ description: >
      前の `devin` プロセスが終わっている（`pgrep -fl "devin .*-p"`。同じクローンで 2 つ同時に動かさない）、
      作業ツリーがきれい（`git status --short` が空。残っていたら捨てずにユーザーに伝える）、
      `git fetch origin && git switch --detach origin/main` で最新の main から始める。
-     起動: `devin --model swe-2-<effort> --permission-mode dangerous -p "<依頼>"` を `run_in_background` で。
+     起動: `devin --model swe-2-<effort> --permission-mode dangerous -p "<依頼>" 2>&1 | tee -a <状態ディレクトリ>/devin-logs/issue-<Issue>.log`
+     を `run_in_background` で（直しを頼む 2 回目以降のセッションも同じログに追記する）。
+     起動したら、ユーザーが実装状況を見られるよう、ターミナル（`run_in_terminal`）に見張り画面を開く:
+     `~/.local/state/tomotabi-harness/bin/devin-watch <Issue>`（タブ名 `Devin #<Issue> watch`）。
+     `-p` の出力は発言だけなので、見張り画面は Devin が実行中のコマンド・変更中のファイル・PR と CI を合わせて出す。
+     リンクが無ければ `node .claude/scripts/devin-watch.mjs --install` で作る（ターミナルには ASCII のコマンドしか渡せないため）。
      `--sandbox` は付けない（autonomous モードになり、確認が要る操作が拒否されて途中で止まる。#48）。
      dangerous は確認なしでコマンドを実行するため、Devin に危険操作の確認は効かない（ユーザー了承済みの割り切り）。代わりに:
      プロンプトに「作業はこのリポジトリのフォルダの中だけで行う。force push・ブランチの削除・履歴の書き換え・main への push・

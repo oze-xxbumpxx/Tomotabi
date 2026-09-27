@@ -134,6 +134,21 @@ test('S-14: 未起票の昇格候補は、candidates/delegation-<category>.md �
   assert.match(text, /未起票の昇格候補.*\n- security（#31 #44）/);
 });
 
+test('S-14: 起票済みの候補を candidates/archive/ に移しても、未起票の昇格候補に戻らない', () => {
+  withTmp((dir) => {
+    const primary = join(dir, 'delegations');
+    const candidates = join(dir, 'candidates');
+    mkdirSync(join(candidates, 'archive'), { recursive: true });
+    for (const issue of [31, 44]) {
+      writeRecord(primary, { ...addReview(issueRec(issue), { round: 0, sha: 'abc1234', verdict: 'escalate', findings: [parseFinding('security:security:x')] }), outcome: 'merged' });
+    }
+    const status = () => collectStatus({ dir: primary, mirrorDir: null, candidatesDir: candidates, now: NOW, useGh: false });
+    assert.deepEqual(status().promotions.map((p) => p.category), ['security']);
+    writeFileSync(join(candidates, 'archive', 'delegation-security.md'), '# 改善候補: delegation-security\n');
+    assert.deepEqual(status().promotions, []);
+  });
+});
+
 test('S-15: 写しの掃除は、完了から 30 日を過ぎたものだけ', () => {
   const done = (issue, closedAt) => issueRec(issue, { outcome: 'merged', gh: { pr: issue + 1, closed_at: closedAt, merged_at: closedAt } });
   const records = [

@@ -10,13 +10,23 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 
 | いつ | コマンド |
 | --- | --- |
-| Issue を渡したとき | `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium\|swe-2-high\|swe-2-max> [--runner cloud] [--level 0-3]` |
+| Issue を渡したとき | `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium\|swe-2-high\|swe-2-max> [--runner cloud] [--level 0-3] [--follow-up-of <前の委譲>]` |
 | レビューの round ごと | `node .claude/scripts/delegation.mjs review <Issue> --round <n> --sha <head> --verdict <merge\|fix\|escalate> [--posted] --finding '<severity>:<category>:<summary>' …` |
 | マージ・クローズの後 | `node .claude/scripts/delegation.mjs finalize <Issue> [--pr <n>]` |
 | 集計 | `node .claude/scripts/delegation.mjs summary` |
+| 進行中の委譲の次の動き | `node .claude/scripts/delegation.mjs status [--json] [--no-gh]`（セッション開始時のフックと同じ） |
 | Issue なし PR を見つけたとき | `node .claude/scripts/delegation.mjs init pr-<PR> [--model <m>] [--runner <local\|cloud>] [--level 0-3]`。`review` / `finalize` も `pr-<PR>` で指定する |
 
-記録は Devin のブランチに commit しない。その日の締め（close-session）の PR にまとめて入れる。
+記録は Devin のブランチに commit しない。その日の締め（close-session）の PR に、finalize した記録だけを入れる。
+
+### 写し（`docs/designs/devin-delegation-status.md`）
+
+`init` / `review` / `finalize` は、ここ（正）に書いたあと、ハーネスの状態ディレクトリ
+（`~/.local/state/tomotabi-harness/delegations/`）にも同じ記録を書く。worktree ごとのセッションでも、main に未マージの
+進行中の記録が見えるようにするため。読むときは正と写しを key でまとめ、`reviews` の多い方 → `outcome` のある方 → 正の順で選ぶ。
+進行中の記録は写しで次のセッションに引き継ぐのでコミットしない（別の worktree と二重にコミットして衝突させない）。
+写しが残らないクラウドのセッションでは、進行中の記録もコミットする。完了した記録の写しは、完了から 30 日で `status` が消す。
+`--dir` を指定したとき（テスト）は、`--mirror-dir` を指定しない限り写さない。
 
 ## 項目
 
@@ -28,13 +38,15 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 | `model` | init | `swe-2-medium` / `swe-2-high` / `swe-2-max` / `unknown`（記録を始める前の委譲。Issue なし PR の既定） |
 | `runner` | init | Devin を動かした場所。`local`（既定）/ `cloud`。Issue なし PR は作成者から推す（bot → `cloud`）。項目が無い古い記録は集計で `unknown` |
 | `change_level` | init | 0〜3。分からなければ `null` |
-| `reviews[]` | review | round ごとの `reviewed_sha`・`verdict`（merge / fix / escalate）・`posted`（PR に投稿したか）・`findings[]` |
+| `follow_up_of` | init（任意） | 前の PR の指摘を直す後続の委譲のとき、前の委譲の key（Issue 番号か `pr-<n>`。複数ならいちばん古いもの）。無い記録は後続ではない |
+| `reviews[]` | review | round ごとの `reviewed_at`（記録した時刻。修正待ちの待機の `--since` に使う。無い古い記録は `delegated_at` で代用）・`reviewed_sha`・`verdict`（merge / fix / escalate）・`posted`（PR に投稿したか）・`findings[]` |
 | `findings[]` | review | `severity`（must / nit / security / decision）・`category`・`summary` |
 | `escalations` | review | `verdict: escalate` の回数（ユーザーに渡した回数） |
 | `outcome` | finalize | merged / closed / open |
 | `gh` | finalize | `pr`・`pr_created_at`・`merged_at`・`closed_at`・`commits`・`ci_first_pass`（PR 作成時の head の CI がすべて成功したか。チェックが無ければ `null`）・`closes_linked` |
 
-- 手戻りの回数（round）は `posted: true` の review の数。
+- 手戻りの回数（round）は `posted: true` の review の数。後続の委譲で直した手戻りは round に出ないので、`summary` の
+  「後続を生んだ」「後続なしの一発合格」で見る。
 - **`security` の `summary` は自動で `(非公開)` になる。** このリポジトリは公開なので、再現手順・迂回の方法をどこにも書かない。
 
 ## category の語彙

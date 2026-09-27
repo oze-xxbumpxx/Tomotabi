@@ -1,9 +1,9 @@
 // delegation.mjs（委譲の記録と集計）のテスト。gh は呼ばない。
-// 観点 ID は docs/tests/devin-delegation-loop.md。
+// 観点 ID は docs/tests/devin-delegation-loop.md（S- で始まるものは docs/tests/devin-delegation-status.md）。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +11,13 @@ import {
   PRIVATE_SUMMARY,
   UsageError,
   addReview,
+  mergeRecords,
+  preferRecord,
+  readKnownRecords,
+  readRecordMerged,
+  writeRecord,
   buildGhSection,
+  defaultMirrorDir,
   firstCiCommit,
   formatSummary,
   newRecord,
@@ -254,7 +260,8 @@ test('D-08: モデル別の件数・一発合格・平均 round・CI 初回成�
   assert.equal(max.finished, 1);
   const text = formatSummary(s);
   assert.match(text, /委譲 4 件（merged 3 \/ closed 0 \/ open 1）/);
-  assert.match(text, /swe-2-medium: 2 \/ 2\/2 \/ 1\/2 \/ 1\.0 \/ 1\/2 \/ 0 \/ 40m \/ 3\.0h/);
+  // 件数 / マージ / 一発合格 / 後続なしの一発合格 / 後続を生んだ / 平均round / CI初回成功 / 引き渡し / Issue→PR / PR→マージ
+  assert.match(text, /swe-2-medium: 2 \/ 2\/2 \/ 1\/2 \/ 1\/2 \/ 0 \/ 1\.0 \/ 1\/2 \/ 0 \/ 40m \/ 3\.0h/);
 });
 
 test('D-09: 分類は Issue 単位で数える（同じ Issue で何度出ても 1 件）', () => {
@@ -406,4 +413,113 @@ test('U-14: 集計は Issue と PR の記録を混ぜて読み、分類は委譲
   assert.match(text, /起点別.*\n {2}issue: 1 \/[^\n]*\n {2}self: 2 \//);
   // Issue の記録だけのときは起点別の行を出さない（今までの出力を変えない）
   assert.doesNotMatch(formatSummary(summarize([base(1)])), /起点別/);
+});
+
+// ---- 記録を状態として使う（docs/designs/devin-delegation-status.md。観点 ID は docs/tests/devin-delegation-status.md）
+
+test('S-01: follow_up_of は任意。Issue 番号と pr-<n> を受け付け、不正な値・自分自身はエラー。YAML で往復できる', () => {
+  assert.equal('follow_up_of' in base(43), false);
+  const rec = newRecord({ issue: 43, title: 't', model: 'unknown', delegatedAt: '2026-09-26T05:25:28Z', followUpOf: 37 });
+  assert.equal(rec.follow_up_of, 37);
+  assert.deepEqual(Object.keys(rec).slice(6, 8), ['delegated_at', 'follow_up_of']);
+  assert.deepEqual(parseYaml(toYaml(rec)), rec);
+  assert.equal(newRecord({ issue: 60, title: 't', model: 'unknown', delegatedAt: '2026-09-26T00:00:00Z', followUpOf: 'pr-54' }).follow_up_of, 'pr-54');
+  assert.throws(() => newRecord({ issue: 60, title: 't', model: 'unknown', delegatedAt: '2026-09-26T00:00:00Z', followUpOf: 'x' }), UsageError);
+  assert.throws(() => newRecord({ issue: 60, title: 't', model: 'unknown', delegatedAt: '2026-09-26T00:00:00Z', followUpOf: 60 }), /自分自身/);
+  withTmp((dir) => {
+    const common = ['--model', 'swe-2-medium', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir];
+    assert.equal(cli(['init', '59', '--follow-up-of', '51', ...common]).status, 0);
+    assert.equal(parseYaml(readFileSync(join(dir, '59.yml'), 'utf8')).follow_up_of, 51);
+    assert.equal(cli(['init', '61', '--follow-up-of', 'bogus', ...common]).status, 2);
+  });
+});
+
+test('S-02: reviewed_at は任意。指定したときだけ round の次に入る。CLI の review は既定で今の時刻を入れる', () => {
+  const plain = addReview(base(1), { round: 0, sha: 'abc1234', verdict: 'merge' });
+  assert.equal('reviewed_at' in plain.reviews[0], false);
+  const timed = addReview(base(1), { round: 0, sha: 'abc1234', verdict: 'fix', posted: true, at: '2026-09-27T01:00:00Z' });
+  assert.deepEqual(Object.keys(timed.reviews[0]).slice(0, 3), ['round', 'reviewed_at', 'reviewed_sha']);
+  assert.throws(() => addReview(base(1), { round: 0, sha: 'abc1234', verdict: 'fix', at: 'yesterday' }), /--reviewed-at/);
+  withTmp((dir) => {
+    cli(['init', '7', '--model', 'swe-2-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir]);
+    const before = Date.now() - 1000;
+    assert.equal(cli(['review', '7', '--round', '0', '--sha', 'abc1234', '--verdict', 'merge', '--dir', dir]).status, 0);
+    const at = parseYaml(readFileSync(join(dir, '7.yml'), 'utf8')).reviews[0].reviewed_at;
+    assert.match(at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+    assert.ok(Date.parse(at) >= before - 1000);
+    assert.equal(cli(['review', '7', '--round', '1', '--sha', 'abc1234', '--verdict', 'merge', '--reviewed-at', '2026-09-27T02:00:00Z', '--dir', dir]).status, 0);
+    assert.equal(parseYaml(readFileSync(join(dir, '7.yml'), 'utf8')).reviews[1].reviewed_at, '2026-09-27T02:00:00Z');
+  });
+});
+
+test('S-03: 写し。writeRecord は写しにも書き、写しの失敗は警告だけ。CLI は --dir のとき写さず、--mirror-dir で写す', () => {
+  withTmp((dir) => {
+    const primary = join(dir, 'primary');
+    const mirror = join(dir, 'mirror');
+    writeRecord(primary, base(70), { mirrorDir: mirror });
+    assert.deepEqual(parseYaml(readFileSync(join(mirror, '70.yml'), 'utf8')), base(70));
+    // 写しの置き場がファイルで塞がっていても、正は書ける
+    writeFileSync(join(dir, 'blocked'), 'x');
+    const path = writeRecord(primary, base(71), { mirrorDir: join(dir, 'blocked') });
+    assert.equal(path, join(primary, '71.yml'));
+    const common = ['--model', 'swe-2-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z'];
+    assert.equal(cli(['init', '72', ...common, '--dir', primary]).status, 0);
+    assert.equal(existsSync(join(mirror, '72.yml')), false);
+    assert.equal(cli(['init', '73', ...common, '--dir', primary, '--mirror-dir', mirror]).status, 0);
+    assert.equal(existsSync(join(mirror, '73.yml')), true);
+    // 写しにだけある記録（別の worktree で init したもの）は init し直せず、review できる
+    assert.equal(cli(['init', '70', ...common, '--dir', join(dir, 'other'), '--mirror-dir', mirror]).status, 2);
+    const review = cli(['review', '70', '--round', '0', '--sha', 'abc1234', '--verdict', 'merge', '--dir', join(dir, 'other'), '--mirror-dir', mirror]);
+    assert.equal(review.status, 0, review.stderr);
+    assert.equal(parseYaml(readFileSync(join(dir, 'other', '70.yml'), 'utf8')).reviews.length, 1);
+    assert.equal(parseYaml(readFileSync(join(mirror, '70.yml'), 'utf8')).reviews.length, 1);
+  });
+  // 状態ディレクトリを明示すると、その delegations/ が既定の写し先になる
+  assert.equal(defaultMirrorDir({ HARNESS_STATE_DIR: '/tmp/tomotabi-state-test', CLAUDE_PROJECT_DIR: '/home/user/x' }), '/tmp/tomotabi-state-test/delegations');
+});
+
+test('S-04: 正と写しの統合（reviews の多い方 → outcome のある方 → 正）', () => {
+  const reviewed = addReview(base(80), { round: 0, sha: 'abc1234', verdict: 'fix', posted: true });
+  const done = { ...base(80), outcome: 'merged' };
+  const mirrorCopy = { ...base(80), title: 'mirror' };
+  assert.equal(preferRecord(base(80), null).issue, 80);
+  assert.equal(preferRecord(null, mirrorCopy).title, 'mirror');
+  assert.equal(preferRecord(base(80), reviewed).reviews.length, 1);
+  assert.equal(preferRecord(reviewed, base(80)).reviews.length, 1);
+  assert.equal(preferRecord(base(80), done).outcome, 'merged');
+  assert.equal(preferRecord(base(80), mirrorCopy).title, 'Issue 80');
+  const merged = mergeRecords([base(81), base(80)], [reviewed, self(53)]);
+  assert.deepEqual(merged.map(recordKey), [80, 81, 'pr-53']);
+  assert.equal(merged[0].reviews.length, 1);
+  withTmp((dir) => {
+    const primary = join(dir, 'p');
+    const mirror = join(dir, 'm');
+    writeRecord(primary, base(80));
+    writeRecord(mirror, reviewed);
+    writeRecord(mirror, base(82));
+    writeFileSync(join(mirror, '83.yml'), 'bogus: "x"');
+    assert.deepEqual(readKnownRecords({ dir: primary, mirrorDir: mirror }).map(recordKey), [80, 82]);
+    assert.equal(readRecordMerged(primary, 80, mirror).reviews.length, 1);
+    assert.equal(readKnownRecords({ dir: primary, mirrorDir: null }).length, 1);
+    assert.throws(() => readRecordMerged(primary, 99, mirror), /記録がありません/);
+  });
+});
+
+test('S-05: summary は後続を生んだ委譲と、後続なしの一発合格を数える', () => {
+  const parent = merged(37, 'unknown');
+  const child = { ...merged(43, 'unknown'), follow_up_of: 37 };
+  const lone = merged(41, 'unknown');
+  const s = summarize([parent, lone, child]);
+  const g = s.models.unknown;
+  assert.equal(g.firstPass, 3);
+  assert.equal(g.spawned, 1);
+  assert.equal(g.cleanFirstPass, 2);
+  assert.deepEqual(s.followUps, [{ key: 43, parent: 37 }]);
+  assert.equal(s.issueOrigin, 3);
+});
+
+test('S-06: 「後続の委譲」の行は後続があるときだけ出す', () => {
+  const s = summarize([merged(37, 'unknown'), { ...merged(43, 'unknown'), follow_up_of: 37 }, { ...merged(48, 'unknown'), follow_up_of: 'pr-54' }]);
+  assert.match(formatSummary(s), /後続の委譲（前の PR の指摘を直す委譲）: 2\/3（#43←#37 #48←PR#54）/);
+  assert.doesNotMatch(formatSummary(summarize([merged(1, 'unknown')])), /後続の委譲/);
 });

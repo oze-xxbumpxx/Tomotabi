@@ -57,7 +57,7 @@ Devin は、**既定でローカル**（手元の Mac の Devin CLI）で動か�
 | 注意 | 同じクローンで 2 つ同時に動かさない。`--sandbox` を付けると途中で止まる。書き込みは強制ではなくプロンプトでクローン内に限る | Mac を閉じても進む |
 
 - 専用クローンにしたのは、Devin のフォルダ信頼（初回だけ `devin` を対話で起動して許可）を 1 回で済ませるため。worktree は `.git` が元のリポジトリ側にあるため使わない。
-- クラウドで作業したセッションは、学んだことをスキルや blueprint に残す PR を自分から出すことがある（#53・#54）。Issue に紐づかないが、Claude Code が自動でレビューする（委譲中のセッションは `wait-for-devin-pr.mjs`、それ以外はセッション開始時のフック `find-devin-prs.mjs` で見つける）。手順は `review-devin-pr` の「Issue なし PR」。
+- クラウドで作業したセッションは、学んだことをスキルや blueprint に残す PR を自分から出すことがある（#53・#54）。Issue に紐づかないが、Claude Code が自動でレビューする（委譲中のセッションは `wait-for-devin-pr.mjs`、それ以外はセッション開始時のフック `delegation-status.mjs` で見つける）。手順は `review-devin-pr` の「Issue なし PR」。
 
 ## 確認済みのこと（2026-09-25）
 

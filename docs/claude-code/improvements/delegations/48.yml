@@ -5,6 +5,7 @@ model: 'swe-2-medium'
 runner: 'local'
 change_level: 1
 delegated_at: '2026-09-26T07:31:17Z'
+follow_up_of: 44
 reviews:
   - round: 0
     reviewed_sha: 'f22d0a0cc7c6f44f7cb8373572479d9e84736f93'

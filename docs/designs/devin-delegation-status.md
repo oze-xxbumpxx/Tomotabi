@@ -1,6 +1,6 @@
 # 設計書: devin-delegation-status
 
-- ステータス: draft（ユーザーの承認待ち）
+- ステータス: confirmed（2026-09-27 ユーザー承認。未決事項 1〜5 はすべて推奨どおり）
 - レベル: L2 / ユーザー承認: 必要（ハーネス `.claude/` のスクリプト・フック・スキル・settings と、記録の形式・`.github/` の Issue テンプレートにまたがる）
 - 関連: `docs/designs/devin-delegation-loop.md` / `docs/designs/devin-unlinked-pr-review.md` / `.claude/scripts/delegation.mjs` / `.claude/hooks/find-devin-prs.mjs` / `.claude/skills/review-devin-pr/SKILL.md` / `docs/claude-code/improvement-cycle.md`
 
@@ -106,6 +106,9 @@ SessionStart: delegation-status.mjs（find-devin-prs を置き換え。判定は
 - 書くのは `writeRecord` の 1 か所。正を書いたあとに写しも書く。写しの失敗は警告だけで、正の書き込みは成功扱いにする。
 - 読むときは、正と写しを key でまとめる。両方あれば `reviews` が多い方、同じなら `outcome` が決まっている方、それも同じなら正を使う。
 - 完了した記録の写しは、`status` が完了から 30 日を過ぎたものを消す（写しが増え続けないように）。正が main に入っているので、情報は失わない。
+- close-session でコミットするのは、finalize した記録（`outcome` が merged / closed）だけにする。進行中の記録は写しで次のセッションに引き継ぐ。
+  委譲した worktree と、レビューした別の worktree の両方が同じ記録をコミットすると、close の PR どうしが衝突するため（実装時に追加）。
+  写しが残らないクラウドのセッションでは、今までどおり進行中の記録もコミットする。
 
 ### 記録の項目の追加（R-5）
 
@@ -194,7 +197,8 @@ reviews:
 
 | ファイル | 変更 |
 | --- | --- |
-| `.claude/scripts/delegation.mjs` | `status`・写し・`follow_up_of`・`reviewed_at`・summary の列 |
+| `.claude/scripts/delegation.mjs` | 写し・`follow_up_of`・`reviewed_at`・summary の列。`status` は下のモジュールを動的に読み込んで実行する |
+| `.claude/scripts/delegation-status.mjs` | 新規。`status` の判定と gh の呼び出し（`wait-for-devin-pr.mjs` を使うため、`delegation.mjs` と循環しないよう別のモジュールにする） |
 | `.claude/scripts/wait-for-devin-pr.mjs` | `--exclude` を削除し、既知の判定を「記録がある」にする |
 | `.claude/hooks/delegation-status.mjs` | 新規（find-devin-prs を置き換え） |
 | `.claude/hooks/find-devin-prs.mjs`・`.claude/tests/find-devin-prs.test.mjs` | 削除（テストの観点は delegation-status へ移す） |
@@ -202,7 +206,7 @@ reviews:
 | `.claude/tests/delegation.test.mjs`・`wait-for-devin-pr.test.mjs`・`delegation-status.test.mjs` | 追加・更新 |
 | `.github/ISSUE_TEMPLATE/devin-task.md` | 新規 |
 | `.claude/skills/review-devin-pr/SKILL.md` | 委譲節（テンプレート・`--follow-up-of`・既知の指摘の表）、Issue なし PR の手順 1 から `--exclude` を削る、セッション開始時の表示への言及 |
-| `.claude/skills/close-session/SKILL.md` | 3a に「`status` で finalize 待ちが残っていないかを確かめる」 |
+| `.claude/skills/close-session/SKILL.md` | 3a に「`status` で finalize 待ちが残っていないかを確かめる」と、finalize した記録だけをコミットすること |
 | `docs/claude-code/improvement-cycle.md` | 予防の置き場の決め方 |
 | `docs/claude-code/improvements/delegations/README.md` | 追加の項目と写しの説明 |
 | `docs/claude-code/improvements/delegations/43.yml`・`48.yml`・`55.yml` | `follow_up_of` |

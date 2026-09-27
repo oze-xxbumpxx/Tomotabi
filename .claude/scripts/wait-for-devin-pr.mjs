@@ -3,10 +3,10 @@
 // 設計: docs/designs/devin-unlinked-pr-review.md
 //
 // 使い方:
-//   node .claude/scripts/wait-for-devin-pr.mjs --since <ISO 8601> [--exclude <PR番号,…>] [--interval 秒] [--timeout 秒]
+//   node .claude/scripts/wait-for-devin-pr.mjs --since <ISO 8601> [--interval 秒] [--timeout 秒]
 //     既定: 60 秒ごとに確認し、8 時間で諦める。セッションで 1 本だけ run_in_background で起動する。
-//     見つけると終了するので、レビューに入ったら同じ --since と、これまでに通知された PR の --exclude で起動し直す
-//     （レビュー中の PR は記録の reviews が空のため、除外しないと再び通知される）。
+//     見つけると終了するので、見つかった PR の記録を init してから、同じ --since で起動し直す
+//     （記録がある PR は通知しない。docs/designs/devin-delegation-status.md）。
 //
 // 終了コード:
 //   0 … 見つかった。見つかった PR ごとに {"pr","url","title","headRefName","author"} の JSON を 1 行ずつ出す
@@ -20,14 +20,15 @@
 //   記録の無い Issue に紐づく PR は誰も待っていないので拾う。
 //   ブランチ名の末尾 -N の規則だけで判定すると、devin/update-skills-1790414398 のような
 //   時刻の数字を Issue 番号と誤読するため、記録のある番号に限る。
-// - レビュー済みは、委譲の記録（Issue の記録の gh.pr、または reviews が 1 件以上ある pr-<n>.yml）か、
-//   PR のコメントの <!-- claude-review の印で判断する。init だけで中断した記録はレビュー済みにしない。
+// - 既知の PR は、委譲の記録（Issue の記録の gh.pr、または pr-<n>.yml。reviews が空でもよい）か、
+//   PR のコメントの <!-- claude-review の印で判断する。init だけで中断したレビューは、
+//   セッション開始時の表示（delegation-status）が「初回レビュー前」として出す。
 // - コメントの取得は PR ごとに失敗を扱う（1 件の失敗で他の PR を捨てない）。
-// - 取得の都度、記録を読み直す（待機中に init された記録を反映する）。
+// - 取得の都度、記録（正 ∪ 写し）を読み直す（待機中に init された記録を、別の worktree のものも含めて反映する）。
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_DIR, readAllRecords } from './delegation.mjs';
+import { readKnownRecords } from './delegation.mjs';
 import { findLinkedPr } from './wait-for-pr.mjs';
 
 const DEFAULT_INTERVAL_SEC = 60;
@@ -39,31 +40,31 @@ export const REVIEW_MARKER = '<!-- claude-review';
 /**
  * @param {Array<{number:number,headRefName?:string,createdAt?:string,title?:string,body?:string,
  *   closingIssuesReferences?:Array<{number:number}>}>} prs
- * @param {{since?: string | null, delegatedIssues?: number[], reviewedPrs?: number[]}} options
- *   since より前に作られた PR は対象外（null なら絞らない）。
+ * @param {{since?: string | null, delegatedIssues?: number[], knownPrs?: number[]}} options
+ *   since より前に作られた PR は対象外（null なら絞らない）。knownPrs は記録がある PR。
  * @returns {Array<object>} 対象の PR を番号の昇順で。
  */
-export function findUnlinkedDevinPrs(prs, { since = null, delegatedIssues = [], reviewedPrs = [] } = {}) {
+export function findUnlinkedDevinPrs(prs, { since = null, delegatedIssues = [], knownPrs = [] } = {}) {
   const sinceMs = since === null ? null : Date.parse(since);
-  const reviewed = new Set(reviewedPrs);
+  const known = new Set(knownPrs);
   return prs
     .filter((pr) => (pr.headRefName ?? '').startsWith(DEVIN_BRANCH_PREFIX))
     .filter((pr) => sinceMs === null || Date.parse(pr.createdAt ?? '') >= sinceMs)
-    .filter((pr) => !reviewed.has(pr.number))
+    .filter((pr) => !known.has(pr.number))
     .filter((pr) => !delegatedIssues.some((issue) => findLinkedPr([pr], issue) !== null))
     .sort((a, b) => a.number - b.number);
 }
 
-/** 記録から「委譲した Issue」と「レビュー済みの PR」を取り出す。 */
+/** 記録から「委譲した Issue」と「記録がある PR」を取り出す。 */
 export function knownFromRecords(records) {
   const delegatedIssues = [];
-  const reviewedPrs = [];
+  const knownPrs = [];
   for (const rec of records) {
     if (Number.isInteger(rec.issue)) delegatedIssues.push(rec.issue);
-    if (Number.isInteger(rec.pr) && (rec.reviews ?? []).length > 0) reviewedPrs.push(rec.pr);
-    if (Number.isInteger(rec.gh?.pr)) reviewedPrs.push(rec.gh.pr);
+    if (Number.isInteger(rec.pr)) knownPrs.push(rec.pr);
+    if (Number.isInteger(rec.gh?.pr)) knownPrs.push(rec.gh.pr);
   }
-  return { delegatedIssues, reviewedPrs };
+  return { delegatedIssues, knownPrs };
 }
 
 /** @param {Array<{body?: string}> | null} comments */
@@ -115,7 +116,6 @@ export function listOpenDevinPrs(since = null, timeout = GH_TIMEOUT_MS) {
 
 export function parseArgs(argv) {
   let since = null;
-  let exclude = [];
   let interval = DEFAULT_INTERVAL_SEC;
   let timeout = DEFAULT_TIMEOUT_SEC;
   for (let i = 0; i < argv.length; i += 2) {
@@ -126,11 +126,6 @@ export function parseArgs(argv) {
       since = value;
       continue;
     }
-    if (argv[i] === '--exclude') {
-      exclude = value.split(',').map(Number);
-      if (exclude.some((n) => !Number.isInteger(n) || n <= 0)) return null;
-      continue;
-    }
     const n = Number(value);
     if (!Number.isFinite(n) || n <= 0) return null;
     if (argv[i] === '--interval') interval = n;
@@ -138,7 +133,7 @@ export function parseArgs(argv) {
     else return null;
   }
   if (since === null) return null;
-  return { since, exclude, interval, timeout };
+  return { since, interval, timeout };
 }
 
 const sleep = (sec) => new Promise((resolve) => setTimeout(resolve, sec * 1000));
@@ -146,18 +141,16 @@ const sleep = (sec) => new Promise((resolve) => setTimeout(resolve, sec * 1000))
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args === null) {
-    console.error('usage: wait-for-devin-pr.mjs --since <ISO 8601> [--exclude <PR番号,…>] [--interval 秒] [--timeout 秒]');
+    console.error('usage: wait-for-devin-pr.mjs --since <ISO 8601> [--interval 秒] [--timeout 秒]');
     process.exit(2);
   }
   const deadline = Date.now() + args.timeout * 1000;
   console.log(`${args.since} 以降に作られた、Issue に紐づかない Devin の PR を待っています（${args.interval} 秒ごと）`);
   for (;;) {
     try {
-      const known = knownFromRecords(readAllRecords(DEFAULT_DIR));
       const candidates = findUnlinkedDevinPrs(listOpenDevinPrs(args.since), {
         since: args.since,
-        delegatedIssues: known.delegatedIssues,
-        reviewedPrs: [...known.reviewedPrs, ...args.exclude],
+        ...knownFromRecords(readKnownRecords()),
       });
       const { pending: found, unchecked } = filterUnreviewed(candidates, (n) => prComments(n));
       if (unchecked.length > 0) {

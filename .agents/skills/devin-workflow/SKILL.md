@@ -38,7 +38,7 @@ npm run build
 ```
 
 - API 契約を変えたら `npm run api:check`、DB スキーマを変えたら `npm run db:check` も通す。
-- ハーネス（`.claude/`・`.agents/`）を変えたら `npm run test:harness` も通す。CI では実行されないため省略しない。
+- ハーネス（`.claude/`・`.agents/`）を変えたら `npm run test:harness` も通す（CI の `harness` ジョブでも実行される）。
 - `npm run test:api-db` は Docker が必要。VM で動かなければ CI の `api-db` ジョブに任せ、PR に「未確認」と書く。
 - `.claude/scripts/run-quality-gates.sh` はロックファイルから npm を検出して実行できる。既定では休眠中の試験を除く。ハーネスの全件は `npm run test:harness`。
 - 通らないテストをスキップ・無効化して CI を通さない。
@@ -51,7 +51,8 @@ npm run build
 
 ## 5. 作業ログ
 
-`logs/YYYY-MM-DD.md`（当日）に、やったこと・検証結果・未完了を追記して PR に含める。ファイルが無ければ `write-work-log` スキルの形で作る。「AI ツール活用記録」に `Devin: <依頼内容と結果>` を 1 行で書く。他のツールが書いた内容は消さない。
+`logs/` は編集しない（PR に含めない）。並行する PR が同じ日のログに追記すると、毎回衝突するため（PR #33・#50）。
+やったこと・検証結果・未完了・気づきは PR の説明に書く。日次ログには、Claude Code が PR のレビューとマージの後に、委譲の記録と PR の説明から書く。
 
 ## やってはいけないこと
 

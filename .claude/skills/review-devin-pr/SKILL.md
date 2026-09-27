@@ -44,7 +44,7 @@ description: >
 ## レビュー（round 0 は全体、round 1 以降は前回のレビュー以降の差分）
 
 1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。CI が未完了なら、
-   ci-monitor の通知か、`gh pr checks <n> --watch` を `run_in_background` で待つ（ポーリングしない）。
+   `gh pr checks <n> --watch` を `run_in_background` で待つ（ポーリングしない）。
    round 1 以降は `gh api repos/{owner}/{repo}/compare/<前回の sha>...<今の head>` で差分を見て、
    前回の指摘が直ったかと、新しい変更に問題が無いかを見る。Devin の返信コメントも読む。
 2. **範囲**: 変更ファイルが Issue の「やること」と範囲内か。範囲外のファイル、並行作業中の他 PR が作る
@@ -58,7 +58,8 @@ description: >
    再現用のテストはコミットしない。worktree は `git worktree remove` で片付ける。
    Testcontainers がイメージ取得で止まるときは、空の `config.json` を置いた `DOCKER_CONFIG` を指定し、
    サンドボックス外で実行する（Docker の認証ヘルパーを避けるため）。
-6. **衝突**: 並行 PR が同じファイル（`logs/` など）を触っていないか。マージ順を提案する。
+6. **衝突**: 並行 PR が同じファイルを触っていないか。マージ順を提案する。
+   Devin の PR に `logs/` の変更があれば、`scope-creep` の `must` にする（`devin-workflow` §5。並行 PR の衝突の元）。
 
 ## Issue なし PR（Devin が自分から出した PR）
 

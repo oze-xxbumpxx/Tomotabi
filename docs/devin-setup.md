@@ -11,7 +11,7 @@
 
 - L2 / L3 を Devin に任せるのは、`docs/designs/` の設計書をユーザーが承認したあとだけにする。
 - 同じブランチを他のツールと同時に編集しない。Devin には専用のブランチ（`devin/<内容>`）を使わせる。
-- マージはユーザーが行う。Devin の PR も CI（`quality` / `build` / `api-db`）が通ってからマージする。
+- マージはユーザーが行う。Devin の PR も CI（`quality` / `build` / `harness` / `api-db`）が通ってからマージする。
 
 ## Devin にルールを届ける方法
 

@@ -1,0 +1,1486 @@
+{
+  "id": "bc6b449e-a76b-415e-9c27-f1ba905bfb76",
+  "prevId": "33623fe3-ddee-48f9-a457-69440120e557",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "identity.accounts": {
+      "name": "accounts",
+      "schema": "identity",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "accounts_user_id_idx": {
+          "name": "accounts_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "accounts_user_id_users_id_fk": {
+          "name": "accounts_user_id_users_id_fk",
+          "tableFrom": "accounts",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "schemaTo": "identity",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "accounts_provider_account_unique": {
+          "name": "accounts_provider_account_unique",
+          "columns": [
+            "provider_id",
+            "account_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "identity.allowed_google_accounts": {
+      "name": "allowed_google_accounts",
+      "schema": "identity",
+      "columns": {
+        "slot": {
+          "name": "slot",
+          "type": "smallint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "google_sub": {
+          "name": "google_sub",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "allowed_google_accounts_user_id_users_id_fk": {
+          "name": "allowed_google_accounts_user_id_users_id_fk",
+          "tableFrom": "allowed_google_accounts",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "schemaTo": "identity",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "allowed_google_accounts_user_id_unique": {
+          "name": "allowed_google_accounts_user_id_unique",
+          "columns": [
+            "user_id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "allowed_google_accounts_google_sub_unique": {
+          "name": "allowed_google_accounts_google_sub_unique",
+          "columns": [
+            "google_sub"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "allowed_google_accounts_slot_check": {
+          "name": "allowed_google_accounts_slot_check",
+          "value": "\"identity\".\"allowed_google_accounts\".\"slot\" IN (0, 1)"
+        },
+        "allowed_google_accounts_google_sub_length_check": {
+          "name": "allowed_google_accounts_google_sub_length_check",
+          "value": "char_length(\"identity\".\"allowed_google_accounts\".\"google_sub\") BETWEEN 1 AND 255"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "identity.sessions": {
+      "name": "sessions",
+      "schema": "identity",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "sessions_user_id_idx": {
+          "name": "sessions_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "schemaTo": "identity",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "sessions_token_unique": {
+          "name": "sessions_token_unique",
+          "columns": [
+            "token"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "identity.users": {
+      "name": "users",
+      "schema": "identity",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "identity.verifications": {
+      "name": "verifications",
+      "schema": "identity",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "verifications_identifier_idx": {
+          "name": "verifications_identifier_idx",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "infra.command_receipts": {
+      "name": "command_receipts",
+      "schema": "infra",
+      "columns": {
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation": {
+          "name": "operation",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_type": {
+          "name": "resource_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "http_status": {
+          "name": "http_status",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "response_body": {
+          "name": "response_body",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "command_receipts_actor_id_users_id_fk": {
+          "name": "command_receipts_actor_id_users_id_fk",
+          "tableFrom": "command_receipts",
+          "columnsFrom": [
+            "actor_id"
+          ],
+          "tableTo": "users",
+          "schemaTo": "identity",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "command_receipts_trip_id_trips_id_fk": {
+          "name": "command_receipts_trip_id_trips_id_fk",
+          "tableFrom": "command_receipts",
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "tableTo": "trips",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "command_receipts_trip_id_actor_id_trip_participants_trip_id_user_id_fk": {
+          "name": "command_receipts_trip_id_actor_id_trip_participants_trip_id_user_id_fk",
+          "tableFrom": "command_receipts",
+          "columnsFrom": [
+            "trip_id",
+            "actor_id"
+          ],
+          "tableTo": "trip_participants",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "trip_id",
+            "user_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "command_receipts_actor_id_operation_idempotency_key_pk": {
+          "name": "command_receipts_actor_id_operation_idempotency_key_pk",
+          "columns": [
+            "actor_id",
+            "operation",
+            "idempotency_key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "command_receipts_request_hash_check": {
+          "name": "command_receipts_request_hash_check",
+          "value": "\"infra\".\"command_receipts\".\"request_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "command_receipts_resource_type_check": {
+          "name": "command_receipts_resource_type_check",
+          "value": "\"infra\".\"command_receipts\".\"resource_type\" IN ('payment', 'payment_cancellation', 'preview', 'settlement', 'settlement_cancellation', 'plan', 'trip', 'plan_event', 'plan_event_cancellation')"
+        },
+        "command_receipts_http_status_check": {
+          "name": "command_receipts_http_status_check",
+          "value": "\"infra\".\"command_receipts\".\"http_status\" IN (200, 201)"
+        },
+        "mutable_resource_receipt_snapshot": {
+          "name": "mutable_resource_receipt_snapshot",
+          "value": "\"infra\".\"command_receipts\".\"resource_type\" NOT IN ('plan', 'trip') OR \"infra\".\"command_receipts\".\"response_body\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "infra.trip_finance_guards": {
+      "name": "trip_finance_guards",
+      "schema": "infra",
+      "columns": {
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "next_settlement_sequence": {
+          "name": "next_settlement_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "trip_finance_guards_trip_id_trips_id_fk": {
+          "name": "trip_finance_guards_trip_id_trips_id_fk",
+          "tableFrom": "trip_finance_guards",
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "tableTo": "trips",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "trip_finance_guards_next_settlement_sequence_check": {
+          "name": "trip_finance_guards_next_settlement_sequence_check",
+          "value": "\"infra\".\"trip_finance_guards\".\"next_settlement_sequence\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "planning.plans": {
+      "name": "plans",
+      "schema": "planning",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "planned_date": {
+          "name": "planned_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "planned_time": {
+          "name": "planned_time",
+          "type": "time(0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "memo": {
+          "name": "memo",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by": {
+          "name": "cancelled_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "plans_day_idx": {
+          "name": "plans_day_idx",
+          "columns": [
+            {
+              "expression": "trip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "planned_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "planned_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "plans_trip_id_trips_id_fk": {
+          "name": "plans_trip_id_trips_id_fk",
+          "tableFrom": "plans",
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "tableTo": "trips",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "plan_canceller_member": {
+          "name": "plan_canceller_member",
+          "tableFrom": "plans",
+          "columnsFrom": [
+            "trip_id",
+            "cancelled_by"
+          ],
+          "tableTo": "trip_participants",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "trip_id",
+            "user_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "plans_trip_id_id_unique": {
+          "name": "plans_trip_id_id_unique",
+          "columns": [
+            "trip_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "plans_kind_check": {
+          "name": "plans_kind_check",
+          "value": "\"planning\".\"plans\".\"kind\" IN ('place', 'food', 'shopping', 'lodging', 'transport')"
+        },
+        "plans_version_check": {
+          "name": "plans_version_check",
+          "value": "\"planning\".\"plans\".\"version\" > 0"
+        },
+        "plan_name_nonempty": {
+          "name": "plan_name_nonempty",
+          "value": "char_length(btrim(\"planning\".\"plans\".\"name\")) > 0"
+        },
+        "plan_time_minute": {
+          "name": "plan_time_minute",
+          "value": "\"planning\".\"plans\".\"planned_time\" IS NULL OR (\"planning\".\"plans\".\"planned_time\" < TIME '24:00' AND EXTRACT(SECOND FROM \"planning\".\"plans\".\"planned_time\") = 0)"
+        },
+        "plan_cancellation_pair": {
+          "name": "plan_cancellation_pair",
+          "value": "(\"planning\".\"plans\".\"cancelled_at\" IS NULL) = (\"planning\".\"plans\".\"cancelled_by\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "planning.trip_participants": {
+      "name": "trip_participants",
+      "schema": "planning",
+      "columns": {
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot": {
+          "name": "slot",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "trip_participants_user_idx": {
+          "name": "trip_participants_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "trip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "trip_participants_trip_id_trips_id_fk": {
+          "name": "trip_participants_trip_id_trips_id_fk",
+          "tableFrom": "trip_participants",
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "tableTo": "trips",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "trip_participants_user_id_users_id_fk": {
+          "name": "trip_participants_user_id_users_id_fk",
+          "tableFrom": "trip_participants",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "schemaTo": "identity",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "trip_participants_trip_id_slot_pk": {
+          "name": "trip_participants_trip_id_slot_pk",
+          "columns": [
+            "trip_id",
+            "slot"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "trip_participants_trip_id_user_id_unique": {
+          "name": "trip_participants_trip_id_user_id_unique",
+          "columns": [
+            "trip_id",
+            "user_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "trip_participants_slot_check": {
+          "name": "trip_participants_slot_check",
+          "value": "\"planning\".\"trip_participants\".\"slot\" IN (0, 1)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "planning.trips": {
+      "name": "trips",
+      "schema": "planning",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'planning'"
+        },
+        "version": {
+          "name": "version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_by": {
+          "name": "started_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finished_by": {
+          "name": "finished_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "trips_list_idx": {
+          "name": "trips_list_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "trips_created_by_users_id_fk": {
+          "name": "trips_created_by_users_id_fk",
+          "tableFrom": "trips",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "tableTo": "users",
+          "schemaTo": "identity",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "trip_starter_member": {
+          "name": "trip_starter_member",
+          "tableFrom": "trips",
+          "columnsFrom": [
+            "id",
+            "started_by"
+          ],
+          "tableTo": "trip_participants",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "trip_id",
+            "user_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "trip_finisher_member": {
+          "name": "trip_finisher_member",
+          "tableFrom": "trips",
+          "columnsFrom": [
+            "id",
+            "finished_by"
+          ],
+          "tableTo": "trip_participants",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "trip_id",
+            "user_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "trips_status_check": {
+          "name": "trips_status_check",
+          "value": "\"planning\".\"trips\".\"status\" IN ('planning', 'traveling', 'finished')"
+        },
+        "trips_version_check": {
+          "name": "trips_version_check",
+          "value": "\"planning\".\"trips\".\"version\" > 0"
+        },
+        "trip_name_nonempty": {
+          "name": "trip_name_nonempty",
+          "value": "char_length(btrim(\"planning\".\"trips\".\"name\")) > 0"
+        },
+        "trip_period_valid": {
+          "name": "trip_period_valid",
+          "value": "\"planning\".\"trips\".\"starts_on\" <= \"planning\".\"trips\".\"ends_on\""
+        },
+        "trip_lifecycle_fields": {
+          "name": "trip_lifecycle_fields",
+          "value": "(\"planning\".\"trips\".\"status\" = 'planning' AND \"planning\".\"trips\".\"started_at\" IS NULL AND \"planning\".\"trips\".\"started_by\" IS NULL AND \"planning\".\"trips\".\"finished_at\" IS NULL AND \"planning\".\"trips\".\"finished_by\" IS NULL)\n          OR (\"planning\".\"trips\".\"status\" = 'traveling' AND \"planning\".\"trips\".\"started_at\" IS NOT NULL AND \"planning\".\"trips\".\"started_by\" IS NOT NULL AND \"planning\".\"trips\".\"finished_at\" IS NULL AND \"planning\".\"trips\".\"finished_by\" IS NULL)\n          OR (\"planning\".\"trips\".\"status\" = 'finished' AND \"planning\".\"trips\".\"started_at\" IS NOT NULL AND \"planning\".\"trips\".\"started_by\" IS NOT NULL AND \"planning\".\"trips\".\"finished_at\" IS NOT NULL AND \"planning\".\"trips\".\"finished_by\" IS NOT NULL AND \"planning\".\"trips\".\"finished_at\" >= \"planning\".\"trips\".\"started_at\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "record.active_plan_events": {
+      "name": "active_plan_events",
+      "schema": "record",
+      "columns": {
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_kind": {
+          "name": "event_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "active_plan_events_trip_id_plan_id_event_kind_event_id_plan_events_trip_id_plan_id_event_kind_id_fk": {
+          "name": "active_plan_events_trip_id_plan_id_event_kind_event_id_plan_events_trip_id_plan_id_event_kind_id_fk",
+          "tableFrom": "active_plan_events",
+          "columnsFrom": [
+            "trip_id",
+            "plan_id",
+            "event_kind",
+            "event_id"
+          ],
+          "tableTo": "plan_events",
+          "schemaTo": "record",
+          "columnsTo": [
+            "trip_id",
+            "plan_id",
+            "event_kind",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "active_plan_events_plan_id_event_kind_pk": {
+          "name": "active_plan_events_plan_id_event_kind_pk",
+          "columns": [
+            "plan_id",
+            "event_kind"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "active_plan_events_event_id_unique": {
+          "name": "active_plan_events_event_id_unique",
+          "columns": [
+            "event_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "active_plan_events_event_kind_check": {
+          "name": "active_plan_events_event_kind_check",
+          "value": "\"record\".\"active_plan_events\".\"event_kind\" IN ('achievement', 'booking')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "record.plan_event_cancellations": {
+      "name": "plan_event_cancellations",
+      "schema": "record",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cancelled_by": {
+          "name": "cancelled_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "plan_event_cancellations_timeline_idx": {
+          "name": "plan_event_cancellations_timeline_idx",
+          "columns": [
+            {
+              "expression": "trip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "plan_event_cancellations_trip_id_event_id_plan_events_trip_id_id_fk": {
+          "name": "plan_event_cancellations_trip_id_event_id_plan_events_trip_id_id_fk",
+          "tableFrom": "plan_event_cancellations",
+          "columnsFrom": [
+            "trip_id",
+            "event_id"
+          ],
+          "tableTo": "plan_events",
+          "schemaTo": "record",
+          "columnsTo": [
+            "trip_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "plan_event_cancellations_trip_id_cancelled_by_trip_participants_trip_id_user_id_fk": {
+          "name": "plan_event_cancellations_trip_id_cancelled_by_trip_participants_trip_id_user_id_fk",
+          "tableFrom": "plan_event_cancellations",
+          "columnsFrom": [
+            "trip_id",
+            "cancelled_by"
+          ],
+          "tableTo": "trip_participants",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "trip_id",
+            "user_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "record.plan_events": {
+      "name": "plan_events",
+      "schema": "record",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_kind": {
+          "name": "event_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "plan_events_history_idx": {
+          "name": "plan_events_history_idx",
+          "columns": [
+            {
+              "expression": "trip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "plan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "plan_events_timeline_idx": {
+          "name": "plan_events_timeline_idx",
+          "columns": [
+            {
+              "expression": "trip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "plan_events_trip_id_plan_id_plans_trip_id_id_fk": {
+          "name": "plan_events_trip_id_plan_id_plans_trip_id_id_fk",
+          "tableFrom": "plan_events",
+          "columnsFrom": [
+            "trip_id",
+            "plan_id"
+          ],
+          "tableTo": "plans",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "trip_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "plan_events_trip_id_created_by_trip_participants_trip_id_user_id_fk": {
+          "name": "plan_events_trip_id_created_by_trip_participants_trip_id_user_id_fk",
+          "tableFrom": "plan_events",
+          "columnsFrom": [
+            "trip_id",
+            "created_by"
+          ],
+          "tableTo": "trip_participants",
+          "schemaTo": "planning",
+          "columnsTo": [
+            "trip_id",
+            "user_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "plan_events_trip_id_plan_id_event_kind_id_unique": {
+          "name": "plan_events_trip_id_plan_id_event_kind_id_unique",
+          "columns": [
+            "trip_id",
+            "plan_id",
+            "event_kind",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "plan_events_trip_id_id_unique": {
+          "name": "plan_events_trip_id_id_unique",
+          "columns": [
+            "trip_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "plan_events_event_kind_check": {
+          "name": "plan_events_event_kind_check",
+          "value": "\"record\".\"plan_events\".\"event_kind\" IN ('achievement', 'booking')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "identity": "identity",
+    "infra": "infra",
+    "planning": "planning",
+    "record": "record"
+  },
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

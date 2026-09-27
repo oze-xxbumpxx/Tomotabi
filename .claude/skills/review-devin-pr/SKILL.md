@@ -51,7 +51,8 @@ description: >
      `--sandbox` は付けない（autonomous モードになり、確認が要る操作が拒否されて途中で止まる。#48）。
      dangerous は確認なしでコマンドを実行するため、Devin に危険操作の確認は効かない（ユーザー了承済みの割り切り）。代わりに:
      プロンプトに「作業はこのリポジトリのフォルダの中だけで行う。force push・ブランチの削除・履歴の書き換え・main への push・
-     クローン外への書き込みはしない。必要になったら止まって報告する」を必ず入れる。
+     クローン外への書き込みはしない。必要になったら止まって報告する。PR を出したらセッションを終了せず、
+     devin-workflow §4.5 に従ってコメントを監視して対応する」を必ず入れる。
      終了後に、`git -C <クローン> reflog -n 20` と `gh pr view <n> --json commits` で、force push や想定外のブランチ操作が無いかを確かめる。
    - **クラウドはユーザーが指示したときだけ**（出先のとき）。`devin --cloud -p "<依頼>"`。`--cloud` では `--model` が無視され、
      Devin Web の「セッションエージェント」の既定（SWE-2 High）で動く。High 以外が要るときは、依頼の前にユーザーに既定の切り替えを頼む。
@@ -150,8 +151,10 @@ description: >
 2. 本文に `(aside)` を入れない（Devin が対応しなくなる）。秘密・環境変数の値・ローカルのパスを書かない。
 3. 範囲外の気づきは投稿しない（ユーザーに渡す）。
 4. `gh pr comment <n> --body-file <file>` で投稿し、投稿時刻（`date -u +%Y-%m-%dT%H:%M:%SZ`）を控える。
-5. **ローカルの委譲なら**、Devin は PR を監視していないので、投稿だけでは直らない。上の「委譲」2 と同じ確認をしてから、
-   新しいローカルセッションを起動して直させる（`devin -c` の再開は「failed to start ACP agent session」で動かなかった）:
+5. **ローカルの委譲でも、通常は起動し直さない**。Devin は `devin-workflow` §4.5 で PR のコメントを監視しているので、
+   投稿すれば自分で気づいて直す。投稿しても反応が無いとき（セッションが終了・クラッシュした場合）は、
+   上の「委譲」2 と同じ確認をしてから、新しいローカルセッションを起動して直させる
+   （`devin -c` の再開は「failed to start ACP agent session」で動かなかった）:
    `devin --model swe-2-<同じ effort> --permission-mode dangerous -p "PR #<n>（ブランチ <branch>）を直す。gh pr view <n> --comments で claude-review round=<r> のコメントを読み、must を直して同じブランチに push する。force push はしない。"`。
    クラウドの委譲なら、Devin が PR のコメントに自動で対応するので起動しない。
 6. `run_in_background` で `node .claude/scripts/wait-for-pr-update.mjs <PR> --since <投稿時刻> --sha <レビューした head>` を起動する。

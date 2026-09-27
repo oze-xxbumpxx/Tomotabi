@@ -18,7 +18,7 @@
           },
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/find-devin-prs.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/delegation-status.mjs\"",
             "timeout": 30
           }
         ]

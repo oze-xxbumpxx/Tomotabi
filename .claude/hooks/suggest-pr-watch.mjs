@@ -48,7 +48,8 @@ const isoSeconds = (date) => date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 export function buildContext(issues, now = new Date()) {
   const lines = issues.map(
     (n) =>
-      `- Issue #${n}: \`node .claude/scripts/delegation.mjs init ${n} --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud]\` で記録を作り（既定はローカル実行）、` +
+      `- Issue #${n}: \`node .claude/scripts/delegation.mjs init ${n} --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud] [--follow-up-of <前の委譲>]\` で記録を作り` +
+      '（既定はローカル実行。前の PR の指摘を直す後続の Issue なら --follow-up-of で前の委譲を指す）、' +
       `Bash の run_in_background で \`node .claude/scripts/wait-for-pr.mjs ${n}\` を起動する`,
   );
   return [

@@ -43,6 +43,18 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  # ハーネス（.claude/ の scripts・hooks）の試験。Node の標準機能だけで動くため npm ci は要らない。
+  harness:
+    name: harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm run test:harness
+
   api-db:
     name: api-db
     runs-on: ubuntu-latest

@@ -34,9 +34,14 @@ description: >
      環境でもコミットがあれば動く。
 3. **日次ログ**: write-work-log Skill の手順で `logs/YYYY-MM-DD.md` を作成・追記する。
    kickoff-session で雛形を作っていれば残りの節を埋める。
-3a. **委譲の記録**（Devin に渡した Issue があるときだけ）: このセッションでマージ・クローズされた委譲に
-   `node .claude/scripts/delegation.mjs finalize <Issue>` を実行し、`docs/claude-code/improvements/delegations/` の
-   変更を手順 6 のコミットに含める。`delegation.mjs summary` で昇格候補が出たらログの「気づき・メモ」に書く。
+3a. **委譲の記録**（Devin の PR をレビューしたときだけ）: `node .claude/scripts/delegation.mjs status` で「PR がマージ／クローズされた」と
+   出た委譲に `node .claude/scripts/delegation.mjs finalize <Issue>`（Issue なし PR は `pr-<n>`）を実行し、finalize した記録
+   （`outcome` が merged / closed）を手順 6 のコミットに含める。進行中の記録はコミットしない（写しで次のセッションに引き継ぐ。
+   写しが残らないクラウドのセッションでは進行中の記録もコミットする。理由は `review-devin-pr` の「完了」）。
+   `status` に未起票の昇格候補が出たら、ログの「気づき・メモ」に書く。
+   - Devin は `logs/` を編集しない（`devin-workflow` §5）。ログの「AI ツール活用記録」に、委譲ごとに
+     `Devin: Issue #<n>（PR #<m>）<依頼の要約>。<結果（マージ / round n で手直し / クローズ）>` を 1 行書く
+     （Issue なし PR は `Devin: PR #<m> <要約>`）。題と結果は記録から、検証結果などは PR の説明から取る。
 4. **メトリクス・振り返り**（L2/L3 のみ）: `record-metrics-and-reflect` Skill が
    利用可能なら実行する（改善サイクルを運用しているプロジェクト）。
    - **利用できない環境ではスキップし、ログにスキップした旨を書く。** セッション終了作業を

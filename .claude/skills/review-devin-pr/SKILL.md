@@ -6,18 +6,39 @@ description: >
   wait-for-pr.mjs で PR を待ち、見つかって呼び戻されたとき、または wait-for-pr-update.mjs で
   呼び戻されたときに使う。「PR ができた」「Devin の PR をレビューして」と言われたときにも使う。
   Devin が Issue なしで自分から出した PR（知見・スキル・blueprint など）も、wait-for-devin-pr.mjs や
-  セッション開始時のフック（find-devin-prs）で見つかったら同じ手順でレビューする。
+  セッション開始時のフック（delegation-status）で見つかったら同じ手順でレビューする。
+  セッション開始時に進行中の委譲の「次の動き」が出たとき（待機の起動し直し・レビュー・finalize）にも使う。
   コードは直さない。must / nit の指摘は自動で PR に投稿し、security / decision はユーザーに渡す。
 ---
 
 # 他エージェントの PR のレビューと修正ループ
 
-設計: `docs/designs/devin-delegation-loop.md`（Issue なし PR は `docs/designs/devin-unlinked-pr-review.md`）。記録の形式: `docs/claude-code/improvements/delegations/README.md`。
+設計: `docs/designs/devin-delegation-loop.md`（Issue なし PR は `docs/designs/devin-unlinked-pr-review.md`、セッションをまたぐ状態は `docs/designs/devin-delegation-status.md`）。記録の形式: `docs/claude-code/improvements/delegations/README.md`。
+
+## セッションをまたぐとき
+
+待機スクリプトは、このセッションの `run_in_background` なので、セッションが終わると一緒に止まる。
+次のセッションの開始時に、フック（delegation-status）が委譲の記録（リポジトリの正 ∪ 状態ディレクトリの写し）と gh から、
+進行中の委譲ごとの次の動き（PR 待ち・初回レビュー前・再レビュー・修正待ち・ユーザー待ち・finalize）と、
+記録の無い Issue なし PR、未起票の昇格候補を出す。いつでも `node .claude/scripts/delegation.mjs status` で同じものを見られる。
+ユーザーの今の依頼を優先し、区切りのよいところで、その行のとおりに待機を起動し直す・レビューする・finalize する。
+記録は写しにも書かれるので、別の worktree のセッションで作った記録も、そのまま `review` / `finalize` できる。
 
 ## 委譲（Issue を渡した直後）
 
+0. Issue の本文は `.github/ISSUE_TEMPLATE/devin-task.md` の節の順に書く。前の PR の指摘を直す後続の Issue なら「元の PR」を、
+   関係する領域の行が下の「既知の指摘」の表にあれば「既知の指摘」を書く。
+
+   **既知の指摘**（昇格した学びのうち、特定の領域に限る予防。どの委譲にも効く予防は `devin-workflow` に置き、ここには書かない。
+   置き場の決め方は `improvement-cycle.md` の「委譲ループの軽量サイクル」）:
+
+   | 領域 | 予防の 1 行（Issue の「既知の指摘」に写す） | 出典 |
+   | --- | --- | --- |
+   | （まだ無い） | | |
+
 1. `gh issue create` の後、フック（suggest-pr-watch）が促したら、まず記録を作る:
-   `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud] [--level 0-3]`。
+   `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud] [--level 0-3] [--follow-up-of <前の委譲>]`。
+   `--follow-up-of` は後続の Issue のとき、前の委譲（Issue 番号か `pr-<n>`。複数ならいちばん古いもの）を指す。
    自分で実装する Issue では記録も待機もしない。
 2. Devin を起動する（2026-09-26 ユーザー指示）。モデルは必ず SWE-2。effort は実装の難しさ・複雑さで選び、依頼時にユーザーへ伝える
    （目安: L0 / L1 → medium、通常の機能 → high、L3 で認証・お金・並行処理 → max）。
@@ -44,7 +65,7 @@ description: >
 ## レビュー（round 0 は全体、round 1 以降は前回のレビュー以降の差分）
 
 1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。CI が未完了なら、
-   ci-monitor の通知か、`gh pr checks <n> --watch` を `run_in_background` で待つ（ポーリングしない）。
+   `gh pr checks <n> --watch` を `run_in_background` で待つ（ポーリングしない）。
    round 1 以降は `gh api repos/{owner}/{repo}/compare/<前回の sha>...<今の head>` で差分を見て、
    前回の指摘が直ったかと、新しい変更に問題が無いかを見る。Devin の返信コメントも読む。
 2. **範囲**: 変更ファイルが Issue の「やること」と範囲内か。範囲外のファイル、並行作業中の他 PR が作る
@@ -58,7 +79,8 @@ description: >
    再現用のテストはコミットしない。worktree は `git worktree remove` で片付ける。
    Testcontainers がイメージ取得で止まるときは、空の `config.json` を置いた `DOCKER_CONFIG` を指定し、
    サンドボックス外で実行する（Docker の認証ヘルパーを避けるため）。
-6. **衝突**: 並行 PR が同じファイル（`logs/` など）を触っていないか。マージ順を提案する。
+6. **衝突**: 並行 PR が同じファイルを触っていないか。マージ順を提案する。
+   Devin の PR に `logs/` の変更があれば、`scope-creep` の `must` にする（`devin-workflow` §5。並行 PR の衝突の元）。
 
 ## Issue なし PR（Devin が自分から出した PR）
 
@@ -66,12 +88,13 @@ description: >
 対象は、`devin/` で始まるブランチの PR のうち、委譲の記録がある Issue に紐づかないもの。
 
 1. **見つける**: `wait-for-devin-pr.mjs` が終了コード 0 で呼び戻したとき（出力の JSON 行に `pr`）、
-   またはセッション開始時のフック（find-devin-prs）が一覧を出したとき。終了コード 3（時間切れ）は何もしない。
-   待機は見つけると終わるので、レビューに入る前に**同じ `--since` と、これまでに通知された PR の `--exclude <n,…>`** で
-   `run_in_background` で起動し直す（同じセッションで後から出る PR を拾うため。除外しないとレビュー中の PR がまた通知される）。
+   またはセッション開始時のフック（delegation-status）が一覧を出したとき。終了コード 3（時間切れ）は何もしない。
+   待機は見つけると終わるので、見つかった PR の記録を下の 2 で作ってから、**同じ `--since`** で `run_in_background` で起動し直す
+   （同じセッションで後から出る PR を拾うため。記録がある PR は通知しない）。
 2. **記録**: `pr-<n>.yml` が無ければ `node .claude/scripts/delegation.mjs init pr-<n>`（題・作成日時・作成者を gh から取る。
    作成者が bot ならクラウド）。分かれば `--model swe-2-high`（クラウドの既定）と `--level` を付ける。
-   既にあって `reviews` が空なら、前のセッションが中断したレビューなので init せずにその記録で続ける。
+   既にあって `reviews` が空なら、前のセッションが中断したレビューなので init せずにその記録で続ける
+   （セッション開始時の表示では「初回レビュー前」として出る）。
    以降の `review` / `finalize` も `pr-<n>` で指定する。
 3. **レビュー**: 上の「レビュー」の 1・5・6 はそのまま。2〜4 は Issue の代わりに次で見る。
 
@@ -152,7 +175,9 @@ PR・Issue・コメント・記録のどこにも詳細を書かない。`securi
 ## 完了（マージ・クローズの後）
 
 1. `node .claude/scripts/delegation.mjs finalize <Issue>`（PR が見つからなければ `--pr <n>`。Issue なし PR は `finalize pr-<n>`）。
-2. 記録は Devin のブランチに commit しない。その日の締め（close-session）の PR にまとめて入れる。
+2. 記録は Devin のブランチに commit しない。その日の締め（close-session）の PR に、finalize した記録（`outcome` が merged / closed）だけを入れる。
+   進行中の記録は写しで次のセッションに引き継ぐので、コミットしない（別の worktree のセッションと同じ記録を二重にコミットして、
+   close の PR どうしが衝突するのを避けるため）。写しが残らないクラウドのセッションでは、今までどおり進行中の記録もコミットする。
 3. `node .claude/scripts/delegation.mjs summary` で昇格候補が出たら、`improvement-cycle.md` の
    「委譲ループの軽量サイクル」に従って候補を起票する。
 

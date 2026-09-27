@@ -4,20 +4,25 @@
 //
 // 使い方:
 //   node .claude/scripts/delegation.mjs init <issue> --model <swe-2-medium|swe-2-high|swe-2-max|unknown>
-//     [--runner <local|cloud>] [--level 0-3] [--title <題>] [--delegated-at <ISO 8601>]
+//     [--runner <local|cloud>] [--level 0-3] [--title <題>] [--delegated-at <ISO 8601>] [--follow-up-of <issue|pr-n>]
 //       --runner は Devin を動かした場所。既定は local（2026-09-26 ユーザー指示: 既定はローカル、出先の指示時だけクラウド）。
 //       記録を作る。--title と --delegated-at を省くと gh から Issue の題と作成日時を取る。
+//       --follow-up-of は、前の委譲の PR の指摘を直す後続の委譲のとき、その前の委譲を指す（複数ならいちばん古いもの）。
 //   node .claude/scripts/delegation.mjs review <issue> --round <n> --sha <sha> --verdict <merge|fix|escalate>
-//     [--posted] [--finding '<must|nit|security|decision>:<category>:<summary>' ...]
-//       round の結果を追記する。
+//     [--posted] [--finding '<must|nit|security|decision>:<category>:<summary>' ...] [--reviewed-at <ISO 8601>]
+//       round の結果を追記する。reviewed_at の既定は今の時刻。
 //   node .claude/scripts/delegation.mjs finalize <issue> [--pr <PR番号>]
 //       gh から PR・時刻・CI 初回（PR 作成時の head）・コミット数・Closes の紐づけを取り、gh: と outcome を埋める。
 //   node .claude/scripts/delegation.mjs summary [--threshold 3] [--security-threshold 2]
-//       記録だけを読んで集計する（gh は呼ばない）。
+//       記録（正 ∪ 写し）だけを読んで集計する（gh は呼ばない）。
 //   Issue に紐づかない Devin の PR（docs/designs/devin-unlinked-pr-review.md）は、<issue> の代わりに pr-<PR番号> を指定する。
 //     init pr-<n> [--model <m>] [--runner <local|cloud>] … は gh から PR の題・作成日時・作成者を取り、
 //     --model の既定は unknown、--runner の既定は作成者（bot → cloud、それ以外 → local）。記録は pr-<n>.yml。
+//   node .claude/scripts/delegation.mjs status [--json] [--no-gh]
+//       進行中の委譲ごとの次の動き・Issue なし PR・未起票の昇格候補（delegation-status.mjs）。
 //   すべてのサブコマンドで --dir <path> を指定すると記録の置き場を変えられる（テスト用）。
+//   --mirror-dir <path> は記録の写しの置き場。既定はハーネスの状態ディレクトリの delegations/。
+//   --dir を指定したときは、--mirror-dir を指定しない限り写さない（テストで手元の写しを汚さない）。
 //
 // 終了コード: 0 成功 / 2 引数・記録の誤り / 3 gh の失敗・PR が見つからない
 //
@@ -26,11 +31,15 @@
 // - YAML は依存を増やさないため、この記録の形（スカラー・ネストした map・map の配列）だけを
 //   読み書きする最小の実装にする。その他の形はエラーにする。
 // - 書き込みは一時ファイル → rename。init は既存を上書きしない。
+// - 記録の写し（docs/designs/devin-delegation-status.md）: 正（リポジトリ）を書いたあと、状態ディレクトリにも書く。
+//   worktree ごとのセッションでも、main に未マージの進行中の記録が見えるようにするため。
+//   読むときは正と写しを key でまとめ、reviews の多い方 → outcome のある方 → 正の順で選ぶ。写しの失敗は警告だけ。
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveStateDir } from '../lib/harness-paths.mjs';
 import { findLinkedPr, listPrs } from './wait-for-pr.mjs';
 
 export const DEFAULT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../docs/claude-code/improvements/delegations');
@@ -168,12 +177,18 @@ export function parseYaml(text) {
 
 // ---------------------------------------------------------------- 記録の操作（純粋関数）
 
-export function newRecord({ issue, title, model, runner = 'local', level = null, delegatedAt }) {
+/**
+ * @param {{followUpOf?: number|string|null}} args followUpOf は前の委譲の key（Issue 番号か 'pr-<n>'）。
+ *   指定したときだけ follow_up_of を書く（項目の無い古い記録と形を揃える）。
+ */
+export function newRecord({ issue, title, model, runner = 'local', level = null, delegatedAt, followUpOf = null }) {
   if (!Number.isInteger(issue) || issue <= 0) throw new UsageError('Issue 番号が不正です');
   if (!MODELS.includes(model)) throw new UsageError(`--model は ${MODELS.join(' | ')} のどれか`);
   if (!RUNNERS.includes(runner)) throw new UsageError(`--runner は ${RUNNERS.join(' | ')} のどれか`);
   if (level !== null && ![0, 1, 2, 3].includes(level)) throw new UsageError('--level は 0〜3');
   if (Number.isNaN(Date.parse(delegatedAt))) throw new UsageError('委譲の日時が ISO 8601 ではありません');
+  const parent = followUpOf === null ? null : targetArg(String(followUpOf));
+  if (parent === issue) throw new UsageError('--follow-up-of に自分自身は指定できません');
   return {
     issue,
     title,
@@ -182,6 +197,7 @@ export function newRecord({ issue, title, model, runner = 'local', level = null,
     runner,
     change_level: level,
     delegated_at: delegatedAt,
+    ...(parent === null ? {} : { follow_up_of: parent }),
     reviews: [],
     escalations: 0,
     outcome: null,
@@ -219,15 +235,17 @@ export function parseFinding(text) {
   return { severity, category, summary: severity === 'security' ? PRIVATE_SUMMARY : summary.replace(/\s+/g, ' ') };
 }
 
-export function addReview(record, { round, sha, verdict, posted = false, findings = [] }) {
+/** at は review を記録した時刻（修正待ちの wait-for-pr-update の --since に使う）。指定したときだけ reviewed_at を書く。 */
+export function addReview(record, { round, sha, verdict, posted = false, findings = [], at = null }) {
   if (!Number.isInteger(round) || round < 0) throw new UsageError('--round は 0 以上の整数');
   if (!VERDICTS.includes(verdict)) throw new UsageError(`--verdict は ${VERDICTS.join(' | ')} のどれか`);
   if (typeof sha !== 'string' || !/^[0-9a-f]{7,40}$/.test(sha)) throw new UsageError('--sha はコミットの SHA');
+  if (at !== null && Number.isNaN(Date.parse(at))) throw new UsageError('--reviewed-at は ISO 8601');
   if (record.reviews.some((r) => r.round === round)) throw new UsageError(`round ${round} は記録済みです`);
   if (posted && findings.some((f) => f.severity === 'security' || f.severity === 'decision')) {
     throw new UsageError('security / decision の指摘は自動投稿しません（--posted と併用できない）');
   }
-  const review = { round, reviewed_sha: sha, verdict, posted, findings };
+  const review = { round, ...(at === null ? {} : { reviewed_at: at }), reviewed_sha: sha, verdict, posted, findings };
   return {
     ...record,
     reviews: [...record.reviews, review].sort((a, b) => a.round - b.round),
@@ -284,7 +302,12 @@ function median(values) {
 /** 投稿した回数 = 手戻りの回数。 */
 export const roundsOf = (record) => record.reviews.filter((r) => r.posted).length;
 
-function groupStats(records, keyOf) {
+/** 他の記録の follow_up_of に指されている key（= 後続の委譲を生んだ委譲）。 */
+export function parentKeys(records) {
+  return new Set(records.map((rec) => rec.follow_up_of ?? null).filter((key) => key !== null));
+}
+
+function groupStats(records, keyOf, parents = new Set()) {
   const groups = {};
   for (const rec of records) {
     const m = (groups[keyOf(rec)] ??= {
@@ -293,6 +316,8 @@ function groupStats(records, keyOf) {
       finished: 0,
       reviewed: 0,
       firstPass: 0,
+      cleanFirstPass: 0,
+      spawned: 0,
       rounds: [],
       ciKnown: 0,
       ciPass: 0,
@@ -303,10 +328,15 @@ function groupStats(records, keyOf) {
     m.count += 1;
     if (rec.outcome === 'merged' || rec.outcome === 'closed') m.finished += 1;
     if (rec.outcome === 'merged') m.merged += 1;
+    const spawned = parents.has(recordKey(rec));
+    if (spawned) m.spawned += 1;
     if (rec.reviews.length > 0) {
       m.reviewed += 1;
       m.rounds.push(roundsOf(rec));
-      if (rec.reviews[0].verdict === 'merge') m.firstPass += 1;
+      if (rec.reviews[0].verdict === 'merge') {
+        m.firstPass += 1;
+        if (!spawned) m.cleanFirstPass += 1;
+      }
     }
     m.escalations += rec.escalations ?? 0;
     if (typeof rec.gh?.ci_first_pass === 'boolean') {
@@ -326,6 +356,8 @@ function groupStats(records, keyOf) {
         finished: m.finished,
         reviewed: m.reviewed,
         firstPass: m.firstPass,
+        cleanFirstPass: m.cleanFirstPass,
+        spawned: m.spawned,
         avgRounds: m.rounds.length === 0 ? null : m.rounds.reduce((a, b) => a + b, 0) / m.rounds.length,
         ciKnown: m.ciKnown,
         ciPass: m.ciPass,
@@ -359,16 +391,23 @@ export function summarize(records, { threshold = 3, securityThreshold = 2 } = {}
       return { category, issues: [...issues].sort(compareKeys), threshold: limit, candidate: issues.size >= limit };
     })
     .sort((a, b) => b.issues.length - a.issues.length || a.category.localeCompare(b.category));
+  const parents = parentKeys(records);
+  const followUps = records
+    .filter((rec) => (rec.follow_up_of ?? null) !== null)
+    .map((rec) => ({ key: recordKey(rec), parent: rec.follow_up_of }))
+    .sort((a, b) => compareKeys(a.key, b.key));
   return {
     total: records.length,
+    issueOrigin: records.filter((rec) => (rec.origin ?? 'issue') === 'issue').length,
+    followUps,
     outcomes: {
       merged: records.filter((r) => r.outcome === 'merged').length,
       closed: records.filter((r) => r.outcome === 'closed').length,
       open: records.filter((r) => r.outcome !== 'merged' && r.outcome !== 'closed').length,
     },
-    models: groupStats(records, (rec) => rec.model),
-    runners: groupStats(records, (rec) => rec.runner ?? 'unknown'),
-    origins: groupStats(records, (rec) => rec.origin ?? 'issue'),
+    models: groupStats(records, (rec) => rec.model, parents),
+    runners: groupStats(records, (rec) => rec.runner ?? 'unknown', parents),
+    origins: groupStats(records, (rec) => rec.origin ?? 'issue', parents),
     byCategory,
     candidates: byCategory.filter((c) => c.candidate).map((c) => c.category),
   };
@@ -389,6 +428,7 @@ function formatGroupRows(groups) {
     .map(
       ([key, m]) =>
         `  ${key}: ${m.count} / ${ratio(m.merged, m.finished)} / ${ratio(m.firstPass, m.reviewed)} / ` +
+        `${ratio(m.cleanFirstPass, m.reviewed)} / ${m.spawned} / ` +
         `${m.avgRounds === null ? '-' : m.avgRounds.toFixed(1)} / ${ratio(m.ciPass, m.ciKnown)} / ${m.escalations} / ` +
         `${formatDuration(m.medianIssueToPrMin)} / ${formatDuration(m.medianPrToMergeMin)}`,
     );
@@ -397,7 +437,12 @@ function formatGroupRows(groups) {
 export function formatSummary(s) {
   const out = [`委譲 ${s.total} 件（merged ${s.outcomes.merged} / closed ${s.outcomes.closed} / open ${s.outcomes.open}）`];
   if (s.total === 0) return out.join('\n');
-  const columns = '件数 / マージ / 一発合格 / 平均round / CI初回成功 / 引き渡し / Issue→PR中央値 / PR→マージ中央値';
+  if (s.followUps.length > 0) {
+    const pairs = s.followUps.map((f) => `${keyLabel(f.key)}←${keyLabel(f.parent)}`).join(' ');
+    out.push(`後続の委譲（前の PR の指摘を直す委譲）: ${s.followUps.length}/${s.issueOrigin}（${pairs}）`);
+  }
+  const columns =
+    '件数 / マージ / 一発合格 / 後続なしの一発合格 / 後続を生んだ / 平均round / CI初回成功 / 引き渡し / Issue→PR中央値 / PR→マージ中央値';
   out.push('', `モデル別: ${columns}`, ...formatGroupRows(s.models));
   out.push('', `実行場所別: ${columns}`, ...formatGroupRows(s.runners));
   if (Object.keys(s.origins ?? {}).some((key) => key !== 'issue')) {
@@ -423,8 +468,8 @@ export function readRecord(dir, key) {
   return parseYaml(readFileSync(path, 'utf8'));
 }
 
-export function writeRecord(dir, record) {
-  mkdirSync(dir, { recursive: true });
+function writeAtomic(dir, record, mode) {
+  mkdirSync(dir, { recursive: true, ...(mode === undefined ? {} : { mode }) });
   const path = recordPath(dir, recordKey(record));
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, toYaml(record));
@@ -432,15 +477,96 @@ export function writeRecord(dir, record) {
   return path;
 }
 
-export function readAllRecords(dir) {
+/** 正を書き、mirrorDir があれば写しも書く。写しの失敗は警告だけにして、正の書き込みは成功扱いにする。 */
+export function writeRecord(dir, record, { mirrorDir = null } = {}) {
+  const path = writeAtomic(dir, record);
+  if (mirrorDir !== null) {
+    try {
+      writeAtomic(mirrorDir, record, 0o700);
+    } catch (error) {
+      console.error(`記録の写しを書けませんでした（正は書けています）: ${error.message.split('\n')[0]}`);
+    }
+  }
+  return path;
+}
+
+/**
+ * @param {{skipInvalid?: boolean}} options skipInvalid は読めないファイルを飛ばす（写しを読むとき。
+ *   手元の写しが 1 つ壊れても、セッション開始の表示や待機を止めない）。正は壊れていたらエラーにする。
+ */
+export function readAllRecords(dir, { skipInvalid = false } = {}) {
   if (!existsSync(dir)) return [];
-  return readdirSync(dir)
+  const records = [];
+  const keys = readdirSync(dir)
     .filter((name) => RECORD_FILE.test(name))
     .map((name) => name.slice(0, -'.yml'.length))
     .map((key) => (/^\d+$/.test(key) ? Number(key) : key))
-    .sort(compareKeys)
-    .map((key) => `${key}.yml`)
-    .map((name) => parseYaml(readFileSync(join(dir, name), 'utf8')));
+    .sort(compareKeys);
+  for (const key of keys) {
+    try {
+      records.push(parseYaml(readFileSync(recordPath(dir, key), 'utf8')));
+    } catch (error) {
+      if (!skipInvalid) throw error;
+      console.error(`記録の写しを読めませんでした（飛ばします）: ${recordPath(dir, key)}: ${error.message.split('\n')[0]}`);
+    }
+  }
+  return records;
+}
+
+/**
+ * 記録の写しの既定の置き場（ハーネスの状態ディレクトリの delegations/。worktree をまたいで同じ場所）。
+ * 状態ディレクトリを解決できない・リポジトリ内へのフォールバックしか無いときは null（写さない）。
+ */
+export function defaultMirrorDir(env = process.env) {
+  try {
+    const resolved = resolveStateDir({ env });
+    return resolved.trusted ? join(resolved.dir, 'delegations') : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 同じ key の正（primary）と写し（mirror）から使う方を選ぶ。reviews の多い方 → outcome のある方 → 正。 */
+export function preferRecord(primary, mirror) {
+  if (primary === null) return mirror;
+  if (mirror === null) return primary;
+  const reviews = (rec) => (rec.reviews ?? []).length;
+  if (reviews(primary) !== reviews(mirror)) return reviews(primary) > reviews(mirror) ? primary : mirror;
+  const decided = (rec) => (rec.outcome ?? null) !== null;
+  if (decided(primary) !== decided(mirror)) return decided(primary) ? primary : mirror;
+  return primary;
+}
+
+/** 正と写しの記録を key でまとめる（key の順）。 */
+export function mergeRecords(primary, mirror) {
+  const byKey = new Map(primary.map((rec) => [recordKey(rec), rec]));
+  for (const rec of mirror) {
+    const key = recordKey(rec);
+    byKey.set(key, preferRecord(byKey.get(key) ?? null, rec));
+  }
+  return [...byKey.keys()].sort(compareKeys).map((key) => byKey.get(key));
+}
+
+/** 正 ∪ 写しの記録。待機・セッション開始の表示はこれを読む。 */
+export function readKnownRecords({ dir = DEFAULT_DIR, mirrorDir = defaultMirrorDir() } = {}) {
+  const mirror = mirrorDir === null ? [] : readAllRecords(mirrorDir, { skipInvalid: true });
+  return mergeRecords(readAllRecords(dir), mirror);
+}
+
+/** 1 件の記録を正と写しから読む（別の worktree で作られ、写しにしか無い記録も続けて扱えるように）。 */
+export function readRecordMerged(dir, key, mirrorDir) {
+  const primary = existsSync(recordPath(dir, key)) ? readRecord(dir, key) : null;
+  let mirror = null;
+  if (mirrorDir !== null && existsSync(recordPath(mirrorDir, key))) {
+    try {
+      mirror = readRecord(mirrorDir, key);
+    } catch (error) {
+      console.error(`記録の写しを読めませんでした（正だけを使います）: ${error.message.split('\n')[0]}`);
+    }
+  }
+  const record = preferRecord(primary, mirror);
+  if (record === null) throw new UsageError(`記録がありません: ${recordPath(dir, key)}（先に init）`);
+  return record;
 }
 
 class GhError extends Error {}
@@ -480,7 +606,7 @@ export function parseOptions(argv, spec) {
   const opts = {};
   const repeated = new Set(spec.repeated ?? []);
   const flags = new Set(spec.flags ?? []);
-  const values = new Set([...(spec.values ?? []), ...repeated, 'dir']);
+  const values = new Set([...(spec.values ?? []), ...repeated, 'dir', 'mirror-dir']);
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i].startsWith('--') ? argv[i].slice(2) : null;
     if (key !== null && flags.has(key)) {
@@ -510,6 +636,22 @@ function issueArg(value) {
   return n;
 }
 
+/** 写しの置き場。--mirror-dir が無く --dir を指定したとき（テスト・別の置き場）は写さない。 */
+function mirrorOf(opts) {
+  if (opts['mirror-dir'] !== undefined) return opts['mirror-dir'];
+  return opts.dir === undefined ? defaultMirrorDir() : null;
+}
+
+/** 正か写しに記録があるか（別の worktree で作った記録を init し直さない）。 */
+function existingRecordPath(dir, key, mirrorDir) {
+  if (existsSync(recordPath(dir, key))) return recordPath(dir, key);
+  if (mirrorDir !== null && existsSync(recordPath(mirrorDir, key))) return recordPath(mirrorDir, key);
+  return null;
+}
+
+/** 秒までの ISO 8601。 */
+const nowIso = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+
 /** '<Issue 番号>' → 番号、'pr-<PR 番号>' → そのままの文字列。 */
 export function targetArg(value) {
   const m = /^pr-(\d+)$/.exec(value ?? '');
@@ -524,7 +666,8 @@ export function runCli(argv) {
   const [command, ...rest] = argv;
   if (command === 'summary') {
     const opts = parseOptions(rest, { values: ['threshold', 'security-threshold'] });
-    const summary = summarize(readAllRecords(opts.dir ?? DEFAULT_DIR), {
+    // status と同じく正 ∪ 写しを数える（別の worktree で進行中の委譲の指摘も、昇格の判定に入れる）
+    const summary = summarize(readKnownRecords({ dir: opts.dir ?? DEFAULT_DIR, mirrorDir: mirrorOf(opts) }), {
       threshold: opts.threshold === undefined ? 3 : toInt(opts.threshold, '--threshold'),
       securityThreshold: opts['security-threshold'] === undefined ? 2 : toInt(opts['security-threshold'], '--security-threshold'),
     });
@@ -539,11 +682,14 @@ export function runCli(argv) {
       return;
     }
     const issue = target;
-    const opts = parseOptions(optArgs, { values: ['model', 'runner', 'level', 'title', 'delegated-at'] });
+    const opts = parseOptions(optArgs, { values: ['model', 'runner', 'level', 'title', 'delegated-at', 'follow-up-of'] });
     const dir = opts.dir ?? DEFAULT_DIR;
+    const mirrorDir = mirrorOf(opts);
     if (opts.model === undefined) throw new UsageError('--model が必要です');
     if (!MODELS.includes(opts.model)) throw new UsageError(`--model は ${MODELS.join(' | ')} のどれか`);
-    if (existsSync(recordPath(dir, issue))) throw new UsageError(`記録は作成済みです: ${recordPath(dir, issue)}`);
+    const existing = existingRecordPath(dir, issue, mirrorDir);
+    if (existing !== null) throw new UsageError(`記録は作成済みです: ${existing}`);
+    const followUpOf = opts['follow-up-of'] === undefined ? null : targetArg(opts['follow-up-of']);
     let { title, 'delegated-at': delegatedAt } = opts;
     if (title === undefined || delegatedAt === undefined) {
       const info = JSON.parse(gh(['issue', 'view', String(issue), '--json', 'title,createdAt']));
@@ -551,42 +697,48 @@ export function runCli(argv) {
       delegatedAt ??= info.createdAt;
     }
     const level = opts.level === undefined ? null : toInt(opts.level, '--level');
-    console.log(writeRecord(dir, newRecord({ issue, title, model: opts.model, runner: opts.runner ?? 'local', level, delegatedAt })));
+    const record = newRecord({ issue, title, model: opts.model, runner: opts.runner ?? 'local', level, delegatedAt, followUpOf });
+    console.log(writeRecord(dir, record, { mirrorDir }));
     return;
   }
   if (command === 'review') {
     const issue = targetArg(issueText);
-    const opts = parseOptions(optArgs, { values: ['round', 'sha', 'verdict'], flags: ['posted'], repeated: ['finding'] });
+    const opts = parseOptions(optArgs, { values: ['round', 'sha', 'verdict', 'reviewed-at'], flags: ['posted'], repeated: ['finding'] });
     const dir = opts.dir ?? DEFAULT_DIR;
+    const mirrorDir = mirrorOf(opts);
     if (opts.round === undefined) throw new UsageError('--round が必要です');
-    const record = addReview(readRecord(dir, issue), {
+    const record = addReview(readRecordMerged(dir, issue, mirrorDir), {
       round: toInt(opts.round, '--round'),
       sha: opts.sha,
       verdict: opts.verdict,
       posted: opts.posted === true,
       findings: (opts.finding ?? []).map(parseFinding),
+      at: opts['reviewed-at'] ?? nowIso(),
     });
-    console.log(writeRecord(dir, record));
+    console.log(writeRecord(dir, record, { mirrorDir }));
     return;
   }
   if (command === 'finalize') {
     const issue = targetArg(issueText);
     const opts = parseOptions(optArgs, { values: ['pr'] });
     const dir = opts.dir ?? DEFAULT_DIR;
-    const record = readRecord(dir, issue);
+    const mirrorDir = mirrorOf(opts);
+    const record = readRecordMerged(dir, issue, mirrorDir);
     const prNumber = opts.pr === undefined ? findPrNumber(record) : issueArg(opts.pr);
-    console.log(writeRecord(dir, { ...record, ...fetchFinalize(record, prNumber) }));
+    console.log(writeRecord(dir, { ...record, ...fetchFinalize(record, prNumber) }, { mirrorDir }));
     return;
   }
-  throw new UsageError('usage: delegation.mjs <init|review|finalize|summary> …（詳細はファイル先頭のコメント）');
+  throw new UsageError('usage: delegation.mjs <init|review|finalize|summary|status> …（詳細はファイル先頭のコメント）');
 }
 
 function initSelf(pr, optArgs) {
   const opts = parseOptions(optArgs, { values: ['model', 'runner', 'level', 'title', 'created-at'] });
   const dir = opts.dir ?? DEFAULT_DIR;
+  const mirrorDir = mirrorOf(opts);
   const key = `pr-${pr}`;
   if (opts.model !== undefined && !MODELS.includes(opts.model)) throw new UsageError(`--model は ${MODELS.join(' | ')} のどれか`);
-  if (existsSync(recordPath(dir, key))) throw new UsageError(`記録は作成済みです: ${recordPath(dir, key)}`);
+  const existing = existingRecordPath(dir, key, mirrorDir);
+  if (existing !== null) throw new UsageError(`記録は作成済みです: ${existing}`);
   let { title, 'created-at': createdAt, runner } = opts;
   if (title === undefined || createdAt === undefined || runner === undefined) {
     const info = JSON.parse(gh(['pr', 'view', String(pr), '--json', 'title,createdAt,author']));
@@ -595,14 +747,27 @@ function initSelf(pr, optArgs) {
     runner ??= runnerFromAuthor(info.author);
   }
   const level = opts.level === undefined ? null : toInt(opts.level, '--level');
-  console.log(writeRecord(dir, newSelfRecord({ pr, title, model: opts.model ?? 'unknown', runner, level, createdAt })));
+  console.log(writeRecord(dir, newSelfRecord({ pr, title, model: opts.model ?? 'unknown', runner, level, createdAt }), { mirrorDir }));
+}
+
+function exitWith(error) {
+  console.error(error.message);
+  process.exit(error instanceof UsageError ? 2 : error instanceof GhError ? 3 : 1);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  try {
-    runCli(process.argv.slice(2));
-  } catch (error) {
-    console.error(error.message);
-    process.exit(error instanceof UsageError ? 2 : error instanceof GhError ? 3 : 1);
+  if (process.argv[2] === 'status') {
+    // status は wait-for-devin-pr.mjs を使い、あちらがこのファイルを読むため、静的に読み込むと循環する。
+    // ここで await すると、このファイルの評価が終わらないまま相手の読み込みを待ち、止まってしまう。
+    // 評価を終えてから then で実行する。
+    import('./delegation-status.mjs')
+      .then(({ runStatusCli }) => runStatusCli(process.argv.slice(3)))
+      .catch(exitWith);
+  } else {
+    try {
+      runCli(process.argv.slice(2));
+    } catch (error) {
+      exitWith(error);
+    }
   }
 }

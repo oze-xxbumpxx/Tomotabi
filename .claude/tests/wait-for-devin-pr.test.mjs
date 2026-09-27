@@ -1,5 +1,5 @@
 // wait-for-devin-pr.mjs の「Issue に紐づかない Devin の PR」の判定と引数検査のテスト。gh は呼ばない。
-// 観点 ID は docs/tests/devin-unlinked-pr-review.md。
+// 観点 ID は docs/tests/devin-unlinked-pr-review.md（S- で始まるものは docs/tests/devin-delegation-status.md）。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -48,19 +48,20 @@ test('U-05: since より前に作られた PR は対象外', () => {
   assert.deepEqual(numbers(findUnlinkedDevinPrs(prs, { since: '2026-09-26T09:20:00Z' })), [54]);
 });
 
-test('U-06: レビュー済み（記録がある）PR は対象外。複数あれば番号順ですべて返す', () => {
+test('U-06: 記録がある PR は対象外。複数あれば番号順ですべて返す', () => {
   const prs = [pr(70, 'devin/c'), pr(54, 'devin/b'), pr(53, 'devin/a')];
-  assert.deepEqual(numbers(findUnlinkedDevinPrs(prs, { reviewedPrs: [54] })), [53, 70]);
+  assert.deepEqual(numbers(findUnlinkedDevinPrs(prs, { knownPrs: [54] })), [53, 70]);
 });
 
-test('U-07: 記録から委譲した Issue とレビュー済みの PR を取り出す。init だけで中断した記録はレビュー済みにしない', () => {
+test('U-07・S-17: 記録から委譲した Issue と記録がある PR を取り出す。init だけで中断した記録の PR も既知（--exclude が要らない）', () => {
   const records = [
     { issue: 55, gh: { pr: 56 } },
     { issue: 51, gh: null },
     { issue: null, pr: 53, origin: 'self', reviews: [{ round: 0 }], gh: null },
     { issue: null, pr: 70, origin: 'self', reviews: [], gh: null },
   ];
-  assert.deepEqual(knownFromRecords(records), { delegatedIssues: [55, 51], reviewedPrs: [56, 53] });
+  assert.deepEqual(knownFromRecords(records), { delegatedIssues: [55, 51], knownPrs: [56, 53, 70] });
+  assert.deepEqual(findUnlinkedDevinPrs([pr(70, 'devin/c'), pr(71, 'devin/d')], knownFromRecords(records)).map((p) => p.number), [71]);
 });
 
 test('U-08: 出力の JSON 行', () => {
@@ -68,11 +69,9 @@ test('U-08: 出力の JSON 行', () => {
   assert.deepEqual(JSON.parse(line), { pr: 53, url: 'https://example.test/53', title: 't', headRefName: 'devin/a', author: 'app/devin-ai-integration' });
 });
 
-test('U-09: 引数の検査（--since は必須で ISO 8601）', () => {
-  assert.deepEqual(parseArgs(['--since', '2026-09-26T09:20:00Z']), { since: '2026-09-26T09:20:00Z', exclude: [], interval: 60, timeout: 28800 });
-  assert.deepEqual(parseArgs(['--since', '2026-09-26T09:20:00Z', '--exclude', '53,54']).exclude, [53, 54]);
-  assert.equal(parseArgs(['--since', '2026-09-26T09:20:00Z', '--exclude', '53,x']), null);
-  assert.equal(parseArgs(['--since', '2026-09-26T09:20:00Z', '--exclude', '0']), null);
+test('U-09・S-18: 引数の検査（--since は必須で ISO 8601。--exclude は受け付けない）', () => {
+  assert.deepEqual(parseArgs(['--since', '2026-09-26T09:20:00Z']), { since: '2026-09-26T09:20:00Z', interval: 60, timeout: 28800 });
+  assert.equal(parseArgs(['--since', '2026-09-26T09:20:00Z', '--exclude', '53,54']), null);
   assert.deepEqual(parseArgs(['--since', '2026-09-26T09:20:00Z', '--interval', '5', '--timeout', '10']).interval, 5);
   assert.equal(parseArgs([]), null);
   assert.equal(parseArgs(['--since', 'yesterday']), null);

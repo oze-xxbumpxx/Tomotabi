@@ -1,0 +1,45 @@
+---
+name: Devin への委譲
+about: Devin に実装を任せる Issue の定型（Claude Code は gh issue create --body-file でこの節の順に書く）
+title: "<feat|fix|test|docs>(<範囲>): <やること>"
+labels: []
+---
+
+## 目的
+
+<!-- 何を・なぜ。変更レベル（L0〜L3）と、ユーザー承認: 必要 / 不要（L2 / L3 は承認済みの設計書を書く）。 -->
+
+## 元の PR（後続のときだけ）
+
+<!-- 前の PR のレビューの指摘を直す Issue なら、どの PR のどの指摘か。
+     委譲の記録は `node .claude/scripts/delegation.mjs init <この Issue> --follow-up-of <前の委譲> …` で作る
+     （前の委譲が複数なら、いちばん古いもの）。後続でなければ、この節を消す。 -->
+
+## 読む資料
+
+<!-- 設計書・試験計画（観点 ID）・実装計画の手順・既存のコード。 -->
+
+## やること
+
+- [ ]
+
+## テスト
+
+- [ ]
+
+## 既知の指摘（関係する領域のときだけ）
+
+<!-- `.claude/skills/review-devin-pr/SKILL.md` の「既知の指摘」の表から、この Issue の領域の行を写す。
+     どの委譲にも効く予防は `devin-workflow` にあるので、ここには書かない。該当が無ければ、この節を消す。 -->
+
+## やらないこと
+
+-
+
+## 完了条件
+
+- `npm run lint` / `npm run type-check` / `npm test` / `npm run build` が通る。
+
+## 進め方
+
+`.agents/skills/devin-workflow/SKILL.md` に従う。ブランチは `devin/<内容>-<この Issue の番号>`。PR 本文に `Closes #<この Issue の番号>` を書く。

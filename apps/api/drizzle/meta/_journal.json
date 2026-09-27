@@ -15,6 +15,27 @@
       "when": 1790255418009,
       "tag": "0001_app_runtime_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790514435397,
+      "tag": "0002_planning_record_infra_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790514451777,
+      "tag": "0003_history_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790514452300,
+      "tag": "0004_planning_record_infra_grants",
+      "breakpoints": true
     }
   ]
 }

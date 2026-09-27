@@ -195,7 +195,7 @@ describe("書き込みのロック順序", () => {
     ]);
   });
 
-  it("作成は allowlist → receipts.find → trips.insert → insertParticipants → financeGuards.create → receipts.insert", async () => {
+  it("作成は receipts.find → allowlist → trips.insert → insertParticipants → financeGuards.create → receipts.insert", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.allowlistRows = [
       { slot: 0, userId: ACTOR },
@@ -217,8 +217,8 @@ describe("書き込みのロック順序", () => {
 
     expect(result.httpStatus).toBe(201);
     expect(ctx.calls).toEqual([
-      "participants.listEnabled",
       "receipts.find",
+      "participants.listEnabled",
       "trips.insert",
       "trips.insertParticipants",
       "financeGuards.create",

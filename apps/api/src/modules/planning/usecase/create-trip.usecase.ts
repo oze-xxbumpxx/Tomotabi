@@ -40,16 +40,8 @@ export class CreateTripUseCase implements CreateTripInputPort {
     const period = parseTripPeriod(input.startsOn, input.endsOn);
     try {
       return await this.unitOfWork.run(async (ctx) => {
-        // allowlist の行はロックしない（行ロックは UPDATE 権限が要り、
-        // app_runtime の allowlist の UPDATE は M1 で禁止されている。差分 1）。
-        const participants = await ctx.participants.listEnabled();
-        if (participants.length !== 2) {
-          throw new ApiError({
-            code: "PARTICIPANTS_NOT_READY",
-            status: 409,
-            message: "The two participants are not ready",
-          });
-        }
+        // receipt を参加者の確認より先に見る。作成に成功したあとで一方が
+        // 利用停止になっても、同じキーの成功の再送は元の結果を返す（F-17）。
         const stored = await storedReceipt(
           ctx,
           input.userId,
@@ -59,6 +51,16 @@ export class CreateTripUseCase implements CreateTripInputPort {
         );
         if (stored !== null) {
           return stored;
+        }
+        // allowlist の行はロックしない（行ロックは UPDATE 権限が要り、
+        // app_runtime の allowlist の UPDATE は M1 で禁止されている。差分 1）。
+        const participants = await ctx.participants.listEnabled();
+        if (participants.length !== 2) {
+          throw new ApiError({
+            code: "PARTICIPANTS_NOT_READY",
+            status: 409,
+            message: "The two participants are not ready",
+          });
         }
         // 旅行・参加者・財務ガード・receipt はすべてこのトランザクションで
         // 作る。どれかが失敗すれば全体がロールバックされる。

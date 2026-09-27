@@ -5,14 +5,16 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * 一覧のページ位置を不透明な文字列にする（base64url の JSON { c, i }）。
- * 中身を読む必要は利用者に無いが、秘密ではないため署名はしない。
+ * 一覧のページ位置を不透明な文字列にする（base64url の JSON { i }）。
+ * 中身は起点の旅行 id だけ。created_at を入れないのは、JS の Date や ISO
+ * 文字列にするとミリ秒に丸まり、同じミリ秒内の違う行がページの境目で
+ * 抜け落ちるため。比較には DB の値をそのまま使う（findTripAnchor）。
+ * 秘密ではないため署名はしない。
  */
 export function encodeTripCursor(cursor: TripListCursor): string {
-  return Buffer.from(
-    JSON.stringify({ c: cursor.createdAt.toISOString(), i: cursor.id }),
-    "utf8",
-  ).toString("base64url");
+  return Buffer.from(JSON.stringify({ i: cursor.id }), "utf8").toString(
+    "base64url",
+  );
 }
 
 /**
@@ -23,30 +25,26 @@ export function decodeTripCursor(value: string): TripListCursor {
   try {
     decoded = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
   } catch {
-    throw invalidCursor();
+    throw invalidTripCursor();
   }
   if (!isCursorShape(decoded)) {
-    throw invalidCursor();
+    throw invalidTripCursor();
   }
-  const createdAt = new Date(decoded.c);
-  if (Number.isNaN(createdAt.getTime())) {
-    throw invalidCursor();
-  }
-  return { createdAt, id: decoded.i };
+  return { id: decoded.i };
 }
 
-function isCursorShape(value: unknown): value is { c: string; i: string } {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const { c, i } = value as { c?: unknown; i?: unknown };
-  return typeof c === "string" && typeof i === "string" && UUID_PATTERN.test(i);
-}
-
-function invalidCursor(): ApiError {
+export function invalidTripCursor(): ApiError {
   return new ApiError({
     code: "INVALID_REQUEST",
     status: 400,
     message: "cursor is invalid",
   });
+}
+
+function isCursorShape(value: unknown): value is { i: string } {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const { i } = value as { i?: unknown };
+  return typeof i === "string" && UUID_PATTERN.test(i);
 }

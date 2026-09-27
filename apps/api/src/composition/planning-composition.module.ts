@@ -63,6 +63,7 @@ const missingDatabase = (): Promise<never> =>
           ? new PgPlanningRead(getPool())
           : {
               findTripForParticipant: missingDatabase,
+              findTripAnchor: missingDatabase,
               listTripsForParticipant: missingDatabase,
             },
     },

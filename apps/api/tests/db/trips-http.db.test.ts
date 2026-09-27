@@ -482,6 +482,38 @@ describe("一覧と取得（T-07〜T-09）", () => {
     );
     expect(tampered.status).toBe(400);
     expect(tampered.body).toMatchObject({ code: "INVALID_REQUEST" });
+
+    // 同じミリ秒・違うマイクロ秒の 3 件を足す。カーソルがミリ秒に丸まると
+    // ページの境目でこれらが抜け落ちる。finished にして limit=1 でたどる。
+    const microIds: string[] = [];
+    for (const micro of ["123900", "123500", "123100"]) {
+      const id = await createTrip(aoiCookie, `sub-ms ${micro}`);
+      await db.admin.query(
+        `UPDATE planning.trips
+           SET created_at = $2::timestamptz, status = 'finished',
+               started_at = '2026-09-11T00:00:00Z', started_by = $3,
+               finished_at = '2026-09-12T00:00:00Z', finished_by = $3
+         WHERE id = $1`,
+        [id, `2027-02-01T00:00:00.${micro}Z`, aoi.userId],
+      );
+      microIds.push(id);
+    }
+    const seen: string[] = [];
+    let microCursor: string | null = null;
+    for (let page = 0; page < 20 && (page === 0 || microCursor !== null); page += 1) {
+      const url =
+        microCursor === null
+          ? "/api/trips?status=finished&limit=1"
+          : `/api/trips?status=finished&limit=1&cursor=${encodeURIComponent(microCursor)}`;
+      const response = await authed(http().get(url), aoiCookie);
+      expect(response.status).toBe(200);
+      expect(response.body.items).toHaveLength(1);
+      seen.push((response.body.items as { id: string }[])[0]!.id);
+      microCursor = response.body.nextCursor;
+    }
+    expect(microCursor).toBeNull();
+    expect(new Set(seen).size).toBe(seen.length);
+    expect(seen.sort()).toEqual([...finished, ...microIds].sort());
   });
 
   it("T-09: 取得は 200＋ETag。参加しない・存在しないはどちらも同じ 403 本文", async () => {

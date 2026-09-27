@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { authClient } from "@/shared/auth/auth-client";
+import { SignInError } from "./sign-in-error";
 
 function GoogleMark() {
   return (
@@ -25,20 +27,44 @@ function GoogleMark() {
   );
 }
 
-export function SignInButton() {
+export function SignInButton({ onSignInStart }: { onSignInStart?: () => void }) {
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function handleClick() {
+    onSignInStart?.();
+    setPending(true);
+    setFailed(false);
+    try {
+      // エラーの中身（status / code / message）は画面に出さない
+      const result = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/",
+      });
+      if (result?.error) {
+        setFailed(true);
+      }
+    } catch {
+      setFailed(true);
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
-    <button
-      type="button"
-      className="btn-google"
-      onClick={() => {
-        void authClient.signIn.social({
-          provider: "google",
-          callbackURL: "/",
-        });
-      }}
-    >
-      <GoogleMark />
-      Google でログイン
-    </button>
+    <>
+      {failed && <SignInError />}
+      <button
+        type="button"
+        className="btn-google"
+        disabled={pending}
+        onClick={() => {
+          void handleClick();
+        }}
+      >
+        <GoogleMark />
+        Google でログイン
+      </button>
+    </>
   );
 }

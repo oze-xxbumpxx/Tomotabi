@@ -96,7 +96,7 @@ export function offlineAction(record) {
   return { key: recordKey(record), pr, state: 'offline', round: last?.round ?? null, verdict: last?.verdict ?? null };
 }
 
-/** 昇格候補のうち、candidates/delegation-<category>.md がまだ無いもの。 */
+/** 昇格候補のうち、candidates/delegation-<category>.md（archive/ に移したものを含む）がまだ無いもの。 */
 export function findPromotions(summary, candidateFiles) {
   const filed = new Set(candidateFiles);
   return summary.byCategory
@@ -253,7 +253,9 @@ export function collectStatus({
   const mirror = mirrorDir === null ? [] : readAllRecords(mirrorDir, { skipInvalid: true });
   const records = mergeRecords(readAllRecords(dir), mirror);
   pruneMirror(mirrorDir, mirror, now);
-  const candidateFiles = existsSync(candidatesDir) ? readdirSync(candidatesDir) : [];
+  // 対応済みの候補は candidates/archive/ へ移る（memory-policy）。移した後も起票済みとして扱う。
+  const listNames = (path) => (existsSync(path) ? readdirSync(path) : []);
+  const candidateFiles = [...listNames(candidatesDir), ...listNames(join(candidatesDir, 'archive'))];
   if (!useGh) return buildStatus({ records, candidateFiles, now, offline: true });
   try {
     const prs = listRecordPrs(records, timeout);

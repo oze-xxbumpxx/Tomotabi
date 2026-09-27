@@ -14,6 +14,9 @@
 //       gh から PR・時刻・CI 初回（PR 作成時の head）・コミット数・Closes の紐づけを取り、gh: と outcome を埋める。
 //   node .claude/scripts/delegation.mjs summary [--threshold 3] [--security-threshold 2]
 //       記録だけを読んで集計する（gh は呼ばない）。
+//   Issue に紐づかない Devin の PR（docs/designs/devin-unlinked-pr-review.md）は、<issue> の代わりに pr-<PR番号> を指定する。
+//     init pr-<n> [--model <m>] [--runner <local|cloud>] … は gh から PR の題・作成日時・作成者を取り、
+//     --model の既定は unknown、--runner の既定は作成者（bot → cloud、それ以外 → local）。記録は pr-<n>.yml。
 //   すべてのサブコマンドで --dir <path> を指定すると記録の置き場を変えられる（テスト用）。
 //
 // 終了コード: 0 成功 / 2 引数・記録の誤り / 3 gh の失敗・PR が見つからない
@@ -30,7 +33,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findLinkedPr, listPrs } from './wait-for-pr.mjs';
 
-const DEFAULT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../docs/claude-code/improvements/delegations');
+export const DEFAULT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../docs/claude-code/improvements/delegations');
 const GH_TIMEOUT_MS = 30_000;
 
 export const MODELS = ['swe-2-medium', 'swe-2-high', 'swe-2-max', 'unknown'];
@@ -39,6 +42,8 @@ export const RUNNERS = ['local', 'cloud'];
 export const SEVERITIES = ['must', 'nit', 'security', 'decision'];
 export const VERDICTS = ['merge', 'fix', 'escalate'];
 export const PRIVATE_SUMMARY = '(非公開)';
+// 委譲の起点。issue = Issue を渡した（既定。項目の無い記録も issue）、self = Devin が自分から出した PR。
+export const ORIGINS = ['issue', 'self'];
 const CATEGORY = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 export class UsageError extends Error {}
@@ -184,6 +189,22 @@ export function newRecord({ issue, title, model, runner = 'local', level = null,
   };
 }
 
+/** Issue に紐づかない Devin の PR の記録。Issue が無いので delegated_at は PR の作成日時。 */
+export function newSelfRecord({ pr, title, model = 'unknown', runner, level = null, createdAt }) {
+  if (!Number.isInteger(pr) || pr <= 0) throw new UsageError('PR 番号が不正です');
+  const { issue, ...rest } = newRecord({ issue: pr, title, model, runner, level, delegatedAt: createdAt });
+  return { issue: null, pr, origin: 'self', ...rest };
+}
+
+/** 記録を指す名前。Issue の記録は番号、PR の記録は pr-<n>（ファイル名と CLI の指定に使う）。 */
+export const recordKey = (record) => (Number.isInteger(record.issue) ? record.issue : `pr-${record.pr}`);
+
+/** 集計の表示用。Issue は #n、PR は PR#n。 */
+const keyLabel = (key) => (typeof key === 'number' ? `#${key}` : `PR#${key.slice(3)}`);
+
+/** 作成者から実行場所を推す。クラウドの Devin は bot のアカウント、ローカルはユーザーのアカウントで PR を作る。 */
+export const runnerFromAuthor = (author) => (author?.is_bot === true || /\[bot\]$|^app\//.test(author?.login ?? '') ? 'cloud' : 'local');
+
 /** '<severity>:<category>:<summary>'。summary には ':' を含めてよい。security の summary は公開しない。 */
 export function parseFinding(text) {
   const first = text.indexOf(':');
@@ -244,7 +265,7 @@ export function buildGhSection(pr, issue, firstCommitRuns) {
       closed_at: pr.closedAt || null,
       commits: (pr.commits ?? []).length,
       ci_first_pass: ciFirstPass,
-      closes_linked: (pr.closingIssuesReferences ?? []).some((ref) => ref.number === issue),
+      closes_linked: issue === null ? null : (pr.closingIssuesReferences ?? []).some((ref) => ref.number === issue),
     },
   };
 }
@@ -292,7 +313,8 @@ function groupStats(records, keyOf) {
       m.ciKnown += 1;
       if (rec.gh.ci_first_pass) m.ciPass += 1;
     }
-    m.issueToPr.push(minutesBetween(rec.delegated_at, rec.gh?.pr_created_at));
+    // 自分から出した PR は delegated_at が PR の作成日時なので、Issue→PR に入れない。
+    if (rec.origin !== 'self') m.issueToPr.push(minutesBetween(rec.delegated_at, rec.gh?.pr_created_at));
     m.prToMerge.push(minutesBetween(rec.gh?.pr_created_at, rec.gh?.merged_at));
   }
   return Object.fromEntries(
@@ -315,20 +337,26 @@ function groupStats(records, keyOf) {
   );
 }
 
+/** Issue（番号）を先に番号順、PR（pr-<n>）を後に番号順。 */
+function compareKeys(a, b) {
+  if (typeof a !== typeof b) return typeof a === 'number' ? -1 : 1;
+  return typeof a === 'number' ? a - b : Number(a.slice(3)) - Number(b.slice(3));
+}
+
 export function summarize(records, { threshold = 3, securityThreshold = 2 } = {}) {
   const categories = new Map();
   for (const rec of records) {
     for (const review of rec.reviews) {
       for (const f of review.findings ?? []) {
         if (!categories.has(f.category)) categories.set(f.category, new Set());
-        categories.get(f.category).add(rec.issue);
+        categories.get(f.category).add(recordKey(rec));
       }
     }
   }
   const byCategory = [...categories]
     .map(([category, issues]) => {
       const limit = category === 'security' ? securityThreshold : threshold;
-      return { category, issues: [...issues].sort((a, b) => a - b), threshold: limit, candidate: issues.size >= limit };
+      return { category, issues: [...issues].sort(compareKeys), threshold: limit, candidate: issues.size >= limit };
     })
     .sort((a, b) => b.issues.length - a.issues.length || a.category.localeCompare(b.category));
   return {
@@ -340,6 +368,7 @@ export function summarize(records, { threshold = 3, securityThreshold = 2 } = {}
     },
     models: groupStats(records, (rec) => rec.model),
     runners: groupStats(records, (rec) => rec.runner ?? 'unknown'),
+    origins: groupStats(records, (rec) => rec.origin ?? 'issue'),
     byCategory,
     candidates: byCategory.filter((c) => c.candidate).map((c) => c.category),
   };
@@ -371,10 +400,13 @@ export function formatSummary(s) {
   const columns = '件数 / マージ / 一発合格 / 平均round / CI初回成功 / 引き渡し / Issue→PR中央値 / PR→マージ中央値';
   out.push('', `モデル別: ${columns}`, ...formatGroupRows(s.models));
   out.push('', `実行場所別: ${columns}`, ...formatGroupRows(s.runners));
-  out.push('', '分類別（指摘が出た Issue の数 / 昇格の閾値）');
+  if (Object.keys(s.origins ?? {}).some((key) => key !== 'issue')) {
+    out.push('', `起点別（self = Issue なしの PR。Issue→PR は数えない）: ${columns}`, ...formatGroupRows(s.origins));
+  }
+  out.push('', '分類別（指摘が出た委譲の数 / 昇格の閾値）');
   for (const c of s.byCategory) {
     const note = c.candidate ? '  ← 昇格候補' : `  あと ${c.threshold - c.issues.length} 件`;
-    out.push(`  ${c.category}: ${c.issues.length}/${c.threshold}（${c.issues.map((n) => `#${n}`).join(' ')}）${note}`);
+    out.push(`  ${c.category}: ${c.issues.length}/${c.threshold}（${c.issues.map(keyLabel).join(' ')}）${note}`);
   }
   out.push('', `昇格候補: ${s.candidates.length === 0 ? 'なし' : s.candidates.join(', ')}`);
   return out.join('\n');
@@ -382,17 +414,18 @@ export function formatSummary(s) {
 
 // ---------------------------------------------------------------- ファイルと gh
 
-const recordPath = (dir, issue) => join(dir, `${issue}.yml`);
+const recordPath = (dir, key) => join(dir, `${key}.yml`);
+const RECORD_FILE = /^(\d+|pr-\d+)\.yml$/;
 
-export function readRecord(dir, issue) {
-  const path = recordPath(dir, issue);
+export function readRecord(dir, key) {
+  const path = recordPath(dir, key);
   if (!existsSync(path)) throw new UsageError(`記録がありません: ${path}（先に init）`);
   return parseYaml(readFileSync(path, 'utf8'));
 }
 
 export function writeRecord(dir, record) {
   mkdirSync(dir, { recursive: true });
-  const path = recordPath(dir, record.issue);
+  const path = recordPath(dir, recordKey(record));
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, toYaml(record));
   renameSync(tmp, path);
@@ -402,8 +435,11 @@ export function writeRecord(dir, record) {
 export function readAllRecords(dir) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((name) => /^\d+\.yml$/.test(name))
-    .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+    .filter((name) => RECORD_FILE.test(name))
+    .map((name) => name.slice(0, -'.yml'.length))
+    .map((key) => (/^\d+$/.test(key) ? Number(key) : key))
+    .sort(compareKeys)
+    .map((key) => `${key}.yml`)
     .map((name) => parseYaml(readFileSync(join(dir, name), 'utf8')));
 }
 
@@ -418,6 +454,7 @@ function gh(args) {
 }
 
 function findPrNumber(record) {
+  if (Number.isInteger(record.pr)) return record.pr;
   if (record.gh?.pr) return record.gh.pr;
   const pr = findLinkedPr(listPrs(record.delegated_at), record.issue, record.delegated_at);
   if (pr === null) throw new GhError(`Issue #${record.issue} に紐づく PR が見つかりません（--pr で指定できます）`);
@@ -473,6 +510,16 @@ function issueArg(value) {
   return n;
 }
 
+/** '<Issue 番号>' → 番号、'pr-<PR 番号>' → そのままの文字列。 */
+export function targetArg(value) {
+  const m = /^pr-(\d+)$/.exec(value ?? '');
+  if (m !== null) {
+    if (Number(m[1]) <= 0) throw new UsageError('PR 番号が不正です');
+    return `pr-${Number(m[1])}`;
+  }
+  return issueArg(value);
+}
+
 export function runCli(argv) {
   const [command, ...rest] = argv;
   if (command === 'summary') {
@@ -486,7 +533,12 @@ export function runCli(argv) {
   }
   const [issueText, ...optArgs] = rest;
   if (command === 'init') {
-    const issue = issueArg(issueText);
+    const target = targetArg(issueText);
+    if (typeof target === 'string') {
+      initSelf(Number(target.slice(3)), optArgs);
+      return;
+    }
+    const issue = target;
     const opts = parseOptions(optArgs, { values: ['model', 'runner', 'level', 'title', 'delegated-at'] });
     const dir = opts.dir ?? DEFAULT_DIR;
     if (opts.model === undefined) throw new UsageError('--model が必要です');
@@ -503,7 +555,7 @@ export function runCli(argv) {
     return;
   }
   if (command === 'review') {
-    const issue = issueArg(issueText);
+    const issue = targetArg(issueText);
     const opts = parseOptions(optArgs, { values: ['round', 'sha', 'verdict'], flags: ['posted'], repeated: ['finding'] });
     const dir = opts.dir ?? DEFAULT_DIR;
     if (opts.round === undefined) throw new UsageError('--round が必要です');
@@ -518,7 +570,7 @@ export function runCli(argv) {
     return;
   }
   if (command === 'finalize') {
-    const issue = issueArg(issueText);
+    const issue = targetArg(issueText);
     const opts = parseOptions(optArgs, { values: ['pr'] });
     const dir = opts.dir ?? DEFAULT_DIR;
     const record = readRecord(dir, issue);
@@ -527,6 +579,23 @@ export function runCli(argv) {
     return;
   }
   throw new UsageError('usage: delegation.mjs <init|review|finalize|summary> …（詳細はファイル先頭のコメント）');
+}
+
+function initSelf(pr, optArgs) {
+  const opts = parseOptions(optArgs, { values: ['model', 'runner', 'level', 'title', 'created-at'] });
+  const dir = opts.dir ?? DEFAULT_DIR;
+  const key = `pr-${pr}`;
+  if (opts.model !== undefined && !MODELS.includes(opts.model)) throw new UsageError(`--model は ${MODELS.join(' | ')} のどれか`);
+  if (existsSync(recordPath(dir, key))) throw new UsageError(`記録は作成済みです: ${recordPath(dir, key)}`);
+  let { title, 'created-at': createdAt, runner } = opts;
+  if (title === undefined || createdAt === undefined || runner === undefined) {
+    const info = JSON.parse(gh(['pr', 'view', String(pr), '--json', 'title,createdAt,author']));
+    title ??= info.title;
+    createdAt ??= info.createdAt;
+    runner ??= runnerFromAuthor(info.author);
+  }
+  const level = opts.level === undefined ? null : toInt(opts.level, '--level');
+  console.log(writeRecord(dir, newSelfRecord({ pr, title, model: opts.model ?? 'unknown', runner, level, createdAt })));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

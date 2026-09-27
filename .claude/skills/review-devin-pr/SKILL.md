@@ -5,12 +5,14 @@ description: >
   指摘 → Devin の修正 → 再レビューのループを上限付きで回す手順。`gh issue create` の後に
   wait-for-pr.mjs で PR を待ち、見つかって呼び戻されたとき、または wait-for-pr-update.mjs で
   呼び戻されたときに使う。「PR ができた」「Devin の PR をレビューして」と言われたときにも使う。
+  Devin が Issue なしで自分から出した PR（知見・スキル・blueprint など）も、wait-for-devin-pr.mjs や
+  セッション開始時のフック（find-devin-prs）で見つかったら同じ手順でレビューする。
   コードは直さない。must / nit の指摘は自動で PR に投稿し、security / decision はユーザーに渡す。
 ---
 
 # 他エージェントの PR のレビューと修正ループ
 
-設計: `docs/designs/devin-delegation-loop.md`。記録の形式: `docs/claude-code/improvements/delegations/README.md`。
+設計: `docs/designs/devin-delegation-loop.md`（Issue なし PR は `docs/designs/devin-unlinked-pr-review.md`）。記録の形式: `docs/claude-code/improvements/delegations/README.md`。
 
 ## 委譲（Issue を渡した直後）
 
@@ -33,6 +35,8 @@ description: >
    - **クラウドはユーザーが指示したときだけ**（出先のとき）。`devin --cloud -p "<依頼>"`。`--cloud` では `--model` が無視され、
      Devin Web の「セッションエージェント」の既定（SWE-2 High）で動く。High 以外が要るときは、依頼の前にユーザーに既定の切り替えを頼む。
 3. Bash の `run_in_background` で `node .claude/scripts/wait-for-pr.mjs <Issue>` を起動する。Issue ごとに 1 本。
+   このセッションでまだ起動していなければ、`node .claude/scripts/wait-for-devin-pr.mjs --since <今の UTC 時刻>` も
+   `run_in_background` で起動する（セッションで 1 本。下の「Issue なし PR」）。
 4. 待機中は `sleep` や `gh` の繰り返しで様子を見ない。終了すると呼び戻される。
    - 終了コード 0: 出力の `{"issue":…}` の JSON 行に PR 番号がある（最後の行とは限らない）→「レビュー」の round 0 へ
    - 終了コード 3: 時間切れ → ユーザーに伝え、再度待つかを聞く
@@ -55,6 +59,30 @@ description: >
    Testcontainers がイメージ取得で止まるときは、空の `config.json` を置いた `DOCKER_CONFIG` を指定し、
    サンドボックス外で実行する（Docker の認証ヘルパーを避けるため）。
 6. **衝突**: 並行 PR が同じファイル（`logs/` など）を触っていないか。マージ順を提案する。
+
+## Issue なし PR（Devin が自分から出した PR）
+
+クラウドの Devin は、作業の終わりに学んだことをスキルや blueprint に残す PR を自分から出すことがある（#53・#54）。
+対象は、`devin/` で始まるブランチの PR のうち、委譲の記録がある Issue に紐づかないもの。
+
+1. **見つける**: `wait-for-devin-pr.mjs` が終了コード 0 で呼び戻したとき（出力の JSON 行に `pr`）、
+   またはセッション開始時のフック（find-devin-prs）が一覧を出したとき。終了コード 3（時間切れ）は何もしない。
+2. **記録**: `node .claude/scripts/delegation.mjs init pr-<n>`（題・作成日時・作成者を gh から取る。作成者が bot ならクラウド）。
+   分かれば `--model swe-2-high`（クラウドの既定）と `--level` を付ける。以降の `review` / `finalize` も `pr-<n>` で指定する。
+3. **レビュー**: 上の「レビュー」の 1・5・6 はそのまま。2〜4 は Issue の代わりに次で見る。
+
+   | 観点 | 見ること |
+   | --- | --- |
+   | 説明 | 何を・なぜ、どのタスク（Issue / PR）から得た知見か |
+   | 範囲 | 説明と変更ファイルが合っているか。目的外の行を変えていないか（#54 は説明コメントを英語の定型文に置き換えていた）。アプリのコードが混ざっていないか |
+   | ハーネス（`.claude/`・`.agents/`・`.devin/`・`AGENTS.md`・`CLAUDE.md`） | **重点レビュー**。既存の規則・スキルと食い違わないか、重複していないか。blueprint の knowledge は環境のコマンド参照だけ（`docs/devin-setup.md`）で、規約や手順を書いていないか |
+   | 事実 | 書かれたコマンド・環境変数・ポート・ファイルが実在し、正しいか |
+   | 秘密 | 秘密・環境変数の値・ローカルのパスが入っていないか（入っていたら `security`） |
+   | 他リポジトリ | Cookpit 専用のスキルや存在しない成果物を前提にしていないか |
+
+4. **分類**: 既存の規則そのものを変える・食い違う内容は `decision`。事実の誤り（`knowledge-inaccurate`）・
+   重複や置き場所の誤り（`harness-conflict`）・目的外の変更（`scope-creep`）は `must`。`Closes #N` が無いことは指摘しない。
+5. 以降の「判定と次の動き」「自動投稿」「完了」は同じ（記録の指定は `pr-<n>`）。
 
 ## 指摘の分類
 
@@ -119,7 +147,7 @@ PR・Issue・コメント・記録のどこにも詳細を書かない。`securi
 
 ## 完了（マージ・クローズの後）
 
-1. `node .claude/scripts/delegation.mjs finalize <Issue>`（PR が見つからなければ `--pr <n>`）。
+1. `node .claude/scripts/delegation.mjs finalize <Issue>`（PR が見つからなければ `--pr <n>`。Issue なし PR は `finalize pr-<n>`）。
 2. 記録は Devin のブランチに commit しない。その日の締め（close-session）の PR にまとめて入れる。
 3. `node .claude/scripts/delegation.mjs summary` で昇格候補が出たら、`improvement-cycle.md` の
    「委譲ループの軽量サイクル」に従って候補を起票する。

@@ -32,6 +32,8 @@ test('gh issue create の出力に Issue の URL があれば、待機コマン�
   assert.match(out.hookSpecificOutput.additionalContext, /review-devin-pr/);
   // H-01: 委譲の記録（docs/designs/devin-delegation-loop.md）
   assert.match(out.hookSpecificOutput.additionalContext, /delegation\.mjs init 37 --model/);
+  // U-10: Issue に紐づかない Devin の PR の待機（docs/designs/devin-unlinked-pr-review.md）
+  assert.match(out.hookSpecificOutput.additionalContext, /wait-for-devin-pr\.mjs --since \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/);
 });
 
 test('複数作成したら全番号を 1 回ずつ挙げる', () => {

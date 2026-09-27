@@ -6,6 +6,7 @@
 //   （2026-09-26 ユーザー依頼）を、セッションをまたいで忘れないようにする。
 // - Hook は Claude のバックグラウンド処理を起動できないため、additionalContext で
 //   wait-for-pr.mjs の起動と review-devin-pr スキルの使用を促すだけにする。
+// - Issue に紐づかない Devin の PR（docs/designs/devin-unlinked-pr-review.md）を待つ wait-for-devin-pr.mjs の起動も促す。
 // - Issue の URL が出力に無いとき（作成失敗・--web 等）は何もしない。失敗しても常に exit 0。
 
 import { readFileSync } from 'node:fs';
@@ -41,7 +42,10 @@ export function createdIssues(input) {
   return [...new Set(numbers)];
 }
 
-export function buildContext(issues) {
+/** 秒までの ISO 8601（gh の search の created:>= に渡す）。 */
+const isoSeconds = (date) => date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+export function buildContext(issues, now = new Date()) {
   const lines = issues.map(
     (n) =>
       `- Issue #${n}: \`node .claude/scripts/delegation.mjs init ${n} --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud]\` で記録を作り（既定はローカル実行）、` +
@@ -50,7 +54,9 @@ export function buildContext(issues) {
   return [
     '📌 Issue を作成しました。この Issue を他のエージェント（Devin など）に渡す場合は、PR を待って自動レビューします。',
     ...lines,
-    '終了して呼び戻されたら review-devin-pr スキルの手順でレビューする。',
+    `- このセッションでまだ起動していなければ、Bash の run_in_background で \`node .claude/scripts/wait-for-devin-pr.mjs --since ${isoSeconds(now)}\` も起動する` +
+      '（Devin が Issue に紐づかない PR を自分から出すことがある。セッションで 1 本）',
+    '終了して呼び戻されたら review-devin-pr スキルの手順でレビューする（Issue に紐づかない PR は「Issue なし PR」の節）。',
     'この Issue を自分（Claude Code）で実装する場合は待機しない。',
   ].join('\n');
 }

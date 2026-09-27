@@ -63,7 +63,7 @@ Devin が自分から出した PR（Issue なし）─────── 検出�
                            └→ wait-for-devin-pr.mjs --since <今>  [background]（新規。セッションで 1 本）
                                   │ exit 0: 新しい Issue なし PR の番号（JSON 行）
                                   ▼
-                           delegation.mjs init --pr <n> → review-devin-pr（「Issue なし PR」の節）→ 以降は既存のループ
+                           delegation.mjs init pr-<n> → review-devin-pr（「Issue なし PR」の節）→ 以降は既存のループ
 
 (2) セッション開始時（取りこぼしの受け皿）
     SessionStart hook: find-devin-prs.mjs
@@ -77,9 +77,9 @@ Devin が自分から出した PR（Issue なし）─────── 検出�
 
 1. `headRefName` が `devin/` で始まる。
 2. `--since` 以降に作られた（待機のとき）/ state が OPEN（セッション開始時）。
-3. `wait-for-pr.mjs` の `findLinkedPr` の規則（`closingIssuesReferences`・本文の `Closes #N`・ブランチ名の末尾 `-N`）で、**どの Issue にも紐づかない**。紐づく PR は既存の経路で待っているので対象外（二重レビューを避ける）。
-   - 注意: `devin/update-skills-1790414398` のように末尾が数字のブランチは、`-N` の規則で「Issue #1790414398 に紐づく」と読めてしまう。**実在する委譲の記録の Issue 番号に当たるときだけ**紐づきとみなす（記録の番号の集合を渡す）。
-4. レビュー済みでない: PR のコメントに `<!-- claude-review` が無く、`delegations/pr-<n>.yml` も無い。
+3. `wait-for-pr.mjs` の `findLinkedPr` の規則（`closingIssuesReferences`・本文の `Closes #N`・ブランチ名の末尾 `-N`）で、**委譲の記録がある Issue に紐づかない**。紐づく PR は既存の経路で待っているので対象外（二重レビューを避ける）。記録の無い Issue に紐づく PR は誰も待っていないので対象にする。
+   - 注意: `devin/update-skills-1790414398` のように末尾が数字のブランチは、`-N` の規則で「Issue #1790414398 に紐づく」と読めてしまう。記録のある Issue 番号に限ることで、この誤読も避ける。
+4. レビュー済みでない: 委譲の記録（Issue の記録の `gh.pr`、または `delegations/pr-<n>.yml`）が無い。セッション開始時は、PR のコメントの `<!-- claude-review` の印も見る。
 
 ### レビューの観点（`review-devin-pr` に節を足す）
 
@@ -124,7 +124,7 @@ outcome: null
 gh: null
 ```
 
-- `delegation.mjs init --pr <n>` で作る（`<Issue>` の代わり）。題・作成日時・作成者は gh から取る。`review` / `finalize` も `--pr <n>` か `pr-<n>` の指定で同じ記録を扱う。
+- `delegation.mjs init pr-<n>` で作る（`<Issue>` の代わり）。題・作成日時・作成者は gh から取る。`review` / `finalize` も `pr-<n>` の指定で同じ記録を扱う。
 - `finalize` は PR 番号が分かっているので Issue からの検索をしない。`closes_linked` は `null`。
 - 集計（`summary`）は、分類の件数を「指摘が出た委譲の数」で数える（キーは Issue 番号か `PR#n`）。「Issue→PR 中央値」は `origin: self` を除く（Issue が無く 0 分になるため）。モデル別の表に加えて `origin` 別の行を出す。
 
@@ -136,7 +136,7 @@ gh: null
 | --- | --- | --- |
 | `node .claude/scripts/wait-for-devin-pr.mjs --since <ISO> [--interval 秒] [--timeout 秒]` | `--since` 以降に作られた Issue なし Devin PR が 1 本以上できるまで待つ。見つかった PR をすべて JSON 行で出す `{pr, url, title, headRefName, author}` | 0 見つかった / 2 引数誤り / 3 時間切れ（既定 8 時間） |
 | `node .claude/hooks/find-devin-prs.mjs` | SessionStart。未レビューの Issue なし Devin PR（OPEN）を一覧にして促す | 常に 0 |
-| `node .claude/scripts/delegation.mjs init --pr <n> [--model <m>] [--level 0-3]` | Issue なし PR の記録を作る。`--model` 省略時は `unknown` | 0 / 2 |
+| `node .claude/scripts/delegation.mjs init pr-<n> [--model <m>] [--runner <local\|cloud>] [--level 0-3]` | Issue なし PR の記録を作る。`--model` 省略時は `unknown`、`--runner` 省略時は作成者から推す | 0 / 2 / 3 |
 
 - `listPrs` と `findLinkedPr` は `wait-for-pr.mjs` のものを使い回す（export 済み）。判定は `findUnlinkedDevinPrs(prs, { since, delegatedIssues, reviewedPrs })` の純粋関数に閉じ込める。
 - レビュー済みの確認（コメントに `<!-- claude-review`）は、セッション開始時だけ gh で PR ごとに見る（対象は OPEN の devin/* だけなので数本）。待機の方は `--since` 以降に作られた PR なので、記録の有無だけ見る。
@@ -150,7 +150,7 @@ gh: null
 | `.claude/scripts/wait-for-devin-pr.mjs` | 新規 |
 | `.claude/hooks/find-devin-prs.mjs` | 新規（SessionStart） |
 | `.claude/settings.json` | SessionStart に `find-devin-prs.mjs` を足す |
-| `.claude/scripts/delegation.mjs` | `init --pr`・`pr-<n>.yml`・`origin`・集計のキー |
+| `.claude/scripts/delegation.mjs` | `init pr-<n>`・`pr-<n>.yml`・`origin`・集計のキー |
 | `.claude/hooks/suggest-pr-watch.mjs` | 促す文に `wait-for-devin-pr.mjs --since` の起動を足す（セッションで 1 本） |
 | `.claude/tests/wait-for-devin-pr.test.mjs`・`find-devin-prs.test.mjs` | 新規 |
 | `.claude/tests/delegation.test.mjs`・`suggest-pr-watch.test.mjs` | 追加 |
@@ -204,7 +204,7 @@ gh: null
 
 - `findUnlinkedDevinPrs`: `devin/` 以外のブランチは対象外 / `Closes #N`・`closingIssuesReferences`・記録のある Issue の `-N` で紐づくものは対象外 / 記録の無い番号の `-N`（`update-skills-1790414398`）は対象 / `--since` より前は対象外 / 記録（`pr-<n>`）がある・claude-review の印があるものは対象外 / 複数見つかったら番号順ですべて返す。
 - `find-devin-prs`: 対象 0 件なら何も出さない / 1 件以上なら additionalContext に PR 番号と `review-devin-pr` / gh の失敗で何も出さず exit 0。
-- `delegation`: `init --pr` の記録の形 / `review`・`finalize` の `--pr` 指定 / `summary` のキー（Issue と PR の混在）と `origin: self` を Issue→PR 中央値から除くこと / 既存の Issue の記録が今までどおり読めること。
+- `delegation`: `init pr-<n>` の記録の形 / `review`・`finalize` の `pr-<n>` 指定 / `summary` のキー（Issue と PR の混在）と `origin: self` を Issue→PR 中央値から除くこと / 既存の Issue の記録が今までどおり読めること。
 - `suggest-pr-watch`: 促す文に `wait-for-devin-pr.mjs --since` が含まれる。
 - 手動の結合確認: 次のクラウド委譲で、Devin が知見の PR を出したら拾えるかを日次ログに書く。
 

@@ -1,0 +1,33 @@
+issue: null
+pr: 54
+origin: 'self'
+title: 'dev knowledge に PUBLIC_APP_ORIGIN の注意を追記'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 1
+delegated_at: '2026-09-26T09:20:03Z'
+reviews:
+  - round: 0
+    reviewed_sha: 'a96593387b41e1112f20bf949af745905e42bdaf'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'scope-creep'
+        summary: 'blueprint の initialize / maintenance の日本語の説明コメントを英語の定型文に置き換えていた（PR の目的外の変更）'
+  - round: 1
+    reviewed_sha: 'e259d6174048f1597a0c1f9e7243a084639bf2f7'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 54
+  pr_created_at: '2026-09-26T09:20:03Z'
+  merged_at: '2026-09-26T10:48:45Z'
+  closed_at: '2026-09-26T10:48:45Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: null

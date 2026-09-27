@@ -5,49 +5,43 @@
 // 方針:
 // - wait-for-devin-pr.mjs は委譲中のセッションでしか動かない。その取りこぼし（セッションの外で出た PR）の受け皿。
 // - Hook はバックグラウンド処理もレビューも起動できないため、additionalContext で review-devin-pr を促すだけにする。
-// - レビュー済みは、委譲の記録（Issue の記録の gh.pr / pr-<n>.yml）か、PR のコメントの <!-- claude-review の印で判断する。
+// - レビュー済みは、委譲の記録（Issue の記録の gh.pr / reviews のある pr-<n>.yml）か、PR のコメントの <!-- claude-review の印で判断する。
+// - コメントの取得に失敗した PR は捨てず、「未確認」として出す（1 件の失敗で他の PR を隠さない）。
 // - gh が無い・未認証・遅い環境（クラウドのセッションなど）では何も出さない。失敗しても常に exit 0。
 
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_DIR, readAllRecords } from '../scripts/delegation.mjs';
-import { findUnlinkedDevinPrs, knownFromRecords, listOpenDevinPrs } from '../scripts/wait-for-devin-pr.mjs';
+import { filterUnreviewed, findUnlinkedDevinPrs, knownFromRecords, listOpenDevinPrs, prComments } from '../scripts/wait-for-devin-pr.mjs';
 
 const GH_TIMEOUT_MS = 8_000;
-export const REVIEW_MARKER = '<!-- claude-review';
 
-/** @param {Array<{body?: string}>} comments */
-export const hasReviewMarker = (comments) => (comments ?? []).some((c) => (c.body ?? '').includes(REVIEW_MARKER));
+const line = (pr, note = '') => `- PR #${pr.number}（${pr.headRefName}）${pr.title ?? ''}${note}`;
 
-export function buildContext(prs) {
+/** unchecked はコメントを取得できず、レビュー済みかを確かめられなかった PR（捨てずに出す）。 */
+export function buildContext(pending, unchecked = []) {
   return [
     '📌 Issue に紐づかない Devin の PR が、まだレビューされていません（知見・スキル・blueprint の PR など）。',
-    ...prs.map((pr) => `- PR #${pr.number}（${pr.headRefName}）${pr.title ?? ''}`),
-    'review-devin-pr スキルの「Issue なし PR」の手順でレビューする（先に `node .claude/scripts/delegation.mjs init pr-<番号>` で記録を作る）。',
+    ...pending.map((pr) => line(pr)),
+    ...unchecked.map((pr) => line(pr, ' ※コメントを取得できず、レビュー済みかは未確認')),
+    'review-devin-pr スキルの「Issue なし PR」の手順でレビューする（`pr-<番号>.yml` が無ければ `node .claude/scripts/delegation.mjs init pr-<番号>` で作る。あれば中断したレビューなので、その記録で続ける）。',
     'ユーザーの今の依頼を優先し、区切りのよいところでレビューする。',
   ].join('\n');
 }
 
-function commentsOf(pr) {
-  const out = execFileSync('gh', ['pr', 'view', String(pr), '--json', 'comments'], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    timeout: GH_TIMEOUT_MS,
-  });
-  return JSON.parse(out).comments;
-}
-
 function main() {
-  let pending;
+  let result;
   try {
     const known = knownFromRecords(readAllRecords(DEFAULT_DIR));
-    pending = findUnlinkedDevinPrs(listOpenDevinPrs(null, GH_TIMEOUT_MS), known).filter((pr) => !hasReviewMarker(commentsOf(pr.number)));
+    const candidates = findUnlinkedDevinPrs(listOpenDevinPrs(null, GH_TIMEOUT_MS), known);
+    result = filterUnreviewed(candidates, (n) => prComments(n, GH_TIMEOUT_MS));
   } catch {
     process.exit(0);
   }
-  if (pending.length === 0) process.exit(0);
+  if (result.pending.length === 0 && result.unchecked.length === 0) process.exit(0);
   process.stdout.write(
-    JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: buildContext(pending) } }),
+    JSON.stringify({
+      hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: buildContext(result.pending, result.unchecked) },
+    }),
   );
   process.exit(0);
 }

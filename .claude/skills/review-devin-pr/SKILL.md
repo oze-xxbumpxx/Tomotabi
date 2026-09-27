@@ -67,8 +67,12 @@ description: >
 
 1. **見つける**: `wait-for-devin-pr.mjs` が終了コード 0 で呼び戻したとき（出力の JSON 行に `pr`）、
    またはセッション開始時のフック（find-devin-prs）が一覧を出したとき。終了コード 3（時間切れ）は何もしない。
-2. **記録**: `node .claude/scripts/delegation.mjs init pr-<n>`（題・作成日時・作成者を gh から取る。作成者が bot ならクラウド）。
-   分かれば `--model swe-2-high`（クラウドの既定）と `--level` を付ける。以降の `review` / `finalize` も `pr-<n>` で指定する。
+   待機は見つけると終わるので、レビューに入る前に**同じ `--since` と、これまでに通知された PR の `--exclude <n,…>`** で
+   `run_in_background` で起動し直す（同じセッションで後から出る PR を拾うため。除外しないとレビュー中の PR がまた通知される）。
+2. **記録**: `pr-<n>.yml` が無ければ `node .claude/scripts/delegation.mjs init pr-<n>`（題・作成日時・作成者を gh から取る。
+   作成者が bot ならクラウド）。分かれば `--model swe-2-high`（クラウドの既定）と `--level` を付ける。
+   既にあって `reviews` が空なら、前のセッションが中断したレビューなので init せずにその記録で続ける。
+   以降の `review` / `finalize` も `pr-<n>` で指定する。
 3. **レビュー**: 上の「レビュー」の 1・5・6 はそのまま。2〜4 は Issue の代わりに次で見る。
 
    | 観点 | 見ること |

@@ -7,15 +7,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildContext, hasReviewMarker } from '../hooks/find-devin-prs.mjs';
+import { buildContext } from '../hooks/find-devin-prs.mjs';
 
 const hookPath = join(dirname(fileURLToPath(import.meta.url)), '../hooks/find-devin-prs.mjs');
 
-test('F-01: claude-review の印のコメントがあればレビュー済み', () => {
-  assert.equal(hasReviewMarker([{ body: 'LGTM' }, { body: '<!-- claude-review round=0 -->\n指摘' }]), true);
-  assert.equal(hasReviewMarker([{ body: 'Devin の返信' }]), false);
-  assert.equal(hasReviewMarker([]), false);
-  assert.equal(hasReviewMarker(null), false);
+test('F-01: コメントを取得できなかった PR も捨てずに「未確認」として出す', () => {
+  const text = buildContext([{ number: 91, headRefName: 'devin/b', title: 'b' }], [{ number: 90, headRefName: 'devin/a', title: 'a' }]);
+  assert.match(text, /PR #91（devin\/b）b\n/);
+  assert.match(text, /PR #90（devin\/a）a ※コメントを取得できず、レビュー済みかは未確認/);
 });
 
 test('F-02: 促す文に PR 番号・ブランチと review-devin-pr・記録の作り方がある', () => {
@@ -27,6 +26,8 @@ test('F-02: 促す文に PR 番号・ブランチと review-devin-pr・記録の
   assert.match(text, /PR #54/);
   assert.match(text, /review-devin-pr/);
   assert.match(text, /delegation\.mjs init pr-/);
+  // 中断したレビューの記録は init し直さない
+  assert.match(text, /中断したレビュー/);
 });
 
 test('F-03: gh が無い環境では何も出さず exit 0', () => {

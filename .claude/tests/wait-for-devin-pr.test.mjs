@@ -5,7 +5,14 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findUnlinkedDevinPrs, knownFromRecords, parseArgs, toOutputLine } from '../scripts/wait-for-devin-pr.mjs';
+import {
+  filterUnreviewed,
+  findUnlinkedDevinPrs,
+  hasReviewMarker,
+  knownFromRecords,
+  parseArgs,
+  toOutputLine,
+} from '../scripts/wait-for-devin-pr.mjs';
 
 const scriptPath = join(dirname(fileURLToPath(import.meta.url)), '../scripts/wait-for-devin-pr.mjs');
 
@@ -46,11 +53,12 @@ test('U-06: レビュー済み（記録がある）PR は対象外。複数あ�
   assert.deepEqual(numbers(findUnlinkedDevinPrs(prs, { reviewedPrs: [54] })), [53, 70]);
 });
 
-test('U-07: 記録から委譲した Issue とレビュー済みの PR を取り出す', () => {
+test('U-07: 記録から委譲した Issue とレビュー済みの PR を取り出す。init だけで中断した記録はレビュー済みにしない', () => {
   const records = [
     { issue: 55, gh: { pr: 56 } },
     { issue: 51, gh: null },
-    { issue: null, pr: 53, origin: 'self', gh: null },
+    { issue: null, pr: 53, origin: 'self', reviews: [{ round: 0 }], gh: null },
+    { issue: null, pr: 70, origin: 'self', reviews: [], gh: null },
   ];
   assert.deepEqual(knownFromRecords(records), { delegatedIssues: [55, 51], reviewedPrs: [56, 53] });
 });
@@ -61,7 +69,10 @@ test('U-08: 出力の JSON 行', () => {
 });
 
 test('U-09: 引数の検査（--since は必須で ISO 8601）', () => {
-  assert.deepEqual(parseArgs(['--since', '2026-09-26T09:20:00Z']), { since: '2026-09-26T09:20:00Z', interval: 60, timeout: 28800 });
+  assert.deepEqual(parseArgs(['--since', '2026-09-26T09:20:00Z']), { since: '2026-09-26T09:20:00Z', exclude: [], interval: 60, timeout: 28800 });
+  assert.deepEqual(parseArgs(['--since', '2026-09-26T09:20:00Z', '--exclude', '53,54']).exclude, [53, 54]);
+  assert.equal(parseArgs(['--since', '2026-09-26T09:20:00Z', '--exclude', '53,x']), null);
+  assert.equal(parseArgs(['--since', '2026-09-26T09:20:00Z', '--exclude', '0']), null);
   assert.deepEqual(parseArgs(['--since', '2026-09-26T09:20:00Z', '--interval', '5', '--timeout', '10']).interval, 5);
   assert.equal(parseArgs([]), null);
   assert.equal(parseArgs(['--since', 'yesterday']), null);
@@ -69,4 +80,24 @@ test('U-09: 引数の検査（--since は必須で ISO 8601）', () => {
   assert.equal(parseArgs(['--since', '2026-09-26T09:20:00Z', '--foo', '1']), null);
   const res = spawnSync(process.execPath, [scriptPath], { encoding: 'utf8' });
   assert.equal(res.status, 2);
+});
+
+test('U-15: claude-review の印のコメントがあればレビュー済み（待機とフックで共通）', () => {
+  assert.equal(hasReviewMarker([{ body: 'LGTM' }, { body: '<!-- claude-review round=0 -->\n指摘' }]), true);
+  assert.equal(hasReviewMarker([{ body: 'Devin の返信' }]), false);
+  assert.equal(hasReviewMarker([]), false);
+  assert.equal(hasReviewMarker(null), false);
+});
+
+test('U-16: 印のある PR を除き、コメントの取得に失敗した PR は unchecked に分けて他の PR を捨てない', () => {
+  const comments = {
+    90: () => {
+      throw new Error('timeout');
+    },
+    91: () => [{ body: 'x' }],
+    92: () => [{ body: '<!-- claude-review round=0 -->' }],
+  };
+  const { pending, unchecked } = filterUnreviewed([pr(90, 'devin/a'), pr(91, 'devin/b'), pr(92, 'devin/c')], (n) => comments[n]());
+  assert.deepEqual(numbers(pending), [91]);
+  assert.deepEqual(numbers(unchecked), [90]);
 });

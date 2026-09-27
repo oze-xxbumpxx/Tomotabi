@@ -79,7 +79,7 @@ Devin が自分から出した PR（Issue なし）─────── 検出�
 2. `--since` 以降に作られた（待機のとき）/ state が OPEN（セッション開始時）。
 3. `wait-for-pr.mjs` の `findLinkedPr` の規則（`closingIssuesReferences`・本文の `Closes #N`・ブランチ名の末尾 `-N`）で、**委譲の記録がある Issue に紐づかない**。紐づく PR は既存の経路で待っているので対象外（二重レビューを避ける）。記録の無い Issue に紐づく PR は誰も待っていないので対象にする。
    - 注意: `devin/update-skills-1790414398` のように末尾が数字のブランチは、`-N` の規則で「Issue #1790414398 に紐づく」と読めてしまう。記録のある Issue 番号に限ることで、この誤読も避ける。
-4. レビュー済みでない: 委譲の記録（Issue の記録の `gh.pr`、または `delegations/pr-<n>.yml`）が無い。セッション開始時は、PR のコメントの `<!-- claude-review` の印も見る。
+4. レビュー済みでない: 委譲の記録（Issue の記録の `gh.pr`、または `reviews` が 1 件以上ある `delegations/pr-<n>.yml`）が無く、PR のコメントに `<!-- claude-review` の印も無い。`init` だけで中断した記録（`reviews` が空）はレビュー済みにしない（PR #61 のレビューで修正）。
 
 ### レビューの観点（`review-devin-pr` に節を足す）
 
@@ -139,7 +139,8 @@ gh: null
 | `node .claude/scripts/delegation.mjs init pr-<n> [--model <m>] [--runner <local\|cloud>] [--level 0-3]` | Issue なし PR の記録を作る。`--model` 省略時は `unknown`、`--runner` 省略時は作成者から推す | 0 / 2 / 3 |
 
 - `listPrs` と `findLinkedPr` は `wait-for-pr.mjs` のものを使い回す（export 済み）。判定は `findUnlinkedDevinPrs(prs, { since, delegatedIssues, reviewedPrs })` の純粋関数に閉じ込める。
-- レビュー済みの確認（コメントに `<!-- claude-review`）は、セッション開始時だけ gh で PR ごとに見る（対象は OPEN の devin/* だけなので数本）。待機の方は `--since` 以降に作られた PR なので、記録の有無だけ見る。
+- レビュー済みの確認（コメントに `<!-- claude-review`）は、待機とセッション開始時の両方で、候補の PR ごとに gh で見る（別のセッションが先にレビューした PR を二重に通知しないため）。取得の失敗は PR ごとに扱い、他の PR を捨てない（待機は次の周期で再確認、フックは「未確認」として出す）。
+- 待機は見つけると終わる。同じセッションで後から出る PR を拾うため、レビューに入る前に同じ `--since` と、通知済みの PR の `--exclude` で起動し直す。
 
 ## DB 設計 / フロントエンド設計 / バックエンド設計
 

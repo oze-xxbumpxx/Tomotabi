@@ -16,22 +16,23 @@ export const CreateTripHeader = zod.object({
 })
 
 
+export const createTripBodyStartsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createTripBodyEndsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 
 export const CreateTripBody = zod.strictObject({
   "name": zod.string().min(1),
-  "startsOn": zod.string(),
-  "endsOn": zod.string()
+  "startsOn": zod.string().regex(createTripBodyStartsOnRegExp),
+  "endsOn": zod.string().regex(createTripBodyEndsOnRegExp)
 })
 
-export const createTripResponseNameMax = 100;
 
 export const createTripResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const CreateTripResponse = zod.object({
   "id": zod.uuid(),
-  "name": zod.string().min(1).max(createTripResponseNameMax),
+  "name": zod.string().min(1),
   "startsOn": zod.iso.date(),
   "endsOn": zod.iso.date(),
   "status": zod.enum(['planning', 'traveling', 'finished']),
@@ -61,7 +62,6 @@ export const ListTripsQueryParams = zod.strictObject({
   "limit": zod.coerce.number().int().min(1).max(listTripsQueryLimitMax).default(listTripsQueryLimitDefault)
 })
 
-export const listTripsResponseItemsItemNameMax = 100;
 
 export const listTripsResponseItemsItemVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
@@ -69,7 +69,7 @@ export const listTripsResponseItemsItemVersionRegExp = new RegExp('^[1-9][0-9]*$
 export const ListTripsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.uuid(),
-  "name": zod.string().min(1).max(listTripsResponseItemsItemNameMax),
+  "name": zod.string().min(1),
   "startsOn": zod.iso.date(),
   "endsOn": zod.iso.date(),
   "status": zod.enum(['planning', 'traveling', 'finished']),
@@ -92,14 +92,13 @@ export const GetTripParams = zod.object({
   "tripId": zod.uuid()
 })
 
-export const getTripResponseNameMax = 100;
 
 export const getTripResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const GetTripResponse = zod.object({
   "id": zod.uuid(),
-  "name": zod.string().min(1).max(getTripResponseNameMax),
+  "name": zod.string().min(1),
   "startsOn": zod.iso.date(),
   "endsOn": zod.iso.date(),
   "status": zod.enum(['planning', 'traveling', 'finished']),
@@ -136,14 +135,13 @@ export const RenameTripBody = zod.strictObject({
   "name": zod.string().min(1)
 })
 
-export const renameTripResponseNameMax = 100;
 
 export const renameTripResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const RenameTripResponse = zod.object({
   "id": zod.uuid(),
-  "name": zod.string().min(1).max(renameTripResponseNameMax),
+  "name": zod.string().min(1),
   "startsOn": zod.iso.date(),
   "endsOn": zod.iso.date(),
   "status": zod.enum(['planning', 'traveling', 'finished']),
@@ -173,14 +171,13 @@ export const StartTripHeader = zod.object({
   "If-Match": zod.string().regex(startTripHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
 })
 
-export const startTripResponseNameMax = 100;
 
 export const startTripResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const StartTripResponse = zod.object({
   "id": zod.uuid(),
-  "name": zod.string().min(1).max(startTripResponseNameMax),
+  "name": zod.string().min(1),
   "startsOn": zod.iso.date(),
   "endsOn": zod.iso.date(),
   "status": zod.enum(['planning', 'traveling', 'finished']),
@@ -210,14 +207,13 @@ export const FinishTripHeader = zod.object({
   "If-Match": zod.string().regex(finishTripHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
 })
 
-export const finishTripResponseNameMax = 100;
 
 export const finishTripResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const FinishTripResponse = zod.object({
   "id": zod.uuid(),
-  "name": zod.string().min(1).max(finishTripResponseNameMax),
+  "name": zod.string().min(1),
   "startsOn": zod.iso.date(),
   "endsOn": zod.iso.date(),
   "status": zod.enum(['planning', 'traveling', 'finished']),

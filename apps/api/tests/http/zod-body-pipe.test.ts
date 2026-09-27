@@ -137,7 +137,20 @@ describe("生成した Zod の Pipe（U-16。configure-app で組んだアプリ
     expect(response.body.received.name).toBe(name);
   });
 
-  it("format: date は Pipe で実在日を拒否しない（実在日は Domain が 422 で判定）", async () => {
+  it.each(["abc", "2026-9-1", "2026/09/01", "2026-09-01T00:00:00Z"])(
+    "YYYY-MM-DD の形でない日付 %s は 400 INVALID_REQUEST（パターン違反）",
+    async (startsOn) => {
+      const response = await post("/api/pipe-test/trips", {
+        name: "x",
+        startsOn,
+        endsOn: "2026-09-03",
+      });
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe("INVALID_REQUEST");
+    },
+  );
+
+  it("形を満たすが実在しない日付は Pipe を通る（実在日は Domain が 422 で判定）", async () => {
     const response = await post("/api/pipe-test/trips", {
       name: "x",
       startsOn: "2026-02-30",
@@ -185,7 +198,13 @@ describe("生成した Zod の Pipe（U-16。configure-app で組んだアプリ
     expect(withDefault.body).toEqual({ received: { limit: 20 } });
   });
 
-  it("クエリの format: date も実在日を拒否しない（期間外は UseCase が 422 にする）", async () => {
+  it("クエリの日付も形だけを検証する（形違反は 400、実在日は UseCase が 422 にする）", async () => {
+    const badShape = await request(app.getHttpServer()).get(
+      "/api/pipe-test/itinerary?date=abc",
+    );
+    expect(badShape.status).toBe(400);
+    expect(badShape.body.code).toBe("INVALID_REQUEST");
+
     const response = await request(app.getHttpServer()).get(
       "/api/pipe-test/itinerary?date=2026-02-30",
     );

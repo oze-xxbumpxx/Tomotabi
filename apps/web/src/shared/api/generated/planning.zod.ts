@@ -14,25 +14,24 @@ export const GetItineraryParams = zod.object({
   "tripId": zod.uuid()
 })
 
+export const getItineraryQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const GetItineraryQueryParams = zod.strictObject({
-  "date": zod.coerce.string().optional()
+  "date": zod.coerce.string().regex(getItineraryQueryDateRegExp).optional()
 })
 
-export const getItineraryResponseTripNameMax = 100;
 
 export const getItineraryResponseTripVersionRegExp = new RegExp('^[1-9][0-9]*$');
-export const getItineraryResponsePlansItemNameMax = 100;
 
 export const getItineraryResponsePlansItemTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
-export const getItineraryResponsePlansItemMemoMax = 2000;
-
 export const getItineraryResponsePlansItemVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const GetItineraryResponse = zod.object({
   "trip": zod.object({
   "id": zod.uuid(),
-  "name": zod.string().min(1).max(getItineraryResponseTripNameMax),
+  "name": zod.string().min(1),
   "startsOn": zod.iso.date(),
   "endsOn": zod.iso.date(),
   "status": zod.enum(['planning', 'traveling', 'finished']),
@@ -48,11 +47,11 @@ export const GetItineraryResponse = zod.object({
   "plans": zod.array(zod.object({
   "id": zod.uuid(),
   "tripId": zod.uuid(),
-  "name": zod.string().min(1).max(getItineraryResponsePlansItemNameMax),
+  "name": zod.string().min(1),
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
   "date": zod.iso.date(),
   "time": zod.string().regex(getItineraryResponsePlansItemTimeRegExp).nullable(),
-  "memo": zod.string().max(getItineraryResponsePlansItemMemoMax).nullable(),
+  "memo": zod.string().nullable(),
   "cancelledAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
   "cancelledBy": zod.union([zod.uuid(),zod.null()]),
   "version": zod.string().regex(getItineraryResponsePlansItemVersionRegExp),
@@ -102,33 +101,31 @@ export const CreatePlanHeader = zod.object({
 })
 
 
+export const createPlanBodyDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const createPlanBodyTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
 
 
 export const CreatePlanBody = zod.strictObject({
   "name": zod.string().min(1),
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
-  "date": zod.string(),
+  "date": zod.string().regex(createPlanBodyDateRegExp),
   "time": zod.string().regex(createPlanBodyTimeRegExp).nullish(),
   "memo": zod.string().nullish()
 })
 
-export const createPlanResponseNameMax = 100;
 
 export const createPlanResponseTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
-export const createPlanResponseMemoMax = 2000;
-
 export const createPlanResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const CreatePlanResponse = zod.object({
   "id": zod.uuid(),
   "tripId": zod.uuid(),
-  "name": zod.string().min(1).max(createPlanResponseNameMax),
+  "name": zod.string().min(1),
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
   "date": zod.iso.date(),
   "time": zod.string().regex(createPlanResponseTimeRegExp).nullable(),
-  "memo": zod.string().max(createPlanResponseMemoMax).nullable(),
+  "memo": zod.string().nullable(),
   "cancelledAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
   "cancelledBy": zod.union([zod.uuid(),zod.null()]),
   "version": zod.string().regex(createPlanResponseVersionRegExp),
@@ -171,22 +168,19 @@ export const GetPlanParams = zod.object({
   "planId": zod.uuid()
 })
 
-export const getPlanResponseNameMax = 100;
 
 export const getPlanResponseTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
-export const getPlanResponseMemoMax = 2000;
-
 export const getPlanResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const GetPlanResponse = zod.object({
   "id": zod.uuid(),
   "tripId": zod.uuid(),
-  "name": zod.string().min(1).max(getPlanResponseNameMax),
+  "name": zod.string().min(1),
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
   "date": zod.iso.date(),
   "time": zod.string().regex(getPlanResponseTimeRegExp).nullable(),
-  "memo": zod.string().max(getPlanResponseMemoMax).nullable(),
+  "memo": zod.string().nullable(),
   "cancelledAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
   "cancelledBy": zod.union([zod.uuid(),zod.null()]),
   "version": zod.string().regex(getPlanResponseVersionRegExp),
@@ -249,22 +243,19 @@ export const UpdatePlanBody = zod.strictObject({
   "memo": zod.string().nullish()
 })
 
-export const updatePlanResponseNameMax = 100;
 
 export const updatePlanResponseTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
-export const updatePlanResponseMemoMax = 2000;
-
 export const updatePlanResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const UpdatePlanResponse = zod.object({
   "id": zod.uuid(),
   "tripId": zod.uuid(),
-  "name": zod.string().min(1).max(updatePlanResponseNameMax),
+  "name": zod.string().min(1),
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
   "date": zod.iso.date(),
   "time": zod.string().regex(updatePlanResponseTimeRegExp).nullable(),
-  "memo": zod.string().max(updatePlanResponseMemoMax).nullable(),
+  "memo": zod.string().nullable(),
   "cancelledAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
   "cancelledBy": zod.union([zod.uuid(),zod.null()]),
   "version": zod.string().regex(updatePlanResponseVersionRegExp),
@@ -316,26 +307,26 @@ export const MovePlanHeader = zod.object({
   "If-Match": zod.string().regex(movePlanHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
 })
 
+export const movePlanBodyDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const MovePlanBody = zod.strictObject({
-  "date": zod.string()
+  "date": zod.string().regex(movePlanBodyDateRegExp)
 })
 
-export const movePlanResponseNameMax = 100;
 
 export const movePlanResponseTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
-export const movePlanResponseMemoMax = 2000;
-
 export const movePlanResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const MovePlanResponse = zod.object({
   "id": zod.uuid(),
   "tripId": zod.uuid(),
-  "name": zod.string().min(1).max(movePlanResponseNameMax),
+  "name": zod.string().min(1),
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
   "date": zod.iso.date(),
   "time": zod.string().regex(movePlanResponseTimeRegExp).nullable(),
-  "memo": zod.string().max(movePlanResponseMemoMax).nullable(),
+  "memo": zod.string().nullable(),
   "cancelledAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
   "cancelledBy": zod.union([zod.uuid(),zod.null()]),
   "version": zod.string().regex(movePlanResponseVersionRegExp),
@@ -387,22 +378,19 @@ export const CancelPlanHeader = zod.object({
   "If-Match": zod.string().regex(cancelPlanHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
 })
 
-export const cancelPlanResponseNameMax = 100;
 
 export const cancelPlanResponseTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
-export const cancelPlanResponseMemoMax = 2000;
-
 export const cancelPlanResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const CancelPlanResponse = zod.object({
   "id": zod.uuid(),
   "tripId": zod.uuid(),
-  "name": zod.string().min(1).max(cancelPlanResponseNameMax),
+  "name": zod.string().min(1),
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
   "date": zod.iso.date(),
   "time": zod.string().regex(cancelPlanResponseTimeRegExp).nullable(),
-  "memo": zod.string().max(cancelPlanResponseMemoMax).nullable(),
+  "memo": zod.string().nullable(),
   "cancelledAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
   "cancelledBy": zod.union([zod.uuid(),zod.null()]),
   "version": zod.string().regex(cancelPlanResponseVersionRegExp),
@@ -453,19 +441,22 @@ export const UpdateTripPeriodHeader = zod.object({
   "If-Match": zod.string().regex(updateTripPeriodHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
 })
 
+export const updateTripPeriodBodyStartsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateTripPeriodBodyEndsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const UpdateTripPeriodBody = zod.strictObject({
-  "startsOn": zod.string(),
-  "endsOn": zod.string()
+  "startsOn": zod.string().regex(updateTripPeriodBodyStartsOnRegExp),
+  "endsOn": zod.string().regex(updateTripPeriodBodyEndsOnRegExp)
 })
 
-export const updateTripPeriodResponseNameMax = 100;
 
 export const updateTripPeriodResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const UpdateTripPeriodResponse = zod.object({
   "id": zod.uuid(),
-  "name": zod.string().min(1).max(updateTripPeriodResponseNameMax),
+  "name": zod.string().min(1),
   "startsOn": zod.iso.date(),
   "endsOn": zod.iso.date(),
   "status": zod.enum(['planning', 'traveling', 'finished']),

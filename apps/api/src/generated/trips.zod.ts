@@ -16,12 +16,14 @@ export const CreateTripHeader = zod.object({
 })
 
 
+export const createTripBodyStartsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createTripBodyEndsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 
 export const CreateTripBody = zod.strictObject({
   "name": zod.string().min(1),
-  "startsOn": zod.string(),
-  "endsOn": zod.string()
+  "startsOn": zod.string().regex(createTripBodyStartsOnRegExp),
+  "endsOn": zod.string().regex(createTripBodyEndsOnRegExp)
 })
 
 export const createTripResponseNameMax = 100;

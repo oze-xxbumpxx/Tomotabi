@@ -30,17 +30,24 @@ function isStringSchema(schema: JsonSchema): boolean {
   );
 }
 
+// 入力側の format: "date" を外す代わりに付ける形だけの検証。
+// YYYY-MM-DD の形でない入力は Pipe で 400（設計の「パターン違反は 400」）、
+// 形を満たすが実在しない日付は Domain（LocalDate）が 422 にする。
+const DATE_SHAPE_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
+
 /**
  * 入力検証用の生成にだけ適用する契約の調整（ADR-0004）。
  * Zod の .max() は UTF-16 の長さで数えるため、入力 body の文字列の maxLength を外し、
  * 文字数はコードポイントで数える Domain の値型に任せる（応答側・クエリには残す）。
- * zod.iso.date() は実在日まで検証するため、入力側の format: "date" も外し、
- * 実在日を含む日付の規則を Domain（LocalDate → 422）に任せる。
+ * zod.iso.date() は実在日まで検証するため、入力側の format: "date" は
+ * 形だけの pattern に置き換え、実在日を含む日付の規則を Domain（LocalDate → 422）に任せる。
+ * stripDateFormat=false の応答スキーマでは maxLength だけを外す（format は残す）。
  */
 function stripInputConstraints(
   schema: JsonSchema,
   components: Record<string, JsonSchema>,
   seen: Set<string>,
+  stripDateFormat: boolean,
 ): void {
   if (typeof schema.$ref === "string") {
     const name = schema.$ref.replace("#/components/schemas/", "");
@@ -48,27 +55,28 @@ function stripInputConstraints(
       return;
     }
     seen.add(name);
-    stripInputConstraints(components[name]!, components, seen);
+    stripInputConstraints(components[name]!, components, seen, stripDateFormat);
     return;
   }
   if (isStringSchema(schema)) {
     delete schema.maxLength;
-    if (schema.format === "date") {
+    if (stripDateFormat && schema.format === "date") {
       delete schema.format;
+      schema.pattern = DATE_SHAPE_PATTERN;
     }
   }
   const properties = schema.properties;
   if (typeof properties === "object" && properties !== null) {
     for (const value of Object.values(properties)) {
       if (typeof value === "object" && value !== null) {
-        stripInputConstraints(value as JsonSchema, components, seen);
+        stripInputConstraints(value as JsonSchema, components, seen, stripDateFormat);
       }
     }
   }
   for (const key of ["items", "additionalProperties"] as const) {
     const value = schema[key];
     if (typeof value === "object" && value !== null) {
-      stripInputConstraints(value as JsonSchema, components, seen);
+      stripInputConstraints(value as JsonSchema, components, seen, stripDateFormat);
     }
   }
   for (const key of ["oneOf", "anyOf", "allOf"] as const) {
@@ -76,7 +84,7 @@ function stripInputConstraints(
     if (Array.isArray(value)) {
       for (const item of value) {
         if (typeof item === "object" && item !== null) {
-          stripInputConstraints(item as JsonSchema, components, seen);
+          stripInputConstraints(item as JsonSchema, components, seen, stripDateFormat);
         }
       }
     }
@@ -119,6 +127,7 @@ function stripDateFormatFromQuery(
           schema.format === "date"
         ) {
           delete schema.format;
+          schema.pattern = DATE_SHAPE_PATTERN;
         }
       }
     }
@@ -152,7 +161,7 @@ const stripRequestInputConstraints = (
       for (const mediaType of Object.values(content)) {
         const schema = (mediaType as { schema?: unknown }).schema;
         if (typeof schema === "object" && schema !== null) {
-          stripInputConstraints(schema as JsonSchema, components, new Set());
+          stripInputConstraints(schema as JsonSchema, components, new Set(), true);
         }
       }
     }
@@ -160,6 +169,52 @@ const stripRequestInputConstraints = (
   stripDateFormatFromQuery(clone);
   return clone;
 };
+
+/**
+ * web の検証用 zod 生成にだけ追加で適用する調整。
+ * 応答側の文字列 maxLength も外す。Zod の .max() は UTF-16 で数えるため、
+ * 契約（コードポイント）に従った有効な応答（絵文字を含む名前など）を
+ * callApi の検証が誤って弾いてしまう。契約の maxLength 自体は残す。
+ */
+const stripResponseStringMaxLength = (
+  spec: OpenApiDocument,
+): OpenApiDocument => {
+  const clone = structuredClone(spec) as OpenApiDocument;
+  const components = (clone.components?.schemas ?? {}) as Record<
+    string,
+    JsonSchema
+  >;
+  for (const pathItem of Object.values(clone.paths ?? {})) {
+    if (typeof pathItem !== "object" || pathItem === null) {
+      continue;
+    }
+    for (const operation of Object.values(pathItem)) {
+      if (typeof operation !== "object" || operation === null) {
+        continue;
+      }
+      const responses = (operation as { responses?: unknown }).responses;
+      if (typeof responses !== "object" || responses === null) {
+        continue;
+      }
+      for (const response of Object.values(responses)) {
+        const content = (response as { content?: unknown })?.content;
+        if (typeof content !== "object" || content === null) {
+          continue;
+        }
+        for (const mediaType of Object.values(content)) {
+          const schema = (mediaType as { schema?: unknown }).schema;
+          if (typeof schema === "object" && schema !== null) {
+            stripInputConstraints(schema as JsonSchema, components, new Set(), false);
+          }
+        }
+      }
+    }
+  }
+  return clone;
+};
+
+const stripWebValidationConstraints = (spec: OpenApiDocument): OpenApiDocument =>
+  stripResponseStringMaxLength(stripRequestInputConstraints(spec));
 
 // 入力検証用の Zod（web 側のフォーム検証と API の Pipe で共用する生成設定）
 const validationZod = {
@@ -171,9 +226,17 @@ const tripsInput = {
   target: "./packages/contracts/openapi/trips.json",
   override: { transformer: stripRequestInputConstraints },
 };
+const tripsWebInput = {
+  target: "./packages/contracts/openapi/trips.json",
+  override: { transformer: stripWebValidationConstraints },
+};
 const planningInput = {
   target: "./packages/contracts/openapi/planning.json",
   override: { transformer: stripRequestInputConstraints },
+};
+const planningWebInput = {
+  target: "./packages/contracts/openapi/planning.json",
+  override: { transformer: stripWebValidationConstraints },
 };
 
 export default defineConfig({
@@ -221,7 +284,7 @@ export default defineConfig({
     },
   },
   tripsZod: {
-    input: tripsInput,
+    input: tripsWebInput,
     output: {
       mode: "single",
       client: "zod",
@@ -248,7 +311,7 @@ export default defineConfig({
     },
   },
   planningZod: {
-    input: planningInput,
+    input: planningWebInput,
     output: {
       mode: "single",
       client: "zod",

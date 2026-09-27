@@ -14,8 +14,11 @@ export const GetItineraryParams = zod.object({
   "tripId": zod.uuid()
 })
 
+export const getItineraryQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const GetItineraryQueryParams = zod.strictObject({
-  "date": zod.coerce.string().optional()
+  "date": zod.coerce.string().regex(getItineraryQueryDateRegExp).optional()
 })
 
 export const getItineraryResponseTripNameMax = 100;
@@ -102,13 +105,14 @@ export const CreatePlanHeader = zod.object({
 })
 
 
+export const createPlanBodyDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const createPlanBodyTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
 
 
 export const CreatePlanBody = zod.strictObject({
   "name": zod.string().min(1),
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
-  "date": zod.string(),
+  "date": zod.string().regex(createPlanBodyDateRegExp),
   "time": zod.string().regex(createPlanBodyTimeRegExp).nullish(),
   "memo": zod.string().nullish()
 })
@@ -316,8 +320,11 @@ export const MovePlanHeader = zod.object({
   "If-Match": zod.string().regex(movePlanHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
 })
 
+export const movePlanBodyDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const MovePlanBody = zod.strictObject({
-  "date": zod.string()
+  "date": zod.string().regex(movePlanBodyDateRegExp)
 })
 
 export const movePlanResponseNameMax = 100;
@@ -453,9 +460,13 @@ export const UpdateTripPeriodHeader = zod.object({
   "If-Match": zod.string().regex(updateTripPeriodHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
 })
 
+export const updateTripPeriodBodyStartsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateTripPeriodBodyEndsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const UpdateTripPeriodBody = zod.strictObject({
-  "startsOn": zod.string(),
-  "endsOn": zod.string()
+  "startsOn": zod.string().regex(updateTripPeriodBodyStartsOnRegExp),
+  "endsOn": zod.string().regex(updateTripPeriodBodyEndsOnRegExp)
 })
 
 export const updateTripPeriodResponseNameMax = 100;

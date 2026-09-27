@@ -6,5 +6,6 @@
 | ID | タイトル | ステータス | 出典 | 更新日 |
 | --- | --- | --- | --- | --- |
 | IMP-2026-001 | 委譲の security 指摘（例外の中身が出力に出る）の予防を `devin-workflow` に足す | accepted | `candidates/delegation-security.md`（#31・#44）。PR #62 で適用 | 2026-09-27 |
+| IMP-2026-002 | 委譲の test-path-mismatch 指摘（テストが本番の経路を通っていない）の予防を `devin-workflow` に足す | proposal | `candidates/delegation-test-path-mismatch.md`（#31・#37・#59） | 2026-09-27 |
 
 accepted / rejected 以外の行が session-briefing / sprint-summary の「未決定 IMP」になる。

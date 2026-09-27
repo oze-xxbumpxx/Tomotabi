@@ -2,10 +2,17 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { signInSocial } = vi.hoisted(() => ({ signInSocial: vi.fn() }));
+const { signInSocial, replaceMock } = vi.hoisted(() => ({
+  signInSocial: vi.fn(),
+  replaceMock: vi.fn(),
+}));
 
 vi.mock("@/shared/auth/auth-client", () => ({
   authClient: { signIn: { social: signInSocial } },
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: replaceMock }),
 }));
 
 import SignInPage from "@/app/sign-in/page";
@@ -42,6 +49,59 @@ describe("SignInScreen", () => {
       callbackURL: "/",
     });
   });
+
+  it("W-04: shows a generic error when sign-in returns an error", async () => {
+    signInSocial.mockResolvedValue({
+      data: null,
+      error: { status: 503, code: "secret_code_x", message: "db down" },
+    });
+    render(<SignInScreen hasError={false} />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Google でログイン" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "ログインできませんでした。時間をおいて、もう一度お試しください。",
+    );
+    expect(screen.queryByText(/secret_code_x|db down|503/)).toBeNull();
+  });
+
+  it("W-05: shows a generic error when sign-in throws", async () => {
+    signInSocial.mockRejectedValue(new Error("network exploded"));
+    render(<SignInScreen hasError={false} />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Google でログイン" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "ログインできませんでした。時間をおいて、もう一度お試しください。",
+    );
+    expect(screen.queryByText(/network exploded/)).toBeNull();
+  });
+
+  it("W-06: disables the button while sign-in is in flight", async () => {
+    let resolveSignIn: (value: { data: null; error: null }) => void = () => {};
+    signInSocial.mockImplementation(
+      () =>
+        new Promise<{ data: null; error: null }>((resolve) => {
+          resolveSignIn = resolve;
+        }),
+    );
+    render(<SignInScreen hasError={false} />);
+
+    const button = screen.getByRole("button", { name: "Google でログイン" });
+    await userEvent.click(button);
+
+    expect(signInSocial).toHaveBeenCalledTimes(1);
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(signInSocial).toHaveBeenCalledTimes(1);
+
+    resolveSignIn({ data: null, error: null });
+    expect(await screen.findByRole("button")).toBeEnabled();
+  });
 });
 
 describe("/sign-in page", () => {
@@ -59,6 +119,20 @@ describe("/sign-in page", () => {
     expect(
       screen.getByRole("button", { name: "Google でログイン" }),
     ).toBeInTheDocument();
+  });
+
+  it("W-07: clears the error query from the address bar but keeps the message", async () => {
+    render(
+      await SignInPage({
+        searchParams: Promise.resolve({ error: "signup_disabled" }),
+      }),
+    );
+
+    expect(replaceMock).toHaveBeenCalledWith("/sign-in");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "ログインできませんでした。時間をおいて、もう一度お試しください。",
+    );
+    expect(screen.queryByText(/signup_disabled/)).not.toBeInTheDocument();
   });
 
   it("shows no error without the error parameter", async () => {

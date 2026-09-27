@@ -413,7 +413,7 @@ describe("planning / record / infra schema migrations and runtime privileges", (
       ["TRUNCATE", "TRUNCATE planning.trips"],
     ])("D-09 cannot run DDL: %s", async (_label, sql) => {
       await expect(runtime.query(sql)).rejects.toMatchObject({
-        code: expect.stringMatching(/^(42501|42P01)$/),
+        code: "42501",
       });
     });
 

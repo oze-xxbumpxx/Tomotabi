@@ -1,0 +1,1313 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tomotabi planning boundary",
+    "version": "0.0.0",
+    "description": "予定・しおり・旅行期間の公開 API 契約。docs/旅行アプリ設計 3/詳細設計/openapi.planning.json から M2 の操作を移植。getTrip は trips.json にだけ置く。"
+  },
+  "security": [
+    {
+      "SessionCookie": []
+    }
+  ],
+  "paths": {
+    "/api/trips/{tripId}/itinerary": {
+      "get": {
+        "operationId": "getItinerary",
+        "description": "認可済み旅行の日別予定。時刻昇順、未定は末尾、同時刻は登録日時・ID順。date 省略時は日本時間の今日（期間外なら初日）。期間外の日付は 422。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Itinerary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "期間外の日付など値の規則違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/plans": {
+      "post": {
+        "operationId": "createPlan",
+        "description": "予定の追加。Idempotency-Key 必須。日付は旅行期間内。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "新規作成",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "成功時の予定version。引用付き10進整数。"
+              }
+            }
+          },
+          "200": {
+            "description": "同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "成功時の予定version。引用付き10進整数。"
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（IDEMPOTENCY_KEY_REUSED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "値の規則違反（PLAN_OUTSIDE_TRIP_PERIOD など）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/plans/{planId}": {
+      "get": {
+        "operationId": "getPlan",
+        "description": "予定 1 件を ETag 付きで返す。旅行の中に予定が無い・別の旅行の予定は 404 PLAN_NOT_FOUND。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/planId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "旅行の中に予定が無い（PLAN_NOT_FOUND）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePlan",
+        "description": "日付は更新不可。種類変更は達成・予約の全履歴がない場合のみ。Idempotency-Key・If-Match 必須。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/planId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "旅行の中に予定が無い（PLAN_NOT_FOUND）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（VERSION_CONFLICT・IDEMPOTENCY_KEY_REUSED・PLAN_HAS_RECORD_HISTORY）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "値の規則違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "If-Match 欠落（IF_MATCH_REQUIRED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/plans/{planId}/move": {
+      "post": {
+        "operationId": "movePlan",
+        "description": "予定の日の移動。移動先は旅行期間内。Idempotency-Key・If-Match 必須。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/planId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Move"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "旅行の中に予定が無い（PLAN_NOT_FOUND）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（VERSION_CONFLICT・IDEMPOTENCY_KEY_REUSED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "値の規則違反（PLAN_OUTSIDE_TRIP_PERIOD）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "If-Match 欠落（IF_MATCH_REQUIRED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/plans/{planId}/cancel": {
+      "post": {
+        "operationId": "cancelPlan",
+        "description": "予定の取りやめ。既存の達成・予約は取り消さない。取りやめ済みは 409 PLAN_CANCELLED。Idempotency-Key・If-Match 必須。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/planId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "旅行の中に予定が無い（PLAN_NOT_FOUND）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（VERSION_CONFLICT・IDEMPOTENCY_KEY_REUSED・PLAN_CANCELLED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "If-Match 欠落（IF_MATCH_REQUIRED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/period": {
+      "put": {
+        "operationId": "updateTripPeriod",
+        "description": "旅行期間の変更。取りやめ済みを含む全予定が新期間内であることを検証（外れは 422 PLAN_OUTSIDE_TRIP_PERIOD）。Idempotency-Key・If-Match 必須。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Period"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "正常結果・同じキーの成功再送",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trip"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "引用付きversion"
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（VERSION_CONFLICT・IDEMPOTENCY_KEY_REUSED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "値の規則違反（PLAN_OUTSIDE_TRIP_PERIOD・開始 > 終了）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "If-Match 欠落（IF_MATCH_REQUIRED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-travel.session_token",
+        "description": "本番のHTTPS・同一オリジン用。Better Authが署名とDBセッションを検証し、利用許可と旅行参加者を別途確認する。ローカル開発Cookie名は別設定。"
+      }
+    },
+    "parameters": {
+      "tripId": {
+        "name": "tripId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "planId": {
+        "name": "planId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Origin": {
+        "name": "Origin",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uri"
+        },
+        "description": "公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。"
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。"
+      },
+      "IfMatch": {
+        "name": "If-Match",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\"[1-9][0-9]*\"$"
+        },
+        "description": "単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。"
+      }
+    },
+    "schemas": {
+      "Trip": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "startsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "planning",
+              "traveling",
+              "finished"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startedBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "finishedBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "startsOn",
+          "endsOn",
+          "status",
+          "version",
+          "createdAt",
+          "startedAt",
+          "finishedAt",
+          "createdBy",
+          "startedBy",
+          "finishedBy"
+        ]
+      },
+      "Event": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tripId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "achievement",
+              "booking"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancellation": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cancellation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "tripId",
+          "planId",
+          "kind",
+          "createdBy",
+          "createdAt",
+          "cancellation"
+        ]
+      },
+      "Cancellation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cancelledBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "targetId",
+          "cancelledBy",
+          "createdAt"
+        ]
+      },
+      "Plan": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tripId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "place",
+              "food",
+              "shopping",
+              "lodging",
+              "transport"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "memo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "cancelledAt": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancelledBy": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "achievement": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Event"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "booking": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Event"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "canChangeKind": {
+            "type": "boolean"
+          },
+          "kindChangeReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "record_history_exists"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "tripId",
+          "name",
+          "kind",
+          "date",
+          "time",
+          "memo",
+          "cancelledAt",
+          "cancelledBy",
+          "version",
+          "achievement",
+          "booking",
+          "canChangeKind",
+          "kindChangeReason"
+        ]
+      },
+      "PlanCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "place",
+              "food",
+              "shopping",
+              "lodging",
+              "transport"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "memo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "date"
+        ]
+      },
+      "PlanPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "place",
+              "food",
+              "shopping",
+              "lodging",
+              "transport"
+            ]
+          },
+          "time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "memo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          }
+        },
+        "required": [],
+        "minProperties": 1
+      },
+      "Move": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "date"
+        ]
+      },
+      "Period": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "startsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "endsOn": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "startsOn",
+          "endsOn"
+        ]
+      },
+      "Itinerary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "trip": {
+            "$ref": "#/components/schemas/Trip"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Plan"
+            }
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "trip",
+          "date",
+          "plans",
+          "fetchedAt"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "requestId",
+          "retryable"
+        ]
+      }
+    }
+  }
+}

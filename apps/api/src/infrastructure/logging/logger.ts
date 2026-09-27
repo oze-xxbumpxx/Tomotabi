@@ -1,4 +1,5 @@
 import { HttpException } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DestinationStream, LogFn, Logger } from "pino";
 import { pinoHttp, type HttpLogger, type Options } from "pino-http";
@@ -175,6 +176,9 @@ export function createPinoHttpOptions(): Options {
     base: null,
     quietReqLogger: true,
     quietResLogger: true,
+    // エラー応答の requestId と同じ値。契約は UUID 形式なので UUID を振る
+    // （既定の整数連番ではなく、クライアントのヘッダーも使わない）。
+    genReqId: () => randomUUID(),
     customAttributeKeys: { reqId: "requestId" },
     customProps: requestLogFields,
     customSuccessObject: (

@@ -550,7 +550,7 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
     const tripId = await createTrip(hinataCookie);
 
     const response = await authed(
-      http().patch(`/api/trips/${tripId}/name`),
+      http().patch(`/api/trips/${tripId}`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
@@ -564,13 +564,13 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
 
   it("T-11: If-Match なしは 428、古い値は 409 で名前は変わらない", async () => {
     const tripId = await createTrip(hinataCookie);
-    await authed(http().patch(`/api/trips/${tripId}/name`), hinataCookie)
+    await authed(http().patch(`/api/trips/${tripId}`), hinataCookie)
       .set("Idempotency-Key", newKey())
       .set("If-Match", '"1"')
       .send({ name: "一度目の名前" });
 
     const noIfMatch = await authed(
-      http().patch(`/api/trips/${tripId}/name`),
+      http().patch(`/api/trips/${tripId}`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
@@ -579,7 +579,7 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
     expect(noIfMatch.body).toMatchObject({ code: "IF_MATCH_REQUIRED" });
 
     const stale = await authed(
-      http().patch(`/api/trips/${tripId}/name`),
+      http().patch(`/api/trips/${tripId}`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
@@ -738,7 +738,7 @@ describe("開始・終了（T-13〜T-16）", () => {
       .set("If-Match", '"2"');
 
     const renamed = await authed(
-      http().patch(`/api/trips/${tripId}/name`),
+      http().patch(`/api/trips/${tripId}`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())

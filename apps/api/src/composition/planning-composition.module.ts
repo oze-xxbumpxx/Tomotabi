@@ -27,8 +27,10 @@ import { PgPlanningRead } from "../modules/planning/infrastructure/pg-planning-r
 import { PgPlanningUnitOfWork } from "../modules/planning/infrastructure/pg-planning-unit-of-work";
 
 function useDatabase(): boolean {
+  // 未設定と空文字はどちらも「DB なし」。foundation・identity と同じ判定に
+  // そろえる（.env.example の `DATABASE_URL=` は空文字。差分 4）。
   // DB なし起動では Guard が先に 503/401 を返すため、これらの実装は呼ばれない。
-  return process.env.DATABASE_URL !== undefined;
+  return Boolean(process.env.DATABASE_URL);
 }
 
 const missingDatabase = (): Promise<never> =>

@@ -152,7 +152,7 @@ export class TripsController {
     return trip;
   }
 
-  @Patch(":tripId/name")
+  @Patch(":tripId")
   async rename(
     @CurrentUser() userId: UserId,
     @Param(new ZodBodyPipe(RenameTripParams)) params: TripParams,

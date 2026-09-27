@@ -163,7 +163,7 @@ migration `0002` を drizzle-kit generate で作り、トリガーと GRANT は�
 
 ### GRANT（カスタム migration 0004）
 
-app_runtime には次だけを与える。DELETE はどの表にも与えない。
+app_runtime には次だけを与える。DELETE はどの表にも与えない。表の権限に加え、`GRANT USAGE ON SCHEMA planning, record, infra TO app_runtime` を最初に与える（スキーマの USAGE が無いと表の権限があってもアクセスできない。0001 の identity と同じ形）。
 
 | 表 | 権限 |
 |---|---|
@@ -221,7 +221,10 @@ app_runtime には次だけを与える。DELETE はどの表にも与えない�
 
 ### 入力検証
 
-Controller の境界で、contracts の OpenAPI から Orval で生成した Zod スキーマを使う（ADR-0004）。形式違反（型・未知の項目・パターン）は 400、Domain の規則違反は 422 にする。Zod のスキーマだけで規則を済ませず、文字数（コードポイント）・日付の実在・前後の空白は Domain の値型（`BoundedText`、`LocalDate`、`LocalTime`）で検証する。DB の CHECK が最後の防御になる。
+Controller の境界で、contracts の OpenAPI から Orval で生成した Zod スキーマを使う（ADR-0004）。形式違反（型・未知の項目・パターン）は 400、Domain の規則違反は 422 にする。
+
+- 未知の項目: 詳細設計の入力スキーマは `additionalProperties: false` だが、Zod の既定の object は未知のキーを黙って捨てる。Orval の `override.zod.strict.body`（とクエリ）を有効にして `.strict()` を生成し、未知の項目を 400 にする。空の PATCH（`minProperties: 1`）は Pipe の後で 400 にする。
+- 文字数: 契約の `maxLength`（JSON Schema ではコードポイント数）はそのまま残すが、Zod の `.max()` は UTF-16 の長さで数えるため、絵文字を含む有効な名前を先に拒否してしまう。そこで API・web の検証用の生成では、入力 body の文字列の `maxLength` を Orval の input transformer で外し、文字数は Domain の `BoundedText`（コードポイント）で 422 にする。web のフォームも同じコードポイントの関数（`shared/lib/text-length`）で検証する。絵文字 51 個（UTF-16 で 102）の名前が通る境界テストを置く。Zod のスキーマだけで規則を済ませず、文字数（コードポイント）・日付の実在・前後の空白は Domain の値型（`BoundedText`、`LocalDate`、`LocalTime`）で検証する。DB の CHECK が最後の防御になる。
 
 ## 書き込みの共通の流れ
 
@@ -315,7 +318,7 @@ Domain は Nest・Drizzle・HTTP に依存しない。M1 の `UserId` と同じ�
 | succeeded | 2xx | トースト（上部に 2 秒）。関連の再取得 |
 | rejected | 4xx（400・403・404・409・422・428） | 入力を残し、code に応じて欄のエラー・C-2・C-5 を出す |
 | unknown | network・5xx・応答の解釈に失敗 | C-4。入力を固定し「同じ内容で確認する」で同じ要求（同じキー・本文・If-Match）を送り直す |
-| session-expired | 401 | C-1。要求は画面のメモリに残し、ログインし直した後に同じ要求で確かめる導線を出す（再読み込みで失う。M3 で IndexedDB） |
+| session-expired | 401 | C-1。401 は SessionGuard が UseCase の前に返すため、その要求では保存されていないと確定する（ログイン後に入力し直して送る）。ただし「結果不明のあと同じ要求で確かめたら 401」のときは、最初の要求の結果が分からないまま Google の往復でメモリが消える。このときは C-1 に「保存されたか確認できていません。ログイン後に{旅行 / 予定}を開いて確かめてください」を出し、ログイン後は画面の GET で本人が確かめる（M2 の限界。M3 の IndexedDB で同じ要求による確認に置き換える） |
 
 - 入力を変えたら別の要求（新しいキー）。rejected のあとに直して送るときも新しいキー。IDEMPOTENCY_KEY_REUSED を新しいキーで自動再送しない。
 - C-5（VERSION_CONFLICT）: 最新を GET し、違いのある項目ごとに「最新（相手）」と「あなたの入力」を並べる。「あなたの入力で保存」は最新の ETag と新しいキーで送る。「最新の内容で入力し直す」はフォームを最新で置き換える。
@@ -414,7 +417,7 @@ HTTP テストは M1 と同じく本番と同じ組み立て（`configure-app`�
 
 ## リスク
 
-- Orval の Zod 出力を API 側で使う形は未検証（web 用の出力は M0 で確認済み）。`format: date` を実在日まで検証しないため、Domain の値型で補う前提にしている。
+- Orval の Zod 出力を API 側で使う形は未検証（web 用の出力は M0 で確認済み）。`format: date` を実在日まで検証しないため、Domain の値型で補う前提にしている。`zod.strict` と、input transformer で入力 body の `maxLength` を外す設定が採用版で期待どおりに出るかを M2-a の最初に確かめる。
 - trips と trip_participants の相互参照 FK を drizzle-kit generate が期待どおりの順で出力しない可能性。出なければカスタム migration に移す。
 - v3 に無い画面の見た目がユーザーの期待と違う可能性。スクリーンショットで確認し、直しを M2-e で受ける。
 - TanStack Query の `refetchOnWindowFocus` が、フォームの入力中に取得結果で欄を置き換えないよう、フォームはサーバー状態から初期値を一度だけコピーする（07 §11）。

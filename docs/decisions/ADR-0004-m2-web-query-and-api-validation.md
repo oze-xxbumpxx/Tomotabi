@@ -19,7 +19,7 @@ API 側で必要なこと: 旅行・予定の body・クエリ・ヘッダーの
 
 1. **web の取得状態は TanStack Query（v5）を使う。** QueryClientProvider を app の Client Component に置く。取得関数は既存の `callApi`（Orval の生成関数 + Zod 検証 + neverthrow）を包み、Query には検証済みの値だけを渡す。mutation の自動再試行は無効にする。
 2. **web のフォームはライブラリを入れない。** React の状態と、契約から生成した Zod スキーマ＋Domain 相当の検証関数（文字数・日付）で作る。M2 のフォームは 5 項目以下で、送信状態は `mutation-request` と feature の model が持つため。
-3. **API の入力検証は、contracts の OpenAPI から Orval で生成した Zod スキーマを Controller 境界で使う。** 生成先は `apps/api/src/generated/`（生成物。手で直さない）。Nest の Pipe で body・クエリを検証し、形式違反を 400 にする。値の規則（コードポイントの文字数、実在日、期間）は Domain の値型で検証し、422 にする。DB の CHECK を最後の防御として残す。
+3. **API の入力検証は、contracts の OpenAPI から Orval で生成した Zod スキーマを Controller 境界で使う。** 生成先は `apps/api/src/generated/`（生成物。手で直さない）。Nest の Pipe で body・クエリを検証し、形式違反を 400 にする。未知の項目を拒否するため `zod.strict` で生成する。Zod の `.max()` は UTF-16 の長さで数えるため、入力 body の文字列の `maxLength` は検証用の生成から外し、文字数はコードポイントで数える Domain の値型に任せる（契約の `maxLength` は残す）。値の規則（コードポイントの文字数、実在日、期間）は Domain の値型で検証し、422 にする。DB の CHECK を最後の防御として残す。
 4. **生成物の差分は CI で確認する**（M0 と同じ `generate` → 差分なしの確認に API 側の出力を足す）。
 
 ## Alternatives（検討した別案と不採用の理由）

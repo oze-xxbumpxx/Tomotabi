@@ -27,11 +27,12 @@ function GoogleMark() {
   );
 }
 
-export function SignInButton() {
+export function SignInButton({ onSignInStart }: { onSignInStart?: () => void }) {
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
 
   async function handleClick() {
+    onSignInStart?.();
     setPending(true);
     setFailed(false);
     try {

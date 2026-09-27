@@ -81,6 +81,36 @@ describe("SignInScreen", () => {
     expect(screen.queryByText(/network exploded/)).toBeNull();
   });
 
+  it("keeps the generic error after the query is cleared", () => {
+    const { rerender } = render(<SignInScreen hasError />);
+
+    expect(replaceMock).toHaveBeenCalledWith("/sign-in");
+
+    // router.replace("/sign-in") のあとの再描画（hasError=false）でも文が残る
+    rerender(<SignInScreen hasError={false} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "ログインできませんでした。時間をおいて、もう一度お試しください。",
+    );
+  });
+
+  it("shows only one alert when a retry from the error query also fails", async () => {
+    signInSocial.mockResolvedValue({
+      data: null,
+      error: { status: 503, code: "secret_code_x", message: "db down" },
+    });
+    render(<SignInScreen hasError />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Google でログイン" }),
+    );
+
+    expect(await screen.findAllByRole("alert")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "ログインできませんでした。時間をおいて、もう一度お試しください。",
+    );
+  });
+
   it("W-06: disables the button while sign-in is in flight", async () => {
     let resolveSignIn: (value: { data: null; error: null }) => void = () => {};
     signInSocial.mockImplementation(

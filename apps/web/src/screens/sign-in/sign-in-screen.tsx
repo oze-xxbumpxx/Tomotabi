@@ -8,11 +8,12 @@ import { SignInButton, SignInError } from "@/features/auth";
  * デザイン 01・02。error の内容は画面に出さず、原因を問わない一般的な文だけを
  * ボタンの直上に出す（設計書「画面デザイン」、W-03）。
  * 失敗理由のコードが載った ?error= クエリは読み取り後にアドレスバーから消す。
- * 表示中の文は状態に持つため、クエリを消しても残る。
+ * 表示中の文は状態に持つため、クエリを消しても残る。ボタンを押して
+ * やり直すときはこの文を消し、同じ文が 2 つ並ばないようにする。
  */
 export function SignInScreen({ hasError }: { hasError: boolean }) {
   const router = useRouter();
-  const [showError] = useState(hasError);
+  const [showError, setShowError] = useState(hasError);
 
   useEffect(() => {
     if (hasError) {
@@ -29,7 +30,7 @@ export function SignInScreen({ hasError }: { hasError: boolean }) {
       </div>
       <div className="signin-footer">
         {showError && <SignInError />}
-        <SignInButton />
+        <SignInButton onSignInStart={() => setShowError(false)} />
       </div>
     </main>
   );

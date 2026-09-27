@@ -3,6 +3,9 @@
 //
 // 使い方:
 //   node .claude/scripts/devin-watch.mjs <Issue番号> [--interval 秒] [--once] [--clone <path>]
+//   node .claude/scripts/devin-watch.mjs --log-path <Issue番号>
+//     Devin の出力を tee するログのパスを出す。置き場（0700）とファイル（0600）が無ければ作る。
+//     起動は review-devin-pr の「委譲」2 のとおり、pipefail を付けて tee する。
 //   node .claude/scripts/devin-watch.mjs --install
 //     状態ディレクトリの bin/devin-watch にこのスクリプトへのリンクを張る。
 //     Claude Code のターミナル（run_in_terminal）は ASCII のコマンドしか受け付けず、
@@ -17,11 +20,13 @@
 // 方針:
 // - 表示の組み立て（render）と、ps・git・gh の出力の解釈は純粋関数にして、テストで固定する。
 // - 作業用コピーでは Devin を同時に 1 つしか動かさない（review-devin-pr）。そのため本体は
-//   「`-p` 付きで動いている devin」を 1 つ探す。対話で開いた devin（`-p` なし）は対象にしない。
+//   「作業ディレクトリが作業用コピーで、`-p` 付きで動いている devin」を探す。対話で開いた devin
+//   （`-p` なし）と、別の場所で動く devin は対象にしない。Issue 番号で探さないのは、直しを頼む
+//   セッションのプロンプトには Issue 番号ではなく PR 番号が入るため。
 // - gh は 30 秒に 1 回だけ呼ぶ。失敗しても画面は止めない。
 
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, statSync, symlinkSync, unlinkSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, statSync, symlinkSync, unlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,17 +40,19 @@ const IDLE_WARN_MS = 10 * 60_000;
 const RECENT_FILES = 8;
 
 export function parseArgs(argv) {
-  const opts = { issue: null, interval: DEFAULT_INTERVAL_SEC, once: false, install: false, clone: null };
+  const opts = { issue: null, interval: DEFAULT_INTERVAL_SEC, once: false, install: false, logPath: false, clone: null };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--once') opts.once = true;
     else if (arg === '--install') opts.install = true;
+    else if (arg === '--log-path') opts.logPath = true;
     else if (arg === '--interval') opts.interval = Number(argv[++i]);
     else if (arg === '--clone') opts.clone = argv[++i] ?? null;
     else if (/^\d+$/.test(arg) && opts.issue === null) opts.issue = Number(arg);
     else throw new Error(`不明な引数: ${arg}`);
   }
   if (!opts.install && opts.issue === null) throw new Error('Issue 番号を指定してください');
+  if (opts.install && opts.logPath) throw new Error('--install と --log-path は同時に使えません');
   if (!Number.isFinite(opts.interval) || opts.interval < 1) throw new Error('--interval は 1 以上の秒数');
   return opts;
 }
@@ -92,9 +99,29 @@ export function parsePs(text) {
     .map(([, pid, ppid, etime, command]) => ({ pid: Number(pid), ppid: Number(ppid), etime, command }));
 }
 
-/** 見張る Devin の本体（`-p` 付きの devin）と、その下の `devin acp` を探す。 */
-export function findDevin(rows) {
-  const root = rows.find((r) => /(^|\/)devin\s(.*\s)?(-p|--print)(\s|$)/.test(r.command) && !/devin acp/.test(r.command));
+/** lsof はパスの UTF-8 のバイトを `\xe5` の形で出す。元の文字列に戻す。 */
+export function decodeLsofPath(text) {
+  const bytes = [];
+  for (let i = 0; i < text.length; i += 1) {
+    const m = text.slice(i).match(/^\\x([0-9a-f]{2})/i);
+    if (m !== null) {
+      bytes.push(parseInt(m[1], 16));
+      i += 3;
+    } else {
+      bytes.push(...Buffer.from(text[i], 'utf8'));
+    }
+  }
+  return Buffer.from(bytes).toString('utf8');
+}
+
+/**
+ * 見張る Devin の本体と、その下の `devin acp` を探す。
+ * @param {(pid:number) => string|null} cwdOf プロセスの作業ディレクトリ（分からなければ null）
+ */
+export function findDevin(rows, { clone, cwdOf }) {
+  const root = rows.find(
+    (r) => /(^|\/)devin\s(.*\s)?(-p|--print)(\s|$)/.test(r.command) && !/devin acp/.test(r.command) && cwdOf(r.pid) === clone,
+  );
   if (root === undefined) return null;
   const acp = rows.find((r) => r.ppid === root.pid && /devin acp$/.test(r.command)) ?? null;
   return { root, acp };
@@ -246,6 +273,23 @@ function harnessEnv(repo) {
   }
 }
 
+function cwdOf(pid) {
+  const out = run('lsof', ['-a', '-d', 'cwd', '-p', String(pid), '-Fn']);
+  const line = out?.split('\n').find((l) => l.startsWith('n'));
+  return line === undefined ? null : decodeLsofPath(line.slice(1));
+}
+
+/** ログの置き場（0700）とファイル（0600）を用意してパスを返す。Devin の発言を他の利用者に読ませない。 */
+function ensureLog(stateDirPath, issue) {
+  const dir = join(stateDirPath, 'devin-logs');
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  chmodSync(dir, 0o700);
+  const path = join(dir, `issue-${issue}.log`);
+  closeSync(openSync(path, 'a', 0o600));
+  chmodSync(path, 0o600);
+  return path;
+}
+
 function mtimeMs(path) {
   try {
     return statSync(path).mtimeMs;
@@ -264,7 +308,7 @@ function logTail(path) {
 
 function collect(opts, cache, nowMs) {
   const rows = parsePs(run('ps', ['-ax', '-o', 'pid=,ppid=,etime=,command=']) ?? '');
-  const devin = findDevin(rows);
+  const devin = findDevin(rows, { clone: opts.clone, cwdOf });
   const { commands, others } = devin?.acp ? directCommands(rows, devin.acp.pid) : { commands: [], others: 0 };
   const clone = opts.clone;
   const branch = run('git', ['-C', clone, 'branch', '--show-current'])?.trim() || null;
@@ -345,6 +389,10 @@ function main() {
   if (opts.install) {
     const link = install(state.dir, scriptPath);
     process.stdout.write(`リンクを作りました: ${link}\n起動: ${link.replace(homedir(), '~')} <Issue番号>\n`);
+    return;
+  }
+  if (opts.logPath) {
+    process.stdout.write(`${ensureLog(state.dir, opts.issue)}\n`);
     return;
   }
   opts.clone ??= process.env.DEVIN_CLONE || DEFAULT_CLONE;

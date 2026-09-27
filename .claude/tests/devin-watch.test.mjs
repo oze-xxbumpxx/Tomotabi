@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  decodeLsofPath,
   directCommands,
   displayWidth,
   findDevin,
@@ -30,7 +31,9 @@ const PS = [
 ].join('\n');
 
 test('引数: Issue 番号は必須。--install だけなら不要', () => {
-  assert.deepEqual(parseArgs(['73']), { issue: 73, interval: 5, once: false, install: false, clone: null });
+  assert.deepEqual(parseArgs(['73']), { issue: 73, interval: 5, once: false, install: false, logPath: false, clone: null });
+  assert.equal(parseArgs(['--log-path', '73']).logPath, true);
+  assert.throws(() => parseArgs(['--log-path']), /Issue 番号/);
   assert.equal(parseArgs(['--install']).install, true);
   assert.equal(parseArgs(['73', '--interval', '2', '--once']).interval, 2);
   assert.throws(() => parseArgs([]), /Issue 番号/);
@@ -59,12 +62,20 @@ test('文の分割: 空白の無い連結でも文ごとに分ける', () => {
   assert.deepEqual(splitSentences('drizzle 0.45.2 を使う。'), ['drizzle 0.45.2 を使う。']);
 });
 
-test('プロセス: -p 付きの devin を本体にし、対話の devin は見ない', () => {
-  const rows = parsePs(PS);
-  const found = findDevin(rows);
+test('プロセス: 作業用コピーで -p 付きの devin を本体にし、対話の devin と別の場所の devin は見ない', () => {
+  const rows = parsePs(`55000 1 10:00 devin --model swe-2-high -p other project\n${PS}`);
+  const cwdOf = (pid) => (pid === 98100 ? CLONE : '/Users/siro/other');
+  const found = findDevin(rows, { clone: CLONE, cwdOf });
   assert.equal(found.root.pid, 98100);
   assert.equal(found.acp.pid, 98102);
-  assert.equal(findDevin(parsePs('17048 12509 1-00:00:00 devin')), null);
+  assert.equal(findDevin(parsePs('17048 12509 1-00:00:00 devin'), { clone: CLONE, cwdOf: () => CLONE }), null);
+  assert.equal(findDevin(rows, { clone: CLONE, cwdOf: () => null }), null);
+});
+
+test('lsof のパス: \\xNN のバイトを UTF-8 に戻す', () => {
+  const raw = '/Users/siro/' + [...Buffer.from('個人開発')].map((b) => `\\x${b.toString(16)}`).join('') + '/devin-work/tomotabi';
+  assert.equal(decodeLsofPath(raw), CLONE);
+  assert.equal(decodeLsofPath('/plain/path'), '/plain/path');
 });
 
 test('プロセス: Devin が直接実行したコマンドだけを出し、その下は数える', () => {

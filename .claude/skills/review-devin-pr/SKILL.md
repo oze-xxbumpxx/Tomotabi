@@ -47,8 +47,10 @@ description: >
      前の `devin` プロセスが終わっている（`pgrep -fl "devin .*-p"`。同じクローンで 2 つ同時に動かさない）、
      作業ツリーがきれい（`git status --short` が空。残っていたら捨てずにユーザーに伝える）、
      `git fetch origin && git switch --detach origin/main` で最新の main から始める。
-     起動: `devin --model swe-2-<effort> --permission-mode dangerous -p "<依頼>" 2>&1 | tee -a <状態ディレクトリ>/devin-logs/issue-<Issue>.log`
-     を `run_in_background` で（直しを頼む 2 回目以降のセッションも同じログに追記する）。
+     起動（`run_in_background` で。以下「ログ付きの起動」）:
+     `LOG=$(node .claude/scripts/devin-watch.mjs --log-path <Issue>) && cd <クローン> && set -o pipefail && devin --model swe-2-<effort> --permission-mode dangerous -p "<依頼>" 2>&1 | tee -a "$LOG"`。
+     `--log-path` はログの置き場（0700）とファイル（0600）を作ってパスを返す。`pipefail` が無いと、終了コードが `tee` のものになり、
+     Devin の異常終了が成功に見える。直しを頼む 2 回目以降のセッションも、同じ Issue 番号のログに追記する。
      起動したら、ユーザーが実装状況を見られるよう、ターミナル（`run_in_terminal`）に見張り画面を開く:
      `~/.local/state/tomotabi-harness/bin/devin-watch <Issue>`（タブ名 `Devin #<Issue> watch`）。
      `-p` の出力は発言だけなので、見張り画面は Devin が実行中のコマンド・変更中のファイル・PR と CI を合わせて出す。
@@ -158,9 +160,9 @@ description: >
 4. `gh pr comment <n> --body-file <file>` で投稿し、投稿時刻（`date -u +%Y-%m-%dT%H:%M:%SZ`）を控える。
 5. **ローカルの委譲でも、通常は起動し直さない**。Devin は `devin-workflow` §4.5 で PR のコメントを監視しているので、
    投稿すれば自分で気づいて直す。投稿しても反応が無いとき（セッションが終了・クラッシュした場合）は、
-   上の「委譲」2 と同じ確認をしてから、新しいローカルセッションを起動して直させる
-   （`devin -c` の再開は「failed to start ACP agent session」で動かなかった）:
-   `devin --model swe-2-<同じ effort> --permission-mode dangerous -p "PR #<n>（ブランチ <branch>）を直す。gh pr view <n> --comments で claude-review round=<r> のコメントを読み、must を直して同じブランチに push する。force push はしない。"`。
+   上の「委譲」2 と同じ確認をしてから、新しいローカルセッションを「ログ付きの起動」（同じ Issue 番号のログ）で起動して直させる
+   （`devin -c` の再開は「failed to start ACP agent session」で動かなかった）。依頼は
+   `"PR #<n>（ブランチ <branch>）を直す。gh pr view <n> --comments で claude-review round=<r> のコメントを読み、must を直して同じブランチに push する。force push はしない。"`。
    クラウドの委譲なら、Devin が PR のコメントに自動で対応するので起動しない。
 6. `run_in_background` で `node .claude/scripts/wait-for-pr-update.mjs <PR> --since <投稿時刻> --sha <レビューした head>` を起動する。
    - 終了コード 0: 更新あり。`ciConclusion` が `failure` なら、Devin が CI を直している途中のことがあるので、
@@ -173,8 +175,8 @@ description: >
 PR・Issue・コメント・記録のどこにも詳細を書かない。`security` の指摘があることも書かない。ユーザーに渡し、経路を決めてもらう。推奨の順:
 
 1. 未マージ（main に入っていない）なら、Devin の新しいセッションを CLI で起動し、PR には書かずに直させる。
-   ローカルのセッション（上の「委譲」2 の手順）が既定。PR に書かないので、指摘の中身はプロンプトだけで渡す:
-   `devin --model swe-2-<同じ effort> --permission-mode dangerous -p "<ブランチ名> に push して直す。…"`。
+   ローカルのセッション（上の「委譲」2 の「ログ付きの起動」）が既定。PR に書かないので、指摘の中身はプロンプトだけで渡す
+   （依頼は `"<ブランチ名> に push して直す。…"`）。ログは 0600 で、ほかの利用者からは読めない。
 2. Devin の監視が止まっているか直せないときは、Devin の作業が終わっているのを確かめてから、Claude が同じブランチに commit する。
 3. main に入っている問題なら、GitHub の Security Advisory（非公開）で扱う。
 

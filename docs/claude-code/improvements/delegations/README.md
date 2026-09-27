@@ -1,6 +1,7 @@
 # 委譲の記録（Issue → Devin → PR）
 
-Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を置く。並行 PR でも衝突しないよう、1 つのファイルに追記しない。
+Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を置く。Devin が Issue なしで自分から出した PR は `pr-<PR 番号>.yml`
+（設計は `docs/designs/devin-unlinked-pr-review.md`）。並行 PR でも衝突しないよう、1 つのファイルに追記しない。
 設計は `docs/designs/devin-delegation-loop.md`、使う手順は `.claude/skills/review-devin-pr/SKILL.md`。
 
 ## 作り方
@@ -13,6 +14,7 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 | レビューの round ごと | `node .claude/scripts/delegation.mjs review <Issue> --round <n> --sha <head> --verdict <merge\|fix\|escalate> [--posted] --finding '<severity>:<category>:<summary>' …` |
 | マージ・クローズの後 | `node .claude/scripts/delegation.mjs finalize <Issue> [--pr <n>]` |
 | 集計 | `node .claude/scripts/delegation.mjs summary` |
+| Issue なし PR を見つけたとき | `node .claude/scripts/delegation.mjs init pr-<PR> [--model <m>] [--runner <local\|cloud>] [--level 0-3]`。`review` / `finalize` も `pr-<PR>` で指定する |
 
 記録は Devin のブランチに commit しない。その日の締め（close-session）の PR にまとめて入れる。
 
@@ -20,10 +22,11 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 
 | 項目 | 書く人 | 意味 |
 | --- | --- | --- |
-| `issue` / `title` / `delegated_at` | init（gh） | Issue の番号・題・作成日時 |
+| `issue` / `title` / `delegated_at` | init（gh） | Issue の番号・題・作成日時。Issue なし PR は `issue: null` で、`delegated_at` は PR の作成日時 |
+| `pr` / `origin` | init（Issue なし PR だけ） | PR 番号と `self`（Devin が自分から出した）。項目が無い記録は `origin: issue` として集計する |
 | `agent` | init | いまは常に `devin` |
-| `model` | init | `swe-2-medium` / `swe-2-high` / `swe-2-max` / `unknown`（記録を始める前の委譲） |
-| `runner` | init | Devin を動かした場所。`local`（既定）/ `cloud`。項目が無い古い記録は集計で `unknown` |
+| `model` | init | `swe-2-medium` / `swe-2-high` / `swe-2-max` / `unknown`（記録を始める前の委譲。Issue なし PR の既定） |
+| `runner` | init | Devin を動かした場所。`local`（既定）/ `cloud`。Issue なし PR は作成者から推す（bot → `cloud`）。項目が無い古い記録は集計で `unknown` |
 | `change_level` | init | 0〜3。分からなければ `null` |
 | `reviews[]` | review | round ごとの `reviewed_sha`・`verdict`（merge / fix / escalate）・`posted`（PR に投稿したか）・`findings[]` |
 | `findings[]` | review | `severity`（must / nit / security / decision）・`category`・`summary` |
@@ -53,10 +56,13 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 | `error-feedback` | 失敗したときに利用者への表示・反応が無い（#51 サインインの失敗） |
 | `error-code-in-url` | URL のクエリに内部の失敗理由が残る（#55） |
 | `merge-conflict` | main との衝突で CI が走らない・マージできない（#48） |
+| `knowledge-inaccurate` | 知見の PR に書かれたコマンド・環境変数・手順が事実と違う |
+| `harness-conflict` | 知見の PR が既存の規則・スキルと重複する・置き場所が違う |
 
 ## 昇格の閾値
 
-`summary` は category ごとに「指摘が出た Issue の数」を数える（同じ Issue で何度出ても 1 件）。
+`summary` は category ごとに「指摘が出た委譲の数」を数える（同じ Issue・同じ Issue なし PR で何度出ても 1 件）。
+「Issue→PR 中央値」には Issue なし PR を入れない（起点別の行で分けて見る）。
 
 - 異なる Issue で **3 件** → 昇格候補。`security` だけ **2 件**。
 - 候補が出たら `docs/claude-code/improvement-cycle.md` の「委譲ループの軽量サイクル」に従って起票する。
@@ -64,4 +70,5 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 ## 初期データ（2026-09-26 に後から起こしたもの）
 
 #30〜32・#37・#41 は、記録の仕組みより前の委譲。モデルは分からないため `unknown`。指摘は日次ログと PR のコメントから起こした。
+Issue なし PR の #53・#54 も同じ日に後から起こした（クラウドの既定の SWE-2 High。#54 は round 0 の must を自動投稿して直った）。
 #31（PR #35）の round 0 は、方針ができる前に、セキュリティ指摘を含めて公開コメントで投稿したため `posted: true` のまま残している（今後は `security` を投稿しない）。

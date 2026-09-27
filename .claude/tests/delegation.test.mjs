@@ -15,10 +15,14 @@ import {
   firstCiCommit,
   formatSummary,
   newRecord,
+  newSelfRecord,
   parseFinding,
   parseYaml,
   readAllRecords,
+  recordKey,
+  runnerFromAuthor,
   summarize,
+  targetArg,
   toYaml,
 } from '../scripts/delegation.mjs';
 
@@ -324,4 +328,82 @@ test('D-12: runner（実行場所）は既定 local、cloud を選べ、それ�
   assert.equal(s.runners.cloud.count, 1);
   assert.equal(s.runners.unknown.count, 1);
   assert.match(formatSummary(s), /実行場所別: .*\n {2}cloud: 1 \//);
+});
+
+// ---- Issue に紐づかない Devin の PR（docs/designs/devin-unlinked-pr-review.md。観点 ID は docs/tests/devin-unlinked-pr-review.md）
+
+const self = (pr, extra = {}) =>
+  newSelfRecord({ pr, title: `PR ${pr}`, runner: 'cloud', createdAt: '2026-09-26T09:20:00Z', ...extra });
+
+test('U-11: Issue なし PR の記録は issue: null・pr・origin: self。model の既定は unknown。YAML で往復できる', () => {
+  const rec = self(53);
+  assert.equal(rec.issue, null);
+  assert.equal(rec.pr, 53);
+  assert.equal(rec.origin, 'self');
+  assert.equal(rec.model, 'unknown');
+  assert.equal(rec.delegated_at, '2026-09-26T09:20:00Z');
+  assert.equal(recordKey(rec), 'pr-53');
+  assert.equal(recordKey(base(55)), 55);
+  assert.deepEqual(Object.keys(rec).slice(0, 3), ['issue', 'pr', 'origin']);
+  assert.deepEqual(parseYaml(toYaml(rec)), rec);
+  assert.throws(() => self(0), /PR 番号/);
+  // closes_linked は Issue が無いので null
+  assert.equal(buildGhSection({ number: 53, state: 'MERGED', createdAt: 'x', commits: [], closingIssuesReferences: [{ number: 51 }] }, null, null).gh.closes_linked, null);
+});
+
+test('U-12: 指定は <Issue> か pr-<n>。作成者から実行場所を推す', () => {
+  assert.equal(targetArg('55'), 55);
+  assert.equal(targetArg('pr-53'), 'pr-53');
+  assert.equal(targetArg('pr-053'), 'pr-53');
+  assert.throws(() => targetArg('pr-0'), UsageError);
+  assert.throws(() => targetArg('pr-x'), UsageError);
+  assert.throws(() => targetArg(undefined), UsageError);
+  assert.equal(runnerFromAuthor({ login: 'app/devin-ai-integration', is_bot: true }), 'cloud');
+  assert.equal(runnerFromAuthor({ login: 'devin-ai-integration[bot]' }), 'cloud');
+  assert.equal(runnerFromAuthor({ login: 'oze-xxbumpxx', is_bot: false }), 'local');
+  assert.equal(runnerFromAuthor(null), 'local');
+});
+
+test('U-13: CLI の init / review を pr-<n> で扱い、pr-<n>.yml に書く。重複 init はエラー', () => {
+  withTmp((dir) => {
+    const init = ['init', 'pr-53', '--title', 't', '--created-at', '2026-09-26T09:20:01Z', '--runner', 'cloud', '--dir', dir];
+    assert.equal(cli(init).status, 0);
+    assert.equal(cli(init).status, 2);
+    const rec = parseYaml(readFileSync(join(dir, 'pr-53.yml'), 'utf8'));
+    assert.equal(rec.pr, 53);
+    assert.equal(rec.model, 'unknown');
+    assert.equal(rec.runner, 'cloud');
+    const review = cli(['review', 'pr-53', '--round', '0', '--sha', 'abc1234', '--verdict', 'fix', '--posted', '--finding', 'must:knowledge-inaccurate:x', '--dir', dir]);
+    assert.equal(review.status, 0, review.stderr);
+    assert.equal(parseYaml(readFileSync(join(dir, 'pr-53.yml'), 'utf8')).reviews[0].findings[0].category, 'knowledge-inaccurate');
+    assert.equal(cli(['init', 'pr-54', '--model', 'bogus', '--dir', dir]).status, 2);
+  });
+});
+
+test('U-14: 集計は Issue と PR の記録を混ぜて読み、分類は委譲ごとに数え、Issue→PR から self を除く', () => {
+  withTmp((dir) => {
+    for (const rec of [base(55), self(53), base(9), self(4)]) writeFileSync(join(dir, `${recordKey(rec)}.yml`), toYaml(rec));
+    writeFileSync(join(dir, 'pr-x.yml'), 'bogus');
+    assert.deepEqual(readAllRecords(dir).map(recordKey), [9, 55, 'pr-4', 'pr-53']);
+  });
+  const f = (text) => [parseFinding(text)];
+  const withFinding = (rec, text) => addReview(rec, { round: 0, sha: 'abc1234', verdict: 'merge', findings: f(text) });
+  const selfMerged = {
+    ...withFinding(self(54), 'must:harness-conflict:a'),
+    outcome: 'merged',
+    gh: { pr: 54, pr_created_at: '2026-09-26T09:20:00Z', merged_at: '2026-09-26T10:20:00Z', closed_at: null, commits: 2, ci_first_pass: true, closes_linked: null },
+  };
+  const s = summarize([merged(1, 'unknown', { findings: f('must:harness-conflict:b') }), selfMerged, withFinding(self(53), 'must:harness-conflict:c')]);
+  const c = s.byCategory.find((x) => x.category === 'harness-conflict');
+  assert.deepEqual(c.issues, [1, 'pr-53', 'pr-54']);
+  assert.equal(c.candidate, true);
+  assert.equal(s.origins.self.count, 2);
+  assert.equal(s.origins.issue.count, 1);
+  assert.equal(s.origins.self.medianIssueToPrMin, null);
+  assert.equal(s.origins.self.medianPrToMergeMin, 60);
+  const text = formatSummary(s);
+  assert.match(text, /harness-conflict: 3\/3（#1 PR#53 PR#54）  ← 昇格候補/);
+  assert.match(text, /起点別.*\n {2}issue: 1 \/[^\n]*\n {2}self: 2 \//);
+  // Issue の記録だけのときは起点別の行を出さない（今までの出力を変えない）
+  assert.doesNotMatch(formatSummary(summarize([base(1)])), /起点別/);
 });

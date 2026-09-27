@@ -61,5 +61,6 @@ Tomotabi は **AI 駆動開発を主とする**。AI が実装し、ユーザー
 - Devin: 本ファイルと `.agents/skills/devin-workflow/SKILL.md`（背景は `docs/devin-setup.md`）を使う。担当は Issue 起点の L0 / L1 と PR レビュー。L2 / L3 は設計承認後だけ。ブランチは `devin/<内容>` を使い、他ツールのブランチに push しない。Claude Code のフックは動かないため、Codex と同じく破壊的操作の事前確認を守る。
 - Devin の起動は、既定で Claude Code がローカルの Devin CLI（SWE-2。effort は難易度で選ぶ）で行う。クラウドはユーザーが出先から指示したときだけ使う。手順は `.claude/skills/review-devin-pr/SKILL.md`。
 - Devin の PR は Claude Code がレビューし、`must` の指摘（と同じ回の `nit`）を PR に自動で投稿して、Devin の修正を再レビューする（自動の投稿は 2 回まで。超えたらユーザーに渡す）。セキュリティ指摘と設計判断が要る指摘は投稿せず、ユーザーに渡す。委譲ごとの記録は `docs/claude-code/improvements/delegations/`。手順は `.claude/skills/review-devin-pr/SKILL.md`。
+- Issue に紐づかない Devin の PR（知見・スキル・blueprint を自分から出したもの）も、Claude Code が見つけて同じ手順でレビューする（`review-devin-pr` の「Issue なし PR」）。
 
 導入元・更新時の注意は `docs/harness-setup.md` を参照。

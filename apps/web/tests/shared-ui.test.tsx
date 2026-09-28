@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -49,6 +49,37 @@ describe("Dialog", () => {
     await vi.waitFor(() =>
       expect(dialog.contains(document.activeElement)).toBe(true),
     );
+  });
+
+  it("中のボタンをキーボードで押しても閉じず、背景のクリックでだけ閉じる", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Dialog title="確認" onClose={onClose}>
+        <button type="button">中のボタン</button>
+      </Dialog>,
+    );
+
+    const dialog = screen.getByRole("dialog");
+    await vi.waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
+    await user.keyboard("{Enter}");
+    expect(onClose).not.toHaveBeenCalled();
+
+    vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      top: 0,
+      right: 400,
+      bottom: 300,
+      width: 400,
+      height: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+    fireEvent.click(dialog, { clientX: -10, clientY: -10 });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -134,6 +165,23 @@ describe("Toast", () => {
     expect(screen.getByRole("status")).toHaveTextContent("保存しました");
     act(() => {
       vi.advanceTimersByTime(2000);
+    });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("呼び出し側の再描画でタイマーをやり直さない", () => {
+    vi.useFakeTimers();
+    const onDismiss = vi.fn();
+    const { rerender } = render(
+      <Toast message="保存しました" onDismiss={onDismiss} />,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    rerender(<Toast message="保存しました" onDismiss={() => onDismiss()} />);
+    act(() => {
+      vi.advanceTimersByTime(600);
     });
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });

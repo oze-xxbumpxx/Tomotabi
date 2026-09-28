@@ -237,7 +237,16 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
   }, [state]);
 
   const backToEditing = useCallback(() => {
-    setState({ status: "editing" });
+    // unknown（送信結果が分からない）・saving・session-expired からは戻せない。
+    // unknown で許すのは confirmWithSameRequest による同じ要求の確認だけで、
+    // editing に戻して別のキーで送り直させない（元の保存が成功していれば二重になる）。
+    setState((current) =>
+      current.status === "unknown" ||
+      current.status === "saving" ||
+      current.status === "session-expired"
+        ? current
+        : { status: "editing" },
+    );
   }, []);
 
   return {

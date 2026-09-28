@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "@phosphor-icons/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 type ToastProps = {
   message: string;
@@ -10,10 +10,12 @@ type ToastProps = {
 };
 
 export function Toast({ message, onDismiss, durationMs = 2000 }: ToastProps) {
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
   useEffect(() => {
-    const timer = setTimeout(onDismiss, durationMs);
+    const timer = setTimeout(() => onDismissRef.current(), durationMs);
     return () => clearTimeout(timer);
-  }, [durationMs, onDismiss]);
+  }, [durationMs]);
 
   return (
     <div className="toast" role="status">

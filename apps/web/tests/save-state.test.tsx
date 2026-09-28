@@ -118,6 +118,9 @@ function RenameForm({
           {saving ? "保存中" : "保存"}
         </button>
       ) : null}
+      <button type="button" onClick={backToEditing}>
+        編集に戻す
+      </button>
     </form>
   );
 }
@@ -244,7 +247,7 @@ describe("useSaveState", () => {
     const first = send.mock.calls[0][0];
     const second = send.mock.calls[1][0];
     expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
-    expect(second.body).toEqual({ name: "直した名前" });
+    expect(second.bodyJson).toBe(JSON.stringify({ name: "直した名前" }));
   });
 
   it("W-11: VERSION_CONFLICT shows the latest next to the input and saves with the latest ETag and a new key", async () => {
@@ -291,7 +294,7 @@ describe("useSaveState", () => {
     const second = send.mock.calls[1][0];
     expect(second.ifMatch).toBe('"7"');
     expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
-    expect(second.body).toEqual({ name: "あなたの名前" });
+    expect(second.bodyJson).toBe(JSON.stringify({ name: "あなたの名前" }));
   });
 
   it("W-12: 401 hides business data behind the C-1 screen", async () => {
@@ -336,6 +339,35 @@ describe("useSaveState", () => {
     expect(
       screen.getByText(/保存されたか確認できていません/),
     ).toBeInTheDocument();
+  });
+
+  it("unknown cannot return to editing and resend with a new key", async () => {
+    const send = vi
+      .fn<Send>()
+      .mockImplementationOnce(failSend({ kind: "network" }))
+      .mockImplementationOnce(okSend({ name: "秋の京都" }));
+    const user = userEvent.setup();
+    render(<RenameForm send={send} initial={initial} />);
+
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await screen.findByText("保存されたか確認できません");
+
+    await user.click(screen.getByRole("button", { name: "編集に戻す" }));
+    expect(
+      screen.getByText("保存されたか確認できません"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "保存" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+    expect(await screen.findByText("保存しました")).toBeInTheDocument();
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1][0].idempotencyKey).toBe(
+      send.mock.calls[0][0].idempotencyKey,
+    );
   });
 
   it("W-24: a refetch with a new value does not overwrite the input being edited", async () => {

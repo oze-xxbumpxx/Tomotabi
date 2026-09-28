@@ -7,9 +7,11 @@ import { useEffect, useState } from "react";
  * `disabled` にし、押せない理由を隣に出す（C-3）。
  */
 export function useOnlineStatus(): boolean {
-  const [online, setOnline] = useState(() => navigator.onLine);
+  // 初期値はサーバー描画と同じ true にする（navigator はクライアントにしか無い）。
+  const [online, setOnline] = useState(true);
 
   useEffect(() => {
+    setOnline(navigator.onLine);
     const goOnline = () => setOnline(true);
     const goOffline = () => setOnline(false);
     window.addEventListener("online", goOnline);

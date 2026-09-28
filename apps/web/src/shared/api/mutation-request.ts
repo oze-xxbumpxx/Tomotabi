@@ -6,13 +6,14 @@ import { httpClient } from "./http-client";
 
 /**
  * 送信の直前に 1 組として固定する書き込みの要求。
- * `body` が null のときは本文を送らない。
+ * `bodyJson` は本文を JSON 文字列にしたもの（null は本文なし）。
+ * 送信後に呼び出し側が元のオブジェクトを変えても、ここに入った文字列は変わらない。
  */
 export type MutationRequest = {
   operation: string;
   url: string;
   method: "POST" | "PATCH" | "PUT";
-  body: unknown;
+  bodyJson: string | null;
   /** If-Match に付ける値（ETag）。不要な操作は null。 */
   ifMatch: string | null;
   idempotencyKey: string;
@@ -38,7 +39,10 @@ export function createMutationRequest(
     operation: draft.operation,
     url: draft.url,
     method: draft.method,
-    body: draft.body,
+    bodyJson:
+      draft.body === null || draft.body === undefined
+        ? null
+        : JSON.stringify(draft.body),
     ifMatch: draft.ifMatch ?? null,
     idempotencyKey: crypto.randomUUID(),
   };
@@ -64,8 +68,7 @@ export function sendMutationRequest<T>(
       {
         method: request.method,
         headers,
-        body:
-          request.body === null ? undefined : JSON.stringify(request.body),
+        body: request.bodyJson === null ? undefined : request.bodyJson,
       },
     ),
     schema,

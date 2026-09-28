@@ -40,6 +40,10 @@ export function useModalDialog() {
 export function isBackdropClick(
   event: MouseEvent<HTMLDialogElement>,
 ): boolean {
+  // 中の要素（ボタンなど）へのクリック・キーボード操作は背景のクリックとみなさない。
+  if (event.target !== event.currentTarget) {
+    return false;
+  }
   const rect = event.currentTarget.getBoundingClientRect();
   return (
     event.clientX < rect.left ||

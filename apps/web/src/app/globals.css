@@ -300,6 +300,9 @@ dialog.sheet {
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+dialog.sheet[open] {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -357,6 +360,9 @@ dialog.dialog {
   background: var(--color-surface);
   color: var(--color-text);
   box-shadow: var(--shadow-dock);
+}
+
+dialog.dialog[open] {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);

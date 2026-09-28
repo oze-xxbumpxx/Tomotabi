@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
@@ -112,6 +113,10 @@ describe("W-15: オフライン（C-3）", () => {
     expect(
       screen.getByText("オフラインのため保存できません"),
     ).toBeInTheDocument();
+  });
+
+  it("サーバー描画でも navigator を参照せず落ちない", () => {
+    expect(() => renderToString(<OfflineForm />)).not.toThrow();
   });
 
   it("オンラインでは帯を出さずボタンを押せる", () => {

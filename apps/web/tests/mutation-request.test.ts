@@ -25,7 +25,7 @@ describe("createMutationRequest", () => {
       operation: "rename-trip",
       url: "/api/trips/trip-1",
       method: "PATCH",
-      body: { name: "京都 2 泊" },
+      bodyJson: JSON.stringify({ name: "京都 2 泊" }),
       ifMatch: '"3"',
     });
     expect(request.idempotencyKey).toMatch(
@@ -97,6 +97,20 @@ describe("sendMutationRequest", () => {
     const headers = new Headers(init.headers);
     expect(headers.has("if-match")).toBe(false);
     expect(init.body).toBeUndefined();
+  });
+
+  it("sends the frozen body even if the caller mutates the original object", async () => {
+    const body = { name: "京都 2 泊" };
+    const request = createMutationRequest({ ...draft, body });
+    body.name = "あとから変えた名前";
+
+    const fetchMock = stubFetch(
+      new Response(JSON.stringify({ id: "trip-1", name: "京都 2 泊" })),
+    );
+    await sendMutationRequest(request, tripSchema);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(JSON.stringify({ name: "京都 2 泊" }));
   });
 
   it("sends the identical key, body and If-Match when the same request is resent", async () => {

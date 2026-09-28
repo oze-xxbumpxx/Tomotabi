@@ -217,3 +217,586 @@ button:active:not(:disabled) {
   align-items: baseline;
   gap: var(--space-3);
 }
+
+/* ---- M2-c1 共通部品と状態表示（v3 のトークンだけを使う） ---- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ボタン（デザイン 02: 主 56 オレンジ / 墨 48 / 副 48 枠 / 危険 48 赤） */
+.btn-primary,
+.btn-ink,
+.btn-secondary,
+.btn-danger {
+  margin-top: 0;
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.btn-primary {
+  min-height: 56px;
+  background: var(--color-accent);
+  color: var(--color-text);
+  box-shadow: var(--shadow-primary);
+  font-size: 17px;
+}
+
+.btn-ink {
+  background: var(--color-surface-inverse);
+  color: var(--color-bg);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: inset 0 0 0 1.5px var(--color-line-strong);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: var(--color-bg);
+}
+
+.icon-button {
+  margin-top: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* シート（下から出る。上端の角丸 xl、掴み棒、見出し、閉じる） */
+dialog.sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 40rem;
+  max-height: 85dvh;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-4) var(--space-8);
+  border: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+dialog.sheet::backdrop,
+dialog.dialog::backdrop {
+  background: color-mix(
+    in srgb,
+    var(--color-surface-inverse) 40%,
+    transparent
+  );
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--color-line-strong);
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-1);
+}
+
+.sheet-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sheet-body {
+  overflow-y: auto;
+}
+
+.sheet-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ダイアログ（中央。フォーカスは内側へ、閉じたら起点へ戻す） */
+dialog.dialog {
+  width: 100%;
+  max-width: min(22rem, calc(100vw - 40px));
+  border: 0;
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-dock);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.dialog-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: var(--space-1);
+}
+
+.dialog-actions > * {
+  flex: 1;
+}
+
+/* 入力欄（可視ラベル・エラーの関連付け・必須/任意表示） */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.field-label-error {
+  color: var(--color-danger);
+}
+
+.field-optional {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.field-input,
+.field-textarea {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1.5px var(--color-line-strong);
+  padding: 0 var(--space-4);
+  min-height: 48px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.field-textarea {
+  min-height: 96px;
+  padding: var(--space-3) var(--space-4);
+  resize: vertical;
+}
+
+.field-input:focus,
+.field-textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--color-surface-inverse);
+}
+
+.field-input[aria-invalid="true"],
+.field-textarea[aria-invalid="true"] {
+  background: var(--color-danger-bg);
+  box-shadow: inset 0 0 0 2px var(--color-danger);
+}
+
+.field-input[data-locked="true"],
+.field-textarea[data-locked="true"] {
+  background: var(--color-surface-locked);
+  color: var(--color-text-muted);
+  box-shadow: none;
+}
+
+.field-error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-danger);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* 2 択 / 複数択の選択（segmented） */
+.segmented {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.segmented-label {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0;
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.segmented-grid {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.segmented-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.segmented-option {
+  flex: 1;
+  min-height: 48px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segmented-option:has(input:checked) {
+  background: var(--color-surface-inverse);
+  color: var(--color-bg);
+}
+
+.segmented-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-surface-inverse);
+  outline-offset: 2px;
+}
+
+.segmented-option:has(input:disabled) {
+  cursor: default;
+}
+
+.segmented-option:has(input:disabled):not(:has(input:checked)) {
+  background: var(--color-surface-locked);
+  color: var(--color-text-muted);
+}
+
+.segmented-option:has(input:checked):has(input:disabled) {
+  background: var(--color-text-muted);
+}
+
+/* トースト（上部に 2 秒） */
+.toast {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-inverse);
+  color: var(--color-bg);
+  padding: 12px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: var(--shadow-dock);
+  z-index: 30;
+}
+
+/* 欄の状態: 読み込み（プレースホルダー） */
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.loading-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.loading-bar {
+  display: block;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--color-surface-locked);
+}
+
+/* 更新中 / 更新できていません / 取得できませんでした */
+.refetching {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.icon-spin {
+  animation: icon-spin 1s linear infinite;
+}
+
+@keyframes icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-spin {
+    animation: none;
+  }
+}
+
+.refetch-failed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.refetch-failed-badge {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.fetch-failed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.fetch-failed-label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+/* 帯（C-3 オフライン・C-4 結果不明・C-5 競合・注意） */
+.banner {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  align-items: flex-start;
+}
+
+.banner-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.banner-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.banner-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.banner-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.banner-body {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.offline-banner {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* 全面表示の状態（C-1 ログイン切れ・C-2 開けない） */
+.state-screen {
+  min-height: 60dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-6) var(--space-5);
+}
+
+.state-screen-icon {
+  color: var(--color-text-muted);
+}
+
+.state-screen-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.state-screen-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  max-width: 22rem;
+}
+
+/* C-4 保存の結果が不明 */
+.save-unknown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* C-5 競合 */
+.conflict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.conflict-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conflict-row {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conflict-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.conflict-row-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.conflict-diff {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-warning);
+}
+
+.conflict-same {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.conflict-compare {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 4px 10px;
+  font-size: 14px;
+  align-items: baseline;
+}
+
+.conflict-side {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.conflict-side-mine {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.conflict-value {
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.conflict-value-mine {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.conflict-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.conflict-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

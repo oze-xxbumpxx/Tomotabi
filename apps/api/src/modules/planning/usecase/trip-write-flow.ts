@@ -165,6 +165,9 @@ export async function executeTripWrite(
   }
 }
 
+/** cause チェーンを辿る深さの上限（循環する cause でも打ち切る）。 */
+const MAX_CAUSE_DEPTH = 8;
+
 /**
  * 同じキーの同時作成は receipt の PK 違反で負ける側が分かる。
  * createTrip では他に一意制約が衝突し得ないため、23505 はその兆候。
@@ -172,8 +175,12 @@ export async function executeTripWrite(
  * cause チェーンを辿って SQLSTATE を見る。
  */
 export function isUniqueViolation(error: unknown): boolean {
+  // 循環する cause が届いても終わるよう、深さに上限を設ける。
   let current: unknown = error;
-  while (typeof current === "object" && current !== null) {
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
+    if (typeof current !== "object" || current === null) {
+      return false;
+    }
     if ((current as { code?: unknown }).code === "23505") {
       return true;
     }

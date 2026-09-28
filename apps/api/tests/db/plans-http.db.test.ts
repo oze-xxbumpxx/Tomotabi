@@ -440,6 +440,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
     expect(otherBody).toEqual(missingBody);
 
     const foreignTripId = await seedForeignTrip();
+    const missingTripId = crypto.randomUUID();
     const foreignGet = await authed(
       http().get(`/api/trips/${foreignTripId}/plans/${planA}`),
       hinataCookie,
@@ -454,12 +455,51 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
       hinataCookie,
     );
     const missingTrip = await authed(
-      http().get(`/api/trips/${crypto.randomUUID()}/plans/${planA}`),
+      http().get(`/api/trips/${missingTripId}/plans/${planA}`),
       hinataCookie,
     );
     for (const response of [foreignGet, foreignPost, foreignItinerary, missingTrip]) {
       expect(response.status).toBe(403);
       expect(response.body.code).toBe("TRIP_NOT_ACCESSIBLE");
+    }
+
+    // 書き込み経路（PATCH・move・cancel）も同じ 403 / 404 に揃える
+    const write403 = [
+      await patchPlan(hinataCookie, foreignTripId, planA, { name: "x" }),
+      await movePlan(hinataCookie, foreignTripId, planA, "2026-10-01", '"1"'),
+      await cancelPlan(hinataCookie, foreignTripId, planA, '"1"'),
+      await patchPlan(hinataCookie, missingTripId, planA, { name: "x" }),
+      await movePlan(hinataCookie, missingTripId, planA, "2026-09-11", '"1"'),
+      await cancelPlan(hinataCookie, missingTripId, planA, '"1"'),
+    ];
+    for (const response of write403) {
+      expect(response.status).toBe(403);
+      expect(response.body.code).toBe("TRIP_NOT_ACCESSIBLE");
+    }
+
+    const missingPlanId = crypto.randomUUID();
+    const writePairs: [request.Response, request.Response][] = [
+      [
+        await patchPlan(hinataCookie, tripB, planA, { name: "x" }),
+        await patchPlan(hinataCookie, tripB, missingPlanId, { name: "x" }),
+      ],
+      [
+        await movePlan(hinataCookie, tripB, planA, "2026-09-11", '"1"'),
+        await movePlan(hinataCookie, tripB, missingPlanId, "2026-09-11", '"1"'),
+      ],
+      [
+        await cancelPlan(hinataCookie, tripB, planA, '"1"'),
+        await cancelPlan(hinataCookie, tripB, missingPlanId, '"1"'),
+      ],
+    ];
+    for (const [otherTripWrite, missingWrite] of writePairs) {
+      expect(otherTripWrite.status).toBe(404);
+      expect(missingWrite.status).toBe(404);
+      expect(otherTripWrite.body.code).toBe("PLAN_NOT_FOUND");
+      // 別の旅行の予定と存在しない予定で本文が同じ（requestId は要求ごとに違う）
+      const { requestId: _ot, ...otherWriteBody } = otherTripWrite.body;
+      const { requestId: _mw, ...missingWriteBody } = missingWrite.body;
+      expect(otherWriteBody).toEqual(missingWriteBody);
     }
   });
 
@@ -474,6 +514,12 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
     });
     const morning = await createPlan(hinataCookie, tripId, {
       name: "清水寺",
+      kind: "place",
+      date: day,
+      time: "09:00",
+    });
+    const morningSecond = await createPlan(hinataCookie, tripId, {
+      name: "朝の二件目",
       kind: "place",
       date: day,
       time: "09:00",
@@ -509,6 +555,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
     expect(plans.map((plan) => plan.id)).toEqual([
       cancelled.id,
       morning.id,
+      morningSecond.id,
       noon.id,
       undecided.id,
     ]);
@@ -900,6 +947,7 @@ describe("同時実行（P-13〜P-15）", () => {
 
     // 接続 A: 予定行を FOR NO KEY UPDATE で持ったまま履歴を入れる（未 COMMIT）
     const holder = await db.admin.connect();
+    let committed = false;
     try {
       await holder.query("BEGIN");
       await holder.query(
@@ -921,6 +969,7 @@ describe("同時実行（P-13〜P-15）", () => {
       });
       await waitForPlanLockWaiter();
       await holder.query("COMMIT");
+      committed = true;
 
       const patch = await patchPromise;
       expect(patch.status).toBe(409);
@@ -932,6 +981,11 @@ describe("同時実行（P-13〜P-15）", () => {
       );
       expect(current.body).toMatchObject({ kind: "food", version: "1" });
     } finally {
+      // COMMIT 前に失敗したときはロールバックしてからプールへ戻す
+      // （開いたトランザクションのまま接続を返さない）
+      if (!committed) {
+        await holder.query("ROLLBACK").catch(() => {});
+      }
       holder.release();
     }
   });

@@ -416,4 +416,16 @@ describe("isUniqueViolation", () => {
     expect(isUniqueViolation({ code: "57014" })).toBe(false);
     expect(isUniqueViolation(null)).toBe(false);
   });
+
+  it("cause が循環しても打ち切って false を返す", () => {
+    const selfLoop = new Error("self loop");
+    (selfLoop as { cause?: unknown }).cause = selfLoop;
+    expect(isUniqueViolation(selfLoop)).toBe(false);
+
+    const inner = new Error("inner");
+    const outer = new Error("outer");
+    (inner as { cause?: unknown }).cause = outer;
+    (outer as { cause?: unknown }).cause = inner;
+    expect(isUniqueViolation(outer)).toBe(false);
+  });
 });

@@ -60,11 +60,18 @@ const TRANSIENT_ERROR_CODES: ReadonlySet<string> = new Set([
   "40P01",
 ]);
 
+/** cause チェーンを辿る深さの上限（循環する cause でも打ち切る）。 */
+const MAX_CAUSE_DEPTH = 8;
+
 function isTransientDbError(value: unknown): boolean {
   // drizzle は pg のエラーを DrizzleQueryError の cause に包んで投げるため、
-  // cause チェーンを辿って SQLSTATE / errno を見る。
+  // cause チェーンを辿って SQLSTATE / errno を見る。循環する cause が届いても
+  // 終わるよう、深さに上限を設ける。
   let current: unknown = value;
-  while (typeof current === "object" && current !== null) {
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
+    if (typeof current !== "object" || current === null) {
+      return false;
+    }
     const code = (current as { code?: unknown }).code;
     if (
       typeof code === "string" &&

@@ -64,6 +64,15 @@ class ErrorTestController {
     );
     throw wrapped;
   }
+
+  @PublicRoute()
+  @Get("cyclic-cause")
+  cyclicCause(): never {
+    // 循環する cause: フィルターの cause 走査が終わることを確かめる
+    const cyclic = new Error("cycle");
+    (cyclic as { cause?: unknown }).cause = cyclic;
+    throw cyclic;
+  }
 }
 
 describe("ApiErrorFilter（U-15。configure-app で組んだアプリ）", () => {
@@ -183,5 +192,16 @@ describe("ApiErrorFilter（U-15。configure-app で組んだアプリ）", () =>
       retryable: true,
     });
     expect(response.text).not.toContain("SECRETPW");
+  });
+
+  it("cause が循環する例外でも打ち切って 500 INTERNAL_ERROR を返す", async () => {
+    const response = await request(app.getHttpServer()).get(
+      "/api/error-test/cyclic-cause",
+    );
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      code: "INTERNAL_ERROR",
+      retryable: false,
+    });
   });
 });

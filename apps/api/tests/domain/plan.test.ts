@@ -53,13 +53,14 @@ describe("Plan.update（部分更新）", () => {
   });
 
   it("差分のある欄だけ更新し version を 1 増やす", () => {
+    const before = plan({ version: 2 });
     const after = Plan.update(
-      plan({ version: 2 }),
+      before,
       { memo: BoundedText.parse("メモ", 2000) },
       false,
       NOW,
     );
-    expect(after).not.toBe(plan());
+    expect(after).not.toBe(before);
     expect(after.memo).toBe("メモ");
     expect(after.name).toBe("清水寺");
     expect(after.version).toBe(3);

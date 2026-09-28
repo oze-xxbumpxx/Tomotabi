@@ -17,6 +17,7 @@ import {
   type PlanningWorkContext,
 } from "../../src/modules/planning/adapter/outbound/planning-work-context";
 import { PgPlanningUnitOfWork } from "../../src/modules/planning/infrastructure/pg-planning-unit-of-work";
+import { PgRecordHistoryQuery } from "../../src/modules/record/infrastructure/pg-record-history.query";
 import { createAuth } from "../../src/modules/identity/infrastructure/better-auth";
 import {
   createRoles,
@@ -300,6 +301,7 @@ describe("作成（T-01〜T-06）", () => {
     const realUoW = new PgPlanningUnitOfWork(
       runtimePool,
       (db): ParticipantsPort => new PgParticipantsQuery(db as NodePgDatabase),
+      (db) => new PgRecordHistoryQuery(db as NodePgDatabase),
     );
     const failingUoW: UnitOfWork<PlanningWorkContext> = {
       run: (work) =>

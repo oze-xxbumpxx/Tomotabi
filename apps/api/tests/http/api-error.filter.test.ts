@@ -52,6 +52,27 @@ class ErrorTestController {
       code: "ECONNREFUSED",
     });
   }
+
+  @PublicRoute()
+  @Get("db-unavailable-wrapped")
+  dbUnavailableWrapped(): never {
+    // drizzle は pg のエラーを DrizzleQueryError の cause に包んで投げる
+    const wrapped = new Error(`Failed query: select ... ${DB_URL}`);
+    (wrapped as { cause?: unknown }).cause = Object.assign(
+      new Error("connect failed"),
+      { code: "ECONNREFUSED" },
+    );
+    throw wrapped;
+  }
+
+  @PublicRoute()
+  @Get("cyclic-cause")
+  cyclicCause(): never {
+    // 循環する cause: フィルターの cause 走査が終わることを確かめる
+    const cyclic = new Error("cycle");
+    (cyclic as { cause?: unknown }).cause = cyclic;
+    throw cyclic;
+  }
 }
 
 describe("ApiErrorFilter（U-15。configure-app で組んだアプリ）", () => {
@@ -159,5 +180,28 @@ describe("ApiErrorFilter（U-15。configure-app で組んだアプリ）", () =>
       retryable: true,
     });
     expect(response.text).not.toContain("SECRETPW");
+  });
+
+  it("DrizzleQueryError の cause に包まれた接続失敗も 503 になる", async () => {
+    const response = await request(app.getHttpServer()).get(
+      "/api/error-test/db-unavailable-wrapped",
+    );
+    expect(response.status).toBe(503);
+    expect(response.body).toMatchObject({
+      code: "TEMPORARILY_UNAVAILABLE",
+      retryable: true,
+    });
+    expect(response.text).not.toContain("SECRETPW");
+  });
+
+  it("cause が循環する例外でも打ち切って 500 INTERNAL_ERROR を返す", async () => {
+    const response = await request(app.getHttpServer()).get(
+      "/api/error-test/cyclic-cause",
+    );
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      code: "INTERNAL_ERROR",
+      retryable: false,
+    });
   });
 });

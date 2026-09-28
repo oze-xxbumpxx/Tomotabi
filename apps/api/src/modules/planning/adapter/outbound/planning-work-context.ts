@@ -4,6 +4,7 @@ import type { IdempotencyKey } from "../../../../common/http/idempotency-key";
 import type { UserId } from "../../../../common/domain/user-id";
 import type { ParticipantsPort } from "./participants.port";
 import type { PlanRepository } from "./plan.repository";
+import type { RecordHistoryPort } from "./record-history.port";
 import type { TripRepository } from "./trip.repository";
 
 export const PLANNING_UNIT_OF_WORK = Symbol("PLANNING_UNIT_OF_WORK");
@@ -28,7 +29,7 @@ export interface FinanceGuardWriter {
 /**
  * planning の UseCase に渡す文脈。型付きの Repository・照会・receipt の
  * 限定集合で、生の tx や SQL 実行口は渡さない（設計書「UnitOfWork の文脈」）。
- * M2-b で recordHistory（履歴の有無の照会）が加わる。
+ * recordHistory は予定行のロックを持ったまま履歴を照会する（E-19）ためここに入れる。
  */
 export interface PlanningWorkContext {
   trips: TripRepository;
@@ -36,6 +37,7 @@ export interface PlanningWorkContext {
   participants: ParticipantsPort;
   receipts: CommandReceiptStore;
   financeGuards: FinanceGuardWriter;
+  recordHistory: RecordHistoryPort;
 }
 
 export type PlanningUnitOfWork = UnitOfWork<PlanningWorkContext>;

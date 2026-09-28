@@ -1,3 +1,4 @@
+import type { Trip as TripContract } from "@tomotabi/contracts";
 import { ApiError } from "../../../common/http/api-error";
 import type { Clock } from "../../../adapter/clock/clock";
 import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
@@ -42,7 +43,7 @@ export class CreateTripUseCase implements CreateTripInputPort {
       return await this.unitOfWork.run(async (ctx) => {
         // receipt を参加者の確認より先に見る。作成に成功したあとで一方が
         // 利用停止になっても、同じキーの成功の再送は元の結果を返す（F-17）。
-        const stored = await storedReceipt(
+        const stored = await storedReceipt<TripContract>(
           ctx,
           input.userId,
           CREATE_TRIP_OPERATION,
@@ -93,7 +94,7 @@ export class CreateTripUseCase implements CreateTripInputPort {
         throw error;
       }
       return this.unitOfWork.run(async (ctx) => {
-        const stored = await storedReceipt(
+        const stored = await storedReceipt<TripContract>(
           ctx,
           input.userId,
           CREATE_TRIP_OPERATION,

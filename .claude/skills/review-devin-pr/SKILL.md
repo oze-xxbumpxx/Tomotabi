@@ -44,7 +44,9 @@ description: >
    （目安: L0 / L1 → medium、通常の機能 → high、L3 で認証・お金・並行処理 → max）。
    - **既定はローカル**。専用クローン `/Users/siro/個人開発/devin-work/tomotabi`（Devin で信頼済み）で動かす。
      worktree は使わない（`.git` が元のリポジトリ側にあり、Devin の書き込み先が散らばる）。起動の前に次を確かめる:
-     前の `devin` プロセスが終わっている（`pgrep -fl "devin .*-p"`。同じクローンで 2 つ同時に動かさない）、
+     前の `devin` プロセスが終わっている（`pgrep -fl "devin .*-p"`。同じクローンで 2 つ同時に動かさない。
+     前の PR がマージ・クローズ済みなのに残っているのは §4.5 の監視の間隔（5 分）の途中なので、
+     自分が起動したバックグラウンドのタスクなら TaskStop で止めてよい。それ以外は止めずにユーザーに伝える）、
      作業ツリーがきれい（`git status --short` が空。残っていたら捨てずにユーザーに伝える）、
      `git fetch origin && git switch --detach origin/main` で最新の main から始める。
      起動（`run_in_background` で。以下「ログ付きの起動」）:

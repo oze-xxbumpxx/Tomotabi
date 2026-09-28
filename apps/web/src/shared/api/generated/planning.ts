@@ -290,11 +290,6 @@ export const getItinerary = async (tripId: string,
 
 
 
-export type createPlanResponse200 = {
-  data: Plan
-  status: 200
-}
-
 export type createPlanResponse201 = {
   data: Plan
   status: 201
@@ -330,7 +325,7 @@ export type createPlanResponse503 = {
   status: 503
 }
 
-export type createPlanResponseSuccess = (createPlanResponse200 | createPlanResponse201) & {
+export type createPlanResponseSuccess = (createPlanResponse201) & {
   headers: Headers;
 };
 export type createPlanResponseError = (createPlanResponse400 | createPlanResponse401 | createPlanResponse403 | createPlanResponse409 | createPlanResponse422 | createPlanResponse503) & {

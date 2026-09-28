@@ -7,6 +7,7 @@ import { SessionGuard } from "./common/guard/session.guard";
 import { createPinoHttpOptions } from "./infrastructure/logging/logger";
 import { FoundationModule } from "./modules/foundation/foundation.module";
 import { IdentityModule } from "./modules/identity/identity.module";
+import { PlanningModule } from "./modules/planning/planning.module";
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { IdentityModule } from "./modules/identity/identity.module";
     LoggerModule.forRoot({ pinoHttp: createPinoHttpOptions(), useExisting: true }),
     FoundationModule,
     IdentityModule,
+    PlanningModule,
   ],
   providers: [
     {

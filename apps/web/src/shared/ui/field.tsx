@@ -5,6 +5,7 @@ import {
   useId,
   type InputHTMLAttributes,
   type ReactNode,
+  type Ref,
   type TextareaHTMLAttributes,
 } from "react";
 
@@ -53,6 +54,8 @@ type FieldProps = {
   error?: string | null;
   /** 固定した入力（C-4）。readOnly になり、見た目も固定色になる。 */
   locked?: boolean;
+  /** エラーの欄へフォーカスを移すなど、input 要素への参照。 */
+  ref?: Ref<HTMLInputElement>;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "id">;
 
 export function Field({

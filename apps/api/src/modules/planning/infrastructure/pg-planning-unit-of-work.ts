@@ -4,6 +4,7 @@ import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
 import { PgCommandReceipts } from "../../../infrastructure/database/pg-command-receipts";
 import { tripFinanceGuards } from "../../../infrastructure/database/schema/infra";
 import type { ParticipantsFactory } from "../adapter/outbound/participants.port";
+import type { RecordHistoryFactory } from "../adapter/outbound/record-history.port";
 import type {
   FinanceGuardWriter,
   PlanningWorkContext,
@@ -28,6 +29,7 @@ export class PgPlanningUnitOfWork implements UnitOfWork<PlanningWorkContext> {
   constructor(
     private readonly pool: Pool,
     private readonly participantsFactory: ParticipantsFactory,
+    private readonly recordHistoryFactory: RecordHistoryFactory,
   ) {}
 
   async run<T>(work: (ctx: PlanningWorkContext) => Promise<T>): Promise<T> {
@@ -41,6 +43,7 @@ export class PgPlanningUnitOfWork implements UnitOfWork<PlanningWorkContext> {
         participants: this.participantsFactory(db),
         receipts: new PgCommandReceipts(db),
         financeGuards: new PgFinanceGuards(db),
+        recordHistory: this.recordHistoryFactory(db),
       });
       await client.query("COMMIT");
       return result;

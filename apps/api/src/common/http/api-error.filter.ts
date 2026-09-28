@@ -61,14 +61,20 @@ const TRANSIENT_ERROR_CODES: ReadonlySet<string> = new Set([
 ]);
 
 function isTransientDbError(value: unknown): boolean {
-  if (typeof value !== "object" || value === null || !("code" in value)) {
-    return false;
+  // drizzle は pg のエラーを DrizzleQueryError の cause に包んで投げるため、
+  // cause チェーンを辿って SQLSTATE / errno を見る。
+  let current: unknown = value;
+  while (typeof current === "object" && current !== null) {
+    const code = (current as { code?: unknown }).code;
+    if (
+      typeof code === "string" &&
+      (TRANSIENT_ERROR_CODES.has(code) || code.startsWith("08"))
+    ) {
+      return true;
+    }
+    current = (current as { cause?: unknown }).cause;
   }
-  const code = (value as { code: unknown }).code;
-  if (typeof code !== "string") {
-    return false;
-  }
-  return TRANSIENT_ERROR_CODES.has(code) || code.startsWith("08");
+  return false;
 }
 
 type NormalizedError = {

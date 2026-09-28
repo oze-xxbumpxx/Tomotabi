@@ -52,6 +52,18 @@ class ErrorTestController {
       code: "ECONNREFUSED",
     });
   }
+
+  @PublicRoute()
+  @Get("db-unavailable-wrapped")
+  dbUnavailableWrapped(): never {
+    // drizzle は pg のエラーを DrizzleQueryError の cause に包んで投げる
+    const wrapped = new Error(`Failed query: select ... ${DB_URL}`);
+    (wrapped as { cause?: unknown }).cause = Object.assign(
+      new Error("connect failed"),
+      { code: "ECONNREFUSED" },
+    );
+    throw wrapped;
+  }
 }
 
 describe("ApiErrorFilter（U-15。configure-app で組んだアプリ）", () => {
@@ -156,6 +168,18 @@ describe("ApiErrorFilter（U-15。configure-app で組んだアプリ）", () =>
       code: "TEMPORARILY_UNAVAILABLE",
       message: "Service is temporarily unavailable",
       requestId: expect.stringMatching(UUID_PATTERN),
+      retryable: true,
+    });
+    expect(response.text).not.toContain("SECRETPW");
+  });
+
+  it("DrizzleQueryError の cause に包まれた接続失敗も 503 になる", async () => {
+    const response = await request(app.getHttpServer()).get(
+      "/api/error-test/db-unavailable-wrapped",
+    );
+    expect(response.status).toBe(503);
+    expect(response.body).toMatchObject({
+      code: "TEMPORARILY_UNAVAILABLE",
       retryable: true,
     });
     expect(response.text).not.toContain("SECRETPW");

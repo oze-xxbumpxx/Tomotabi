@@ -3,9 +3,25 @@ import { CLOCK, type Clock } from "../../adapter/clock/clock";
 import type { UnitOfWork } from "../../adapter/transaction/unit-of-work";
 import { PlanningCompositionModule } from "../../composition/planning-composition.module";
 import {
+  CANCEL_PLAN_INPUT_PORT,
+  type CancelPlanInputPort,
+} from "./adapter/inbound/cancel-plan.input-port";
+import {
+  CREATE_PLAN_INPUT_PORT,
+  type CreatePlanInputPort,
+} from "./adapter/inbound/create-plan.input-port";
+import {
   CREATE_TRIP_INPUT_PORT,
   type CreateTripInputPort,
 } from "./adapter/inbound/create-trip.input-port";
+import {
+  GET_ITINERARY_INPUT_PORT,
+  type GetItineraryInputPort,
+} from "./adapter/inbound/get-itinerary.input-port";
+import {
+  GET_PLAN_INPUT_PORT,
+  type GetPlanInputPort,
+} from "./adapter/inbound/get-plan.input-port";
 import {
   GET_TRIP_INPUT_PORT,
   type GetTripInputPort,
@@ -14,6 +30,10 @@ import {
   LIST_TRIPS_INPUT_PORT,
   type ListTripsInputPort,
 } from "./adapter/inbound/list-trips.input-port";
+import {
+  MOVE_PLAN_INPUT_PORT,
+  type MovePlanInputPort,
+} from "./adapter/inbound/move-plan.input-port";
 import {
   RENAME_TRIP_INPUT_PORT,
   type RenameTripInputPort,
@@ -31,6 +51,10 @@ import {
   type StartTripInputPort,
 } from "./adapter/inbound/start-trip.input-port";
 import {
+  UPDATE_PLAN_INPUT_PORT,
+  type UpdatePlanInputPort,
+} from "./adapter/inbound/update-plan.input-port";
+import {
   PLANNING_READ_PORT,
   type PlanningReadPort,
 } from "./adapter/outbound/planning-read.port";
@@ -42,14 +66,21 @@ import {
   WRITE_LOG,
   type WriteLog,
 } from "./adapter/outbound/write-log.port";
+import { PlansController } from "./controller/plans.controller";
 import { TripsController } from "./controller/trips.controller";
+import { CancelPlanUseCase } from "./usecase/cancel-plan.usecase";
+import { CreatePlanUseCase } from "./usecase/create-plan.usecase";
 import { CreateTripUseCase } from "./usecase/create-trip.usecase";
+import { GetItineraryUseCase } from "./usecase/get-itinerary.usecase";
+import { GetPlanUseCase } from "./usecase/get-plan.usecase";
 import { GetTripUseCase } from "./usecase/get-trip.usecase";
 import { ListTripsUseCase } from "./usecase/list-trips.usecase";
+import { MovePlanUseCase } from "./usecase/move-plan.usecase";
 import { RenameTripUseCase } from "./usecase/rename-trip.usecase";
 import { ChangeTripPeriodUseCase } from "./usecase/change-trip-period.usecase";
 import { FinishTripUseCase } from "./usecase/finish-trip.usecase";
 import { StartTripUseCase } from "./usecase/start-trip.usecase";
+import { UpdatePlanUseCase } from "./usecase/update-plan.usecase";
 
 type WriteDeps = [
   uow: UnitOfWork<PlanningWorkContext>,
@@ -60,7 +91,7 @@ const WRITE_INJECT = [PLANNING_UNIT_OF_WORK, CLOCK, WRITE_LOG];
 
 @Module({
   imports: [PlanningCompositionModule],
-  controllers: [TripsController],
+  controllers: [TripsController, PlansController],
   providers: [
     {
       provide: CREATE_TRIP_INPUT_PORT,
@@ -102,6 +133,42 @@ const WRITE_INJECT = [PLANNING_UNIT_OF_WORK, CLOCK, WRITE_LOG];
       provide: FINISH_TRIP_INPUT_PORT,
       useFactory: (...deps: WriteDeps): FinishTripInputPort =>
         new FinishTripUseCase(...deps),
+      inject: WRITE_INJECT,
+    },
+    {
+      provide: GET_ITINERARY_INPUT_PORT,
+      useFactory: (read: PlanningReadPort, clock: Clock): GetItineraryInputPort =>
+        new GetItineraryUseCase(read, clock),
+      inject: [PLANNING_READ_PORT, CLOCK],
+    },
+    {
+      provide: CREATE_PLAN_INPUT_PORT,
+      useFactory: (...deps: WriteDeps): CreatePlanInputPort =>
+        new CreatePlanUseCase(...deps),
+      inject: WRITE_INJECT,
+    },
+    {
+      provide: GET_PLAN_INPUT_PORT,
+      useFactory: (read: PlanningReadPort): GetPlanInputPort =>
+        new GetPlanUseCase(read),
+      inject: [PLANNING_READ_PORT],
+    },
+    {
+      provide: UPDATE_PLAN_INPUT_PORT,
+      useFactory: (...deps: WriteDeps): UpdatePlanInputPort =>
+        new UpdatePlanUseCase(...deps),
+      inject: WRITE_INJECT,
+    },
+    {
+      provide: MOVE_PLAN_INPUT_PORT,
+      useFactory: (...deps: WriteDeps): MovePlanInputPort =>
+        new MovePlanUseCase(...deps),
+      inject: WRITE_INJECT,
+    },
+    {
+      provide: CANCEL_PLAN_INPUT_PORT,
+      useFactory: (...deps: WriteDeps): CancelPlanInputPort =>
+        new CancelPlanUseCase(...deps),
       inject: WRITE_INJECT,
     },
   ],

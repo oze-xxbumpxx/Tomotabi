@@ -8,12 +8,14 @@ import type { TripWriteResult } from "../adapter/inbound/trip-write.result";
 import type { WriteLog } from "../adapter/outbound/write-log.port";
 import { toTripDto } from "./trip-dto";
 
-export type TripWriteOutcome = Readonly<{
+export type WriteOutcome<T> = Readonly<{
   httpStatus: 200 | 201;
-  body: TripContract;
+  body: T;
   /** receipt に残った元の結果を返したとき true */
   replayed: boolean;
 }>;
+
+export type TripWriteOutcome = WriteOutcome<TripContract>;
 
 export type TripUpdateCommand = Readonly<{
   userId: UserId;
@@ -38,13 +40,13 @@ export function tripNotAccessible(): ApiError {
  * 元の結果を返す決まりなので、If-Match の検査より先に見る（設計書「書き込みの
  * 共通の流れ」2）。request_hash が違う同一キーは 409 IDEMPOTENCY_KEY_REUSED。
  */
-export async function storedReceipt(
+export async function storedReceipt<T>(
   ctx: PlanningWorkContext,
   actorId: UserId,
   operation: string,
   key: IdempotencyKey,
   requestHash: string,
-): Promise<TripWriteOutcome | null> {
+): Promise<WriteOutcome<T> | null> {
   const receipt = await ctx.receipts.find(actorId, operation, key);
   if (receipt === null) {
     return null;
@@ -58,7 +60,7 @@ export async function storedReceipt(
   }
   return {
     httpStatus: receipt.httpStatus,
-    body: receipt.responseBody as TripContract,
+    body: receipt.responseBody as T,
     replayed: true,
   };
 }
@@ -77,7 +79,7 @@ export async function runTripUpdate(
   if (trip === null) {
     throw tripNotAccessible();
   }
-  const replayed = await storedReceipt(
+  const replayed = await storedReceipt<TripContract>(
     ctx,
     command.userId,
     command.operation,
@@ -166,11 +168,16 @@ export async function executeTripWrite(
 /**
  * 同じキーの同時作成は receipt の PK 違反で負ける側が分かる。
  * createTrip では他に一意制約が衝突し得ないため、23505 はその兆候。
+ * pg のエラーは DrizzleQueryError の cause に入って届くため、
+ * cause チェーンを辿って SQLSTATE を見る。
  */
 export function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { code?: unknown }).code === "23505"
-  );
+  let current: unknown = error;
+  while (typeof current === "object" && current !== null) {
+    if ((current as { code?: unknown }).code === "23505") {
+      return true;
+    }
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
 }

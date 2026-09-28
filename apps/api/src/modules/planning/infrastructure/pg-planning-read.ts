@@ -1,19 +1,54 @@
-import { and, desc, eq, exists, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, exists, sql, type SQL } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { alias } from "drizzle-orm/pg-core";
 import type { Pool } from "pg";
-import type { UserId } from "../../../common/domain/user-id";
+import type { EventKind } from "@tomotabi/contracts";
+import { UserId } from "../../../common/domain/user-id";
+import type { LocalDate } from "../../../common/domain/local-date";
 import {
+  plans,
   tripParticipants,
   trips,
 } from "../../../infrastructure/database/schema/planning";
+import {
+  activePlanEvents,
+  planEvents,
+} from "../../../infrastructure/database/schema/record";
 import type { Trip } from "../domain/trip";
 import type {
   PlanningReadPort,
+  PlanView,
   TripListAnchor,
   TripListPage,
   TripListQuery,
 } from "../adapter/outbound/planning-read.port";
+import type { ActivePlanEvent } from "../adapter/outbound/record-history.port";
+import { toPlanDomain } from "./drizzle-plan.repository";
 import { toTripDomain } from "./drizzle-trip.repository";
+
+type PlanEventRow = typeof planEvents.$inferSelect;
+
+/**
+ * LEFT JOIN で取れなかった側は各列が null で返る。id が null なら行なし。
+ */
+type JoinedEventRow = {
+  [K in keyof PlanEventRow]: PlanEventRow[K] | null;
+} | null;
+
+function toActivePlanEvent(row: JoinedEventRow): ActivePlanEvent | null {
+  if (row === null || row.id === null) {
+    return null;
+  }
+  const event = row as PlanEventRow;
+  return {
+    id: event.id,
+    tripId: event.tripId,
+    planId: event.planId,
+    kind: event.eventKind as EventKind,
+    createdBy: UserId.parse(event.createdBy),
+    createdAt: event.createdAt,
+  };
+}
 
 /**
  * 一覧・取得の読み取り。トランザクション・行ロックは使わず、
@@ -88,6 +123,82 @@ export class PgPlanningRead implements PlanningReadPort {
           ? { id: last.id }
           : null,
     };
+  }
+
+  async findPlanInTrip(
+    tripId: string,
+    planId: string,
+  ): Promise<PlanView | null> {
+    const rows = await this.planViews(and(eq(plans.tripId, tripId), eq(plans.id, planId)));
+    return rows[0] === undefined ? null : rows[0];
+  }
+
+  async listPlansForDay(
+    tripId: string,
+    date: LocalDate,
+  ): Promise<PlanView[]> {
+    return this.planViews(
+      and(eq(plans.tripId, tripId), eq(plans.plannedDate, date)),
+      // 時刻の早い順・未定（NULL）は末尾（ASC の既定）・登録日時・id。
+      asc(plans.plannedTime),
+      asc(plans.createdAt),
+      asc(plans.id),
+    );
+  }
+
+  /**
+   * 予定と、有効な達成・予約（active_plan_events 経由）・履歴の有無を
+   * 1 回の読み取りで取る。取り消し済みは active に行が無いので null に
+   * なるが、hasRecordHistory は plan_events の存在で別に立てる。
+   */
+  private async planViews(
+    where: SQL | undefined,
+    ...orderBy: SQL[]
+  ): Promise<PlanView[]> {
+    const activeAchievement = alias(activePlanEvents, "active_achievement");
+    const achievementEvent = alias(planEvents, "achievement_event");
+    const activeBooking = alias(activePlanEvents, "active_booking");
+    const bookingEvent = alias(planEvents, "booking_event");
+    const rows = await this.db
+      .select({
+        plan: plans,
+        achievementEvent,
+        bookingEvent,
+        hasRecordHistory: exists(
+          this.db
+            .select({ _: sql`1` })
+            .from(planEvents)
+            .where(eq(planEvents.planId, plans.id)),
+        ),
+      })
+      .from(plans)
+      .leftJoin(
+        activeAchievement,
+        and(
+          eq(activeAchievement.planId, plans.id),
+          eq(activeAchievement.eventKind, "achievement"),
+        ),
+      )
+      .leftJoin(
+        achievementEvent,
+        eq(achievementEvent.id, activeAchievement.eventId),
+      )
+      .leftJoin(
+        activeBooking,
+        and(
+          eq(activeBooking.planId, plans.id),
+          eq(activeBooking.eventKind, "booking"),
+        ),
+      )
+      .leftJoin(bookingEvent, eq(bookingEvent.id, activeBooking.eventId))
+      .where(where)
+      .orderBy(...orderBy);
+    return rows.map((row) => ({
+      plan: toPlanDomain(row.plan),
+      achievement: toActivePlanEvent(row.achievementEvent),
+      booking: toActivePlanEvent(row.bookingEvent),
+      hasRecordHistory: row.hasRecordHistory as boolean,
+    }));
   }
 
   private participates(userId: UserId) {

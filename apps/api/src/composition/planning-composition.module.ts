@@ -20,11 +20,17 @@ import {
   type PlanningWorkContext,
 } from "../modules/planning/adapter/outbound/planning-work-context";
 import {
+  RECORD_HISTORY_FACTORY,
+  type RecordHistoryFactory,
+  type RecordHistoryPort,
+} from "../modules/planning/adapter/outbound/record-history.port";
+import {
   WRITE_LOG,
   type WriteLog,
 } from "../modules/planning/adapter/outbound/write-log.port";
 import { PgPlanningRead } from "../modules/planning/infrastructure/pg-planning-read";
 import { PgPlanningUnitOfWork } from "../modules/planning/infrastructure/pg-planning-unit-of-work";
+import { PgRecordHistoryQuery } from "../modules/record/infrastructure/pg-record-history.query";
 
 function useDatabase(): boolean {
   // 未設定と空文字はどちらも「DB なし」。foundation・identity と同じ判定に
@@ -37,8 +43,8 @@ const missingDatabase = (): Promise<never> =>
   Promise.reject(new Error("DATABASE_URL is not set"));
 
 /**
- * planning の port と、identity（許可リストの照会）・infrastructure（時計・
- * receipt・財務 guard）の実装を結ぶ組み立て。M2-b で record の履歴照会もここに足す。
+ * planning の port と、identity（許可リストの照会）・record（履歴の照会）・
+ * infrastructure（時計・receipt・財務 guard）の実装を結ぶ組み立て。
  */
 @Module({
   providers: [
@@ -49,14 +55,25 @@ const missingDatabase = (): Promise<never> =>
           new PgParticipantsQuery(db as NodePgDatabase),
     },
     {
+      provide: RECORD_HISTORY_FACTORY,
+      useFactory: (): RecordHistoryFactory =>
+        (db): RecordHistoryPort =>
+          new PgRecordHistoryQuery(db as NodePgDatabase),
+    },
+    {
       provide: PLANNING_UNIT_OF_WORK,
       useFactory: (
         participantsFactory: ParticipantsFactory,
+        recordHistoryFactory: RecordHistoryFactory,
       ): UnitOfWork<PlanningWorkContext> =>
         useDatabase()
-          ? new PgPlanningUnitOfWork(getPool(), participantsFactory)
+          ? new PgPlanningUnitOfWork(
+              getPool(),
+              participantsFactory,
+              recordHistoryFactory,
+            )
           : { run: missingDatabase },
-      inject: [PARTICIPANTS_FACTORY],
+      inject: [PARTICIPANTS_FACTORY, RECORD_HISTORY_FACTORY],
     },
     {
       provide: PLANNING_READ_PORT,
@@ -67,6 +84,8 @@ const missingDatabase = (): Promise<never> =>
               findTripForParticipant: missingDatabase,
               findTripAnchor: missingDatabase,
               listTripsForParticipant: missingDatabase,
+              findPlanInTrip: missingDatabase,
+              listPlansForDay: missingDatabase,
             },
     },
     { provide: CLOCK, useClass: SystemClock },

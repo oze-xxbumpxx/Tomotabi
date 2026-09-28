@@ -11,6 +11,7 @@ import { CreateTripUseCase } from "../../../src/modules/planning/usecase/create-
 import { FinishTripUseCase } from "../../../src/modules/planning/usecase/finish-trip.usecase";
 import { RenameTripUseCase } from "../../../src/modules/planning/usecase/rename-trip.usecase";
 import { StartTripUseCase } from "../../../src/modules/planning/usecase/start-trip.usecase";
+import { isUniqueViolation } from "../../../src/modules/planning/usecase/trip-write-flow";
 import {
   ACTOR,
   fixedClock,
@@ -394,5 +395,25 @@ describe("書き込みの異常系", () => {
     expect(writeLog.entries).toEqual([
       expect.objectContaining({ result: "replayed" }),
     ]);
+  });
+});
+
+describe("isUniqueViolation", () => {
+  it("pg の 23505 は DrizzleQueryError の cause に包まれても一意制約違反と判定する", () => {
+    const raw = Object.assign(new Error("duplicate key"), { code: "23505" });
+    expect(isUniqueViolation(raw)).toBe(true);
+
+    const wrapped = new Error("Failed query: insert");
+    (wrapped as { cause?: unknown }).cause = raw;
+    expect(isUniqueViolation(wrapped)).toBe(true);
+
+    const nested = new Error("outer");
+    (nested as { cause?: unknown }).cause = wrapped;
+    expect(isUniqueViolation(nested)).toBe(true);
+
+    expect(isUniqueViolation(new Error("other"))).toBe(false);
+    expect(isUniqueViolation({ code: "23505" })).toBe(true);
+    expect(isUniqueViolation({ code: "57014" })).toBe(false);
+    expect(isUniqueViolation(null)).toBe(false);
   });
 });

@@ -1,5 +1,8 @@
 import type { UserId } from "../../../../common/domain/user-id";
+import type { LocalDate } from "../../../../common/domain/local-date";
+import type { Plan } from "../../domain/plan";
 import type { Trip, TripStatus } from "../../domain/trip";
+import type { ActivePlanEvent } from "./record-history.port";
 
 export const PLANNING_READ_PORT = Symbol("PLANNING_READ_PORT");
 
@@ -26,6 +29,18 @@ export type TripListQuery = Readonly<{
 export type TripListPage = Readonly<{
   items: Trip[];
   nextCursor: TripListCursor | null;
+}>;
+
+/**
+ * 予定 1 件と画面表示用の結合結果。
+ * achievement / booking は有効な行だけ（無ければ null）。
+ * hasRecordHistory は取り消し済みを含む履歴の有無（種類変更の可否判定用）。
+ */
+export type PlanView = Readonly<{
+  plan: Plan;
+  achievement: ActivePlanEvent | null;
+  booking: ActivePlanEvent | null;
+  hasRecordHistory: boolean;
 }>;
 
 /**
@@ -59,4 +74,17 @@ export interface PlanningReadPort {
     userId: UserId,
     query: TripListQuery,
   ): Promise<TripListPage>;
+
+  /**
+   * 旅行の中の予定を 1 件返す。別の旅行の予定・無い予定は null を返す
+   * （呼び出し側が同じ形の 404 に写し、存在を漏らさない）。
+   * 参加確認は呼び出し側が findTripForParticipant で済ませている前提。
+   */
+  findPlanInTrip(tripId: string, planId: string): Promise<PlanView | null>;
+
+  /**
+   * 指定日の予定をすべて返す（取りやめ済みを含む）。
+   * 並びは時刻の早い順・時刻未定は末尾・登録日時・id（詳細設計 04 §4）。
+   */
+  listPlansForDay(tripId: string, date: LocalDate): Promise<PlanView[]>;
 }

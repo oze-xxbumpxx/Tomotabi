@@ -29,11 +29,26 @@ describe("httpClient", () => {
       method: "GET",
     });
 
-    expect(result).toMatchObject({ data: { count: 4 }, status: 200 });
+    expect(result).toMatchObject({ data: { count: 4 }, status: 200, etag: null });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/foundation/probes");
     expect(init).toMatchObject({ method: "GET", credentials: "include", cache: "no-store" });
     expect(new Headers(init.headers).has("content-type")).toBe(false);
+  });
+
+  it("returns the ETag response header on success", async () => {
+    stubFetch(
+      new Response(JSON.stringify({ version: 3 }), {
+        headers: { ETag: '"3"' },
+      }),
+    );
+
+    const result = await httpClient<{ data: unknown; etag: string | null }>(
+      "/api/trips/abc",
+      { method: "GET" },
+    );
+
+    expect(result.etag).toBe('"3"');
   });
 
   it("adds a JSON content type to a body-less POST", async () => {
@@ -61,7 +76,58 @@ describe("httpClient", () => {
     expect(await failureOf(httpClient("/api/health", { method: "GET" }))).toEqual({
       kind: "http",
       status: 500,
+      code: null,
     });
+  });
+
+  it("extracts a known code from the error body", async () => {
+    stubFetch(
+      new Response(
+        JSON.stringify({
+          code: "VERSION_CONFLICT",
+          message: "バージョンが古いです",
+          requestId: "req-secret-1",
+          retryable: false,
+        }),
+        { status: 409 },
+      ),
+    );
+
+    const failure = await failureOf(
+      httpClient("/api/trips/abc", { method: "PATCH" }),
+    );
+
+    expect(failure).toEqual({
+      kind: "http",
+      status: 409,
+      code: "VERSION_CONFLICT",
+    });
+    // message・requestId は取り出さない（画面に出さない方針）。
+    expect(JSON.stringify(failure)).not.toContain("バージョンが古いです");
+    expect(JSON.stringify(failure)).not.toContain("req-secret-1");
+  });
+
+  it.each([
+    ["an unknown code", { code: "SOME_NEW_CODE" }, null],
+    ["a non-string code", { code: 42 }, null],
+    ["a body without code", { message: "oops" }, null],
+  ])(
+    "maps %s in the error body to null",
+    async (_label, body, expectedCode) => {
+      stubFetch(new Response(JSON.stringify(body), { status: 422 }));
+
+      expect(
+        await failureOf(httpClient("/api/trips", { method: "POST" })),
+      ).toEqual({ kind: "http", status: 422, code: expectedCode });
+    },
+  );
+
+  it("maps a non-JSON error body to a null code", async () => {
+    stubFetch(new Response("not json", { status: 400 }));
+
+    expect(
+      await failureOf(httpClient("/api/trips", { method: "POST" })),
+    ).toEqual({ kind: "http", status: 400, code: null });
   });
 
   it.each([

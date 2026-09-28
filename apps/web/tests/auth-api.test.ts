@@ -43,6 +43,7 @@ describe("me API", () => {
       expect((await getMe())._unsafeUnwrapErr()).toEqual({
         kind: "http",
         status,
+        code: null,
       });
     },
   );

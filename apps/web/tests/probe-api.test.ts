@@ -58,7 +58,11 @@ describe("probe API", () => {
 
   it("keeps HTTP, network and invalid-JSON failures distinct", async () => {
     respondWith("boom", 500);
-    expect((await getProbe())._unsafeUnwrapErr()).toEqual({ kind: "http", status: 500 });
+    expect((await getProbe())._unsafeUnwrapErr()).toEqual({
+      kind: "http",
+      status: 500,
+      code: null,
+    });
 
     respondWith("not json");
     expect((await getProbe())._unsafeUnwrapErr()).toEqual({ kind: "invalid-json" });

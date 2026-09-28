@@ -1,9 +1,23 @@
-import { ApiRequestError } from "./api-failure";
+import { ApiRequestError, isApiErrorCode } from "./api-failure";
+
+async function readErrorCode(response: Response) {
+  try {
+    const body: unknown = await response.json();
+    if (typeof body === "object" && body !== null && "code" in body) {
+      const code = (body as { code: unknown }).code;
+      return isApiErrorCode(code) ? code : null;
+    }
+  } catch {
+    // 本文が JSON でなければ code は取り出さない。
+  }
+  return null;
+}
 
 /**
  * Orval の custom mutator。生成関数から呼ばれる。
- * 2xx かつ JSON 本文のときだけ `{ data, status, headers }` を返す。`data` は未検証なので、
- * 呼び出し側（`callApi`）で Zod 検証するまで信頼しない。
+ * 2xx かつ JSON 本文のときだけ `{ data, status, headers, etag }` を返す。`data` は未検証なので、
+ * 呼び出し側（`callApi`）で Zod 検証するまで信頼しない。`etag` は成功応答の ETag ヘッダー（無ければ null）。
+ * 非 2xx では本文から既知の code だけを取り出して `http` に載せる。message・requestId は取り出さない。
  * @throws ApiRequestError 通信失敗（network）、非 2xx（http）、空または JSON でない本文（invalid-json）
  */
 export async function httpClient<T>(url: string, options: RequestInit): Promise<T> {
@@ -27,7 +41,8 @@ export async function httpClient<T>(url: string, options: RequestInit): Promise<
   }
 
   if (!response.ok) {
-    throw new ApiRequestError({ kind: "http", status: response.status });
+    const code = await readErrorCode(response);
+    throw new ApiRequestError({ kind: "http", status: response.status, code });
   }
 
   const text = await response.text();
@@ -41,5 +56,10 @@ export async function httpClient<T>(url: string, options: RequestInit): Promise<
     throw new ApiRequestError({ kind: "invalid-json" });
   }
 
-  return { data, status: response.status, headers: response.headers } as T;
+  return {
+    data,
+    status: response.status,
+    headers: response.headers,
+    etag: response.headers.get("etag"),
+  } as T;
 }

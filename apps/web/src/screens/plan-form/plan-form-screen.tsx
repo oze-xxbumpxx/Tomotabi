@@ -142,6 +142,20 @@ export function PlanFormScreen({
     }
   }, [mode, plan]);
 
+  // 428（If-Match 必須）で拒否されたら ETag が古いので、最新を取り直す
+  // までは送り直せない。取り直しで ETag を差し替えて編集に戻す。
+  const reloadLatest = async () => {
+    if (mode === "edit") {
+      const result = await planQuery.refetch();
+      if (result.data !== undefined) {
+        etagRef.current = `"${result.data.version}"`;
+      }
+    } else {
+      await tripQuery.refetch();
+    }
+    save.backToEditing();
+  };
+
   // 追加で日が未指定なら期間の初日を初期値にする（設計書「v3 に無い画面」）。
   useEffect(() => {
     if (
@@ -203,6 +217,13 @@ export function PlanFormScreen({
   }, [mode, state, refetchTrip]);
 
   const applyChange = (change: PlanFormChange) => {
+    // 拒否（422 など）のあと欄を直したら編集に戻す。サーバーは拒否した
+    // 要求で予定を変えないので ETag はそのまま使え、送り直しは新しい
+    // キーになる（07 §10 / W-10 と同じ考え方）。428（If-Match 必須）
+    // だけは ETag が古いので、欄を変えても先に最新を取り直させる。
+    if (state.status === "rejected" && state.httpStatus !== 428) {
+      save.backToEditing();
+    }
     setValues((current) => ({
       ...current,
       [change.field]: change.value,
@@ -495,6 +516,15 @@ export function PlanFormScreen({
           {state.status === "rejected" && topMessage !== null && (
             <StatusText tone="error">{topMessage}</StatusText>
           )}
+          {state.status === "rejected" && state.httpStatus === 428 && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => void reloadLatest()}
+            >
+              最新を取り直す
+            </button>
+          )}
           <PlanFormFields
             values={values}
             errors={displayErrors}
@@ -521,9 +551,9 @@ export function PlanFormScreen({
               disabled={
                 locked ||
                 !online ||
-                // 拒否のあとに同じ古い ETag で再送するボタンは出さない。
-                // 閉じて開き直すと最新の ETag で送れる。
-                (mode === "edit" && state.status === "rejected")
+                // 428（ETag が古い）のときだけ止める。ほかの拒否は欄を
+                // 直せば編集に戻り、新しいキーで送り直せる。
+                (state.status === "rejected" && state.httpStatus === 428)
               }
             >
               {state.status === "saving" ? "保存中" : "保存する"}

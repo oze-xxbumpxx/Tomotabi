@@ -1144,4 +1144,170 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
       await screen.findByText(/保存されたか確認できていません/),
     ).toBeInTheDocument();
   });
+
+  it("編集で 422 のあと欄を直すと新しいキーで送り直せる", async () => {
+    let patchCalls = 0;
+    const fetchMock = stubApi({
+      plan: () => json(plan({ name: "錦市場で昼食", version: "3" })),
+      patch: () => {
+        patchCalls += 1;
+        return patchCalls === 1
+          ? json({ code: "VALIDATION_FAILED" }, 422)
+          : json(plan({ name: "直した名前", version: "4" }));
+      },
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
+    fireEvent.change(nameInput, { target: { value: "悪い名前" } });
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+
+    expect(
+      await screen.findByText("入力内容を確認してください"),
+    ).toBeInTheDocument();
+    // 欄を直したら保存できる（送り直しは新しい idempotency-key）。
+    fireEvent.change(nameInput, { target: { value: "直した名前" } });
+    const submit = screen.getByRole("button", { name: "保存する" });
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/plans/${planId}`,
+      ),
+    );
+    const writes = writeCalls(fetchMock);
+    expect(writes).toHaveLength(2);
+    const key1 = new Headers(writes[0][1]?.headers).get("idempotency-key");
+    const key2 = new Headers(writes[1][1]?.headers).get("idempotency-key");
+    expect(key1).not.toBeNull();
+    expect(key2).not.toBeNull();
+    expect(key2).not.toBe(key1);
+    // サーバーは拒否した要求で予定を変えないので同じ ETag でよい。
+    expect(new Headers(writes[1][1]?.headers).get("if-match")).toBe('"3"');
+  });
+
+  it("編集で 428 のあとは取り直すまで送れず、取り直すと新しい ETag で送れる", async () => {
+    let planCalls = 0;
+    let patchCalls = 0;
+    const fetchMock = stubApi({
+      plan: () => {
+        planCalls += 1;
+        return json(
+          planCalls === 1
+            ? plan({ version: "3" })
+            : plan({ version: "5" }),
+        );
+      },
+      patch: () => {
+        patchCalls += 1;
+        return patchCalls === 1
+          ? json({ code: "IF_MATCH_REQUIRED" }, 428)
+          : json(plan({ name: "直した名前", version: "6" }));
+      },
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
+    fireEvent.change(nameInput, { target: { value: "直した名前" } });
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+
+    expect(
+      await screen.findByText("画面を更新してからやり直してください"),
+    ).toBeInTheDocument();
+    // 欄を変えても送り直せない（ETag が古い）。
+    fireEvent.change(nameInput, { target: { value: "もう一度直す" } });
+    expect(
+      screen.getByRole("button", { name: "保存する" }),
+    ).toBeDisabled();
+
+    // 最新を取り直すと予定を再取得し、新しい ETag で送れる。
+    await userEvent.click(
+      screen.getByRole("button", { name: "最新を取り直す" }),
+    );
+    await waitFor(() => expect(planCalls).toBeGreaterThanOrEqual(2));
+    const submit = await screen.findByRole("button", { name: "保存する" });
+    await waitFor(() => expect(submit).toBeEnabled());
+    await userEvent.click(submit);
+
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/plans/${planId}`,
+      ),
+    );
+    const writes = writeCalls(fetchMock);
+    expect(writes).toHaveLength(2);
+    expect(new Headers(writes[1][1]?.headers).get("if-match")).toBe('"5"');
+  });
+
+  it("移動で期間外に拒否されたあと別の日を選ぶと送り直せる", async () => {
+    let moveCalls = 0;
+    const fetchMock = stubApi({
+      plan: () => json(plan({ date: "2026-10-13", version: "3" })),
+      trip: () => json(trip()),
+      move: () => {
+        moveCalls += 1;
+        return moveCalls === 1
+          ? json({ code: "PLAN_OUTSIDE_TRIP_PERIOD" }, 422)
+          : json(plan({ date: "2026-10-14", version: "4" }));
+      },
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    await userEvent.click(
+      screen.getByRole("button", { name: /日の移動/ }),
+    );
+    await screen.findByRole("heading", { name: "日の移動" });
+    await userEvent.click(
+      screen.getByRole("radio", { name: "10/14 水" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "この日に移動する" }),
+    );
+
+    // 期間外は日付欄のエラーとして出る。
+    expect(
+      await screen.findByText(/旅行期間の外です/),
+    ).toBeInTheDocument();
+    const submit = screen.getByRole("button", {
+      name: "この日に移動する",
+    });
+    // 選んだ日が拒否と同じなら押せない（sameDay は今の日ではなく選択比較
+    // なので、別の日に選び直すと編集に戻る）。
+    await userEvent.click(
+      screen.getByRole("radio", { name: "10/12 月" }),
+    );
+    await waitFor(() => expect(submit).toBeEnabled());
+    await userEvent.click(submit);
+
+    expect(await screen.findByText("移動しました")).toBeInTheDocument();
+    const moves = fetchMock.mock.calls.filter(
+      ([url]) => String(url) === `/api/trips/${tripId}/plans/${planId}/move`,
+    );
+    expect(moves).toHaveLength(2);
+    expect(
+      new Headers(moves[1][1]?.headers).get("idempotency-key"),
+    ).not.toBe(
+      new Headers(moves[0][1]?.headers).get("idempotency-key"),
+    );
+  });
 });

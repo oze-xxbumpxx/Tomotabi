@@ -116,10 +116,13 @@ export function PlanMoveSheet({
               type="button"
               className="btn-ink"
               onClick={submit}
-              // 拒否のあとに同じ古い ETag で再送するボタンは出さない。
-              // 閉じて開き直すと最新の ETag で送れる。
+              // 止めるのは 428（ETag が古い）のときだけ。ほかの拒否は
+              // 別の日を選び直せば編集に戻り、新しいキーで送り直せる。
               disabled={
-                sameDay || saving || !online || state.status === "rejected"
+                sameDay ||
+                saving ||
+                !online ||
+                (state.status === "rejected" && state.httpStatus === 428)
               }
             >
               {saving ? "保存中" : "この日に移動する"}
@@ -177,12 +180,33 @@ export function PlanMoveSheet({
             state.code !== "PLAN_OUTSIDE_TRIP_PERIOD" && (
               <StatusText tone="error">{rejectedMessage(state)}</StatusText>
             )}
+          {state.status === "rejected" && state.httpStatus === 428 && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={onClose}
+            >
+              閉じて最新を取り直す
+            </button>
+          )}
           <DatePickerGrid
             startsOn={trip.startsOn}
             endsOn={trip.endsOn}
             value={selected}
             disabled={saving || state.status === "unknown"}
-            onSelect={setSelected}
+            onSelect={(date) => {
+              setSelected(date);
+              // 拒否（期間外など）のあと別の日を選び直したら編集に戻す。
+              // 拒否した要求でサーバーは予定を変えないので ETag は
+              // そのまま使え、送り直しは新しいキーになる。428 だけは
+              // 取り直すまで送らせない。
+              if (
+                state.status === "rejected" &&
+                state.httpStatus !== 428
+              ) {
+                move.backToEditing();
+              }
+            }}
           />
           {state.status === "rejected" &&
             state.code === "PLAN_OUTSIDE_TRIP_PERIOD" && (

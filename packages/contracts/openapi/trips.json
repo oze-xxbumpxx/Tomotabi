@@ -35,25 +35,7 @@
         },
         "responses": {
           "201": {
-            "description": "旅行と二人の参加者と財務 guard を同時に作成",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Trip"
-                }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
-            }
-          },
-          "200": {
-            "description": "正常結果・同じキーの成功再送",
+            "description": "作成した。同じキーの成功の再送も元の 201 と同じ本文を返す",
             "content": {
               "application/json": {
                 "schema": {

@@ -107,11 +107,6 @@ export const ListTripsStatus = {
   finished: 'finished',
 } as const;
 
-export type createTripResponse200 = {
-  data: Trip
-  status: 200
-}
-
 export type createTripResponse201 = {
   data: Trip
   status: 201
@@ -147,7 +142,7 @@ export type createTripResponse503 = {
   status: 503
 }
 
-export type createTripResponseSuccess = (createTripResponse200 | createTripResponse201) & {
+export type createTripResponseSuccess = (createTripResponse201) & {
   headers: Headers;
 };
 export type createTripResponseError = (createTripResponse400 | createTripResponse401 | createTripResponse403 | createTripResponse409 | createTripResponse422 | createTripResponse503) & {

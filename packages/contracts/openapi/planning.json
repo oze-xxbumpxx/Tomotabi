@@ -120,25 +120,7 @@
         },
         "responses": {
           "201": {
-            "description": "新規作成",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plan"
-                }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "成功時の予定version。引用付き10進整数。"
-              }
-            }
-          },
-          "200": {
-            "description": "同じキーの成功再送",
+            "description": "作成した。同じキーの成功の再送も元の 201 と同じ本文を返す",
             "content": {
               "application/json": {
                 "schema": {

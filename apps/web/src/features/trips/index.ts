@@ -24,7 +24,9 @@ export {
 } from "./model/trip-form";
 export {
   itineraryQueryKey,
+  tripQueryKey,
   tripsListQueryKey,
+  useTrip,
   useTripItinerary,
   useTripList,
 } from "./model/trip-queries";

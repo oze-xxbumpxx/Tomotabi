@@ -1,10 +1,12 @@
 "use client";
 
-import { BookOpenText } from "@phosphor-icons/react";
+import { BookOpenText, Plus } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMe, useSignOut } from "@/features/auth";
+import { DateBar, PlanCard } from "@/features/plans";
 import {
   FinishTripDialog,
   sendFinishTrip,
@@ -12,6 +14,7 @@ import {
   TripEditSheet,
   TripHeader,
   TripMenu,
+  useTrip,
   useTripItinerary,
   useTripMutation,
   type TripSaveState,
@@ -21,6 +24,12 @@ import {
   clearSelectedTripId,
   saveSelectedTripId,
 } from "@/shared/browser/selected-trip-store";
+import { takePendingToast } from "@/shared/lib/pending-toast";
+import {
+  daysOfPeriod,
+  formatLocalDate,
+  isLocalDateString,
+} from "@/shared/lib/local-date";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
 import { NotAvailable } from "@/shared/ui/state/not-available";
@@ -31,20 +40,30 @@ import {
 } from "@/shared/ui/state/refetch-failed";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
+import { StatusText } from "@/shared/ui/status-text";
 import { Toast } from "@/shared/ui/toast";
 
 type Layer = "menu" | "edit" | "finish";
 
 /**
- * `/trips/{tripId}/itinerary` のしおり。M2-c2 ではヘッダーと「準備中」だけ
- * （日付バーと予定の一覧は M2-d でここに入る）。下部のタブは「しおり」だけ。
- * 開けた旅行はその人の「前回の旅行」として保存する（F-23）。
+ * `/trips/{tripId}/itinerary` のしおり（08）。旅行ヘッダー・日付バー
+ * （期間の日を並べ、選択は URL の `date` で再現）と予定の一覧。
+ * `date` を省略するとサーバーの既定、期間外なら「旅行期間外です」。
+ * 下部のタブは「しおり」だけ。開けた旅行はその人の「前回の旅行」
+ * として保存する（F-23）。
  */
-export function ItineraryScreen({ tripId }: { tripId: string }) {
+export function ItineraryScreen({
+  tripId,
+  date = null,
+}: {
+  tripId: string;
+  /** URL の `date`（`YYYY-MM-DD`）。省略時は null（サーバー既定）。 */
+  date?: string | null;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { state: meState, clear: clearMe } = useMe();
-  const itinerary = useTripItinerary(tripId);
+  const itinerary = useTripItinerary(tripId, date);
   const online = useOnlineStatus();
   const [layer, setLayer] = useState<Layer | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -92,10 +111,40 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
     }
   }, [meState.status, router]);
 
+  // 別画面での保存成功を遷移先で 1 回だけ知らせる（追加・編集・移動・取りやめ）。
+  useEffect(() => {
+    const pending = takePendingToast();
+    if (pending !== null) {
+      setToast(pending);
+    }
+  }, []);
+
   const failure =
     itinerary.error instanceof ApiRequestError
       ? itinerary.error.failure
       : null;
+
+  const period =
+    itinerary.data !== undefined
+      ? {
+          startsOn: itinerary.data.trip.startsOn,
+          endsOn: itinerary.data.trip.endsOn,
+        }
+      : null;
+
+  // 期間外の日は 422（PLAN_OUTSIDE_TRIP_PERIOD）→「旅行期間外です」。
+  // 開いていたときは再取得も同じ 422 で失敗するため、どちらも同じ表示にする。
+  const outsidePeriod =
+    failure !== null &&
+    failure.kind === "http" &&
+    failure.status === 422 &&
+    date !== null &&
+    isLocalDateString(date);
+
+  // 期間外の表示に必要な期間だけを取りに行く（しおりが無ければ旅行を取る）。
+  const tripQuery = useTrip(tripId, {
+    enabled: outsidePeriod && period === null,
+  });
 
   // 開けた旅行を「前回の旅行」として保存する。開けなくなった（403）なら消す。
   useEffect(() => {
@@ -169,6 +218,48 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
     );
   }
 
+  // 期間外の日（422）は読み取りの失敗ではなく画面の状態なので、
+  // FetchFailed より先に切り替える。
+  if (outsidePeriod) {
+    const tripPeriod =
+      period !== null
+        ? period
+        : tripQuery.data !== undefined
+          ? {
+              startsOn: tripQuery.data.startsOn,
+              endsOn: tripQuery.data.endsOn,
+            }
+          : null;
+    return (
+      <main className="itinerary-page">
+        {!online && <OfflineBanner at={null} />}
+        {tripPeriod !== null ? (
+          <>
+            <DateBar
+              tripId={tripId}
+              startsOn={tripPeriod.startsOn}
+              endsOn={tripPeriod.endsOn}
+              selectedDate={null}
+            />
+            <section className="itinerary-outside">
+              <StatusText>{`「${formatLocalDate(date ?? "")}」は旅行期間の外です。期間の日を選んでください。`}</StatusText>
+            </section>
+          </>
+        ) : (
+          <Loading />
+        )}
+        <nav className="tabbar" aria-label="タブ">
+          <div className="tabbar-inner">
+            <span className="tabbar-item tabbar-item-current" aria-current="page">
+              <BookOpenText size={18} weight="fill" aria-hidden="true" />
+              しおり
+            </span>
+          </div>
+        </nav>
+      </main>
+    );
+  }
+
   if (failure !== null && itinerary.data === undefined) {
     if (
       failure.kind === "http" &&
@@ -201,6 +292,9 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
 
   const trip = data.trip;
   const etag = `"${trip.version}"`;
+  const days = daysOfPeriod(trip.startsOn, trip.endsOn);
+  const dayIndex = days.indexOf(data.date);
+  const plans = data.plans;
 
   const openMenu = () => {
     // 前回の拒否・競合は開き直したときに持ち越さない（結果不明は残す）。
@@ -219,11 +313,48 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
       )}
       {itinerary.isRefetching && <Refetching />}
       <TripHeader trip={trip} onOpenMenu={openMenu} />
-      <section className="itinerary-stub">
-        <p>しおりは準備中です。</p>
-        <p className="itinerary-stub-note">
-          予定の一覧は今後のリリースで追加されます。
-        </p>
+      <DateBar
+        tripId={tripId}
+        startsOn={trip.startsOn}
+        endsOn={trip.endsOn}
+        selectedDate={data.date}
+      />
+      <section className="itinerary-list">
+        <header className="itinerary-list-head">
+          <span className="itinerary-list-title">
+            {dayIndex >= 0 ? `${dayIndex + 1} 日目` : ""}{" "}
+            <span className="itinerary-list-date tabular-nums">
+              {formatLocalDate(data.date)}
+            </span>
+          </span>
+          <Link
+            className="itinerary-list-add"
+            href={`/trips/${tripId}/plans/new?date=${data.date}`}
+          >
+            <Plus size={16} weight="bold" aria-hidden="true" />
+            予定を追加
+          </Link>
+        </header>
+        {plans.length === 0 ? (
+          <p className="itinerary-list-empty">
+            この日の予定はまだありません
+          </p>
+        ) : (
+          <ul className="itinerary-list-items">
+            {plans.map((plan, index) => (
+              <li key={plan.id}>
+                <PlanCard
+                  tripId={tripId}
+                  plan={plan}
+                  from={data.date}
+                  meId={userId}
+                  meName={displayName}
+                  last={index === plans.length - 1}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
       {layer === "menu" && (
         <TripMenu

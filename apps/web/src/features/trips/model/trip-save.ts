@@ -17,7 +17,7 @@ export type TripSend = (
 ) => ResultAsync<ApiSuccess<Trip>, ApiFailure>;
 
 /** 応答の ETag。ヘッダーが無いときは本文の version から作る（`"3"` の形）。 */
-export function etagOf(result: ApiSuccess<Trip>): string {
+export function etagOf(result: ApiSuccess<{ version: string }>): string {
   return result.etag ?? `"${result.data.version}"`;
 }
 

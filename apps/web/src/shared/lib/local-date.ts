@@ -36,3 +36,40 @@ export function formatTripPeriod(startsOn: string, endsOn: string): string {
   const start = formatLocalDate(startsOn);
   return startsOn === endsOn ? start : `${start} – ${formatLocalDate(endsOn)}`;
 }
+
+/** 期間の日を `YYYY-MM-DD` の配列で返す（両端を含む）。異常な入力でも空で返す。 */
+export function daysOfPeriod(startsOn: string, endsOn: string): string[] {
+  if (!isLocalDateString(startsOn) || !isLocalDateString(endsOn)) {
+    return [];
+  }
+  const days: string[] = [];
+  const cursor = new Date(`${startsOn}T00:00:00.000Z`);
+  const end = new Date(`${endsOn}T00:00:00.000Z`);
+  // 期間の上限（1 年超は入力ミスとみなして打ち切る）。
+  while (cursor <= end && days.length < 366) {
+    days.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return days;
+}
+
+/** 端末のローカル日付を `YYYY-MM-DD` で返す（「今日」の印用）。 */
+export function todayLocalDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** ISO 8601 の日時を `10/10 木 20:14` の形にする（記録日時の表示用）。 */
+export function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  const weekday = WEEKDAYS[date.getDay()] ?? "";
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${date.getMonth() + 1}/${date.getDate()} ${weekday} ${hh}:${mm}`;
+}

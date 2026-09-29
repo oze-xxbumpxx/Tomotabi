@@ -169,6 +169,12 @@ test('D-05: finding の解析（summary の : は残す・未知の severity と
   assert.throws(() => parseFinding('must:error-shape:  '), /空/);
 });
 
+test('D-06b: security は severity と category の両方にそろえる', () => {
+  assert.throws(() => parseFinding('security:auth:x'), /両方を security/);
+  assert.throws(() => parseFinding('must:security:Origin ヘッダを外すと迂回できる'), /両方を security/);
+  assert.equal(parseFinding('security:security:x').category, 'security');
+});
+
 test('D-06: security の summary は公開しない', () => {
   const f = parseFinding('security:security:Origin ヘッダを外すと迂回できる。手順: curl …');
   assert.equal(f.summary, PRIVATE_SUMMARY);

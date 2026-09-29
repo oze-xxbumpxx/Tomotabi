@@ -1,0 +1,60 @@
+issue: 80
+title: 'feat(web): M2-c2 旅行の画面と入口（一覧・作成・ヘッダーとメニュー・旅行の選択）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-09-28T22:54:19Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-09-28T23:56:42Z'
+    reviewed_sha: '364d0e0e396773e6848afb1a164ebbb88b4952eb'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'security'
+        category: 'auth'
+        summary: '(非公開)'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '書き込みの 403 / 404 で C-2 を出さず、汎用文と再試行を出す'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '表示後の再取得が 401 のとき業務データを隠さず C-1 を出さない'
+      - severity: 'must'
+        category: 'ui-glitch'
+        summary: '利用者の取得に失敗しているとログアウトが無反応'
+      - severity: 'nit'
+        category: 'spec-mismatch'
+        summary: '0 件表示のときの再取得の失敗が表示されない'
+      - severity: 'nit'
+        category: 'ui-glitch'
+        summary: 'ログアウト後に表示名が遷移まで残る'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '期間 422 のあとの再保存の If-Match が再取得前は古い'
+      - severity: 'nit'
+        category: 'ui-glitch'
+        summary: '開始の rejected の「やり直す」が同じ古い ETag で再送する'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'W-06 の試験データの絵文字 51 個の境界が無い'
+      - severity: 'nit'
+        category: 'pr-metadata'
+        summary: 'PR の説明と壊れた保存値の扱いが食い違う'
+  - round: 1
+    reviewed_at: '2026-09-29T10:59:39Z'
+    reviewed_sha: '3e0c92766b4c16d77124ebeeae987ed59931c3ce'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 1
+outcome: 'merged'
+gh:
+  pr: 84
+  pr_created_at: '2026-09-28T23:42:58Z'
+  merged_at: '2026-09-29T13:08:05Z'
+  closed_at: '2026-09-29T13:08:05Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

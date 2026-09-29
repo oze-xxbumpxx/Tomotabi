@@ -13,7 +13,7 @@ reviews:
     posted: false
     findings:
       - severity: 'nit'
-        category: 'test-path-mismatch'
+        category: 'missing-test'
         summary: 'D-09 の DDL のテストが 42P01（表が無い）でも合格する'
 escalations: 0
 outcome: 'merged'

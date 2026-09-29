@@ -13,7 +13,7 @@ reviews:
     posted: true
     findings:
       - severity: 'must'
-        category: 'test-path-mismatch'
+        category: 'missing-test'
         summary: 'P-10 に同時刻の予定が無く、登録日時・id の並びをテストが通っていない'
       - severity: 'nit'
         category: 'missing-test'

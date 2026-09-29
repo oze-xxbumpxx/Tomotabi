@@ -23,7 +23,8 @@ export type PlanFormField = "name" | "kind" | "date" | "time" | "memo";
 
 export type PlanFormValues = {
   name: string;
-  kind: PlanKind;
+  /** 追加では未選択（null）から始めて必須にする（07 §6）。 */
+  kind: PlanKind | null;
   /** `YYYY-MM-DD`。追加フォームだけで使う（編集は日の移動で変える）。 */
   date: string;
   /** 「時刻未定」なら true。true のあいだ time は送らない。 */
@@ -57,6 +58,10 @@ export function validatePlanForm(
     errors.name = "予定名を入力してください";
   } else if (nameLength > PLAN_NAME_MAX_CODEPOINTS) {
     errors.name = "予定名は 100 文字以内で入力してください";
+  }
+
+  if (values.kind === null) {
+    errors.kind = "種類を選んでください";
   }
 
   if (values.date === "") {
@@ -102,8 +107,10 @@ function memoOf(values: PlanFormValues): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-/** 追加の body（時刻未定は `time: null` を明示して送る）。 */
-export function planCreateOf(values: PlanFormValues): PlanCreate {
+/** 追加の body（時刻未定は `time: null` を明示して送る）。検証済みの値にだけ使う。 */
+export function planCreateOf(
+  values: PlanFormValues & { kind: PlanKind },
+): PlanCreate {
   return {
     name: values.name.trim(),
     kind: values.kind,
@@ -120,7 +127,7 @@ export function planPatchOf(plan: Plan, values: PlanFormValues): PlanPatch {
   if (name !== plan.name) {
     patch.name = name;
   }
-  if (values.kind !== plan.kind) {
+  if (values.kind !== null && values.kind !== plan.kind) {
     patch.kind = values.kind;
   }
   const time = timeOf(values);

@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Itinerary, Plan, Trip } from "@tomotabi/contracts";
 import { createQueryClient } from "@/shared/api/query-client";
+import { takePendingToast } from "@/shared/lib/pending-toast";
 
 const { replaceMock, pushMock, backMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
@@ -43,6 +44,14 @@ const secondPlanId = "11111111-2222-4333-8444-555555555555";
 const thirdPlanId = "66666666-7777-4888-8999-000000000000";
 const eventId = "aa1d8e52-1c4a-4d6e-9a67-9d2f0a44cc01";
 const eventId2 = "bb2e9f63-2d5b-4e7f-8b78-0e3f1b55dd02";
+const kindIds = {
+  place: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  food: "5af0a5e0-1b2c-4d3e-8f9a-0b1c2d3e4f5a",
+  shopping: "2d26e1f0-6c3d-4a5b-9c7e-1f2a3b4c5d6e",
+  lodging: "8e9f0a1b-2c3d-4e5f-a6b7-c8d9e0f1a2b3",
+  transport: "0f1e2d3c-4b5a-6c7d-8e9f-a0b1c2d3e4f5",
+  cancelled: "1a2b3c4d-5e6f-4a8b-9c0d-e1f2a3b4c5d6",
+} as const;
 
 const meBody = {
   user: { id: userId, displayName: "ひなた" },
@@ -281,25 +290,58 @@ describe("ItineraryScreen の予定一覧（08）", () => {
     );
   });
 
-  it("W-16: 取りやめの予定は文字とアイコンで示す（色だけではない）", async () => {
-    const cancelled = plan({
-      name: "シュノーケル",
-      cancelledAt: "2026-10-13T09:00:00.000Z",
-      cancelledBy: userId,
-    });
+  it("W-16: 5 種類・同時刻・時刻未定・取りやめを試験データで並べる", async () => {
+    // 試験計画 W-16: 種類 5 件ずつ。09:00 が 2 件（同時刻は応答の順）、
+    // 時刻未定 1 件（後ろ）、取りやめ済み 1 件。
+    const plans = [
+      plan({ id: kindIds.place, name: "美ら海水族館", kind: "place", time: "09:00" }),
+      plan({ id: kindIds.food, name: "朝食", kind: "food", time: "09:00" }),
+      plan({ id: kindIds.transport, name: "移動", kind: "transport", time: "12:00" }),
+      plan({
+        id: kindIds.cancelled,
+        name: "シュノーケル",
+        kind: "place",
+        time: "15:00",
+        cancelledAt: "2026-10-13T09:00:00.000Z",
+        cancelledBy: userId,
+      }),
+      plan({ id: kindIds.shopping, name: "お土産", kind: "shopping", time: "18:00" }),
+      plan({ id: kindIds.lodging, name: "宿", kind: "lodging", time: null }),
+    ];
     stubApi({
-      itinerary: () =>
-        json(itineraryBody(trip(), [cancelled], "2026-10-12")),
+      itinerary: () => json(itineraryBody(trip(), plans, "2026-10-13")),
     });
-    render(
+    const { container } = render(
       <QueryClientProvider client={createQueryClient()}>
-        <ItineraryScreen tripId={tripId} date="2026-10-12" />
+        <ItineraryScreen tripId={tripId} date="2026-10-13" />
       </QueryClientProvider>,
     );
 
-    const name = await screen.findByText("シュノーケル");
-    expect(name.className).toContain("plan-item-name-cancelled");
+    await screen.findByText("美ら海水族館");
+    // 並びは応答の順（時刻昇順・同時刻は応答順・未定は後ろ）をそのまま出す。
+    const names = Array.from(
+      container.querySelectorAll(".plan-item-name"),
+    ).map((el) => el.textContent);
+    expect(names).toEqual([
+      "美ら海水族館",
+      "朝食",
+      "移動",
+      "シュノーケル",
+      "お土産",
+      "宿",
+    ]);
+    // 5 種類はすべて文字で示す。
+    for (const label of ["場所", "食べ処", "移動", "宿", "買い物"]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+    // 時刻未定は「未定」。取りやめは文字とアイコンで示す（色だけではない）。
+    expect(screen.getByText("未定")).toBeInTheDocument();
     expect(screen.getByText("取りやめ")).toBeInTheDocument();
+    expect(
+      container.querySelector("svg.plan-marker-cancel"),
+    ).not.toBeNull();
+    const cancelledName = screen.getByText("シュノーケル");
+    expect(cancelledName.className).toContain("plan-item-name-cancelled");
   });
 
   it("0 件の日は「この日の予定はまだありません」", async () => {
@@ -356,6 +398,13 @@ describe("ItineraryScreen の予定一覧（08）", () => {
     expect(
       await screen.findByText(/旅行期間の外です/),
     ).toBeInTheDocument();
+    // 期間編集へ行けるよう TripHeader（旅行名とメニュー）は出す。
+    expect(
+      screen.getByRole("heading", { name: "沖縄" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /メニュー/ }),
+    ).toBeInTheDocument();
     // 別の日に自動で変えず、期間の日は選べる。
     expect(
       screen.getByRole("link", { name: /1 日目/ }),
@@ -399,9 +448,13 @@ describe("ItineraryScreen の予定一覧（08）", () => {
 });
 
 describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
-  function renderDetail(p = plan(), from: string | null = "2026-10-13") {
+  function renderDetail(
+    p = plan(),
+    from: string | null = "2026-10-13",
+    client = createQueryClient(),
+  ) {
     render(
-      <QueryClientProvider client={createQueryClient()}>
+      <QueryClientProvider client={client}>
         <PlanDetailScreen tripId={tripId} planId={p.id} from={from} />
       </QueryClientProvider>,
     );
@@ -469,7 +522,20 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
       trip: () => json(trip()),
       move: () => json(plan({ date: "2026-10-14", version: "4" })),
     });
-    renderDetail();
+    const client = createQueryClient();
+    client.setQueryData(
+      ["itinerary", tripId, "2026-10-13"],
+      itineraryBody(trip(), [plan()], "2026-10-13"),
+    );
+    client.setQueryData(
+      ["itinerary", tripId, "2026-10-14"],
+      itineraryBody(trip(), [], "2026-10-14"),
+    );
+    client.setQueryData(
+      ["plan", tripId, planId],
+      plan({ date: "2026-10-13", version: "3" }),
+    );
+    renderDetail(plan(), "2026-10-13", client);
 
     await screen.findByRole("heading", { name: "錦市場で昼食" });
     await userEvent.click(
@@ -502,6 +568,25 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
       new Headers(init?.headers).get("idempotency-key"),
     ).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    // しおり（旧日・新日とも）と予定詳細を再取得する。
+    expect(
+      client.getQueryState(["itinerary", tripId, "2026-10-13"])
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryState(["itinerary", tripId, "2026-10-14"])
+        ?.isInvalidated,
+    ).toBe(true);
+    // 表示中の予定詳細は無効化されて再取得される（初回 + 再取得で 2 回）。
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(
+          ([url, init]) =>
+            String(url) === `/api/trips/${tripId}/plans/${planId}` &&
+            (init?.method ?? "GET") === "GET",
+        ).length,
+      ).toBeGreaterThanOrEqual(2),
     );
   });
 
@@ -552,13 +637,18 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
 });
 
 describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
-  it("名前・種類・日付・時刻未定・メモを送って追加する", async () => {
+  it("W-18: 時刻未定（time:null）で送り、追加しましたとしおりの再取得", async () => {
     const fetchMock = stubApi({
       trip: () => json(trip()),
       create: () => json(plan({ id: planId }), 201),
     });
+    const client = createQueryClient();
+    client.setQueryData(
+      ["itinerary", tripId, "2026-10-13"],
+      itineraryBody(trip(), [], "2026-10-13"),
+    );
     render(
-      <QueryClientProvider client={createQueryClient()}>
+      <QueryClientProvider client={client}>
         <PlanFormScreen
           mode="new"
           tripId={tripId}
@@ -577,13 +667,6 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    // 「時刻未定」のチェックを外すと時刻の欄が出る。
-    await userEvent.click(
-      screen.getByRole("checkbox", { name: "時刻未定" }),
-    );
-    fireEvent.change(screen.getByLabelText("時刻"), {
-      target: { value: "15:30" },
-    });
     await userEvent.click(
       screen.getByRole("button", { name: "保存する" }),
     );
@@ -593,18 +676,50 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
         `/trips/${tripId}/itinerary?date=2026-10-13`,
       ),
     );
+    // 時刻未定（既定）は time: null で送る。
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/plans`);
     expect(JSON.parse(String(init?.body))).toEqual({
       name: "国際通りで買い物",
       kind: "shopping",
       date: "2026-10-13",
-      time: "15:30",
+      time: null,
       memo: null,
     });
     expect(
       new Headers(init?.headers).get("idempotency-key"),
     ).not.toBeNull();
+    // 追加しましたの表示（しおり側で出す pending toast）としおりの無効化。
+    expect(takePendingToast()).toBe("追加しました");
+    expect(
+      client.getQueryState(["itinerary", tripId, "2026-10-13"])
+        ?.isInvalidated,
+    ).toBe(true);
+  });
+
+  it("種類が未選択では送らず、欄のエラーとフォーカスを出す", async () => {
+    const fetchMock = stubApi({ trip: () => json(trip()) });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="new" tripId={tripId} date="2026-10-13" />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "予定を追加" });
+    await userEvent.type(screen.getByLabelText("名前"), "国際通り");
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+
+    expect(
+      await screen.findByText("種類を選んでください"),
+    ).toBeInTheDocument();
+    expect(writeCalls(fetchMock)).toHaveLength(0);
+    // 種類の欄（Segmented の fieldset）にフォーカスする。
+    expect(
+      document.activeElement instanceof HTMLElement &&
+        document.activeElement.classList.contains("segmented"),
+    ).toBe(true);
   });
 
   it("必須の名前が空なら欄のエラーにして送らない", async () => {
@@ -727,5 +842,306 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
         screen.getByRole("radio", { name: label }),
       ).toBeDisabled();
     }
+  });
+});
+
+describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () => {
+  it("編集の初回取得が失敗したら読み込みをやめて取得失敗を出す", async () => {
+    stubApi({
+      plan: () => json({ code: "INTERNAL_ERROR" }, 500),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByText("取得できませんでした"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "再試行" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("読み込み中")).not.toBeInTheDocument();
+  });
+
+  it("日の移動で旅行期間の取得が失敗したらシート内で再試行できる", async () => {
+    const fetchMock = stubApi({
+      plan: () => json(plan()),
+      trip: () => json({ code: "INTERNAL_ERROR" }, 500),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    await userEvent.click(
+      screen.getByRole("button", { name: /日の移動/ }),
+    );
+
+    expect(
+      await screen.findByText("旅行の期間を取得できませんでした"),
+    ).toBeInTheDocument();
+    const tripCalls = () =>
+      fetchMock.mock.calls.filter(
+        ([url]) => String(url) === `/api/trips/${tripId}`,
+      );
+    await userEvent.click(
+      screen.getByRole("button", { name: "再試行" }),
+    );
+    await waitFor(() => expect(tripCalls().length).toBeGreaterThan(1));
+  });
+
+  it("日の移動で旅行期間の取得が 401 なら C-1、403 なら C-2", async () => {
+    for (const [status, text] of [
+      [401, "もう一度ログインしてください"],
+      [403, "この旅行を開けません"],
+    ] as const) {
+      cleanup();
+      stubApi({
+        plan: () => json(plan()),
+        trip: () => json({ code: "ERROR" }, status),
+      });
+      render(
+        <QueryClientProvider client={createQueryClient()}>
+          <PlanDetailScreen
+            tripId={tripId}
+            planId={planId}
+            from="2026-10-13"
+          />
+        </QueryClientProvider>,
+      );
+
+      await screen.findByRole("heading", { name: "錦市場で昼食" });
+      await userEvent.click(
+        screen.getByRole("button", { name: /日の移動/ }),
+      );
+
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      // 401 は業務データを隠す。
+      if (status === 401) {
+        expect(
+          screen.queryByRole("heading", { name: "錦市場で昼食" }),
+        ).not.toBeInTheDocument();
+      }
+    }
+  });
+
+  it("しおりの初回取得が 401 / 403 なら C-1 / C-2", async () => {
+    for (const [status, text] of [
+      [401, "もう一度ログインしてください"],
+      [403, "この旅行を開けません"],
+    ] as const) {
+      cleanup();
+      stubApi({
+        itinerary: () => json({ code: "ERROR" }, status),
+      });
+      render(
+        <QueryClientProvider client={createQueryClient()}>
+          <ItineraryScreen tripId={tripId} date="2026-10-13" />
+        </QueryClientProvider>,
+      );
+
+      expect(await screen.findByText(text)).toBeInTheDocument();
+    }
+  });
+
+  it("表示中の再取得が 401 になっても業務データを隠して C-1", async () => {
+    let calls = 0;
+    stubApi({
+      itinerary: () => {
+        calls += 1;
+        return calls === 1
+          ? json(itineraryBody(trip(), [plan()], "2026-10-13"))
+          : json({ code: "UNAUTHENTICATED" }, 401);
+      },
+    });
+    const client = createQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <ItineraryScreen tripId={tripId} date="2026-10-13" />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText("錦市場で昼食");
+    await act(async () => {
+      await client.invalidateQueries({
+        queryKey: ["itinerary", tripId],
+      });
+    });
+
+    expect(
+      await screen.findByText("もう一度ログインしてください"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("錦市場で昼食")).not.toBeInTheDocument();
+  });
+
+  it("追加フォームの旅行取得が 401 / 403 なら C-1 / C-2", async () => {
+    for (const [status, text] of [
+      [401, "もう一度ログインしてください"],
+      [403, "この旅行を開けません"],
+    ] as const) {
+      cleanup();
+      stubApi({ trip: () => json({ code: "ERROR" }, status) });
+      render(
+        <QueryClientProvider client={createQueryClient()}>
+          <PlanFormScreen mode="new" tripId={tripId} date="2026-10-13" />
+        </QueryClientProvider>,
+      );
+
+      expect(await screen.findByText(text)).toBeInTheDocument();
+    }
+  });
+
+  it("編集フォームの予定取得が 401 / 403 / 404 なら C-1 / C-2", async () => {
+    for (const [status, text] of [
+      [401, "もう一度ログインしてください"],
+      [403, "この旅行を開けません"],
+      [404, "この項目を開けません"],
+    ] as const) {
+      cleanup();
+      stubApi({ plan: () => json({ code: "ERROR" }, status) });
+      render(
+        <QueryClientProvider client={createQueryClient()}>
+          <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+        </QueryClientProvider>,
+      );
+
+      expect(await screen.findByText(text)).toBeInTheDocument();
+    }
+  });
+
+  it("追加の保存が 403 なら C-2「この旅行を開けません」", async () => {
+    stubApi({
+      trip: () => json(trip()),
+      create: () => json({ code: "ERROR" }, 403),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="new" tripId={tripId} date="2026-10-13" />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "予定を追加" });
+    await userEvent.type(screen.getByLabelText("名前"), "国際通り");
+    await userEvent.click(
+      screen.getByRole("radio", { name: "買い物" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+
+    expect(
+      await screen.findByText("この旅行を開けません"),
+    ).toBeInTheDocument();
+  });
+
+  it("編集の保存が 404 なら C-2「この項目を開けません」", async () => {
+    stubApi({
+      plan: () => json(plan()),
+      patch: () => json({ code: "ERROR" }, 404),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
+    fireEvent.change(nameInput, { target: { value: "別の名前" } });
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+
+    expect(
+      await screen.findByText("この項目を開けません"),
+    ).toBeInTheDocument();
+  });
+
+  it("取りやめの保存が 404 なら C-2「この項目を開けません」", async () => {
+    stubApi({
+      plan: () => json(plan({ version: "2" })),
+      cancel: () => json({ code: "ERROR" }, 404),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "取りやめにする" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "取りやめにする" }),
+    );
+
+    expect(
+      await screen.findByText("この項目を開けません"),
+    ).toBeInTheDocument();
+  });
+
+  it("保存が 401 なら C-1、結果不明のあとの確認なら確認できていない旨を出す", async () => {
+    // 直接の 401。
+    stubApi({
+      trip: () => json(trip()),
+      create: () => json({ code: "UNAUTHENTICATED" }, 401),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="new" tripId={tripId} date="2026-10-13" />
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("heading", { name: "予定を追加" });
+    await userEvent.type(screen.getByLabelText("名前"), "国際通り");
+    await userEvent.click(
+      screen.getByRole("radio", { name: "買い物" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+    expect(
+      await screen.findByText("もう一度ログインしてください"),
+    ).toBeInTheDocument();
+
+    // network 失敗（結果不明）→ 同じ内容で確認 → 401 は「確認できていません」。
+    cleanup();
+    let calls = 0;
+    stubApi({
+      trip: () => json(trip()),
+      create: () => {
+        calls += 1;
+        return calls === 1
+          ? Promise.reject(new TypeError("network"))
+          : json({ code: "UNAUTHENTICATED" }, 401);
+      },
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="new" tripId={tripId} date="2026-10-13" />
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("heading", { name: "予定を追加" });
+    await userEvent.type(screen.getByLabelText("名前"), "国際通り");
+    await userEvent.click(
+      screen.getByRole("radio", { name: "買い物" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+    expect(
+      await screen.findByText("保存されたか確認できません"),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+    expect(
+      await screen.findByText(/保存されたか確認できていません/),
+    ).toBeInTheDocument();
   });
 });

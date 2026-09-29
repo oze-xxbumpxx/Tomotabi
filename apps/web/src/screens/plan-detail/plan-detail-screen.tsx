@@ -23,6 +23,7 @@ import {
 } from "@/features/plans";
 import { useTrip } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import { Sheet } from "@/shared/ui/sheet";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 import { isLocalDateString } from "@/shared/lib/local-date";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
@@ -35,6 +36,7 @@ import {
 } from "@/shared/ui/state/refetch-failed";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
+import { StatusText } from "@/shared/ui/status-text";
 import { Toast } from "@/shared/ui/toast";
 
 type Layer = "move" | "cancel";
@@ -109,6 +111,21 @@ export function PlanDetailScreen({
 
   // 日の移動に期間の日が必要なので、シートを開くときだけ旅行を取る。
   const tripQuery = useTrip(tripId, { enabled: layer === "move" });
+  const tripFailure =
+    tripQuery.error instanceof ApiRequestError
+      ? tripQuery.error.failure
+      : null;
+
+  // 期間外の拒否（旅行期間が変わった）は期間を取り直す（07 §10）。
+  const refetchTrip = tripQuery.refetch;
+  useEffect(() => {
+    if (
+      move.state.status === "rejected" &&
+      move.state.code === "PLAN_OUTSIDE_TRIP_PERIOD"
+    ) {
+      void refetchTrip();
+    }
+  }, [move.state, refetchTrip]);
 
   const backDate =
     from !== null && isLocalDateString(from)
@@ -151,6 +168,37 @@ export function PlanDetailScreen({
       <main>
         <NotAvailable
           target={target}
+          onGoToTrips={() => router.push("/trips")}
+          onGoToParent={toItinerary}
+        />
+      </main>
+    );
+  }
+
+  // 日の移動のための旅行の取得も同じ拒否の出し分け。401 は表示済みの
+  // 予定も隠して C-1、403 / 404 は C-2。
+  if (
+    layer === "move" &&
+    tripFailure !== null &&
+    tripFailure.kind === "http" &&
+    tripFailure.status === 401
+  ) {
+    return (
+      <main>
+        <SessionExpired onGoToSignIn={() => router.push("/sign-in")} />
+      </main>
+    );
+  }
+  if (
+    layer === "move" &&
+    tripFailure !== null &&
+    tripFailure.kind === "http" &&
+    (tripFailure.status === 403 || tripFailure.status === 404)
+  ) {
+    return (
+      <main>
+        <NotAvailable
+          target="trip"
           onGoToTrips={() => router.push("/trips")}
           onGoToParent={toItinerary}
         />
@@ -292,6 +340,19 @@ export function PlanDetailScreen({
               setNotAvailable(target);
             }}
           />
+        ) : tripFailure !== null ? (
+          <Sheet title="日の移動" onClose={() => onWriteClose(move)}>
+            <StatusText tone="error">
+              旅行の期間を取得できませんでした
+            </StatusText>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => void tripQuery.refetch()}
+            >
+              再試行
+            </button>
+          </Sheet>
         ) : (
           <Loading />
         ))}

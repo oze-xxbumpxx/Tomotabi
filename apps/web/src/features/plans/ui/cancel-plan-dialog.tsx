@@ -139,7 +139,13 @@ export function CancelPlanDialog({
               type="button"
               className="btn-danger"
               onClick={submit}
-              disabled={state.status === "saving" || !online}
+              // 拒否のあとに同じ古い ETag で再送するボタンは出さない。
+              // 閉じて開き直すと最新の ETag で送れる。
+              disabled={
+                state.status === "saving" ||
+                !online ||
+                state.status === "rejected"
+              }
             >
               <Prohibit size={16} weight="bold" aria-hidden="true" />
               {state.status === "saving" ? "保存中" : "取りやめにする"}

@@ -67,7 +67,7 @@ function fieldMessage(
 
 const EMPTY_VALUES = (date: string): PlanFormValues => ({
   name: "",
-  kind: "place",
+  kind: null,
   date,
   timeUndecided: true,
   time: "",
@@ -108,6 +108,7 @@ export function PlanFormScreen({
   );
   const [errors, setErrors] = useState<PlanFormErrors>({});
   const nameRef = useRef<HTMLInputElement>(null);
+  const kindRef = useRef<HTMLFieldSetElement>(null);
   const timeRef = useRef<HTMLInputElement>(null);
   const fieldRefs: Partial<
     Record<PlanFormField, RefObject<HTMLInputElement | null>>
@@ -188,6 +189,19 @@ export function PlanFormScreen({
     }
   }, [meState.status, router]);
 
+  // 保存が「期間外」で拒否されたら期間を取り直し（07 §10）。
+  // 日付欄のエラーとして表示するのは下の displayErrors。
+  const refetchTrip = tripQuery.refetch;
+  useEffect(() => {
+    if (
+      mode === "new" &&
+      state.status === "rejected" &&
+      state.code === "PLAN_OUTSIDE_TRIP_PERIOD"
+    ) {
+      void refetchTrip();
+    }
+  }, [mode, state, refetchTrip]);
+
   const applyChange = (change: PlanFormChange) => {
     setValues((current) => ({
       ...current,
@@ -216,11 +230,20 @@ export function PlanFormScreen({
     setErrors(nextErrors);
     const invalid = firstInvalidField(nextErrors);
     if (invalid !== null) {
-      fieldRefs[invalid]?.current?.focus();
+      if (invalid === "kind") {
+        kindRef.current?.focus();
+      } else {
+        fieldRefs[invalid]?.current?.focus();
+      }
       return;
     }
     if (mode === "new") {
-      void create.submit(createPlanDraft(tripId, planCreateOf(values)));
+      if (values.kind === null) {
+        return;
+      }
+      void create.submit(
+        createPlanDraft(tripId, planCreateOf({ ...values, kind: values.kind })),
+      );
       return;
     }
     if (plan === undefined) {
@@ -315,10 +338,13 @@ export function PlanFormScreen({
     );
   }
 
+  // 編集はデータが届いたあと欄の hydrate を待つが、取得が失敗した
+  // （データが無い）ときは失敗の画面に進ませる。
   const loading =
     mode === "new"
       ? tripQuery.isPending
-      : planQuery.isPending || savedRef.current === null;
+      : planQuery.isPending ||
+        (planQuery.data !== undefined && savedRef.current === null);
   if (loading) {
     return (
       <main>
@@ -342,6 +368,25 @@ export function PlanFormScreen({
   }
 
   const locked = state.status === "saving" || state.status === "unknown";
+
+  // 「期間外」の拒否は上部の文ではなく日付欄のエラーにする（追加だけ。
+  // 編集は日付欄が無いので上部の文のまま）。
+  const outsideRejected =
+    state.status === "rejected" &&
+    state.code === "PLAN_OUTSIDE_TRIP_PERIOD";
+  const showDateError = outsideRejected && mode === "new";
+  const displayErrors: PlanFormErrors = showDateError
+    ? {
+        ...errors,
+        date: "その日付は旅行期間の外です。旅行の期間が変わっていないか確認してください",
+      }
+    : errors;
+  const topMessage =
+    state.status === "rejected" && !showDateError
+      ? (fieldMessage(state) ??
+        "保存できませんでした。もう一度お試しください。")
+      : null;
+
   const kindLockedReason =
     mode === "edit" && plan !== undefined && !plan.canChangeKind
       ? "達成・予約の記録があるため、種類は変更できません"
@@ -369,7 +414,7 @@ export function PlanFormScreen({
       </h1>
       {state.status === "conflict" &&
         state.latest !== null &&
-        plan !== undefined && (
+        plan !== undefined && values.kind !== null && (
           <ConflictNotice
             rows={[
               {
@@ -422,20 +467,24 @@ export function PlanFormScreen({
             }}
           />
         )}
-      {state.status === "conflict" && state.latest === null && (
-        <>
-          <StatusText tone="error">
-            最新の内容を取得できませんでした。
-          </StatusText>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => void update.reloadLatest()}
-          >
-            再試行
-          </button>
-        </>
-      )}
+      {state.status === "conflict" &&
+        state.latest === null &&
+        (state.latestFailed ? (
+          <>
+            <StatusText tone="error">
+              最新の内容を取得できませんでした。
+            </StatusText>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => void update.reloadLatest()}
+            >
+              再試行
+            </button>
+          </>
+        ) : (
+          <StatusText>読み込み中です</StatusText>
+        ))}
       {state.status !== "conflict" && (
         <>
           {state.status === "unknown" && (
@@ -443,19 +492,17 @@ export function PlanFormScreen({
               onConfirm={() => void save.confirmWithSameRequest()}
             />
           )}
-          {state.status === "rejected" && (
-            <StatusText tone="error">
-              {fieldMessage(state) ??
-                "保存できませんでした。もう一度お試しください。"}
-            </StatusText>
+          {state.status === "rejected" && topMessage !== null && (
+            <StatusText tone="error">{topMessage}</StatusText>
           )}
           <PlanFormFields
             values={values}
-            errors={errors}
+            errors={displayErrors}
             locked={locked}
             period={period}
             kindLockedReason={kindLockedReason}
             fieldRefs={fieldRefs}
+            kindRef={kindRef}
             onChange={applyChange}
           />
           <div className="plan-form-actions">
@@ -471,7 +518,13 @@ export function PlanFormScreen({
               type="button"
               className="btn-ink"
               onClick={submit}
-              disabled={locked || !online}
+              disabled={
+                locked ||
+                !online ||
+                // 拒否のあとに同じ古い ETag で再送するボタンは出さない。
+                // 閉じて開き直すと最新の ETag で送れる。
+                (mode === "edit" && state.status === "rejected")
+              }
             >
               {state.status === "saving" ? "保存中" : "保存する"}
             </button>

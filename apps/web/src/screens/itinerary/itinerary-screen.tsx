@@ -138,6 +138,7 @@ export function ItineraryScreen({
     failure !== null &&
     failure.kind === "http" &&
     failure.status === 422 &&
+    failure.code === "PLAN_OUTSIDE_TRIP_PERIOD" &&
     date !== null &&
     isLocalDateString(date);
 
@@ -218,49 +219,52 @@ export function ItineraryScreen({
     );
   }
 
-  // 期間外の日（422）は読み取りの失敗ではなく画面の状態なので、
-  // FetchFailed より先に切り替える。
+  // 期間外の日（422 PLAN_OUTSIDE_TRIP_PERIOD）は読み取りの失敗ではなく
+  // 画面の状態なので、FetchFailed より先に切り替える。期間の取得に使う
+  // 旅行の読み取りにも同じ出し分け（401 → C-1、403 / 404 → C-2）を適用する。
   if (outsidePeriod) {
-    const tripPeriod =
-      period !== null
-        ? period
-        : tripQuery.data !== undefined
-          ? {
-              startsOn: tripQuery.data.startsOn,
-              endsOn: tripQuery.data.endsOn,
-            }
-          : null;
-    return (
-      <main className="itinerary-page">
-        {!online && <OfflineBanner at={null} />}
-        {tripPeriod !== null ? (
-          <>
-            <DateBar
-              tripId={tripId}
-              startsOn={tripPeriod.startsOn}
-              endsOn={tripPeriod.endsOn}
-              selectedDate={null}
-            />
-            <section className="itinerary-outside">
-              <StatusText>{`「${formatLocalDate(date ?? "")}」は旅行期間の外です。期間の日を選んでください。`}</StatusText>
-            </section>
-          </>
-        ) : (
+    if (tripQuery.isPending) {
+      return (
+        <main>
           <Loading />
-        )}
-        <nav className="tabbar" aria-label="タブ">
-          <div className="tabbar-inner">
-            <span className="tabbar-item tabbar-item-current" aria-current="page">
-              <BookOpenText size={18} weight="fill" aria-hidden="true" />
-              しおり
-            </span>
-          </div>
-        </nav>
-      </main>
-    );
+        </main>
+      );
+    }
+    const tripFailure =
+      tripQuery.error instanceof ApiRequestError
+        ? tripQuery.error.failure
+        : null;
+    if (tripQuery.data === undefined) {
+      if (tripFailure !== null && tripFailure.kind === "http") {
+        if (tripFailure.status === 401) {
+          return (
+            <main>
+              <SessionExpired
+                onGoToSignIn={() => router.push("/sign-in")}
+              />
+            </main>
+          );
+        }
+        if (tripFailure.status === 403 || tripFailure.status === 404) {
+          return (
+            <main>
+              <NotAvailable
+                target="trip"
+                onGoToTrips={() => router.push("/trips")}
+              />
+            </main>
+          );
+        }
+      }
+      return (
+        <main>
+          <FetchFailed onRetry={() => void tripQuery.refetch()} />
+        </main>
+      );
+    }
   }
 
-  if (failure !== null && itinerary.data === undefined) {
+  if (failure !== null && itinerary.data === undefined && !outsidePeriod) {
     if (
       failure.kind === "http" &&
       (failure.status === 403 || failure.status === 404)
@@ -282,19 +286,27 @@ export function ItineraryScreen({
   }
 
   const data = itinerary.data;
-  if (data === undefined) {
+  // 期間外はしおりの応答が無いので、旅行の問い合わせの結果を使う。
+  const trip = data !== undefined ? data.trip : tripQuery.data;
+  if (data === undefined && trip === undefined) {
     return (
       <main>
         <FetchFailed onRetry={() => void itinerary.refetch()} />
       </main>
     );
   }
+  if (trip === undefined) {
+    return (
+      <main>
+        <FetchFailed onRetry={() => void tripQuery.refetch()} />
+      </main>
+    );
+  }
 
-  const trip = data.trip;
   const etag = `"${trip.version}"`;
   const days = daysOfPeriod(trip.startsOn, trip.endsOn);
-  const dayIndex = days.indexOf(data.date);
-  const plans = data.plans;
+  const dayIndex = data !== undefined ? days.indexOf(data.date) : -1;
+  const plans = data !== undefined ? data.plans : null;
 
   const openMenu = () => {
     // 前回の拒否・競合は開き直したときに持ち越さない（結果不明は残す）。
@@ -304,8 +316,12 @@ export function ItineraryScreen({
 
   return (
     <main className="itinerary-page">
-      {!online && <OfflineBanner at={new Date(data.fetchedAt)} />}
-      {itinerary.isRefetchError && (
+      {!online && (
+        <OfflineBanner
+          at={data !== undefined ? new Date(data.fetchedAt) : null}
+        />
+      )}
+      {data !== undefined && itinerary.isRefetchError && (
         <RefetchFailed
           fetchedAt={new Date(data.fetchedAt)}
           onRetry={() => void itinerary.refetch()}
@@ -317,45 +333,51 @@ export function ItineraryScreen({
         tripId={tripId}
         startsOn={trip.startsOn}
         endsOn={trip.endsOn}
-        selectedDate={data.date}
+        selectedDate={data !== undefined ? data.date : null}
       />
-      <section className="itinerary-list">
-        <header className="itinerary-list-head">
-          <span className="itinerary-list-title">
-            {dayIndex >= 0 ? `${dayIndex + 1} 日目` : ""}{" "}
-            <span className="itinerary-list-date tabular-nums">
-              {formatLocalDate(data.date)}
+      {data === undefined ? (
+        <section className="itinerary-outside">
+          <StatusText>{`「${formatLocalDate(date ?? "")}」は旅行期間の外です。期間の日を選んでください。`}</StatusText>
+        </section>
+      ) : (
+        <section className="itinerary-list">
+          <header className="itinerary-list-head">
+            <span className="itinerary-list-title">
+              {dayIndex >= 0 ? `${dayIndex + 1} 日目` : ""}{" "}
+              <span className="itinerary-list-date tabular-nums">
+                {formatLocalDate(data.date)}
+              </span>
             </span>
-          </span>
-          <Link
-            className="itinerary-list-add"
-            href={`/trips/${tripId}/plans/new?date=${data.date}`}
-          >
-            <Plus size={16} weight="bold" aria-hidden="true" />
-            予定を追加
-          </Link>
-        </header>
-        {plans.length === 0 ? (
-          <p className="itinerary-list-empty">
-            この日の予定はまだありません
-          </p>
-        ) : (
-          <ul className="itinerary-list-items">
-            {plans.map((plan, index) => (
-              <li key={plan.id}>
-                <PlanCard
-                  tripId={tripId}
-                  plan={plan}
-                  from={data.date}
-                  meId={userId}
-                  meName={displayName}
-                  last={index === plans.length - 1}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+            <Link
+              className="itinerary-list-add"
+              href={`/trips/${tripId}/plans/new?date=${data.date}`}
+            >
+              <Plus size={16} weight="bold" aria-hidden="true" />
+              予定を追加
+            </Link>
+          </header>
+          {plans === null || plans.length === 0 ? (
+            <p className="itinerary-list-empty">
+              この日の予定はまだありません
+            </p>
+          ) : (
+            <ul className="itinerary-list-items">
+              {plans.map((plan, index) => (
+                <li key={plan.id}>
+                  <PlanCard
+                    tripId={tripId}
+                    plan={plan}
+                    from={data.date}
+                    meId={userId}
+                    meName={displayName}
+                    last={index === plans.length - 1}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
       {layer === "menu" && (
         <TripMenu
           trip={trip}

@@ -38,6 +38,7 @@ export function PlanFormFields({
   period = null,
   kindLockedReason = null,
   fieldRefs,
+  kindRef,
   onChange,
 }: {
   values: PlanFormValues;
@@ -51,6 +52,8 @@ export function PlanFormFields({
   fieldRefs: Partial<
     Record<PlanFormField, RefObject<HTMLInputElement | null>>
   >;
+  /** 種類のエラー時にフォーカスを戻す fieldset 参照。 */
+  kindRef?: RefObject<HTMLFieldSetElement | null>;
   onChange: (change: PlanFormChange) => void;
 }) {
   const kindLocked = kindLockedReason !== null || locked;
@@ -69,6 +72,7 @@ export function PlanFormFields({
       />
       <div className="field">
         <Segmented
+          ref={kindRef}
           label="種類"
           options={KIND_OPTIONS}
           value={values.kind}

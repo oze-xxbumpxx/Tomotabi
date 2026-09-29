@@ -116,7 +116,11 @@ export function PlanMoveSheet({
               type="button"
               className="btn-ink"
               onClick={submit}
-              disabled={sameDay || saving || !online}
+              // 拒否のあとに同じ古い ETag で再送するボタンは出さない。
+              // 閉じて開き直すと最新の ETag で送れる。
+              disabled={
+                sameDay || saving || !online || state.status === "rejected"
+              }
             >
               {saving ? "保存中" : "この日に移動する"}
             </button>
@@ -169,9 +173,10 @@ export function PlanMoveSheet({
         ))}
       {state.status !== "conflict" && (
         <>
-          {state.status === "rejected" && (
-            <StatusText tone="error">{rejectedMessage(state)}</StatusText>
-          )}
+          {state.status === "rejected" &&
+            state.code !== "PLAN_OUTSIDE_TRIP_PERIOD" && (
+              <StatusText tone="error">{rejectedMessage(state)}</StatusText>
+            )}
           <DatePickerGrid
             startsOn={trip.startsOn}
             endsOn={trip.endsOn}
@@ -179,6 +184,12 @@ export function PlanMoveSheet({
             disabled={saving || state.status === "unknown"}
             onSelect={setSelected}
           />
+          {state.status === "rejected" &&
+            state.code === "PLAN_OUTSIDE_TRIP_PERIOD" && (
+              <p className="field-error" role="alert">
+                {rejectedMessage(state)}
+              </p>
+            )}
           {sameDay && (
             <p className="plan-field-note">今の日付と同じ日は選べません</p>
           )}

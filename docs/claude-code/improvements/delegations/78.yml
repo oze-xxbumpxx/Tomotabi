@@ -1,0 +1,51 @@
+issue: 78
+title: 'feat(api): M2-b 予定の API としおり（追加・取得・更新・移動・取りやめ・しおり）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-09-28T12:45:08Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-09-28T14:26:24Z'
+    reviewed_sha: 'df3f30ea22ff191eca8eebfbf442feee3f520de0'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-path-mismatch'
+        summary: 'P-10 に同時刻の予定が無く、登録日時・id の並びをテストが通っていない'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'PATCH・移動・取りやめで 403（参加しない旅行）と 404（別の旅行の予定）のテストが無い'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: 'cause を辿る 2 つのループに深さの上限が無い（循環する cause で止まらない）'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'plan.test.ts の not.toBe(plan()) は常に真で何も確かめていない'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'P-14 の finally で ROLLBACK せずに接続を返す'
+      - severity: 'decision'
+        category: 'coding-standard'
+        summary: 'PATCH の未送信を undefined で表し、規約の null への統一と混在する'
+  - round: 1
+    reviewed_at: '2026-09-28T22:51:50Z'
+    reviewed_sha: '01c1a72e90d1f66ede2a9790cd180314c5223d14'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'duplication'
+        summary: 'MAX_CAUSE_DEPTH と cause を辿るループが 2 つのファイルに重複している'
+escalations: 1
+outcome: 'merged'
+gh:
+  pr: 79
+  pr_created_at: '2026-09-28T14:03:42Z'
+  merged_at: '2026-09-28T22:52:49Z'
+  closed_at: '2026-09-28T22:52:49Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

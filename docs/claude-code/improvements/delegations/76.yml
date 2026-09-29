@@ -1,0 +1,51 @@
+issue: 76
+title: 'feat(web): M2-c1 web の基盤（取得状態・保存状態・共通の部品と状態表示）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-09-28T00:16:47Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-09-28T00:42:36Z'
+    reviewed_sha: '65835dcba48adc2ef33261cbbb9c506b476750aa'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: 'unknown から backToEditing で編集に戻り新しいキーで保存し直せる'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '要求の本文が参照のまま保存され確認時に本文が変わり得る'
+      - severity: 'must'
+        category: 'ssr-crash'
+        summary: 'useOnlineStatus がサーバー描画で navigator を参照して落ちる'
+      - severity: 'must'
+        category: 'a11y'
+        summary: 'ダイアログ内のボタンのキーボード操作が背景クリックと判定されて閉じる'
+      - severity: 'must'
+        category: 'ui-glitch'
+        summary: '開く前のダイアログ・シートが display:flex で見える'
+      - severity: 'nit'
+        category: 'ui-glitch'
+        summary: 'トーストのタイマーが呼び出し側の再描画でやり直しになる'
+  - round: 1
+    reviewed_at: '2026-09-28T00:50:23Z'
+    reviewed_sha: '7cedb374484544ed4e4e2b1633d3d70449f61285'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'scope-creep'
+        summary: 'build の生成物 apps/web/next-env.d.ts の変更が含まれる'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 77
+  pr_created_at: '2026-09-28T00:39:47Z'
+  merged_at: '2026-09-28T12:33:02Z'
+  closed_at: '2026-09-28T12:33:02Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

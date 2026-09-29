@@ -1,0 +1,54 @@
+issue: 73
+title: 'feat(api): M2-a3 旅行の API（作成・一覧・取得・名前・期間・開始・終了）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-09-27T22:51:23Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-09-27T23:29:51Z'
+    reviewed_sha: 'a6bfb47feb2e80618e3627abf78d3db4340882e6'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'precision-loss'
+        summary: '一覧のカーソルがミリ秒に丸められ、同じミリ秒の旅行が次のページから抜け落ちる'
+      - severity: 'nit'
+        category: 'spec-mismatch'
+        summary: '作成の再送が参加者の確認より後で、一方の利用停止後に 409 になる'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'T-06 の 1 回の失敗の原因が残っていない'
+  - round: 1
+    reviewed_at: '2026-09-27T23:39:53Z'
+    reviewed_sha: '50efb411483c79715e20a07a3de1e0746ee48768'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '旅行名の変更の経路が PATCH /trips/:tripId/name で契約（/trips/{tripId}）と違う'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: 'DATABASE_URL が空文字のとき API が起動しない'
+  - round: 2
+    reviewed_at: '2026-09-27T23:47:25Z'
+    reviewed_sha: '16b41e391c66858fc5806eaa5b25be48c9ed3c3b'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'coding-standard'
+        summary: 'useDatabase のコメントの「差分 4」の参照先が違う（設計書の差分 4 は期間外のしおりの 422）'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 74
+  pr_created_at: '2026-09-27T23:25:41Z'
+  merged_at: '2026-09-28T00:15:28Z'
+  closed_at: '2026-09-28T00:15:28Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true

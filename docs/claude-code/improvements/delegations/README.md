@@ -55,13 +55,13 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 
 | category | 例 |
 | --- | --- |
-| `test-path-mismatch` | テストが本番と違う組み立てで動き、本番の経路を通っていない（#35 素の HTTP サーバー、#39 `bodyParser`） |
+| `test-path-mismatch` | テストが本番と違う組み立てで動き、本番の経路を通っていない（#35 素の HTTP サーバー、#39 `bodyParser`、#64 モックの先の再描画）。経路は通っているが壊しても落ちないものは `missing-test` |
 | `error-shape` | エラー応答が設計書の形（`{ code, message }`）でない（#39） |
 | `logging-gap` | 出すべきログが出ない・出してはいけない項目が出る（#39） |
 | `pr-metadata` | PR 本文の不備（`Closes #N` 漏れ（#33）、品質確認の結果が無い） |
 | `scope-creep` | Issue の範囲外の変更、並行 PR の担当を先回り |
-| `spec-mismatch` | 名前・置き場所・型・エラーコードが設計書・試験計画と違う |
-| `missing-test` | 試験計画の観点 ID に対応するテストが無い |
+| `spec-mismatch` | 名前・置き場所・型・エラーコード・振る舞い（状態の遷移、エラーの表示の出し分け）が設計書・契約・試験計画と違う（#74・#77・#84） |
+| `missing-test` | 試験計画の観点 ID に対応するテストが無い、またはあっても確かめたい処理を壊して落ちない（試験データの不足・常に真の assert。#70・#79） |
 | `coding-standard` | `.claude/rules/coding-standards.md` の違反 |
 | `security` | セキュリティの指摘（severity も `security`） |
 | `design-gap` | 設計書・試験計画の側の穴で、実装どおりでも期待の動きにならない（#51 ログイン失敗時の戻り先） |

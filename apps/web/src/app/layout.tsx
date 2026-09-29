@@ -5,7 +5,7 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Tomotabi",
-  description: "M0 開発基盤の確認。旅行機能は未実装です。",
+  description: "ふたりの旅行のしおり・記録・精算をひとつに。",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

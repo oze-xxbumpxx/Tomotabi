@@ -13,7 +13,7 @@ reviews:
     posted: false
     findings:
       - severity: 'security'
-        category: 'auth'
+        category: 'security'
         summary: '(非公開)'
       - severity: 'must'
         category: 'spec-mismatch'

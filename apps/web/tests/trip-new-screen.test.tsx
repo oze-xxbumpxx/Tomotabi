@@ -130,6 +130,27 @@ describe("TripNewScreen (/trips/new)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("W-06: 絵文字 51 個（UTF-16 で 102）の名前は通る（境界）", async () => {
+    const fetchMock = stubApi(() =>
+      new Response(JSON.stringify(tripBody), { status: 201 }),
+    );
+    renderScreen();
+
+    const emojiName = "🍡".repeat(51);
+    fireEvent.change(screen.getByLabelText("旅行名"), {
+      target: { value: emojiName },
+    });
+    fillDates("2026-10-12", "2026-10-14");
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行をつくる" }),
+    );
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).name,
+    ).toBe(emojiName);
+  });
+
   it("W-06: 絵文字 100 個の名前は通る（コードポイントで数える）", async () => {
     const fetchMock = stubApi(() =>
       new Response(JSON.stringify(tripBody), { status: 201 }),

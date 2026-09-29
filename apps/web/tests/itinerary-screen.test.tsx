@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -9,15 +10,21 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Itinerary, Trip } from "@tomotabi/contracts";
+import { itineraryQueryKey } from "@/features/trips";
 import { createQueryClient } from "@/shared/api/query-client";
 
-const { replaceMock, pushMock } = vi.hoisted(() => ({
+const { replaceMock, pushMock, signOutMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   pushMock: vi.fn(),
+  signOutMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, push: pushMock }),
+}));
+
+vi.mock("@/shared/auth/auth-client", () => ({
+  authClient: { signOut: signOutMock },
 }));
 
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
@@ -81,6 +88,7 @@ function notFound(): Response {
  * ハンドラは呼ばれるたびに評価する（成功→失敗の切り替えが書ける）。
  */
 function stubApi(handlers: {
+  me?: Handler;
   itinerary?: Handler;
   trip?: Handler;
   start?: Handler;
@@ -92,7 +100,9 @@ function stubApi(handlers: {
     const url = urlOf(input);
     const method = init?.method ?? "GET";
     if (url === "/api/me") {
-      return Promise.resolve(json(meBody));
+      return Promise.resolve(
+        handlers.me !== undefined ? handlers.me(init) : json(meBody),
+      );
     }
     if (url === `/api/trips/${tripId}/itinerary` && method === "GET") {
       return Promise.resolve(
@@ -132,9 +142,12 @@ function stubApi(handlers: {
   return fetchMock;
 }
 
-function renderScreen(id = tripId): void {
+function renderScreen(
+  id = tripId,
+  client = createQueryClient(),
+): void {
   render(
-    <QueryClientProvider client={createQueryClient()}>
+    <QueryClientProvider client={client}>
       <ItineraryScreen tripId={id} />
     </QueryClientProvider>,
   );
@@ -390,5 +403,229 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
       await screen.findByText("もう一度ログインしてください"),
     ).toBeInTheDocument();
     expect(screen.queryByText("沖縄")).not.toBeInTheDocument();
+  });
+
+  it("W-12: 表示の後の再取得が 401 でも表示済みのデータを隠して C-1", async () => {
+    let itineraryCalls = 0;
+    stubApi({
+      itinerary: () => {
+        itineraryCalls += 1;
+        return itineraryCalls === 1
+          ? json(itineraryBody(trip()))
+          : json({ code: "UNAUTHENTICATED" }, 401);
+      },
+    });
+    const client = createQueryClient();
+    renderScreen(tripId, client);
+
+    expect(
+      await screen.findByRole("heading", { name: "沖縄" }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: itineraryQueryKey(tripId) });
+    });
+
+    expect(
+      await screen.findByText("もう一度ログインしてください"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("沖縄")).not.toBeInTheDocument();
+  });
+
+  it("ログアウトでキャッシュと表示名を消して /sign-in へ", async () => {
+    let itineraryCalls = 0;
+    stubApi({
+      itinerary: () => {
+        itineraryCalls += 1;
+        if (itineraryCalls === 1) {
+          return json(itineraryBody(trip()));
+        }
+        // ログアウト後にキャッシュから描画されないことを確かめるため保留にする。
+        return new Promise<Response>(() => {});
+      },
+    });
+    signOutMock.mockResolvedValue({
+      data: { success: true },
+      error: null,
+    });
+    const client = createQueryClient();
+    renderScreen(tripId, client);
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    expect(
+      screen.getByText("ひなた としてログイン中"),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: /ログアウト/ }),
+    );
+
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith("/sign-in"),
+    );
+    expect(client.getQueryData(itineraryQueryKey(tripId))).toBeUndefined();
+    expect(screen.queryByText(/ひなた/)).not.toBeInTheDocument();
+    expect(screen.queryByText("沖縄")).not.toBeInTheDocument();
+  });
+
+  it("利用者が取れなくてもログアウトを押せる（失敗は既存の表示）", async () => {
+    stubApi({
+      me: () => json({ code: "INTERNAL_ERROR" }, 500),
+    });
+    signOutMock.mockResolvedValue({
+      data: null,
+      error: { status: 503 },
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /ログアウト/ }),
+    );
+
+    await waitFor(() => expect(signOutMock).toHaveBeenCalled());
+    expect(
+      await screen.findByText(
+        "ログアウトできませんでした。もう一度お試しください。",
+      ),
+    ).toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalledWith("/sign-in");
+  });
+
+  it.each(["start", "rename"] as const)(
+    "書き込みが 403 で拒否されたら「この旅行を開けません」（%s）",
+    async (target) => {
+      stubApi(
+        target === "start"
+          ? { start: () => json({ code: "TRIP_NOT_ACCESSIBLE" }, 403) }
+          : { rename: () => json({ code: "TRIP_NOT_ACCESSIBLE" }, 403) },
+      );
+      renderScreen();
+
+      await screen.findByRole("heading", { name: "沖縄" });
+      await userEvent.click(
+        screen.getByRole("button", { name: "旅行のメニュー" }),
+      );
+      if (target === "start") {
+        await userEvent.click(
+          screen.getByRole("button", { name: "旅行を開始する" }),
+        );
+      } else {
+        await userEvent.click(
+          screen.getByRole("button", { name: "旅行名と期間を変更" }),
+        );
+        fireEvent.change(screen.getByLabelText("旅行名"), {
+          target: { value: "石垣島" },
+        });
+        await userEvent.click(screen.getByRole("button", { name: "保存" }));
+      }
+
+      expect(
+        await screen.findByText("この旅行を開けません"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "旅行一覧へ" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("沖縄")).not.toBeInTheDocument();
+    },
+  );
+
+  it("開始が 428 なら古い ETag で再送せず、閉じると最新を取り直す", async () => {
+    let itineraryCalls = 0;
+    const fetchMock = stubApi({
+      itinerary: () => {
+        itineraryCalls += 1;
+        return json(itineraryBody(trip({ version: String(itineraryCalls) })));
+      },
+      start: () => json({ code: "IF_MATCH_REQUIRED" }, 428),
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行を開始する" }),
+    );
+
+    expect(
+      await screen.findByText("画面を更新してからやり直してください"),
+    ).toBeInTheDocument();
+    // 古い ETag のままの再送ボタンは出さない。
+    expect(
+      screen.queryByRole("button", { name: "やり直す" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "閉じる" }),
+    );
+
+    await waitFor(() => expect(itineraryCalls).toBe(2));
+    const writes = writeCalls(fetchMock);
+    expect(writes).toHaveLength(1);
+  });
+
+  it("W-23: 期間が 422 のあと期間だけ直して再保存すると直近の応答の ETag で送る", async () => {
+    let periodCalls = 0;
+    const fetchMock = stubApi({
+      rename: () => json(trip({ name: "石垣島", version: "2" })),
+      period: () => {
+        periodCalls += 1;
+        if (periodCalls === 1) {
+          return json({ code: "PLAN_OUTSIDE_TRIP_PERIOD" }, 422);
+        }
+        return json(
+          trip({
+            name: "石垣島",
+            startsOn: "2026-10-20",
+            endsOn: "2026-10-22",
+            version: "3",
+          }),
+        );
+      },
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行名と期間を変更" }),
+    );
+
+    fireEvent.change(screen.getByLabelText("旅行名"), {
+      target: { value: "石垣島" },
+    });
+    fireEvent.change(screen.getByLabelText("開始日"), {
+      target: { value: "2026-10-01" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(
+      await screen.findByText("旅行名は保存済みです"),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("開始日"), {
+      target: { value: "2026-10-20" },
+    });
+    fireEvent.change(screen.getByLabelText("終了日"), {
+      target: { value: "2026-10-22" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(await screen.findByText("変更しました")).toBeInTheDocument();
+    const puts = writeCalls(fetchMock).filter(
+      ([url]) => url === `/api/trips/${tripId}/period`,
+    );
+    expect(puts).toHaveLength(2);
+    // 2 回目の PUT は、名前の保存が返した ETag（しおりの再取得を待たない）。
+    expect(new Headers(puts[1][1]?.headers).get("if-match")).toBe('"2"');
   });
 });

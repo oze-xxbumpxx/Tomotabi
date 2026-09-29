@@ -55,32 +55,20 @@ function MenuItem({ icon, label, note, disabled, onClick }: MenuItemProps) {
   );
 }
 
-function StartStateBlock({
-  start,
-  tripId,
-  etag,
-}: {
-  start: TripSave;
-  tripId: string;
-  etag: string;
-}) {
+function StartStateBlock({ start }: { start: TripSave }) {
   const state = start.state;
   switch (state.status) {
     case "saving":
       return <StatusText>開始しています</StatusText>;
     case "rejected":
+      // 拒否のあとは同じ ETag で再送しない。閉じると最新を取り直す。
       return (
         <div className="menu-status">
           <StatusText tone="error">
-            開始できませんでした。画面を更新してやり直してください。
+            {state.httpStatus === 428
+              ? "画面を更新してからやり直してください"
+              : "開始できませんでした。画面を更新してやり直してください。"}
           </StatusText>
-          <button
-            type="button"
-            className="btn-ink"
-            onClick={() => void start.submit(startTripDraft(tripId, etag))}
-          >
-            やり直す
-          </button>
         </div>
       );
     case "unknown":
@@ -180,7 +168,7 @@ export function TripMenu({
         <TripStatusBadge status={trip.status} />
       </div>
       {startInFlight ? (
-        <StartStateBlock start={start} tripId={trip.id} etag={etag} />
+        <StartStateBlock start={start} />
       ) : (
         <div className="menu-card">
           <MenuItem

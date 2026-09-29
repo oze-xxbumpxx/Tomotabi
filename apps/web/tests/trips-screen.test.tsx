@@ -1,5 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Trip, TripPage } from "@tomotabi/contracts";
@@ -81,9 +87,9 @@ function page(items: Trip[], nextCursor: string | null = null): TripPage {
   return { items, nextCursor };
 }
 
-function renderScreen(): void {
+function renderScreen(client = createQueryClient()): void {
   render(
-    <QueryClientProvider client={createQueryClient()}>
+    <QueryClientProvider client={client}>
       <TripsScreen />
     </QueryClientProvider>,
   );
@@ -181,6 +187,62 @@ describe("TripsScreen (/trips)", () => {
       await screen.findByText("もう一度ログインしてください"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/沖縄/)).not.toBeInTheDocument();
+  });
+
+  it("W-12: 表示の後の再取得が 401 でも表示済みのデータを隠して C-1", async () => {
+    let tripsCalls = 0;
+    stubApi({ status: 200, body: meBody }, () => {
+      tripsCalls += 1;
+      return tripsCalls === 1
+        ? new Response(JSON.stringify(page([trip()])), { status: 200 })
+        : new Response(JSON.stringify({ code: "UNAUTHENTICATED" }), {
+            status: 401,
+          });
+    });
+    const client = createQueryClient();
+    renderScreen(client);
+
+    expect(
+      await screen.findByRole("link", { name: /沖縄/ }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await client.invalidateQueries();
+    });
+
+    expect(
+      await screen.findByText("もう一度ログインしてください"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/沖縄/)).not.toBeInTheDocument();
+  });
+
+  it("旅行 0 件でも再取得中・再取得の失敗を出す", async () => {
+    let tripsCalls = 0;
+    stubApi({ status: 200, body: meBody }, () => {
+      tripsCalls += 1;
+      if (tripsCalls === 1) {
+        return new Response(JSON.stringify(page([])), { status: 200 });
+      }
+      return new Response(JSON.stringify({ code: "INTERNAL_ERROR" }), {
+        status: 500,
+      });
+    });
+    const client = createQueryClient();
+    renderScreen(client);
+
+    expect(
+      await screen.findByText("旅行はまだありません"),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await client.invalidateQueries();
+    });
+
+    expect(
+      await screen.findByText(/更新できていません/),
+    ).toBeInTheDocument();
+    // 空の表示はそのまま残す（失敗を 0 件と混ぜない）。
+    expect(screen.getByText("旅行はまだありません")).toBeInTheDocument();
   });
 
   it("/api/me が 401 なら /sign-in へ", async () => {

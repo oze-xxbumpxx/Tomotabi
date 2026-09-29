@@ -84,9 +84,11 @@ export function FinishTripDialog({
           </p>
           {state.status === "rejected" && (
             <StatusText tone="error">
-              {state.code === "INVALID_TRIP_TRANSITION"
-                ? "旅行の状態が変わっています。閉じて開き直してください。"
-                : "終了できませんでした。もう一度お試しください。"}
+              {state.httpStatus === 428
+                ? "画面を更新してからやり直してください"
+                : state.code === "INVALID_TRIP_TRANSITION"
+                  ? "旅行の状態が変わっています。閉じて開き直してください。"
+                  : "終了できませんでした。もう一度お試しください。"}
             </StatusText>
           )}
           <div className="dialog-actions">

@@ -1,6 +1,7 @@
 "use client";
 
 import { BookOpenText } from "@phosphor-icons/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMe, useSignOut } from "@/features/auth";
@@ -41,12 +42,14 @@ type Layer = "menu" | "edit" | "finish";
  */
 export function ItineraryScreen({ tripId }: { tripId: string }) {
   const router = useRouter();
-  const { state: meState } = useMe();
+  const queryClient = useQueryClient();
+  const { state: meState, clear: clearMe } = useMe();
   const itinerary = useTripItinerary(tripId);
   const online = useOnlineStatus();
   const [layer, setLayer] = useState<Layer | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [sheetExpired, setSheetExpired] = useState<boolean | null>(null);
+  const [sheetNotAvailable, setSheetNotAvailable] = useState(false);
 
   const start = useTripMutation({
     tripId,
@@ -75,10 +78,10 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
     meState.status === "ready" ? meState.me.user.displayName : null;
 
   const handleSignOut = async () => {
-    if (userId === null) {
-      return;
-    }
     if (await signOut(userId)) {
+      // 前の利用者の業務データが残らないよう、キャッシュと利用者の表示を消す。
+      queryClient.clear();
+      clearMe();
       router.replace("/sign-in");
     }
   };
@@ -128,6 +131,23 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
     );
   }
 
+  // 書き込みが 403 / 404 で拒否されたら C-2。新しいキーで回避しない（07 §10）。
+  const writeNotAvailable = [start.state, finish.state].find(
+    (state): state is Extract<TripSaveState, { status: "rejected" }> =>
+      state.status === "rejected" &&
+      (state.httpStatus === 403 || state.httpStatus === 404),
+  );
+  if (writeNotAvailable !== undefined || sheetNotAvailable) {
+    return (
+      <main>
+        <NotAvailable
+          target="trip"
+          onGoToTrips={() => router.push("/trips")}
+        />
+      </main>
+    );
+  }
+
   if (itinerary.isPending) {
     return (
       <main>
@@ -136,14 +156,20 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
     );
   }
 
+  // 取得・再取得の 401 は、表示済みのデータがあっても業務データを隠して C-1。
+  if (
+    failure !== null &&
+    failure.kind === "http" &&
+    failure.status === 401
+  ) {
+    return (
+      <main>
+        <SessionExpired onGoToSignIn={() => router.push("/sign-in")} />
+      </main>
+    );
+  }
+
   if (failure !== null && itinerary.data === undefined) {
-    if (failure.kind === "http" && failure.status === 401) {
-      return (
-        <main>
-          <SessionExpired onGoToSignIn={() => router.push("/sign-in")} />
-        </main>
-      );
-    }
     if (
       failure.kind === "http" &&
       (failure.status === 403 || failure.status === 404)
@@ -214,7 +240,13 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
           onSignOut={() => void handleSignOut()}
           signOutPending={signOutPending}
           signOutFailed={signOutFailed}
-          onClose={() => setLayer(null)}
+          onClose={() => {
+            // 拒否のあとに開き直すときは、取り直した最新の ETag で送る。
+            if (start.state.status === "rejected") {
+              void itinerary.refetch();
+            }
+            setLayer(null);
+          }}
         />
       )}
       {layer === "edit" && (
@@ -230,6 +262,10 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
             setLayer(null);
             setSheetExpired(unconfirmed);
           }}
+          onNotAvailable={() => {
+            setLayer(null);
+            setSheetNotAvailable(true);
+          }}
         />
       )}
       {layer === "finish" && (
@@ -237,7 +273,12 @@ export function ItineraryScreen({ tripId }: { tripId: string }) {
           trip={trip}
           etag={etag}
           finish={finish}
-          onClose={() => setLayer(null)}
+          onClose={() => {
+            if (finish.state.status === "rejected") {
+              void itinerary.refetch();
+            }
+            setLayer(null);
+          }}
         />
       )}
       {toast !== null && (

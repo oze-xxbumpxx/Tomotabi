@@ -43,11 +43,11 @@ export function TripsScreen() {
   const failure =
     trips.error instanceof ApiRequestError ? trips.error.failure : null;
 
+  // 取得・再取得の 401 は、表示済みのデータがあっても業務データを隠して C-1。
   if (
     failure !== null &&
     failure.kind === "http" &&
-    failure.status === 401 &&
-    trips.data === undefined
+    failure.status === 401
   ) {
     return (
       <main>
@@ -70,6 +70,17 @@ export function TripsScreen() {
       {failure !== null && trips.data === undefined && (
         <FetchFailed onRetry={() => void trips.refetch()} />
       )}
+      {trips.data !== undefined && (
+        <>
+          {trips.isRefetching && <Refetching />}
+          {trips.isRefetchError && (
+            <RefetchFailed
+              fetchedAt={new Date(trips.dataUpdatedAt)}
+              onRetry={() => void trips.refetch()}
+            />
+          )}
+        </>
+      )}
       {trips.data !== undefined && items.length === 0 && (
         <div className="empty-trips">
           <SuitcaseRolling size={44} aria-hidden="true" />
@@ -85,13 +96,6 @@ export function TripsScreen() {
       )}
       {items.length > 0 && (
         <>
-          {trips.isRefetching && <Refetching />}
-          {trips.isRefetchError && (
-            <RefetchFailed
-              fetchedAt={new Date(trips.dataUpdatedAt)}
-              onRetry={() => void trips.refetch()}
-            />
-          )}
           <div className="trip-list-card">
             {items.map((trip) => (
               <TripRow

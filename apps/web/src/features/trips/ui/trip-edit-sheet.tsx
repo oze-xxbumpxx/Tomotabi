@@ -3,7 +3,6 @@
 import { Check } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import type { Trip } from "@tomotabi/contracts";
-import type { ApiErrorCode } from "@/shared/api/api-failure";
 import { formatTripPeriod } from "@/shared/lib/local-date";
 import { Sheet } from "@/shared/ui/sheet";
 import { ConflictNotice } from "@/shared/ui/state/conflict";
@@ -29,14 +28,30 @@ import {
 } from "../model/trip-save";
 import { TripFormFields } from "./trip-form-fields";
 
-function nameError(code: ApiErrorCode | null): string {
-  return code === "VALIDATION_FAILED"
+type RejectedState = Extract<TripSaveState, { status: "rejected" }>;
+
+/** 403 / 404 の拒否は C-2 に切り替える対象（欄のエラーや再送は出さない）。 */
+function isNotAvailableState(state: TripSaveState): state is RejectedState {
+  return (
+    state.status === "rejected" &&
+    (state.httpStatus === 403 || state.httpStatus === 404)
+  );
+}
+
+function nameError(state: RejectedState): string {
+  if (state.httpStatus === 428) {
+    return "画面を更新してからやり直してください";
+  }
+  return state.code === "VALIDATION_FAILED"
     ? "旅行名を確認してください"
     : "旅行名を保存できませんでした。もう一度お試しください。";
 }
 
-function periodError(code: ApiErrorCode | null): string {
-  switch (code) {
+function periodError(state: RejectedState): string {
+  if (state.httpStatus === 428) {
+    return "画面を更新してからやり直してください";
+  }
+  switch (state.code) {
     case "PLAN_OUTSIDE_TRIP_PERIOD":
       return "この期間に入らない予定があります。予定の日付を先に変更してください";
     case "VALIDATION_FAILED":
@@ -69,6 +84,7 @@ export function TripEditSheet({
   onClose,
   onSaved,
   onSessionExpired,
+  onNotAvailable,
 }: {
   trip: Trip;
   etag: string;
@@ -77,6 +93,8 @@ export function TripEditSheet({
   onSaved: () => void;
   /** 401（C-1）。業務データを隠すため呼び出し側が全面を差し替える。 */
   onSessionExpired: (unconfirmed: boolean) => void;
+  /** 書き込みが 403 / 404 で拒否（C-2）。呼び出し側が全面を差し替える。 */
+  onNotAvailable: () => void;
 }) {
   const online = useOnlineStatus();
   const [name, setName] = useState(trip.name);
@@ -98,6 +116,9 @@ export function TripEditSheet({
     startsOn: trip.startsOn,
     endsOn: trip.endsOn,
   });
+  // 直近の書き込み応答が返した ETag。次の送信では prop の etag よりこちらを優先する
+  //（名前の保存が成功したあとは version が進むため）。
+  const etagRef = useRef(etag);
 
   const periodChanged = () =>
     startsOn !== savedRef.current.startsOn || endsOn !== savedRef.current.endsOn;
@@ -109,6 +130,7 @@ export function TripEditSheet({
     tripId: trip.id,
     send: sendUpdateTripPeriod,
     onSucceeded: (result) => {
+      etagRef.current = etagOf(result);
       savedRef.current = {
         ...savedRef.current,
         startsOn: result.data.startsOn,
@@ -122,6 +144,7 @@ export function TripEditSheet({
     tripId: trip.id,
     send: sendRenameTrip,
     onSucceeded: (result) => {
+      etagRef.current = etagOf(result);
       savedRef.current = { ...savedRef.current, name: result.data.name };
       // 名前の保存が済んでから期間を送る（変わった方だけを送る順序）。
       if (periodChanged()) {
@@ -136,8 +159,15 @@ export function TripEditSheet({
     const expired = sessionExpiredOf([rename.state, period.state]);
     if (expired !== null) {
       onSessionExpired(expired.unconfirmed);
+      return;
     }
-  }, [rename.state, period.state, onSessionExpired]);
+    if (
+      isNotAvailableState(rename.state) ||
+      isNotAvailableState(period.state)
+    ) {
+      onNotAvailable();
+    }
+  }, [rename.state, period.state, onSessionExpired, onNotAvailable]);
 
   const onChange = (field: TripFormField, value: string) => {
     if (field === "name") {
@@ -162,11 +192,13 @@ export function TripEditSheet({
       return;
     }
     if (name.trim() !== savedRef.current.name) {
-      void rename.submit(renameTripDraft(trip.id, name.trim(), etag));
+      void rename.submit(
+        renameTripDraft(trip.id, name.trim(), etagRef.current),
+      );
       return;
     }
     if (periodChanged()) {
-      void period.submit(periodDraft(etag));
+      void period.submit(periodDraft(etagRef.current));
       return;
     }
     // 未変更なら送らずに閉じる。
@@ -185,13 +217,17 @@ export function TripEditSheet({
   const displayErrors: TripFormErrors = {
     name:
       errors.name ??
-      (rename.state.status === "rejected" ? nameError(rename.state.code) : null) ??
+      (rename.state.status === "rejected" &&
+      !isNotAvailableState(rename.state)
+        ? nameError(rename.state)
+        : null) ??
       undefined,
     startsOn: errors.startsOn ?? undefined,
     endsOn:
       errors.endsOn ??
-      (period.state.status === "rejected"
-        ? periodError(period.state.code)
+      (period.state.status === "rejected" &&
+      !isNotAvailableState(period.state)
+        ? periodError(period.state)
         : null) ??
       undefined,
   };

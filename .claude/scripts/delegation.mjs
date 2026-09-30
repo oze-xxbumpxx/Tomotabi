@@ -221,7 +221,10 @@ const keyLabel = (key) => (typeof key === 'number' ? `#${key}` : `PR#${key.slice
 /** 作成者から実行場所を推す。クラウドの Devin は bot のアカウント、ローカルはユーザーのアカウントで PR を作る。 */
 export const runnerFromAuthor = (author) => (author?.is_bot === true || /\[bot\]$|^app\//.test(author?.login ?? '') ? 'cloud' : 'local');
 
-/** '<severity>:<category>:<summary>'。summary には ':' を含めてよい。security の summary は公開しない。 */
+/**
+ * '<severity>:<category>:<summary>'。summary には ':' を含めてよい。security の summary は公開しない。
+ * @throws UsageError severity と category の片方だけが security のとき
+ */
 export function parseFinding(text) {
   const first = text.indexOf(':');
   const second = first === -1 ? -1 : text.indexOf(':', first + 1);
@@ -232,6 +235,11 @@ export function parseFinding(text) {
   if (!SEVERITIES.includes(severity)) throw new UsageError(`severity は ${SEVERITIES.join(' | ')} のどれか: ${severity}`);
   if (!CATEGORY.test(category)) throw new UsageError(`category は kebab-case: ${category}`);
   if (summary === '') throw new UsageError('summary が空です');
+  // 集計は security を category で数え、非公開・自動投稿の禁止は severity で決める。片方だけだと再発件数から漏れるか、
+  // 手順が公開の記録・PR に出るため、両方をそろえる（#80 の記録で severity: security / category: auth）。
+  if ((severity === 'security') !== (category === 'security')) {
+    throw new UsageError(`security の指摘は severity と category の両方を security にする: ${severity}:${category}`);
+  }
   return { severity, category, summary: severity === 'security' ? PRIVATE_SUMMARY : summary.replace(/\s+/g, ' ') };
 }
 

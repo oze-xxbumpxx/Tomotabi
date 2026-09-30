@@ -63,7 +63,7 @@ Devin に渡した Issue ごとに 1 ファイル（`<Issue 番号>.yml`）を�
 | `spec-mismatch` | 名前・置き場所・型・エラーコード・振る舞い（状態の遷移、エラーの表示の出し分け）が設計書・契約・試験計画と違う（#74・#77・#84） |
 | `missing-test` | 試験計画の観点 ID に対応するテストが無い、またはあっても確かめたい処理を壊して落ちない（試験データの不足・常に真の assert。#70・#79） |
 | `coding-standard` | `.claude/rules/coding-standards.md` の違反 |
-| `security` | セキュリティの指摘（severity も `security`） |
+| `security` | セキュリティの指摘（severity も `security`。`review` は片方だけが `security` の指摘をエラーにする） |
 | `design-gap` | 設計書・試験計画の側の穴で、実装どおりでも期待の動きにならない（#51 ログイン失敗時の戻り先） |
 | `error-feedback` | 失敗したときに利用者への表示・反応が無い（#51 サインインの失敗） |
 | `error-code-in-url` | URL のクエリに内部の失敗理由が残る（#55） |

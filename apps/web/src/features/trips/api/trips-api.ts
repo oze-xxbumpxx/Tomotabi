@@ -81,12 +81,19 @@ export function getTripWithMeta(
 
 /**
  * しおり（GET /api/trips/{tripId}/itinerary）。応答の trip が
- * 旅行ヘッダーのデータ元になる。日付の選択は M2-d で加える。
+ * 旅行ヘッダーのデータ元になる。date は省略するとサーバーの既定
+ * （期間内の今日、期間外なら初日）になり、空文字は絶対に送らない。
  */
 export function getTripItinerary(
   tripId: string,
+  date?: string | null,
 ): ResultAsync<Itinerary, ApiFailure> {
-  return callApi(getItineraryRequest(tripId), GetItineraryResponse);
+  return callApi(
+    getItineraryRequest(tripId, {
+      date: date === null || date === "" ? undefined : date,
+    }),
+    GetItineraryResponse,
+  );
 }
 
 // ---- 変更要求の組み立て（MutationDraft） ----

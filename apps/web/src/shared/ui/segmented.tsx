@@ -1,7 +1,7 @@
 "use client";
 
 import { Warning } from "@phosphor-icons/react";
-import { useId, type ReactNode } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 
 export type SegmentedOption = {
   value: string;
@@ -19,6 +19,8 @@ type SegmentedProps = {
   locked?: boolean;
   error?: string | null;
   columns?: 1 | 2;
+  /** エラー欄へフォーカスを戻すための fieldset 参照。 */
+  ref?: Ref<HTMLFieldSetElement>;
 };
 
 export function Segmented({
@@ -30,6 +32,7 @@ export function Segmented({
   locked = false,
   error = null,
   columns = 1,
+  ref,
 }: SegmentedProps) {
   const name = useId();
   const errorId = `${name}-error`;
@@ -37,6 +40,8 @@ export function Segmented({
 
   return (
     <fieldset
+      ref={ref}
+      tabIndex={ref !== undefined ? -1 : undefined}
       className="segmented"
       aria-invalid={hasError || undefined}
       aria-describedby={hasError ? errorId : undefined}

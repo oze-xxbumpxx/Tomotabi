@@ -7,9 +7,12 @@ import { EyeSlash, ListBullets } from "@phosphor-icons/react";
 export function NotAvailable({
   target,
   onGoToTrips,
+  onGoToParent = null,
 }: {
   target: "trip" | "item";
   onGoToTrips: () => void;
+  /** 「しおりに戻る」のような近い場所への導線。項目（item）が開けないときに添える。 */
+  onGoToParent?: { label: string; onClick: () => void } | null;
 }) {
   return (
     <div className="state-screen">
@@ -24,7 +27,20 @@ export function NotAvailable({
       <p className="state-screen-body">
         削除されたか、開く権限がありません。
       </p>
-      <button type="button" className="btn-ink" onClick={onGoToTrips}>
+      {onGoToParent !== null && (
+        <button
+          type="button"
+          className="btn-ink"
+          onClick={onGoToParent.onClick}
+        >
+          {onGoToParent.label}
+        </button>
+      )}
+      <button
+        type="button"
+        className={onGoToParent === null ? "btn-ink" : "btn-secondary"}
+        onClick={onGoToTrips}
+      >
         <ListBullets size={16} weight="bold" aria-hidden="true" />
         旅行一覧へ
       </button>

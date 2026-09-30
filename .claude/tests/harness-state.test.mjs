@@ -7,6 +7,7 @@ import {
   readdirSync,
   readFileSync,
   statSync,
+  utimesSync,
   writeFileSync,
   rmSync,
 } from 'node:fs';
@@ -290,6 +291,41 @@ test('並行 updateRunState で更新が失われない', async () => {
     for (const name of names) {
       assert.ok(name in loaded.state.gateResults, `ゲート結果が失われました: ${name}`);
     }
+  } finally {
+    cleanup();
+  }
+});
+
+test('古いロックの回収が競合しても、別プロセスの更新が失われない', async () => {
+  const { state: stateDirPath, root, opts, cleanup } = sandbox();
+  try {
+    saveRunState(createRunState({ taskId: 'stale-race' }), opts);
+    // 異常終了したプロセスが残した古いロック（mtime を 1 分前にする）。
+    const lockPath = join(stateDirPath, `${RUN_STATE_FILENAME}.lock`);
+    writeFileSync(lockPath, '0');
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lockPath, old, old);
+    const cli = fileURLToPath(new URL('../scripts/harness-run.mjs', import.meta.url));
+    const env = { ...process.env, HARNESS_STATE_DIR: stateDirPath, CLAUDE_PROJECT_DIR: root };
+    const names = ['lint', 'test', 'build', 'harness', 'type-check', 'format'];
+    await Promise.all(
+      names.map(
+        (name) =>
+          new Promise((resolve) => {
+            const p = spawn(process.execPath, [cli, 'gate', '--name', name, '--result', 'pass'], {
+              env,
+              stdio: 'ignore',
+            });
+            p.on('exit', resolve);
+          }),
+      ),
+    );
+    const loaded = loadRunState(opts);
+    assert.equal(loaded.ok, true);
+    const missing = names.filter((n) => !(n in loaded.state.gateResults));
+    assert.deepEqual(missing, [], `古いロックの回収の競合で失われたゲート: ${missing.join(', ')}`);
+    const leftovers = readdirSync(stateDirPath).filter((f) => f.includes('.lock'));
+    assert.deepEqual(leftovers, [], `ロックの残り: ${leftovers.join(', ')}`);
   } finally {
     cleanup();
   }

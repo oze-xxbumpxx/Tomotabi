@@ -52,7 +52,7 @@ E-2 は E-1 のマージ後に始める。#91（読み上げ名の直し）の�
 
 6. **M-02・M-03**: 2 つの context で C-5 と「あなたの入力で保存」。ログアウト → Cookie を入れ直す → 旅行一覧 → 旅行を選ぶ → `/` でそのしおり。
 7. **M-04**: `page.route` で予定の追加の POST を `route.fetch()` してから `route.abort("failed")` → C-4 → `unroute` →「同じ内容で確認する」→ 10/3 の予定が 1 件だけ。
-8. **CI**: `.github/workflows/e2e.yml`（設計書 E2E-R7）。build を事前のステップで行い（`E2E_SKIP_BUILD=1`）、`npx playwright install --with-deps chromium`、失敗時に artifact。
+8. **CI**: `.github/workflows/e2e.yml`（設計書 E2E-R7）。build を事前のステップで行い（`E2E_SKIP_BUILD=1`。web の build には `API_ORIGIN=http://localhost:3101` を渡す）、`npx playwright install --with-deps chromium`、失敗時に artifact。
    完了条件: CI で 5 回続けて通る（`workflow_dispatch` を足して手で回してよい）。各試験について、確かめたい振る舞いを壊すと落ちることを 1 回試し、PR の説明に書く。
 
 ## 依存関係

@@ -78,7 +78,7 @@ e2e/
 2. `seed.ts` でひなた（slot 0）・あおい（slot 1）の users / accounts / allowlist を入れる（M1 の架空の値。メールは `@example.test`）。
 3. 次の環境変数を決めて、`npx playwright test` を子プロセスで起動する（`stdio: inherit`）。
    - `E2E_DATABASE_URL_RUNTIME`（app_runtime）、`E2E_DATABASE_URL_MIGRATOR`（migrator）
-   - `E2E_API_PORT`（例 3101）・`E2E_WEB_PORT`（例 3100）
+   - `E2E_API_PORT`（3101 固定）・`E2E_WEB_PORT`（3100 固定。web の build に焼き込まれるため、実行ごとに変えない）
    - `E2E_AUTH_SECRET`（実行ごとに `crypto.randomBytes(32)` で作る）
 4. Playwright が終わったら（失敗・中断でも `finally` で）コンテナを止め、Playwright の終了コードで終わる。
 
@@ -91,6 +91,7 @@ e2e/
 
 - `reuseExistingServer: false`（手元で起動している開発サーバーを誤って使わない）。起動の上限は 180 秒。
 - build は CI では事前のステップで済ませ、`webServer` は `node` / `next start` だけにする（`E2E_SKIP_BUILD=1` で分岐）。手元では毎回 build する。
+- **web の build には必ず `API_ORIGIN=http://localhost:${E2E_API_PORT}` を渡す。** Next.js の `rewrites` の転送先は `next build` のときに決まり、`next start` の環境変数では変わらない。渡さないと既定の 3001 番に固まり、E2E の API に要求が届かない（PR #97 の Devin Review）。そのため E2E のポートは固定値（API 3101・web 3100）にし、`e2e/support/env.ts` の定数を CI の build のステップでも同じ値で使う。
 
 ログイン（`support/auth.ts`。global setup ではなく fixture で試験ごとに使う）:
 

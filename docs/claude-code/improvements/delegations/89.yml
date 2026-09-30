@@ -1,0 +1,25 @@
+issue: 89
+title: 'fix(web): M2-d の後続（競合のあとの編集の差分・しおりの date の検証・ログアウトでトーストを捨てる）'
+agent: 'devin'
+model: 'swe-2-medium'
+runner: 'local'
+change_level: 1
+delegated_at: '2026-09-30T13:12:49Z'
+follow_up_of: 85
+reviews:
+  - round: 0
+    reviewed_at: '2026-09-30T13:20:42Z'
+    reviewed_sha: 'dfccb565575f2ce9d362411c3a577b3b23ee93ba'
+    verdict: 'merge'
+    posted: true
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 90
+  pr_created_at: '2026-09-30T13:18:36Z'
+  merged_at: '2026-09-30T13:27:52Z'
+  closed_at: '2026-09-30T13:27:52Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: false

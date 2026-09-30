@@ -1,6 +1,6 @@
 # ADR-0005: E2E テスト（Playwright）の構成
 
-- Status: Proposed
+- Status: Accepted（2026-10-01 ユーザー承認。1〜4 は推奨案）
 - Date: 2026-09-30
 - 関連 feature: e2e-foundation（M3 の前に入れる）
 
@@ -23,15 +23,15 @@ M2 までの試験は、Domain・UseCase の単体、HTTP + 実 PostgreSQL（Tes
 
 この ADR は 1〜6 を記録し、まだ決めていない細部（置き場所、ログインの受け渡し、結果不明の作り方、起動のしかた、CI の書き方）を決める。
 
-## Decision（採用する決定。【】は決めてほしい点で、推奨を先に書く）
+## Decision（採用した決定）
 
-### 1. 置き場所【推奨: ルートの `e2e/` を npm workspace にする】
+### 1. 置き場所: ルートの `e2e/` を npm workspace にする
 
 - `e2e/` に `@tomotabi/e2e`（private）を作り、`@playwright/test` はここの devDependencies にだけ入れる。
 - web・API のどちらにも属さない（両方を起動して、その間を確かめる）ため、どちらかの app の中に置かない。
 - `npm run test:e2e`（ルート）→ `npm run e2e -w @tomotabi/e2e`。e2e の workspace には **`test` という名前のスクリプトを置かない**。ルートの `npm test` は `--workspaces --if-present` で全 workspace の `test` を呼ぶため、`test` を置くと通常のテストと CI の quality ジョブが E2E（Docker とビルドが要り、遅い）まで起動してしまう（PR #94 の Devin Review の指摘）。
 
-### 2. ログインの受け渡し【推奨: Playwright 側で testUtils を使って Cookie を作る。API に試験用の経路を足さない】
+### 2. ログインの受け渡し: Playwright 側で testUtils を使って Cookie を作る。API に試験用の経路を足さない
 
 - Playwright の global setup が、API と同じ `BETTER_AUTH_SECRET` と同じ DB を使って `createAuth(..., { plugins: [testUtils()] })` を作り、`test.login` 相当でひなた・あおいのセッションを作る。返った Cookie を `context.addCookies` で 2 つの context に入れる。
 - API は本番と同じ `main.ts`（`createAuthFromEnv`）をビルドして起動する。**試験用のログインの経路は、どのプロセスの HTTP にも載らない**。
@@ -39,7 +39,7 @@ M2 までの試験は、Domain・UseCase の単体、HTTP + 実 PostgreSQL（Tes
 
 2026-09-28 の案（`apps/api/e2e/` に専用の起動口を置き、そこに testUtils と試験用のログインの経路を足す）からの変更点。理由は Alternatives の表。
 
-### 3. 結果不明（M-04）の作り方【推奨: `page.route` で要求をサーバーに通し、応答だけ捨てる】
+### 3. 結果不明（M-04）の作り方: `page.route` で要求をサーバーに通し、応答だけ捨てる
 
 - `page.route` の中で `route.fetch()` で API に届けてから `route.abort("failed")` にする。サーバーでは保存が成立し、ブラウザには network 失敗に見える。これは E-21（応答が失われた保存）そのもの。
 - そのあと `page.unroute` して「同じ内容で確認する」を押し、予定が 1 件だけであることを確かめる。
@@ -64,7 +64,7 @@ M2 までの試験は、Domain・UseCase の単体、HTTP + 実 PostgreSQL（Tes
 - `record.*` の追記のみの保証（migration 0003）は `BEFORE UPDATE OR DELETE` の行トリガーなので、TRUNCATE では動かない（SQL を読んで確認済み）。最初のスパイクで実際に空にできることを確かめる。できない場合は、試験ファイルごとに DB を `CREATE DATABASE ... TEMPLATE` で作り直す方式に切り替え、この ADR に追記する。
 - この TRUNCATE は試験の準備だけで、migrator で行う。アプリ（app_runtime）には TRUNCATE の権限を与えない。
 
-### 6. CI【推奨: 別のワークフロー `e2e.yml` に分ける】
+### 6. CI: 別のワークフロー `e2e.yml` に分ける
 
 - `on.pull_request.paths` と `on.push`（main）で、`apps/web/**`・`apps/api/**`・`packages/contracts/**`・`e2e/**`・`package-lock.json` を変えたときだけ回す。
 - 失敗したときは Playwright のトレースとスクリーンショットを artifact に残す（保存期間 7 日）。

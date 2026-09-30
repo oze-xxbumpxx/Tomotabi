@@ -210,11 +210,15 @@ export function withLock(lockPath, fn, { timeoutMs = 5_000, staleMs = LOCK_STALE
       // 生成直後はロック内容がまだ書き込まれておらず空になりうるため、内容ではなく
       // ファイルの mtime で年齢を判定する（内容ベースだと age=Date.now()-0 の
       // 誤った巨大値になり、生きたロックを誤って「古い」と判定して奪ってしまう）。
-      let age = 0;
+      // stat の時点でロックが消えていたら、持ち主が外しただけなので取り直す。
+      // ここで「古い」とみなして rm すると、その間に別のプロセスが取った新しい
+      // ロックを消してしまい、2 つが同時に書いて更新が失われる（CI で lint が消えた）。
+      let age;
       try {
         age = Date.now() - statSync(lockPath).mtimeMs;
-      } catch {
-        age = staleMs + 1;
+      } catch (statError) {
+        if (statError?.code === 'ENOENT') continue;
+        throw statError;
       }
       if (age > staleMs) {
         rmSync(lockPath, { force: true });

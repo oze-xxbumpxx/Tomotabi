@@ -1,10 +1,19 @@
-import { useEffect, useRef, type MouseEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 
 /**
  * `<dialog>` をモーダルとして開く。開いているあいだフォーカスは内側にあり、
  * 閉じたら開く直前にフォーカスしていた要素へ戻す。
+ * `initialFocus` を渡すと、開いたときのフォーカスは先頭の要素ではなく
+ * その要素に移る（フォームのシートは最初の入力欄へ）。
  */
-export function useModalDialog() {
+export function useModalDialog(
+  initialFocus?: RefObject<HTMLElement | null>,
+) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -25,14 +34,14 @@ export function useModalDialog() {
       const focusable = element.querySelector<HTMLElement>(
         "button, [href], input, select, textarea, [tabindex]",
       );
-      (focusable ?? element).focus();
+      (initialFocus?.current ?? focusable ?? element).focus();
     }
     return () => {
       if (previous !== null && document.contains(previous)) {
         previous.focus();
       }
     };
-  }, []);
+  }, [initialFocus]);
 
   return ref;
 }

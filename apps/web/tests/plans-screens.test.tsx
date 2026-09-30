@@ -445,6 +445,61 @@ describe("ItineraryScreen の予定一覧（08）", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("錦市場で昼食")).toBeInTheDocument();
   });
+
+  it("日の見出しは「{M/D} {曜日} {N} 件」で、取りやめも件数に含める（08）", async () => {
+    const plans = [
+      plan({ id: planId, name: "1件目" }),
+      plan({ id: secondPlanId, name: "2件目" }),
+      plan({ id: thirdPlanId, name: "3件目" }),
+      plan({ id: kindIds.place, name: "4件目" }),
+      plan({
+        id: kindIds.food,
+        name: "5件目",
+        cancelledAt: "2026-10-13T10:00:00.000Z",
+      }),
+    ];
+    stubApi({
+      itinerary: () => json(itineraryBody(trip(), plans, "2026-10-13")),
+    });
+    const { container } = render(
+      <QueryClientProvider client={createQueryClient()}>
+        <ItineraryScreen tripId={tripId} date="2026-10-13" />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    expect(
+      container.querySelector(".itinerary-list-title")?.textContent,
+    ).toBe("10/13 火 5 件");
+    // 「予定を追加」は青い文字リンクではなく見出し右の pill（墨ボタン）。
+    const add = container.querySelector(".itinerary-list-add");
+    expect(add).not.toBeNull();
+    expect(add).toHaveAttribute(
+      "href",
+      `/trips/${tripId}/plans/new?date=2026-10-13`,
+    );
+  });
+
+  it("終了した旅行は日付の行に「終了」を添え、日バーはすべて墨にする（18）", async () => {
+    const finished = trip({ status: "finished" });
+    stubApi({ itinerary: () => json(itineraryBody(finished, [plan()])) });
+    const { container } = render(
+      <QueryClientProvider client={createQueryClient()}>
+        <ItineraryScreen tripId={tripId} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText("終了 · 10/12 月 – 10/14 水");
+    const cells = container.querySelectorAll(".date-cell");
+    expect(cells).toHaveLength(3);
+    cells.forEach((cell) => {
+      expect(cell.classList.contains("date-cell-finished")).toBe(true);
+    });
+    // 選択中の日は分かるように残す。
+    expect(
+      container.querySelector('[aria-current="date"]'),
+    ).toHaveClass("date-cell-current");
+  });
 });
 
 describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
@@ -499,6 +554,18 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
       "href",
       `/trips/${tripId}/itinerary?date=2026-10-13`,
     );
+  });
+
+  it("メモも記録も無い予定は空の記録カードを出さない（09）", async () => {
+    stubApi({});
+    const { container } = render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanDetailScreen tripId={tripId} planId={planId} from={null} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    expect(container.querySelector(".plan-records")).toBeNull();
   });
 
   it("予定の 404 は「この項目を開けません」としおりへの導線", async () => {
@@ -658,7 +725,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "予定を追加" }),
+      await screen.findByLabelText("名前"),
     ).toBeInTheDocument();
     await userEvent.type(
       screen.getByLabelText("名前"),
@@ -691,10 +758,15 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     ).not.toBeNull();
     // 追加しましたの表示（しおり側で出す pending toast）としおりの無効化。
     expect(takePendingToast()).toBe("追加しました");
-    expect(
-      client.getQueryState(["itinerary", tripId, "2026-10-13"])
-        ?.isInvalidated,
-    ).toBe(true);
+    // シートの後ろに敷いたしおりは開いているため、無効化されると
+    // その場で取り直す（2 回目の itinerary 取得）。
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([url]) =>
+          String(url).includes("itinerary"),
+        ).length,
+      ).toBeGreaterThanOrEqual(2),
+    );
   });
 
   it("種類が未選択では送らず、欄のエラーとフォーカスを出す", async () => {
@@ -705,7 +777,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByRole("heading", { name: "予定を追加" });
+    await screen.findByLabelText("名前");
     await userEvent.type(screen.getByLabelText("名前"), "国際通り");
     await userEvent.click(
       screen.getByRole("button", { name: "保存する" }),
@@ -730,7 +802,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByRole("heading", { name: "予定を追加" });
+    await screen.findByLabelText("名前");
     await userEvent.click(
       screen.getByRole("button", { name: "保存する" }),
     );
@@ -740,9 +812,80 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     ).toBeInTheDocument();
     expect(writeCalls(fetchMock)).toHaveLength(0);
   });
+
+  it("しおりの上にシートで開き、最初の欄にフォーカスする", async () => {
+    stubApi({});
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen
+          mode="new"
+          tripId={tripId}
+          date="2026-10-13"
+        />
+      </QueryClientProvider>,
+    );
+
+    // フォームの欄が見えた = 読み込み用のシートから本シートへ入れ替わった。
+    expect(await screen.findByLabelText("名前")).toHaveFocus();
+    expect(
+      screen.getByRole("dialog", { name: "予定を追加" }),
+    ).toBeInTheDocument();
+    // シートの後ろに元の画面（しおり）が透けて見える。
+    expect(
+      await screen.findByRole("heading", { name: "沖縄" }),
+    ).toBeInTheDocument();
+  });
+
+  it("種類の選択肢と「時刻未定」は表示どおりの名で読み上げる", async () => {
+    stubApi({});
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen
+          mode="new"
+          tripId={tripId}
+          date="2026-10-13"
+        />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("radio", { name: "場所" });
+    const pairs: [string, string][] = [
+      ["場所", "place"],
+      ["食べ処", "food"],
+      ["買い物", "shopping"],
+      ["宿", "lodging"],
+      ["移動", "transport"],
+    ];
+    for (const [label, value] of pairs) {
+      expect(
+        screen.getByRole("radio", { name: label }),
+      ).toHaveAttribute("value", value);
+    }
+    expect(
+      screen.getByRole("checkbox", { name: "時刻未定" }),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
+  it("予定の詳細の上にシートで開く", async () => {
+    stubApi({});
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByLabelText("名前")).toHaveFocus();
+    expect(
+      screen.getByRole("dialog", { name: "予定を編集" }),
+    ).toBeInTheDocument();
+    // シートの後ろに元の画面（予定の詳細）が透けて見える。
+    expect(
+      await screen.findByRole("heading", { name: "錦市場で昼食" }),
+    ).toBeInTheDocument();
+  });
+
   it("変更のあった項目だけを PATCH で送る", async () => {
     const fetchMock = stubApi({
       plan: () =>
@@ -1091,7 +1234,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
       </QueryClientProvider>,
     );
 
-    await screen.findByRole("heading", { name: "予定を追加" });
+    await screen.findByLabelText("名前");
     await userEvent.type(screen.getByLabelText("名前"), "国際通り");
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
@@ -1164,7 +1307,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
         <PlanFormScreen mode="new" tripId={tripId} date="2026-10-13" />
       </QueryClientProvider>,
     );
-    await screen.findByRole("heading", { name: "予定を追加" });
+    await screen.findByLabelText("名前");
     await userEvent.type(screen.getByLabelText("名前"), "国際通り");
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
@@ -1193,7 +1336,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
         <PlanFormScreen mode="new" tripId={tripId} date="2026-10-13" />
       </QueryClientProvider>,
     );
-    await screen.findByRole("heading", { name: "予定を追加" });
+    await screen.findByLabelText("名前");
     await userEvent.type(screen.getByLabelText("名前"), "国際通り");
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),

@@ -111,6 +111,7 @@ export function PlanFormFields({
             type="checkbox"
             checked={values.timeUndecided}
             disabled={locked}
+            aria-label="時刻未定"
             onChange={(event) =>
               onChange({
                 field: "timeUndecided",

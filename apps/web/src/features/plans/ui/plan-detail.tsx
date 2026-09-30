@@ -33,6 +33,12 @@ export function PlanDetailBody({
   meName: string | null;
 }) {
   const cancelled = plan.cancelledAt !== null;
+  // メモも記録も無い予定は空の記録カードを出さない（09）。
+  const hasRecords =
+    plan.achievement !== null ||
+    plan.booking !== null ||
+    cancelled ||
+    plan.memo !== null;
   return (
     <>
       <div className="plan-detail-head">
@@ -79,6 +85,7 @@ export function PlanDetailBody({
           {formatLocalDate(plan.date)}
         </Link>
       </div>
+      {hasRecords && (
       <section className="plan-records" aria-label="記録">
         {plan.achievement !== null && (
           <div className="plan-record-row">
@@ -134,6 +141,7 @@ export function PlanDetailBody({
           </div>
         )}
       </section>
+      )}
     </>
   );
 }

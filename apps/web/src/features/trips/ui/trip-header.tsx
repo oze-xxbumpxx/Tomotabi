@@ -17,7 +17,9 @@ export function TripHeader({
     <header className="trip-header">
       <div className="trip-header-main">
         <span className="trip-header-period tabular-nums">
-          {formatTripPeriod(trip.startsOn, trip.endsOn)}
+          {trip.status === "finished"
+            ? `終了 · ${formatTripPeriod(trip.startsOn, trip.endsOn)}`
+            : formatTripPeriod(trip.startsOn, trip.endsOn)}
         </span>
         <h1 className="trip-header-name">{trip.name}</h1>
       </div>

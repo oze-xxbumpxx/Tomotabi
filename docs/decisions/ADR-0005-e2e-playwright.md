@@ -29,7 +29,7 @@ M2 までの試験は、Domain・UseCase の単体、HTTP + 実 PostgreSQL（Tes
 
 - `e2e/` に `@tomotabi/e2e`（private）を作り、`@playwright/test` はここの devDependencies にだけ入れる。
 - web・API のどちらにも属さない（両方を起動して、その間を確かめる）ため、どちらかの app の中に置かない。
-- `npm run test:e2e`（ルート）→ `npm run test -w @tomotabi/e2e`。既存の `npm test` には含めない（Docker とビルドが要り、遅いため）。
+- `npm run test:e2e`（ルート）→ `npm run e2e -w @tomotabi/e2e`。e2e の workspace には **`test` という名前のスクリプトを置かない**。ルートの `npm test` は `--workspaces --if-present` で全 workspace の `test` を呼ぶため、`test` を置くと通常のテストと CI の quality ジョブが E2E（Docker とビルドが要り、遅い）まで起動してしまう（PR #94 の Devin Review の指摘）。
 
 ### 2. ログインの受け渡し【推奨: Playwright 側で testUtils を使って Cookie を作る。API に試験用の経路を足さない】
 
@@ -47,10 +47,14 @@ M2 までの試験は、Domain・UseCase の単体、HTTP + 実 PostgreSQL（Tes
 
 ### 4. 起動のしかた
 
-- Playwright の `webServer` で 2 つを起動する。
-  - API: `npm run build -w @tomotabi/api` の成果物を `node apps/api/dist/main` で起動（`DATABASE_URL` は Testcontainers の app_runtime、`PORT` は空いているポート）。
-  - web: `next build` のあと `next start`（`API_ORIGIN` を上の API に向ける）。開発サーバーは初回の組み立てで数秒待つため使わない（M2-e で実際に遅れた）。
-- DB: global setup で Testcontainers の PostgreSQL を起動し、既存の `apps/api/tests/support/database.ts` と同じ手順でロールを作って migration を当てる。ひなた・あおいの users / accounts / allowlist を 1 回だけ入れる。
+- **起動の順番が決まっているので、Playwright の前に動く起動スクリプト（`e2e/scripts/run.mjs`）で準備する。** Playwright は `webServer` を global setup より先に起動するため、global setup で DB を作ると、API の起動時に `DATABASE_URL` がまだ決まっていない（PR #94 の Devin Review の指摘）。
+  1. Testcontainers の PostgreSQL を起動し、既存の `apps/api/tests/support/database.ts` と同じ手順でロールを作って migration を当てる。ひなた・あおいの users / accounts / allowlist を 1 回だけ入れる。
+  2. 決まった接続先（app_runtime と migrator の URL）と、試験用の `BETTER_AUTH_SECRET` などを環境変数に入れて、`playwright test` を子プロセスで起動する。
+  3. Playwright の `webServer` が、その環境変数で API と web を起動する。
+     - API: `npm run build -w @tomotabi/api` の成果物を `node apps/api/dist/main` で起動（`PORT` は固定の試験用ポート）。
+     - web: `next build` のあと `next start`（`API_ORIGIN` を上の API に向ける）。開発サーバーは初回の組み立てで数秒待つため使わない（M2-e で実際に遅れた）。
+  4. Playwright が終わったら（失敗しても）コンテナを止める。終了コードは Playwright のものを返す。
+- global setup は、上で決まった DB に対してセッションを作る（Decision 2）ことだけを行う。
 - ブラウザは **Chromium だけ**、viewport は **375×812**（v3 の基準）。
 
 ### 5. 試験ごとの DB の初期化
@@ -90,6 +94,8 @@ M-03 の「ログイン」は Google を通さず、global setup で作り直し
 | 結果不明 | API のプロセスを止める | 止めた時点で要求が届いたかが決まらず不安定。止めて戻すのに時間がかかる |
 | 起動 | `next dev` と `nest start --watch` | 初回の組み立てで数秒待つ（M2-e で遅れた）。本番のビルドと違う |
 | DB の初期化 | 試験ごとにコンテナを作り直す | 1 回に数秒かかり、M-01〜04 だけでも遅くなる |
+| 起動 | Playwright の global setup で DB を起動する | `webServer` は global setup より先に起動するので、API に `DATABASE_URL` を渡せない |
+| 起動 | global setup で DB・API・web をすべて自前で起動し、teardown で止める | `webServer` の待ち合わせ（ポートが開くまで待つ・ログを出す）を自作することになる。起動スクリプトで DB だけ先に作れば `webServer` をそのまま使える |
 | CI | 既存の `ci.yml` にジョブを足す | ワークフロー全体の `on` に paths を付けられないため、ジョブの中で変更の有無を判定する仕組み（外部の action）が要る。別のワークフローなら `on.paths` で足りる |
 
 ## Consequences（良い影響・悪い影響・残るリスク）

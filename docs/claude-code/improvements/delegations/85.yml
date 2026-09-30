@@ -1,0 +1,81 @@
+issue: 85
+title: 'feat(web): M2-d しおりと予定の画面（しおり・詳細・追加・編集・日の移動・取りやめ）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-09-29T13:09:56Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-09-29T14:02:43Z'
+    reviewed_sha: 'fa78d9f31478b9a771c52fc8b2db9c30ecbb1b06'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'must'
+        category: 'error-feedback'
+        summary: '予定の編集で初回の取得が 5xx / network だと読み込み中のまま止まる'
+      - severity: 'must'
+        category: 'error-feedback'
+        summary: '日の移動のシートで旅行の取得が失敗（401 / 403 を含む）すると読み込み中のままで出し分けない'
+      - severity: 'must'
+        category: 'missing-test'
+        summary: 'W-18 のテストが時刻未定（time=null）でなく 15:30 を送り、トースト・しおりの再取得を見ていない'
+      - severity: 'must'
+        category: 'missing-test'
+        summary: 'W-16 が試験データ（5 種類・同時刻 2 件・時刻未定・取りやめ）で作られていない'
+      - severity: 'must'
+        category: 'missing-test'
+        summary: '拒否（読み取り・書き込みの 401 / 403 / 404）のテストが予定の GET 404 の 1 件だけ'
+      - severity: 'must'
+        category: 'scope-creep'
+        summary: 'v3 に無い色 #b5b3ae を globals.css に 2 か所足した'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '拒否のあとも確定ボタンが有効で、同じ古い ETag で再送する'
+      - severity: 'nit'
+        category: 'spec-mismatch'
+        summary: '保存の 422 PLAN_OUTSIDE_TRIP_PERIOD を日付欄に出さず、旅行期間も取り直さない'
+      - severity: 'nit'
+        category: 'spec-mismatch'
+        summary: 'しおりの期間外の判定が 422 だけで code を見ていない'
+      - severity: 'nit'
+        category: 'spec-mismatch'
+        summary: '期間外の表示で旅行ヘッダーとメニューが出ない'
+      - severity: 'nit'
+        category: 'ui-glitch'
+        summary: '編集の競合で最新の取得中にも「取得できませんでした」を出す'
+      - severity: 'decision'
+        category: 'spec-mismatch'
+        summary: '予定の追加で種類が既定「場所」（07 §6 は未選択・必須）'
+      - severity: 'decision'
+        category: 'design-gap'
+        summary: '相手の記録者名が出ない（参加者名の公開 API が無い）'
+  - round: 1
+    reviewed_at: '2026-09-29T15:36:27Z'
+    reviewed_sha: 'c022c630b2305d1bac24508e56438cc22d2f1cd0'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '編集で拒否（422 など）のあと入力を直しても保存ボタンが押せない（round 0 の nit の直しで入った）'
+  - round: 2
+    reviewed_at: '2026-09-29T16:15:09Z'
+    reviewed_sha: '6acb3699fd3f9c00b85c775696d22926cdd53881'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '428 の「最新を取り直す」で取得が失敗しても古い ETag のまま編集に戻る'
+escalations: 1
+outcome: 'merged'
+gh:
+  pr: 87
+  pr_created_at: '2026-09-29T13:52:00Z'
+  merged_at: '2026-09-30T13:11:42Z'
+  closed_at: '2026-09-30T13:11:42Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true

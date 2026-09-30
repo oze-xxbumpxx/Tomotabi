@@ -6,7 +6,13 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import type { Plan, PlanEvent } from "@tomotabi/contracts";
-import { formatDateTime, formatLocalDate } from "@/shared/lib/local-date";
+import {
+  formatDateTime,
+  formatLocalDate,
+  formatRemaining,
+} from "@/shared/lib/local-date";
+import { useNow } from "@/shared/lib/use-now";
+import { minutesUntilPlan } from "../model/next-plan";
 import { PLAN_KIND_LABEL, PlanKindIcon } from "./plan-kind-icon";
 
 function recordedBy(event: PlanEvent, meId: string | null, meName: string | null) {
@@ -33,6 +39,9 @@ export function PlanDetailBody({
   meName: string | null;
 }) {
   const cancelled = plan.cancelledAt !== null;
+  // 今日の今以降の予定なら、時刻の横に「あと N」（v3 09）。
+  const now = useNow();
+  const remaining = now !== null ? minutesUntilPlan(plan, now) : null;
   return (
     <>
       <div className="plan-detail-head">
@@ -78,6 +87,16 @@ export function PlanDetailBody({
         >
           {formatLocalDate(plan.date)}
         </Link>
+        {remaining !== null && (
+          <>
+            <span className="plan-detail-when-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="plan-detail-remaining tabular-nums">
+              {`あと ${formatRemaining(remaining)}`}
+            </span>
+          </>
+        )}
       </div>
       <section className="plan-records" aria-label="記録">
         {plan.achievement !== null && (

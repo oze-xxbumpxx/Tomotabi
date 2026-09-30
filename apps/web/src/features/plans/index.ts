@@ -19,6 +19,11 @@ export {
   type PlanSaveState,
 } from "./model/plan-save";
 export {
+  minutesUntilPlan,
+  nextPlanOf,
+  nowLineIndexOf,
+} from "./model/next-plan";
+export {
   firstInvalidField,
   isLocalTimeString,
   PLAN_MEMO_MAX_CODEPOINTS,

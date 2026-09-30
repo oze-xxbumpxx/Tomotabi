@@ -1,0 +1,23 @@
+issue: 92
+title: 'feat(web): しおりの「今・次まで」の線と次の予定の強調、詳細の「あと N 時間」'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 1
+delegated_at: '2026-09-30T13:51:20Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-09-30T23:49:51Z'
+    reviewed_sha: '645f1a04df295861272104b350823443f0e05a77'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'robustness'
+        summary: 'useNow の 1 分タイマーが分の境目にそろっておらず、表示の時刻と残りが最大 59 秒遅れる'
+      - severity: 'nit'
+        category: 'ui-glitch'
+        summary: '強調カードの --color-accent-soft にダークの値が無く、ダークでは淡い背景に明るい文字になる（ダーク対応は第 4 弾の予定）'
+escalations: 0
+outcome: null
+gh: null

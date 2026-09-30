@@ -1,0 +1,20 @@
+issue: 91
+title: 'fix(web): M2 の画面を v3 に合わせる（しおりの見出し・終了後・詳細・シート・読み上げ名）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 1
+delegated_at: '2026-09-30T13:51:18Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-09-30T23:49:51Z'
+    reviewed_sha: '6b32eba237b1f39a14e31525368a87da8ffab076'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'layering'
+        summary: 'plan-form と trip-new が別の screen（ItineraryScreen / PlanDetailScreen / TripsScreen）を import して下に敷いている（同じ層の依存）'
+escalations: 0
+outcome: null
+gh: null

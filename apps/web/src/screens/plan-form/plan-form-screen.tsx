@@ -267,10 +267,14 @@ export function PlanFormScreen({
       );
       return;
     }
-    if (plan === undefined) {
+    // 差分の基準はフォームの基準値（開いたときの欄。「最新の内容で
+    // 入力し直す」で置き換わる）。取得値を基準にすると、競合のあと
+    // 開いたときの値に戻した編集が「変更なし」と判定されて失われる。
+    const saved = savedRef.current;
+    if (plan === undefined || saved === null) {
       return;
     }
-    const patch = planPatchOf(plan, values);
+    const patch = planPatchOf(saved, values);
     // 何も変わっていなければ送らずに閉じる。
     if (Object.keys(patch).length === 0) {
       tryClose();

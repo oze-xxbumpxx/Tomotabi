@@ -806,6 +806,73 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     expect(writeCalls(fetchMock)).toHaveLength(0);
   });
 
+  it("競合で「最新の内容で入力し直す」あと開いたときの値に戻して保存すると差分を送る", async () => {
+    let planCalls = 0;
+    let patchCalls = 0;
+    const fetchMock = stubApi({
+      plan: () => {
+        planCalls += 1;
+        // conflict で取り直した最新は相手が変えた内容。
+        return json(
+          planCalls === 1
+            ? plan({ name: "錦市場で昼食", version: "1" })
+            : plan({ name: "相手が変えた名前", version: "5" }),
+        );
+      },
+      patch: () => {
+        patchCalls += 1;
+        return patchCalls === 1
+          ? json({ code: "VERSION_CONFLICT" }, 409)
+          : json(plan({ name: "錦市場で昼食", version: "6" }));
+      },
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
+    fireEvent.change(nameInput, { target: { value: "あなたの名前" } });
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+
+    expect(
+      await screen.findByText("相手が先に変更しました"),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "最新の内容で入力し直す" }),
+    );
+
+    // 欄は最新に置き換わる。ここで開いたときの値に戻して保存すると、
+    // 基準（最新）との差分として名前を送る。
+    await waitFor(() =>
+      expect(screen.getByLabelText("名前")).toHaveValue(
+        "相手が変えた名前",
+      ),
+    );
+    fireEvent.change(screen.getByLabelText("名前"), {
+      target: { value: "錦市場で昼食" },
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "保存する" }),
+    );
+
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/plans/${planId}`,
+      ),
+    );
+    const writes = writeCalls(fetchMock);
+    expect(writes).toHaveLength(2);
+    expect(JSON.parse(String(writes[1][1]?.body))).toEqual({
+      name: "錦市場で昼食",
+    });
+    expect(new Headers(writes[1][1]?.headers).get("if-match")).toBe('"5"');
+  });
+
   it("W-19: 記録がある予定は種類を固定して理由を出す", async () => {
     stubApi({
       plan: () =>

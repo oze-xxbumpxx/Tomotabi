@@ -120,22 +120,29 @@ export function planCreateOf(
   };
 }
 
-/** 編集の body。保存済みの値と違う項目だけを入れる（送っていない = 変えない）。 */
-export function planPatchOf(plan: Plan, values: PlanFormValues): PlanPatch {
+/**
+ * 編集の body。基準の欄（フォームを開いたとき、または競合で
+ * 「最新の内容で入力し直す」を選んだあとの欄）と違う項目だけを入れる
+ * （送っていない = 変えない）。
+ */
+export function planPatchOf(
+  base: PlanFormValues,
+  values: PlanFormValues,
+): PlanPatch {
   const patch: PlanPatch = {};
   const name = values.name.trim();
-  if (name !== plan.name) {
+  if (name !== base.name.trim()) {
     patch.name = name;
   }
-  if (values.kind !== null && values.kind !== plan.kind) {
+  if (values.kind !== null && values.kind !== base.kind) {
     patch.kind = values.kind;
   }
   const time = timeOf(values);
-  if (time !== plan.time) {
+  if (time !== timeOf(base)) {
     patch.time = time;
   }
   const memo = memoOf(values);
-  if (memo !== plan.memo) {
+  if (memo !== memoOf(base)) {
     patch.memo = memo;
   }
   return patch;

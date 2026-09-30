@@ -27,7 +27,12 @@ vi.mock("@/shared/auth/auth-client", () => ({
   authClient: { signOut: signOutMock },
 }));
 
+import ItineraryPage from "@/app/trips/[tripId]/itinerary/page";
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
+import {
+  setPendingToast,
+  takePendingToast,
+} from "@/shared/lib/pending-toast";
 
 const userId = "550e8400-e29b-41d4-a716-446655440000";
 const tripId = "8a6e0804-2bd0-4672-b79d-d97027f9071a";
@@ -201,6 +206,25 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
       ).toBeInTheDocument();
     },
   );
+
+  it("URL の date が日付の形でなければ date なし（サーバー既定）で取る", async () => {
+    const fetchMock = stubApi({});
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        {await ItineraryPage({
+          params: Promise.resolve({ tripId }),
+          searchParams: Promise.resolve({ date: "abc" }),
+        })}
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    const itineraryCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).startsWith(`/api/trips/${tripId}/itinerary`),
+    );
+    expect(itineraryCalls).toHaveLength(1);
+    expect(String(itineraryCalls[0][0])).not.toContain("date=");
+  });
 
   it("403 なら「前回の旅行」の保存値を消す（B-09）", async () => {
     stubApi({
@@ -468,6 +492,31 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(client.getQueryData(itineraryQueryKey(tripId))).toBeUndefined();
     expect(screen.queryByText(/ひなた/)).not.toBeInTheDocument();
     expect(screen.queryByText("沖縄")).not.toBeInTheDocument();
+  });
+
+  it("ログアウトすると未表示のトーストを捨てる", async () => {
+    stubApi({});
+    signOutMock.mockResolvedValue({
+      data: { success: true },
+      error: null,
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    // 保存成功の直後、遷移先でまだ出していないトーストがある状態。
+    act(() => setPendingToast("変更しました"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /ログアウト/ }),
+    );
+
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith("/sign-in"),
+    );
+    // 次に開いた画面が取り出す受け皿が空なら、古いトーストは出ない。
+    expect(takePendingToast()).toBeNull();
   });
 
   it("利用者が取れなくてもログアウトを押せる（失敗は既存の表示）", async () => {

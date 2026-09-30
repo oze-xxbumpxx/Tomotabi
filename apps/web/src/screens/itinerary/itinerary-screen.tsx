@@ -98,7 +98,9 @@ export function ItineraryScreen({
 
   const handleSignOut = async () => {
     if (await signOut(userId)) {
-      // 前の利用者の業務データが残らないよう、キャッシュと利用者の表示を消す。
+      // 前の利用者の業務データが残らないよう、キャッシュと利用者の表示、
+      // 未表示のトーストを消す。
+      takePendingToast();
       queryClient.clear();
       clearMe();
       router.replace("/sign-in");

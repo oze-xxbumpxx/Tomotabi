@@ -1,6 +1,6 @@
 # ADR-0006: 結果不明の要求を IndexedDB に残す方式
 
-- Status: Proposed
+- Status: Accepted（2026-10-02 ユーザー承認。推奨の `idb` を使う）
 - Date: 2026-10-02
 - 関連 feature: payments-and-settlement（支払い・精算の中核）
 

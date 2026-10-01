@@ -46,7 +46,7 @@ Tomotabi は **AI 駆動開発を主とする**。AI が実装し、ユーザー
 ## 作業の進め方
 
 1. 作業開始時に `git status` と `logs/` の最新ログを読み、実装済み・未完了を確認する。
-2. `.claude/skills/classify-change/SKILL.md` を参照して変更規模を判断する。判定結果に **ユーザー承認: 必要 / 不要** を含める。必要な設計・計画・検証・レビューは `docs/claude-code/` と該当スキルを参照する。
+2. `.claude/skills/classify-change/SKILL.md` を参照して変更規模を判断する。判定結果に **ユーザー承認: 必要 / 不要** を含める。必要な設計・計画・検証・レビューは `docs/claude-code/` と該当スキルを参照する。 L2 / L3 の要件定義書・設計書は、書く前に `.claude/skills/ask-questions/SKILL.md` の手順で問いを出し、ユーザーの答えを受けてから書く。
 3. 小さな修正は直接進める。ユーザーが既に依頼した範囲のファイル追加や通常作業で再承認を求めない。
 4. 品質コマンドは実在するものだけ実行し、未導入のゲートは `unknown` と報告する。ハーネス自身のテストは `node --test .claude/tests/*.test.mjs`。
 5. 人が読む文章（報告・ログ・docs・Issue・PR・コメント）は `.claude/rules/writing-style.md` の書き方にする。

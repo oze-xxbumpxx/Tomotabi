@@ -37,7 +37,8 @@ packages/contracts/    wire 型と foundation OpenAPI
 ## 前提
 
 - Node 22.18 以上の 22.x（orval の要件。リポジトリは 22.23.2 で確認）
-- Docker Desktop が動いていること（`npm run test:api-db` だけ。単体テストと build には不要）
+- Docker Desktop が動いていること（`npm run test:api-db` と `npm run test:e2e`。単体テストと build には不要）
+- E2E を初めて動かす前に `npx playwright install chromium`（ブラウザの取得。以後は不要）
 
 ## コマンド
 
@@ -52,6 +53,7 @@ npm run test:coverage  # web / api のカバレッジを計測（apps/*/coverage
 npm run test:api-db
 npm run build
 npm run test:harness
+npm run test:e2e   # Playwright E2E（Docker が必要。DB・API・web を起動して M-01 を流す）
 npm run api:generate  # OpenAPI から web の API クライアントを再生成
 npm run api:check     # 再生成して差分が無いことを確認（CI でも実行）
 ```

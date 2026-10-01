@@ -1,6 +1,7 @@
 import path from "node:path";
 import eslint from "@eslint/js";
 import { defineConfig } from "eslint/config";
+import globals from "globals";
 import tseslint from "typescript-eslint";
 
 const nestForbidden = ["@nestjs/common", "@nestjs/core", "@nestjs/platform-express"];
@@ -97,6 +98,8 @@ export default defineConfig(
       ".claude/**",
       "docs/**",
       "**/coverage/**",
+      "**/playwright-report/**",
+      "**/test-results/**",
       "**/tests/fixtures/boundaries/**",
       "apps/web/src/shared/api/generated/**",
       "apps/api/src/generated/**",
@@ -115,6 +118,13 @@ export default defineConfig(
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+    },
+  },
+  {
+    // e2e のスクリプト・設定は Node で動く（Playwright は実行時にページ側を別処理）。
+    files: ["e2e/**/*.{js,mjs,cjs,ts}"],
+    languageOptions: {
+      globals: globals.node,
     },
   },
   {

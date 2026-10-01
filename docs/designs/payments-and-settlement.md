@@ -1,6 +1,6 @@
 # 設計書: payments-and-settlement（支払い・精算の中核）
 
-- ステータス: draft
+- ステータス: confirmed（2026-10-02 ユーザー承認。PR #106 のマージ。未決事項 1〜3 は推奨どおり）
 - レベル: L3
 - 関連: docs/requirements/payments-and-settlement.md、ADR-0002（認証）、ADR-0003（DB のロールと migration）、ADR-0004（web の取得状態と API の入力検証）、ADR-0005（E2E）、ADR-0006（結果不明の要求を IndexedDB に残す。案）
 

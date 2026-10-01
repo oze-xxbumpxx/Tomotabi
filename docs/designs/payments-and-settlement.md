@@ -6,7 +6,7 @@
 
 ## 背景
 
-要件定義のとおり。旅行・予定の段階で作った書き込みの共通部品（ETag・Idempotency-Key・受領・エラー形式・旅行単位のロック・保存状態）と、E2E の土台の上に、支払いと精算を作る。正本は詳細設計 01・07・09 と `sql/01_finance.sql`・`openapi.finance.json`。
+要件定義のとおり。旅行・予定の段階で作った書き込みの共通部品（ETag・Idempotency-Key・受領・エラー形式・旅行単位のロック・保存状態）と、E2E の土台の上に、支払いと精算を作る。正本は詳細設計「支払いと精算」「画面状態と入力操作」「テストと監視・CI」と、`sql/01_finance.sql`・`openapi.finance.json`。
 
 ## 目的
 
@@ -16,7 +16,17 @@
 
 ## 要件
 
-要件定義の F-01〜F-63、E-01〜E-17、境界条件、受け入れ条件。
+要件定義の機能要件（F-01〜F-63）、異常系（E-01〜E-17）、境界条件、受け入れ条件。この設計書で F- や E- の番号を引くときは、要件定義のその行を指す。
+
+用語（要件定義の「この文書の読み方」と同じ）:
+
+- **参加者番号**は旅行の二人に振る固定の番号 0（ひなた）と 1（あおい）。DB の `slot`。
+- **寄与**は支払い 1 件が貸し借りに与える量（参加者番号 1 の人から 0 の人へ渡す向きを正）。
+- **guard の行**（`infra.trip_finance_guards`）は、旅行ごとに 1 行ある「お金の書き込みの順番待ちの札」。お金の書き込みは最初にこの行をロックするので、同じ旅行の書き込みは一列に並ぶ。精算の連番もここで払い出す。
+- **占有**（`settlement.active_claims`）は、「どの支払いが、どの精算で済んでいるか」の今の状態の記録。同じ支払いを二つの精算に入れないために使う。
+- **BASE と REVERSAL** は精算の明細の種類。BASE は支払いをそのまま精算すること（寄与 c）。REVERSAL は、精算済みの支払いがあとで取り消されたときの戻し（−c）。
+- **指紋**は、受け渡しの確認を作った時点の、その支払いの精算と取り消しの履歴をまとめた短い値（sha256）。完了のときに作り直して比べ、違えば「対象が変わった」と分かる（金額が同じでも見分けられる）。
+- **受領**（`infra.command_receipts`）は、同じ要求の再送を見分けるための保存の記録。同じキーで送り直すと、ここから元の結果を返す。
 
 ## 対象範囲
 
@@ -28,7 +38,7 @@ API（支払いの記録・取得・取り消し、残額、確認の作成・�
 
 ## 現状構成
 
-- DB: `planning.trips`・`trip_participants`（slot 0・1）、`infra.trip_finance_guards`（`next_settlement_sequence` 既定 1）、`infra.command_receipts`（`resource_type` は支払い・確認・精算の種類を既に含む）、`record.plan_events` など（達成・予約の土台）。
+- DB: `planning.trips`・`trip_participants`（参加者番号 0・1。列名は slot）、`infra.trip_finance_guards`（`next_settlement_sequence` 既定 1）、`infra.command_receipts`（`resource_type` は支払い・確認・精算の種類を既に含む）、`record.plan_events` など（達成・予約の土台）。
 - API: `modules/planning`（旅行・予定。`trip-write-flow.ts`・`plan-write-flow.ts` が書き込みの共通の流れ）、`modules/record`（達成・予約の履歴の照会だけ）、`common/http/*`（ETag・Idempotency-Key・ZodBodyPipe・ApiErrorFilter）、`common/idempotency/command-receipt.ts`。
 - web: `features/trips`・`features/plans`、`shared/api/*`（`callApi`・`mutation-request`・`save-state`）、`shared/ui/*`（シート・ダイアログ・状態表示）。下部のタブは「しおり」だけ。
 - 契約: `packages/contracts/openapi/{trips,planning}.json`。財務の契約はまだ無い（正本の `openapi.finance.json` だけ）。
@@ -67,7 +77,7 @@ apps/web/src/
 e2e/tests/{payment-and-settlement,unknown-payment}.spec.ts
 ```
 
-- `record` は支払いを書き、`settlement` は `payments-read.port` で同じトランザクションの支払いを読む。`record` から `settlement` の業務処理を呼ばない（詳細設計 01 §8）。
+- `record` は支払いを書き、`settlement` は `payments-read.port` で同じトランザクションの支払いを読む。`record` から `settlement` の業務処理を呼ばない（詳細設計「支払いと精算」の「境界と実装への制約」）。
 - 財務の書き込みはすべて `PgFinanceUnitOfWork` の中で行い、最初に `trip_finance_guards` の行を `SELECT … FOR UPDATE` する。
 
 ## データフロー
@@ -92,11 +102,11 @@ Guard（Origin → セッション → userId）
 
 ### 確認の作成
 
-ロックの後で対象（F-11）と占有を読み、確認と明細（各明細に、その時点の指紋と支払いの取り消し状態）を同時に保存する。ロックは保存後すぐ外す。
+ロックの後で対象（要件 F-11: 対象の導出）と占有を読み、確認と明細（各明細に、その時点の指紋と支払いの取り消し状態）を同時に保存する。ロックは保存後すぐ外す。
 
 ### 精算の完了
 
-ロック → receipt → 確認が旅行に属するか → 確認にすでに精算があれば、その精算が取り消し済みなら 409（新しい確認へ案内。E-10）、有効なら既存の精算を返す（E-07。同じ確認の重複の完了）→ 今の対象を導出し、確認の明細ごとに指紋・取り消し状態を比べる → 一致なら連番を払い出し、精算・明細・占有・受領を保存。BASE の支払いだけが取り消されていて、了承の集合が今の取り消し済み BASE の集合と完全に一致すれば例外として許可（F-32）。それ以外の違いは 409。
+ロック → receipt → 確認が旅行に属するか → 確認にすでに精算があれば、その精算が取り消し済みなら 409（新しい確認へ案内。E-10）、有効なら既存の精算を返す（要件 E-07: 同じ確認を二人が同時に完了）→ 今の対象を導出し、確認の明細ごとに指紋・取り消し状態を比べる → 一致なら連番を払い出し、精算・明細・占有・受領を保存。BASE の支払いだけが取り消されていて、了承の集合が今の取り消し済み BASE の集合と完全に一致すれば例外として許可（要件 F-32: 取り消された対象の例外）。それ以外の違いは 409。
 
 ### 精算の取り消し
 
@@ -126,8 +136,8 @@ Guard（Origin → セッション → userId）
 
 - 円は 10 進の整数文字列（`"7001"`、符号付きは `"-3500"`）。Zod は文字列のパターンで形式を見て、範囲は Domain の `Yen` で 422 にする。
 - 正本との差分: 支払い額の上限を 9,999,999 円にする（`maxLength` と `pattern` を合わせる）。
-- 支払いの入力は払った人を `payerUserId`、分け方を slot 0 の割合で受ける（正本どおり）。
-- エラーの code（正本 §6 に、旅行・予定の段階の共通の code を合わせる）: PREVIEW_CHANGED、CANCELLED_ITEMS_ACK_REQUIRED、TARGET_ALREADY_SETTLED、TARGET_PARTIALLY_SETTLED、SETTLEMENT_NOT_LATEST、NO_SETTLEMENT_TARGET（422）、IDEMPOTENCY_KEY_REUSED、TRIP_NOT_ACCESSIBLE、PAYMENT_NOT_FOUND・PREVIEW_NOT_FOUND・SETTLEMENT_NOT_FOUND（404）。
+- 支払いの入力は払った人を `payerUserId`、分け方を参加者番号 0 の人の負担の割合で受ける（正本どおり）。
+- エラーの code（詳細設計「支払いと精算」の「API 契約案」に、旅行・予定の段階の共通の code を合わせる）: PREVIEW_CHANGED、CANCELLED_ITEMS_ACK_REQUIRED、TARGET_ALREADY_SETTLED、TARGET_PARTIALLY_SETTLED、SETTLEMENT_NOT_LATEST、NO_SETTLEMENT_TARGET（422）、IDEMPOTENCY_KEY_REUSED、TRIP_NOT_ACCESSIBLE、PAYMENT_NOT_FOUND・PREVIEW_NOT_FOUND・SETTLEMENT_NOT_FOUND（404）。
 
 ## DB 設計
 
@@ -153,11 +163,11 @@ Guard（Origin → セッション → userId）
 
 | URL | 画面 | v3 | 取得 |
 | --- | --- | --- | --- |
-| `/trips/{tripId}/payments/new?planId=` | 支払いを記録（シート。後ろにしおり） | 11・11b・11c | getTrip、`planId` があれば getPlan（同じ旅行の予定かを確かめて選んだ状態にする。しおりの表示日と違う日の予定でも選べる）、関連する予定の選択で選んだ日の getItinerary |
-| `/trips/{tripId}/settlement` | 精算 | 14・14b・14f・14g・14i | getBalance、listSettlementPreviews、listSettlements |
-| `/trips/{tripId}/settlement/previews/{previewId}` | 受け渡しの確認 | 14c・14d・14h | getSettlementPreview |
+| `/trips/{tripId}/payments/new?planId=` | 支払いを記録（シート。後ろにしおり） | 支払いを記録・割合を指定・関連する予定 | getTrip、`planId` があれば getPlan（同じ旅行の予定かを確かめて選んだ状態にする。しおりの表示日と違う日の予定でも選べる）、関連する予定の選択で選んだ日の getItinerary |
+| `/trips/{tripId}/settlement` | 精算 | 精算・内訳・対象 0 件・0 円・取得失敗 | getBalance、listSettlementPreviews、listSettlements |
+| `/trips/{tripId}/settlement/previews/{previewId}` | 受け渡しの確認 | 受け渡しの確認・記録する前の確認のダイアログ・0 円の確認 | getSettlementPreview |
 
-- 下部: タブに「精算」を足し、主ボタン「支払いを記録」を出す（旅行・予定の段階の差分 2 を戻す）。ホーム・記録のタブは次の段階。
+- 下部: タブに「精算」を足し、主ボタン「支払いを記録」を出す（旅行・予定の段階では「しおり」のタブだけに絞っていたものを戻す）。ホーム・記録のタブは次の段階。
 - 予定の詳細に「支払いを記録」の導線（関連する予定を選んだ状態で開く）。
 - 金額は `shared/lib/yen.ts` で文字列 ⇔ BigInt を変換し、Number に通さない。二人の負担は入力のたびに画面でも計算して見せる（サーバーと同じ式。保存はサーバーの計算を正とする）。
 - 確認の検証結果のうち、`cancelled_items_ack_required`・`target_changed` は今回は「この確認では記録できません。精算の画面に戻って確認し直してください」と最新の精算への導線だけを出す（了承の画面は次の段階）。`already_completed`・`completed_then_cancelled` は既存の精算への導線。
@@ -173,15 +183,15 @@ Guard（Origin → セッション → userId）
 ### 結果不明からの復帰（ADR-0006）
 
 - `shared/browser/pending-requests.ts`: IndexedDB の 1 つのデータベース `tomotabi` の `pending-requests` に、`{ id, userId, tripId, operation, url, method, bodyJson, idempotencyKey, ifMatch, createdAt }` を保存する。
-- 送る直前に保存し、保存に失敗したら送らない（F-53）。成功・確定した拒否で消す。結果不明（network・5xx・解釈できない応答）では残す。
+- 送る直前に保存し、保存に失敗したら送らない（要件 F-53）。成功・確定した拒否で消す。結果不明（network・5xx・解釈できない応答）では残す。
 - 画面を開いたとき、同じ利用者・同じ旅行・同じ操作の保留があれば、入力を固定して「保存されたか確認できません」と「同じ内容で確認する」を出す。送るのは本人の操作だけ。
 - ログアウトの成功時にその利用者の保留を消す。保留があれば、ログアウトの前に「確認できていない保存があります」と出す（ログアウトは止めない）。
 - 描画中に IndexedDB を触らない（effect の中で）。
 
 ## バックエンド設計
 
-- Domain は Nest・Drizzle に依存しない。`Yen`（bigint のブランド型）、`Payment.create`（負担額・寄与）、`deriveTargets(payments, cancellations, activeClaims)`、`fingerprintOf(paymentHistory)`、`balanceOf(targets)`。
-- `fingerprintOf`: その支払いの有効な BASE・REVERSAL の精算 ID、その支払いを含む精算の明細と精算の取り消しの ID を、決まった順に並べて sha256（正本 §5）。
+- Domain は Nest・Drizzle に依存しない。`Yen`（bigint のブランド型）、`Payment.create`（負担額・寄与。要件 F-04・F-05）、`deriveTargets(payments, cancellations, activeClaims)`、`fingerprintOf(paymentHistory)`、`balanceOf(targets)`。
+- `fingerprintOf`: その支払いの有効な BASE・REVERSAL の精算 ID、その支払いを含む精算の明細と精算の取り消しの ID を、決まった順に並べて sha256（詳細設計「支払いと精算」の「確認内容の保持・再開」）。
 - UoW の文脈は型付きのポートの限定集合（旅行・予定の段階と同じ形）。生の tx を渡さない。
 
 ## エラー処理
@@ -214,8 +224,8 @@ Guard（Origin → セッション → userId）
 
 ## テスト方針
 
-- Domain の単体: 負担額・寄与（1,001 円の折半、0／100%、両方の払った人、上限）、対象の導出の表（詳細設計 01 §4 の 5 行と不正な 2 つ）、指紋、残額。`finance_model_check.py` の筋書き（取り消しの順序、重複取り消し、確認後の追加、二重完了、取り消し済み対象の例外、最新の制限、再精算、0 円、古い確認）を TypeScript の単体テストに移す。
-- 実 DB と HTTP（`tests/db/finance-http.db.test.ts`）: 詳細設計 09 の T-01〜T-10。二つの接続での同時の完了・取り消し・最新の取り消し、応答が消えたあとの再送、途中の失敗での巻き戻し、別の旅行の並行処理、占有を履歴から作り直した結果との一致、GRANT。
+- Domain の単体: 負担額・寄与（1,001 円の折半、0／100%、両方の払った人、上限）、対象の導出の表（詳細設計「支払いと精算」の「次回対象の導出」の 5 行と、不正な 2 つの状態）、指紋、残額。`finance_model_check.py` の筋書き（取り消しの順序、重複取り消し、確認後の追加、二重完了、取り消し済み対象の例外、最新の制限、再精算、0 円、古い確認）を TypeScript の単体テストに移す。
+- 実 DB と HTTP（`tests/db/finance-http.db.test.ts`）: 詳細設計「テストと監視・CI」のお金の観点（T-01〜T-10。要件定義の受け入れ条件 1 に中身）。二つの接続での同時の完了・取り消し・最新の取り消し、応答が消えたあとの再送、途中の失敗での巻き戻し、別の旅行の並行処理、占有を履歴から作り直した結果との一致、GRANT。
 - web の単体: 支払いの入力（分け方 → 割合 → 二人の負担の表示）、精算の状態の出し分け、確認のチェックと完了、IndexedDB の保留（保存失敗で送らない、再読み込み後の表示、ログアウトで消す）。
 - E2E: 支払いを記録 → 精算 → 受け渡しの確認 → 完了、0 円、確認後の追加支払いで金額が変わらない、結果不明のあと再読み込みして同じ内容で確認し 1 件だけ。
 

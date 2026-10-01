@@ -7,11 +7,130 @@ import type { MutationRequest } from "@/shared/api/mutation-request";
  * 保存するのは要求を送り直すのに要る組だけで、Cookie・セッショントークン・
  * Google の情報・未送信の入力は入れない。
  * サーバー描画で IndexedDB を触らないよう、呼び出しは effect 以降に限る。
+ *
+ * 読み出した値は書いたときのままとは限らない（端末上の保存は利用者が触れる）。
+ * 形・経路・宛先を確かめてから使い、合わないものは送らずに消す。
  */
 
 const DB_NAME = "tomotabi";
 const DB_VERSION = 1;
 const STORE_NAME = "pending-requests";
+
+/** 保留を残す期間。createdAt からこれを超えたものは読むときに消して返さない。 */
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_SEGMENT =
+  "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+/**
+ * 送り直せる経路の許可リスト。{tripId} 部はその保留の tripId と一致させる。
+ * 支払い・精算の書き込み（createPayment・cancelPayment・createSettlementPreview・
+ * completeSettlement・cancelSettlement）だけを許す。
+ */
+const ALLOWED_PATHS: readonly RegExp[] = [
+  /^\/api\/trips\/[^/]+\/payments$/,
+  new RegExp(`^/api/trips/[^/]+/payments/${UUID_SEGMENT}/cancel$`, "i"),
+  /^\/api\/trips\/[^/]+\/settlement-previews$/,
+  /^\/api\/trips\/[^/]+\/settlements$/,
+  new RegExp(`^/api/trips/[^/]+/settlements/${UUID_SEGMENT}/cancel$`, "i"),
+];
+
+/**
+ * 試験用の操作名（`test-` で始まる）の経路は、操作名そのものを末尾に持つ
+ * 経路だけ許す（支払い・精算の画面ができるまで試験で使う）。
+ */
+const TEST_OPERATION_PREFIX = "test-";
+
+const ALLOWED_METHODS: ReadonlySet<string> = new Set(["POST", "PATCH", "PUT"]);
+
+function isAllowedPendingUrl(record: {
+  url?: unknown;
+  tripId?: unknown;
+  operation?: unknown;
+}): boolean {
+  if (
+    typeof record.url !== "string" ||
+    typeof record.tripId !== "string" ||
+    record.tripId === "" ||
+    !record.url.startsWith("/") ||
+    record.url.startsWith("//")
+  ) {
+    return false;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(record.url, window.location.origin);
+  } catch {
+    return false;
+  }
+  if (parsed.origin !== window.location.origin) {
+    return false;
+  }
+  const prefix = `/api/trips/${record.tripId}/`;
+  if (!record.url.startsWith(prefix) || !parsed.pathname.startsWith(prefix)) {
+    return false;
+  }
+  if (ALLOWED_PATHS.some((pattern) => pattern.test(parsed.pathname))) {
+    return true;
+  }
+  return (
+    typeof record.operation === "string" &&
+    record.operation.startsWith(TEST_OPERATION_PREFIX) &&
+    parsed.pathname === `${prefix}${record.operation}`
+  );
+}
+
+/**
+ * 読み出した保留が送り直せる形か確かめる。経路は同一オリジンの
+ * `/api/trips/{その保留の tripId}/` 配下で許可リストの経路だけ。
+ * `idempotencyKey` は UUID、`bodyJson` は JSON として読める文字列だけ。
+ */
+export function isValidPendingRequest(record: {
+  id?: unknown;
+  userId?: unknown;
+  tripId?: unknown;
+  operation?: unknown;
+  method?: unknown;
+  url?: unknown;
+  bodyJson?: unknown;
+  idempotencyKey?: unknown;
+  ifMatch?: unknown;
+  createdAt?: unknown;
+}): record is PendingRequestRecord {
+  if (
+    typeof record.idempotencyKey !== "string" ||
+    !UUID_PATTERN.test(record.idempotencyKey) ||
+    record.id !== record.idempotencyKey ||
+    typeof record.userId !== "string" ||
+    record.userId === "" ||
+    typeof record.tripId !== "string" ||
+    record.tripId === "" ||
+    typeof record.operation !== "string" ||
+    record.operation === "" ||
+    typeof record.method !== "string" ||
+    !ALLOWED_METHODS.has(record.method) ||
+    (record.bodyJson !== null && typeof record.bodyJson !== "string") ||
+    (record.ifMatch !== null && typeof record.ifMatch !== "string") ||
+    typeof record.createdAt !== "string" ||
+    Number.isNaN(Date.parse(record.createdAt))
+  ) {
+    return false;
+  }
+  if (record.bodyJson !== null) {
+    try {
+      JSON.parse(record.bodyJson);
+    } catch {
+      return false;
+    }
+  }
+  return isAllowedPendingUrl(record);
+}
+
+function isExpired(record: PendingRequestRecord, now: number): boolean {
+  return now - Date.parse(record.createdAt) > RETENTION_MS;
+}
 
 export type PendingRequestRecord = {
   /** 要求を一意に指す id（UUID）。再送に使う冪等キーと同じ値にする。 */
@@ -27,6 +146,14 @@ export type PendingRequestRecord = {
   /** ISO 8601。同じ操作に複数残ったときは新しいものを正とする。 */
   createdAt: string;
 };
+
+export type PendingRequestLookup =
+  | { status: "none" }
+  | { status: "found"; record: PendingRequestRecord }
+  | {
+      /** 保留はあったが形を確かめられず消した（「この保存は確かめられません」の扱い）。 */
+      status: "invalid";
+    };
 
 interface PendingRequestsSchema extends DBSchema {
   "pending-requests": {
@@ -88,34 +215,63 @@ export function toPendingRequestRecord(input: {
   };
 }
 
-/** 送る直前に保存する。失敗したら例外を投げる（呼び出し側は送らずに止める）。 */
+/**
+ * 送る直前に保存する。失敗したら例外を投げる（呼び出し側は送らずに止める）。
+ * 同じ id の保留が既にある（同じキーでの確かめ直し）ときは、最初の createdAt を保つ。
+ */
 export async function savePendingRequest(
   record: PendingRequestRecord,
 ): Promise<void> {
   await withDb(async (db) => {
-    await db.put(STORE_NAME, record);
+    const existing = await db.get(STORE_NAME, record.id);
+    const createdAt =
+      existing !== undefined &&
+      !Number.isNaN(Date.parse(existing.createdAt))
+        ? existing.createdAt
+        : record.createdAt;
+    await db.put(STORE_NAME, { ...record, createdAt });
   });
 }
 
 /**
  * 同じ利用者・旅行・操作の保留を探す。複数残っていたら
- * 新しいもの（createdAt の大きいもの）を返す。なければ null。
+ * 新しいもの（createdAt の大きいもの）を返す。
+ * 形・経路が確かめられないものと、保持期間（7 日）を超えたものは消す。
+ * 確かめられないものだけがあったときは `invalid` を返す。
  */
 export async function findPendingRequest(input: {
   userId: string;
   tripId: string;
   operation: string;
-}): Promise<PendingRequestRecord | null> {
+}): Promise<PendingRequestLookup> {
   return withDb(async (db) => {
-    const records = await db.getAllFromIndex(
-      STORE_NAME,
-      "userTripOperation",
-      [input.userId, input.tripId, input.operation],
-    );
-    if (records.length === 0) {
-      return null;
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const valid: PendingRequestRecord[] = [];
+    const now = Date.now();
+    let sawInvalid = false;
+    let cursor = await tx.store
+      .index("userTripOperation")
+      .openCursor(IDBKeyRange.only([input.userId, input.tripId, input.operation]));
+    while (cursor !== null) {
+      const record = cursor.value;
+      if (!isValidPendingRequest(record)) {
+        await cursor.delete();
+        sawInvalid = true;
+      } else if (isExpired(record, now)) {
+        await cursor.delete();
+      } else {
+        valid.push(record);
+      }
+      cursor = await cursor.continue();
     }
-    return records.reduce((a, b) => (a.createdAt >= b.createdAt ? a : b));
+    await tx.done;
+    if (valid.length === 0) {
+      return sawInvalid ? { status: "invalid" } : { status: "none" };
+    }
+    return {
+      status: "found",
+      record: valid.reduce((a, b) => (a.createdAt >= b.createdAt ? a : b)),
+    };
   });
 }
 
@@ -126,11 +282,50 @@ export async function deletePendingRequest(id: string): Promise<void> {
   });
 }
 
-/** その利用者の保留をすべて返す（ログアウトの前の案内に使う）。 */
+/**
+ * サインインした利用者以外の userId の保留をすべて消す。
+ * 利用者が分かったときに呼ぶ（別の利用者の保留を残さない）。
+ */
+export async function deletePendingRequestsForOtherUsers(
+  userId: string,
+): Promise<void> {
+  await withDb(async (db) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    let cursor = await tx.store.openCursor();
+    while (cursor !== null) {
+      if (cursor.value.userId !== userId) {
+        await cursor.delete();
+      }
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+  });
+}
+
+/**
+ * その利用者の保留をすべて返す（ログアウトの前の案内に使う）。
+ * 確かめられない形のものと保持期間を超えたものは消して返さない。
+ */
 export async function listPendingRequestsForUser(
   userId: string,
 ): Promise<PendingRequestRecord[]> {
-  return withDb(async (db) => db.getAllFromIndex(STORE_NAME, "userId", userId));
+  return withDb(async (db) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const valid: PendingRequestRecord[] = [];
+    const now = Date.now();
+    let cursor = await tx.store.index("userId").openCursor(userId);
+    while (cursor !== null) {
+      const record = cursor.value;
+      if (!isValidPendingRequest(record) || isExpired(record, now)) {
+        await cursor.delete();
+      } else {
+        valid.push(record);
+      }
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+    return valid;
+  });
 }
 
 /** ログアウトの成功時に、その利用者の保留をすべて消す。 */
@@ -148,10 +343,16 @@ export async function clearPendingRequestsForUser(
   });
 }
 
-/** 保存されていた要求を送り直せる形に戻す（同じキー・本文・If-Match）。 */
+/**
+ * 保存されていた要求を送り直せる形に戻す（同じキー・本文・If-Match）。
+ * 形・経路が確かめられないレコードには null を返す（呼び出し側は送らずに消す）。
+ */
 export function pendingRequestToMutation(
   record: PendingRequestRecord,
-): MutationRequest {
+): MutationRequest | null {
+  if (!isValidPendingRequest(record)) {
+    return null;
+  }
   return {
     operation: record.operation,
     url: record.url,

@@ -4,9 +4,12 @@ import type { ApiErrorCode, ApiFailure } from "./api-failure";
 import type { ApiSuccess } from "./api-result";
 import {
   deletePendingRequest,
+  pendingRequestToMutation,
   savePendingRequest,
   toPendingRequestRecord,
+  type PendingRequestRecord,
 } from "@/shared/browser/pending-requests";
+import type { PendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import {
   createMutationRequest,
   type MutationDraft,
@@ -75,8 +78,15 @@ export type UseSaveStateOptions<TData, TLatest> = {
    * 指定した操作だけ有効になり、送る前に保存し、保存に失敗したら
    * `storage-unavailable` で止めて送らない。成功・確定した拒否で消し、
    * 結果不明・認証期限切れでは残す。未指定の操作の振る舞いは変わらない。
+   * `check` に `usePendingRequestCheck` の結果を渡すと、保留がある・
+   * まだ確認中・確認できないあいだは `submit`（新しいキーでの保存）を
+   * 受け付けない（同じ要求の再送で二重に作られないようにする）。
    */
-  pendingRequest?: { userId: string; tripId: string } | null;
+  pendingRequest?: {
+    userId: string;
+    tripId: string;
+    check?: PendingRequestCheck;
+  } | null;
 };
 
 /**
@@ -203,12 +213,16 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
 
   const submit = useCallback(
     async (draft: MutationDraft) => {
+      const check = pendingRequestRef.current?.check;
       if (
         busyRef.current ||
         (state.status !== "editing" &&
           state.status !== "rejected" &&
           state.status !== "succeeded" &&
-          state.status !== "storage-unavailable")
+          state.status !== "storage-unavailable") ||
+        // 未確定の保留が残っている（または残っているか未確認・確認できない）あいだは
+        // 新しいキーで保存しない（同じ要求の再送で二重に作られないようにする）。
+        (check !== undefined && check.status !== "none")
       ) {
         return;
       }
@@ -235,17 +249,39 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
   }, [state, run]);
 
   /**
-   * 再読み込み後に IndexedDB から復帰した要求を、本人の操作で同じまま送り直す。
-   * `usePendingRequestCheck` で見つけた record を
-   * `pendingRequestToMutation` で戻して渡す（自動では呼ばない）。
+   * 再読み込み後に IndexedDB から復帰した保留を、本人の操作で同じまま送り直す。
+   * `usePendingRequestCheck` で見つけた record をそのまま渡す（自動では呼ばない）。
+   * 形・経路が確かめられないもの、今の利用者・旅行と合わないものは送らずに消す。
    */
   const confirmRequest = useCallback(
-    async (request: MutationRequest) => {
+    async (record: PendingRequestRecord) => {
       if (busyRef.current) {
         return;
       }
       busyRef.current = true;
       try {
+        const pendingLink = pendingRequestRef.current;
+        const request = pendingRequestToMutation(record);
+        if (pendingLink === null || request === null) {
+          try {
+            await deletePendingRequest(record.id);
+          } catch {
+            // 消せなくても送らないことは変わらない。
+          }
+          setState({ status: "storage-unavailable" });
+          return;
+        }
+        if (
+          record.userId !== pendingLink.userId ||
+          record.tripId !== pendingLink.tripId
+        ) {
+          try {
+            await deletePendingRequest(record.id);
+          } catch {
+            // 消せなくても送らないことは変わらない。
+          }
+          return;
+        }
         await run(request, true);
       } finally {
         busyRef.current = false;

@@ -5,6 +5,7 @@ import {
   render,
   renderHook,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { errAsync, okAsync, type ResultAsync } from "neverthrow";
@@ -23,6 +24,7 @@ import {
   pendingRequestToMutation,
   savePendingRequest,
   toPendingRequestRecord,
+  type PendingRequestRecord,
 } from "@/shared/browser/pending-requests";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
@@ -45,6 +47,8 @@ const OTHER_USER_ID = "user-aoi";
 const TRIP_ID = "trip-1";
 // 支払い・精算の操作はまだ無いため、試験用の操作名で確かめる。
 const OPERATION = "test-payment-record";
+const TEST_URL = `/api/trips/${TRIP_ID}/${OPERATION}`;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function failSend(failure: ApiFailure): Send {
   return () => errAsync<ApiSuccess<Data>, ApiFailure>(failure);
@@ -55,12 +59,28 @@ function okSend(data: Data): Send {
     okAsync<ApiSuccess<Data>, ApiFailure>({ data, status: 201, etag: null });
 }
 
+function makeRecord(
+  overrides: Partial<PendingRequestRecord> = {},
+): PendingRequestRecord {
+  const request = createMutationRequest({
+    operation: OPERATION,
+    url: TEST_URL,
+    method: "POST",
+    body: { amount: "7001" },
+  });
+  return {
+    ...toPendingRequestRecord({ userId: USER_ID, tripId: TRIP_ID, request }),
+    ...overrides,
+  };
+}
+
 async function findKept() {
-  return findPendingRequest({
+  const lookup = await findPendingRequest({
     userId: USER_ID,
     tripId: TRIP_ID,
     operation: OPERATION,
   });
+  return lookup.status === "found" ? lookup.record : null;
 }
 
 async function resetDb(): Promise<void> {
@@ -72,21 +92,29 @@ async function resetDb(): Promise<void> {
   });
 }
 
+async function waitForCheckStatus(status: string) {
+  await waitFor(() =>
+    expect(screen.getByTestId("check-status")).toHaveTextContent(status),
+  );
+}
+
 /**
  * 結果不明の要求を IndexedDB に残す操作の試験用フォーム。
  * 支払い・精算の画面ができるまで、この形で保存の流れを通す。
+ * `check` を `useSaveState` に渡しているので、保留がある・確認中・
+ * 確認できないあいだは「保存」（新しいキーでの送信）は受け付けない。
  */
 function FinanceForm({ send, userId }: { send: Send; userId: string }) {
-  const { state, submit, confirmWithSameRequest, confirmRequest } =
-    useSaveState<Data, Data>({
-      send,
-      pendingRequest: { userId, tripId: TRIP_ID },
-    });
-  const { check } = usePendingRequestCheck({
+  const { check, reload } = usePendingRequestCheck({
     userId,
     tripId: TRIP_ID,
     operation: OPERATION,
   });
+  const { state, submit, confirmWithSameRequest, confirmRequest } =
+    useSaveState<Data, Data>({
+      send,
+      pendingRequest: { userId, tripId: TRIP_ID, check },
+    });
   const [memo, setMemo] = useState("");
 
   return (
@@ -95,7 +123,7 @@ function FinanceForm({ send, userId }: { send: Send; userId: string }) {
         event.preventDefault();
         void submit({
           operation: OPERATION,
-          url: `/api/trips/${TRIP_ID}/payments`,
+          url: TEST_URL,
           method: "POST",
           body: { amount: "7001" },
         });
@@ -108,11 +136,10 @@ function FinanceForm({ send, userId }: { send: Send; userId: string }) {
           onChange={(event) => setMemo(event.currentTarget.value)}
         />
       </label>
+      <span data-testid="check-status">{check.status}</span>
       {state.status === "editing" && check.status === "found" ? (
         <SaveUnknown
-          onConfirm={() =>
-            void confirmRequest(pendingRequestToMutation(check.record))
-          }
+          onConfirm={() => void confirmRequest(check.record).then(reload)}
         />
       ) : null}
       {state.status === "unknown" ? (
@@ -164,6 +191,7 @@ describe("保留中の要求（IndexedDB）", () => {
     const send = vi.fn(okSend({ id: "pay-1" }));
     const user = userEvent.setup();
     render(<FinanceForm send={send} userId={USER_ID} />);
+    await waitForCheckStatus("unavailable");
 
     await user.click(screen.getByRole("button", { name: "保存" }));
 
@@ -179,6 +207,7 @@ describe("保留中の要求（IndexedDB）", () => {
     const send = vi.fn(okSend({ id: "pay-1" }));
     const user = userEvent.setup();
     render(<FinanceForm send={send} userId={USER_ID} />);
+    await waitForCheckStatus("none");
 
     await user.click(screen.getByRole("button", { name: "保存" }));
     await screen.findByText("保存しました");
@@ -192,6 +221,7 @@ describe("保留中の要求（IndexedDB）", () => {
     );
     const user = userEvent.setup();
     render(<FinanceForm send={send} userId={USER_ID} />);
+    await waitForCheckStatus("none");
 
     await user.click(screen.getByRole("button", { name: "保存" }));
     await screen.findByText("保存できませんでした");
@@ -210,6 +240,7 @@ describe("保留中の要求（IndexedDB）", () => {
         userId={USER_ID}
       />,
     );
+    await waitForCheckStatus("none");
     await user.click(screen.getByRole("button", { name: "保存" }));
     await screen.findByText("保存されたか確認できません");
     expect(await findKept()).not.toBeNull();
@@ -224,6 +255,7 @@ describe("保留中の要求（IndexedDB）", () => {
         userId={USER_ID}
       />,
     );
+    await waitForCheckStatus("none");
     await user.click(screen.getByRole("button", { name: "保存" }));
     await screen.findByText("もう一度ログインしてください");
     expect(await findKept()).not.toBeNull();
@@ -236,6 +268,7 @@ describe("保留中の要求（IndexedDB）", () => {
     const first = render(
       <FinanceForm send={vi.fn(failSend({ kind: "network" }))} userId={USER_ID} />,
     );
+    await waitForCheckStatus("none");
     await user.click(screen.getByRole("button", { name: "保存" }));
     await screen.findByText("保存されたか確認できません");
     const kept = await findKept();
@@ -244,11 +277,13 @@ describe("保留中の要求（IndexedDB）", () => {
     }
     first.unmount();
 
-    // 別の利用者で開くと、保留は出ない（内容も見せない）。
-    const other = render(<PendingOnly userId={OTHER_USER_ID} />);
-    expect(await screen.findByText("保留なし")).toBeInTheDocument();
-    expect(screen.queryByText(/7001/)).not.toBeInTheDocument();
-    other.unmount();
+    // 別の利用者の保留としては見つからない（内容も見せない）。
+    const otherLookup = await findPendingRequest({
+      userId: OTHER_USER_ID,
+      tripId: TRIP_ID,
+      operation: OPERATION,
+    });
+    expect(otherLookup.status).toBe("none");
 
     // 同じ利用者で開き直す → 「同じ内容で確認する」は本人の操作でだけ送る。
     const send = vi.fn(okSend({ id: "pay-1" }));
@@ -270,10 +305,46 @@ describe("保留中の要求（IndexedDB）", () => {
     expect(await findKept()).toBeNull();
   });
 
+  it("再読み込み後に保留が残っているあいだは新しいキーで保存せず、同じ内容で確かめるだけ送る", async () => {
+    const user = userEvent.setup();
+
+    // network で結果不明 → 保留が残る → 再読み込み相当でアンマウント。
+    const first = render(
+      <FinanceForm send={vi.fn(failSend({ kind: "network" }))} userId={USER_ID} />,
+    );
+    await waitForCheckStatus("none");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await screen.findByText("保存されたか確認できません");
+    const kept = await findKept();
+    if (kept === null) {
+      throw new Error("pending request was not kept");
+    }
+    first.unmount();
+
+    const send = vi.fn(okSend({ id: "pay-1" }));
+    render(<FinanceForm send={send} userId={USER_ID} />);
+    await screen.findByRole("button", { name: "同じ内容で確認する" });
+
+    // 保留があるあいだは「保存」を押しても新しいキーで送らない。
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(send).not.toHaveBeenCalled();
+    expect(await listPendingRequestsForUser(USER_ID)).toHaveLength(1);
+
+    // 「同じ内容で確認する」は同じキーで 1 回だけ送る。
+    await user.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+    await screen.findByText("保存しました");
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].idempotencyKey).toBe(kept.idempotencyKey);
+    expect(await findKept()).toBeNull();
+  });
+
   it("FW-11: 保留の中身に Cookie・トークン・未送信の入力は入っていない", async () => {
     const send = vi.fn(failSend({ kind: "network" }));
     const user = userEvent.setup();
     render(<FinanceForm send={send} userId={USER_ID} />);
+    await waitForCheckStatus("none");
 
     await user.type(screen.getByLabelText("メモ"), "未送信の入力 draft-123");
     await user.click(screen.getByRole("button", { name: "保存" }));
@@ -302,6 +373,279 @@ describe("保留中の要求（IndexedDB）", () => {
     expect(serialized).not.toContain("cookie");
     expect(serialized).not.toContain("token");
     expect(serialized).not.toContain("draft-123");
+  });
+});
+
+describe("読み出した保留の検証", () => {
+  const tamperedCases: {
+    name: string;
+    record: () => PendingRequestRecord;
+  }[] = [
+    {
+      name: "外部のオリジンを向く url",
+      record: () =>
+        makeRecord({
+          url: `https://evil.example.com/api/trips/${TRIP_ID}/${OPERATION}`,
+        }),
+    },
+    {
+      name: "// で始まる url",
+      record: () =>
+        makeRecord({
+          url: `//evil.example.com/api/trips/${TRIP_ID}/${OPERATION}`,
+        }),
+    },
+    {
+      name: "別の旅行を向く url",
+      record: () => makeRecord({ url: `/api/trips/other-trip/${OPERATION}` }),
+    },
+    {
+      name: "許可リストに無い経路の url",
+      record: () => makeRecord({ url: `/api/trips/${TRIP_ID}/members` }),
+    },
+    {
+      name: "GET の method",
+      record: () =>
+        makeRecord({ method: "GET" as PendingRequestRecord["method"] }),
+    },
+    {
+      name: "UUID でない冪等キー",
+      record: () => makeRecord({ idempotencyKey: "not-a-uuid", id: "not-a-uuid" }),
+    },
+    {
+      name: "JSON として読めない bodyJson",
+      record: () => makeRecord({ bodyJson: "{not json" }),
+    },
+  ];
+
+  for (const { name, record } of tamperedCases) {
+    it(`${name} の保留は送らずに消し、確かめられない案内を出す`, async () => {
+      const send = vi.fn(okSend({ id: "pay-1" }));
+      await savePendingRequest(record());
+      const user = userEvent.setup();
+      render(<FinanceForm send={send} userId={USER_ID} />);
+
+      // 「この保存は確かめられません」の扱い（storage-unavailable と同じ案内）。
+      expect(
+        await screen.findByText(
+          "この端末では保存の確認に使う領域が使えません",
+        ),
+      ).toBeInTheDocument();
+      await waitFor(async () => {
+        expect(await listPendingRequestsForUser(USER_ID)).toEqual([]);
+      });
+      expect(send).not.toHaveBeenCalled();
+
+      // そのあと「保存」を押しても新しいキーで送らない。
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      expect(send).not.toHaveBeenCalled();
+      expect(await listPendingRequestsForUser(USER_ID)).toEqual([]);
+    });
+  }
+
+  it("許可リストの経路と形が合う保留は送り直せる形に戻る", () => {
+    const allowed: { operation: string; url: string }[] = [
+      { operation: "record-payment", url: `/api/trips/${TRIP_ID}/payments` },
+      {
+        operation: "cancel-payment",
+        url: `/api/trips/${TRIP_ID}/payments/${crypto.randomUUID()}/cancel`,
+      },
+      {
+        operation: "create-settlement-preview",
+        url: `/api/trips/${TRIP_ID}/settlement-previews`,
+      },
+      {
+        operation: "complete-settlement",
+        url: `/api/trips/${TRIP_ID}/settlements`,
+      },
+      {
+        operation: "cancel-settlement",
+        url: `/api/trips/${TRIP_ID}/settlements/${crypto.randomUUID()}/cancel`,
+      },
+      // 試験用の操作名の経路（操作名そのものを末尾に持つ）。
+      { operation: OPERATION, url: TEST_URL },
+    ];
+    for (const { operation, url } of allowed) {
+      const request = createMutationRequest({
+        operation,
+        url,
+        method: "POST",
+        body: { amount: "7001" },
+      });
+      const record = toPendingRequestRecord({
+        userId: USER_ID,
+        tripId: TRIP_ID,
+        request,
+      });
+      const mutation = pendingRequestToMutation(record);
+      expect(mutation).not.toBeNull();
+      expect(mutation?.url).toBe(url);
+      expect(mutation?.idempotencyKey).toBe(record.idempotencyKey);
+    }
+  });
+
+  it("確かめ直しの要求が今の利用者・旅行と合わなければ送らずに消す", async () => {
+    const send = vi.fn(okSend({ id: "pay-1" }));
+    const { result } = renderHook(() =>
+      useSaveState<Data, Data>({
+        send,
+        pendingRequest: {
+          userId: USER_ID,
+          tripId: TRIP_ID,
+          check: { status: "none" },
+        },
+      }),
+    );
+
+    // 別の利用者の保留。
+    const otherUserRecord = makeRecord({ userId: OTHER_USER_ID });
+    await savePendingRequest(otherUserRecord);
+    // 別の旅行の保留（url はその保留の tripId に合わせる）。
+    const otherTripRequest = createMutationRequest({
+      operation: OPERATION,
+      url: `/api/trips/trip-2/${OPERATION}`,
+      method: "POST",
+      body: { amount: "7001" },
+    });
+    const otherTripRecord = toPendingRequestRecord({
+      userId: USER_ID,
+      tripId: "trip-2",
+      request: otherTripRequest,
+    });
+    await savePendingRequest(otherTripRecord);
+
+    await act(async () => {
+      await result.current.confirmRequest(otherUserRecord);
+    });
+    expect(send).not.toHaveBeenCalled();
+    expect(
+      (
+        await findPendingRequest({
+          userId: OTHER_USER_ID,
+          tripId: TRIP_ID,
+          operation: OPERATION,
+        })
+      ).status,
+    ).toBe("none");
+
+    await act(async () => {
+      await result.current.confirmRequest(otherTripRecord);
+    });
+    expect(send).not.toHaveBeenCalled();
+    expect(
+      (
+        await findPendingRequest({
+          userId: USER_ID,
+          tripId: "trip-2",
+          operation: OPERATION,
+        })
+      ).status,
+    ).toBe("none");
+  });
+
+  it("確かめ直しで形が合わない保留は送らずに消し、確かめられない扱いにする", async () => {
+    const send = vi.fn(okSend({ id: "pay-1" }));
+    const { result } = renderHook(() =>
+      useSaveState<Data, Data>({
+        send,
+        pendingRequest: {
+          userId: USER_ID,
+          tripId: TRIP_ID,
+          check: { status: "none" },
+        },
+      }),
+    );
+    const broken = makeRecord({ method: "GET" as PendingRequestRecord["method"] });
+    await savePendingRequest(broken);
+
+    await act(async () => {
+      await result.current.confirmRequest(broken);
+    });
+
+    expect(send).not.toHaveBeenCalled();
+    expect(result.current.state.status).toBe("storage-unavailable");
+    expect(await listPendingRequestsForUser(USER_ID)).toEqual([]);
+  });
+});
+
+describe("保持期間と他の利用者の掃除", () => {
+  it("createdAt から 7 日を超えた保留は読むときに消して返さず、期間内のものは見つかる", async () => {
+    const expired = makeRecord({
+      createdAt: new Date(Date.now() - 8 * DAY_MS).toISOString(),
+    });
+    const fresh = makeRecord();
+    await savePendingRequest(expired);
+    await savePendingRequest(fresh);
+
+    const lookup = await findPendingRequest({
+      userId: USER_ID,
+      tripId: TRIP_ID,
+      operation: OPERATION,
+    });
+    expect(lookup.status).toBe("found");
+    if (lookup.status === "found") {
+      expect(lookup.record.id).toBe(fresh.id);
+    }
+    expect(await listPendingRequestsForUser(USER_ID)).toHaveLength(1);
+  });
+
+  it("サインインした利用者以外の保留は、利用者が分かったときに消す", async () => {
+    await savePendingRequest(makeRecord());
+    await savePendingRequest(makeRecord({ userId: OTHER_USER_ID }));
+
+    render(<PendingOnly userId={USER_ID} />);
+    await screen.findByText(/7001/);
+
+    expect(await listPendingRequestsForUser(OTHER_USER_ID)).toEqual([]);
+    expect(await listPendingRequestsForUser(USER_ID)).toHaveLength(1);
+  });
+
+  it("利用者が分かるまでは IndexedDB を読まず checking のままにする", async () => {
+    const openSpy = vi.spyOn(indexedDB, "open");
+    try {
+      const { result, rerender } = renderHook(
+        ({ userId }: { userId: string | null }) =>
+          usePendingRequestCheck({
+            userId,
+            tripId: TRIP_ID,
+            operation: OPERATION,
+          }),
+        { initialProps: { userId: null as string | null } },
+      );
+      await act(async () => {});
+
+      expect(result.current.check.status).toBe("checking");
+      expect(openSpy).not.toHaveBeenCalled();
+
+      rerender({ userId: USER_ID });
+      await waitFor(() =>
+        expect(result.current.check.status).toBe("none"),
+      );
+      expect(openSpy).toHaveBeenCalled();
+    } finally {
+      openSpy.mockRestore();
+    }
+  });
+
+  it("同じキーでの確かめ直しでは createdAt を最初の値のままにする", async () => {
+    const originalCreatedAt = new Date(
+      Date.now() - DAY_MS,
+    ).toISOString();
+    await savePendingRequest(makeRecord({ createdAt: originalCreatedAt }));
+
+    const send = vi.fn(failSend({ kind: "network" }));
+    const user = userEvent.setup();
+    render(<FinanceForm send={send} userId={USER_ID} />);
+    await user.click(
+      await screen.findByRole("button", { name: "同じ内容で確認する" }),
+    );
+    await screen.findByText("保存されたか確認できません");
+
+    const kept = await findKept();
+    if (kept === null) {
+      throw new Error("pending request was not kept");
+    }
+    expect(kept.createdAt).toBe(originalCreatedAt);
   });
 });
 

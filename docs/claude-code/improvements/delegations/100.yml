@@ -1,0 +1,33 @@
+issue: 100
+title: 'feat(e2e): E2E（Playwright）の土台と M-01 の自動化（E-1）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'local'
+change_level: 2
+delegated_at: '2026-09-30T23:40:02Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-01T00:33:54Z'
+    reviewed_sha: 'b3d84e3e1fd92ac568f4847bc457bfffc10589b4'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-flaky'
+        summary: 'M-01 が旅行期間中の日に流すとしおりの既定の日が変わって落ちる'
+  - round: 1
+    reviewed_at: '2026-10-01T00:41:19Z'
+    reviewed_sha: 'b0a6da99add45a784badc067758df6c78f1a31bd'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 101
+  pr_created_at: '2026-10-01T00:30:38Z'
+  merged_at: '2026-10-01T13:18:28Z'
+  closed_at: '2026-10-01T13:18:28Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

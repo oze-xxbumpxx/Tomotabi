@@ -1,0 +1,27 @@
+issue: 103
+title: 'feat(e2e): M-02〜M-04 の自動化と CI（E-2）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 2
+delegated_at: '2026-10-01T11:36:50Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-01T14:06:16Z'
+    reviewed_sha: 'b914375c8653b374e9b737bd216d3566d52318f5'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'pr-metadata'
+        summary: 'CI の 5 回を取るために空のコミットを 4 つ足した（Devin の権限では rerun できなかった）'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 104
+  pr_created_at: '2026-10-01T13:46:48Z'
+  merged_at: '2026-10-01T22:07:34Z'
+  closed_at: '2026-10-01T22:07:34Z'
+  commits: 5
+  ci_first_pass: true
+  closes_linked: true

@@ -39,6 +39,12 @@ export function PlanDetailBody({
   meName: string | null;
 }) {
   const cancelled = plan.cancelledAt !== null;
+  // メモも記録も無い予定は空の記録カードを出さない（09）。
+  const hasRecords =
+    plan.achievement !== null ||
+    plan.booking !== null ||
+    cancelled ||
+    plan.memo !== null;
   // 今日の今以降の予定なら、時刻の横に「あと N」（v3 09）。
   const now = useNow();
   const remaining = now !== null ? minutesUntilPlan(plan, now) : null;
@@ -98,6 +104,7 @@ export function PlanDetailBody({
           </>
         )}
       </div>
+      {hasRecords && (
       <section className="plan-records" aria-label="記録">
         {plan.achievement !== null && (
           <div className="plan-record-row">
@@ -153,6 +160,7 @@ export function PlanDetailBody({
           </div>
         )}
       </section>
+      )}
     </>
   );
 }

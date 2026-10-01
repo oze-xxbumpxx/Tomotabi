@@ -31,7 +31,6 @@ import {
 } from "@/shared/browser/selected-trip-store";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 import {
-  daysOfPeriod,
   formatLocalDate,
   formatRemaining,
   isLocalDateString,
@@ -315,8 +314,6 @@ export function ItineraryScreen({
   }
 
   const etag = `"${trip.version}"`;
-  const days = daysOfPeriod(trip.startsOn, trip.endsOn);
-  const dayIndex = data !== undefined ? days.indexOf(data.date) : -1;
   const plans = data !== undefined ? data.plans : null;
 
   // 「今 · 次まで」の線と次の予定の強調。表示中の日が日本時間の
@@ -353,6 +350,7 @@ export function ItineraryScreen({
         startsOn={trip.startsOn}
         endsOn={trip.endsOn}
         selectedDate={data !== undefined ? data.date : null}
+        finished={trip.status === "finished"}
       />
       {data === undefined ? (
         <section className="itinerary-outside">
@@ -362,16 +360,18 @@ export function ItineraryScreen({
         <section className="itinerary-list">
           <header className="itinerary-list-head">
             <span className="itinerary-list-title">
-              {dayIndex >= 0 ? `${dayIndex + 1} 日目` : ""}{" "}
-              <span className="itinerary-list-date tabular-nums">
+              <span className="tabular-nums">
                 {formatLocalDate(data.date)}
+              </span>{" "}
+              <span className="itinerary-list-count tabular-nums">
+                {plans?.length ?? 0} 件
               </span>
             </span>
             <Link
               className="itinerary-list-add"
               href={`/trips/${tripId}/plans/new?date=${data.date}`}
             >
-              <Plus size={16} weight="bold" aria-hidden="true" />
+              <Plus size={14} weight="bold" aria-hidden="true" />
               予定を追加
             </Link>
           </header>

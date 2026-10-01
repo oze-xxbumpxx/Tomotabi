@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
-import { useId, type ReactNode } from "react";
+import { useId, type ReactNode, type RefObject } from "react";
 import { isBackdropClick, useModalDialog } from "./use-modal-dialog";
 
 type SheetProps = {
@@ -9,10 +9,18 @@ type SheetProps = {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  /** 開いたときにフォーカスする要素（指定が無ければ先頭の要素）。 */
+  initialFocus?: RefObject<HTMLElement | null>;
 };
 
-export function Sheet({ title, onClose, children, footer }: SheetProps) {
-  const dialogRef = useModalDialog();
+export function Sheet({
+  title,
+  onClose,
+  children,
+  footer,
+  initialFocus,
+}: SheetProps) {
+  const dialogRef = useModalDialog(initialFocus);
   const titleId = useId();
 
   return (

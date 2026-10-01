@@ -1,7 +1,5 @@
 "use client";
 
-import { CaretLeft } from "@phosphor-icons/react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -31,6 +29,8 @@ import {
   type PlanSaveState,
 } from "@/features/plans";
 import { useTrip } from "@/features/trips";
+import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
+import { PlanDetailScreen } from "@/screens/plan-detail/plan-detail-screen";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { setPendingToast } from "@/shared/lib/pending-toast";
 import { isLocalDateString } from "@/shared/lib/local-date";
@@ -41,6 +41,7 @@ import { NotAvailable } from "@/shared/ui/state/not-available";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
+import { Sheet } from "@/shared/ui/sheet";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 import { StatusText } from "@/shared/ui/status-text";
 
@@ -77,7 +78,8 @@ const EMPTY_VALUES = (date: string): PlanFormValues => ({
 /**
  * 予定の追加・編集（v3 に無い画面。11 と同じシートの組み方）。
  * 追加は `/trips/{tripId}/plans/new?date=`、編集は
- * `/trips/{tripId}/plans/{planId}/edit`。
+ * `/trips/{tripId}/plans/{planId}/edit`。ルートはそのままに、追加は
+ * しおり・編集は詳細をシートの後ろに敷いて重ねて見せる。
  * - 編集の PATCH は変更のあった項目だけを送る（送っていない = 変えない）。
  *   何も変えずに閉じれば送らない。
  * - 達成・予約の記録がある予定は種類を固定し、理由の文を出す（W-19）。
@@ -370,11 +372,24 @@ export function PlanFormScreen({
       ? tripQuery.isPending
       : planQuery.isPending ||
         (planQuery.data !== undefined && savedRef.current === null);
+  // 追加・編集のシートは元の画面（追加はしおり、編集は詳細）の上に重ねる。
+  const sheetTitle = mode === "new" ? "予定を追加" : "予定を編集";
+  const underlying =
+    mode === "new" ? (
+      <ItineraryScreen tripId={tripId} date={date ?? null} />
+    ) : (
+      <PlanDetailScreen tripId={tripId} planId={planId ?? ""} from={null} />
+    );
+
   if (loading) {
     return (
-      <main>
-        <Loading />
-      </main>
+      <>
+        {underlying}
+        {/* key でフォーム用のシートと入れ替え、開き直して初期フォーカスを当て直す */}
+        <Sheet key="loading" title={sheetTitle} onClose={tryClose}>
+          <Loading />
+        </Sheet>
+      </>
     );
   }
   if (mode === "new" && tripQuery.data === undefined) {
@@ -418,7 +433,41 @@ export function PlanFormScreen({
       : null;
 
   return (
-    <main className="plan-page">
+    <>
+      {underlying}
+      <Sheet
+        title={sheetTitle}
+        onClose={tryClose}
+        initialFocus={nameRef}
+        footer={
+          state.status === "conflict" ? null : (
+            <>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={tryClose}
+                disabled={locked}
+              >
+                やめる
+              </button>
+              <button
+                type="button"
+                className="btn-ink"
+                onClick={submit}
+                disabled={
+                  locked ||
+                  !online ||
+                  // 428（ETag が古い）のときだけ止める。ほかの拒否は欄を
+                  // 直せば編集に戻り、新しいキーで送り直せる。
+                  (state.status === "rejected" && state.httpStatus === 428)
+                }
+              >
+                {state.status === "saving" ? "保存中" : "保存する"}
+              </button>
+            </>
+          )
+        }
+      >
       {!online && (
         <OfflineBanner
           at={
@@ -428,15 +477,6 @@ export function PlanFormScreen({
           }
         />
       )}
-      <header className="plan-detail-header">
-        <Link className="plan-back" href={backHref}>
-          <CaretLeft size={18} weight="bold" aria-hidden="true" />
-          {mode === "new" ? "しおり" : "予定"}
-        </Link>
-      </header>
-      <h1 className="plan-form-title">
-        {mode === "new" ? "予定を追加" : "予定を編集"}
-      </h1>
       {state.status === "conflict" &&
         state.latest !== null &&
         plan !== undefined && values.kind !== null && (
@@ -539,32 +579,9 @@ export function PlanFormScreen({
             kindRef={kindRef}
             onChange={applyChange}
           />
-          <div className="plan-form-actions">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={tryClose}
-              disabled={locked}
-            >
-              やめる
-            </button>
-            <button
-              type="button"
-              className="btn-ink"
-              onClick={submit}
-              disabled={
-                locked ||
-                !online ||
-                // 428（ETag が古い）のときだけ止める。ほかの拒否は欄を
-                // 直せば編集に戻り、新しいキーで送り直せる。
-                (state.status === "rejected" && state.httpStatus === 428)
-              }
-            >
-              {state.status === "saving" ? "保存中" : "保存する"}
-            </button>
-          </div>
         </>
       )}
-    </main>
+      </Sheet>
+    </>
   );
 }

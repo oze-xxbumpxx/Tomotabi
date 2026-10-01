@@ -344,10 +344,16 @@ dialog.dialog::backdrop {
   overflow-y: auto;
 }
 
+/* シート下端は副ボタン（やめる）と主ボタンの横並び */
 .sheet-footer {
   display: flex;
-  flex-direction: column;
   gap: var(--space-2);
+}
+
+.sheet-footer > * {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 /* ダイアログ（中央。フォーカスは内側へ、閉じたら起点へ戻す） */
@@ -382,6 +388,7 @@ dialog.dialog[open] {
   color: var(--color-text-secondary);
 }
 
+/* 副ボタン（やめる）と主ボタンの横並び。375 幅で文字を折り返さない */
 .dialog-actions {
   display: flex;
   gap: 10px;
@@ -390,6 +397,12 @@ dialog.dialog[open] {
 
 .dialog-actions > * {
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.dialog-actions > :first-child {
+  flex: none;
 }
 
 /* 入力欄（可視ラベル・エラーの関連付け・必須/任意表示） */
@@ -1118,6 +1131,20 @@ dialog.dialog[open] {
   color: var(--color-bg);
 }
 
+/* 終了した旅行は全日が墨（18）。選択中は内側の輪郭で分かるようにする */
+.date-cell-finished {
+  background: var(--color-surface-inverse);
+  color: var(--color-bg);
+}
+
+.date-cell-finished .date-cell-num {
+  color: var(--color-bg);
+}
+
+.date-cell-finished.date-cell-current {
+  box-shadow: inset 0 0 0 2px var(--color-bg);
+}
+
 /* しおりの一覧カード（08 のタイムライン） */
 .itinerary-list {
   margin-top: var(--space-3);
@@ -1139,22 +1166,28 @@ dialog.dialog[open] {
   font-weight: 700;
 }
 
-.itinerary-list-date {
+.itinerary-list-count {
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-muted);
   margin-left: var(--space-1);
 }
 
+/* 「予定を追加」は v3 08 の見出し右の墨 pill */
 .itinerary-list-add {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  height: 40px;
+  padding: 0 var(--space-4) 0 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-inverse);
+  color: var(--color-bg);
+  font-size: 13px;
   font-weight: 700;
-  color: var(--color-link);
   text-decoration: none;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .itinerary-list-empty {
@@ -1406,7 +1439,7 @@ dialog.dialog[open] {
   gap: 4px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-link);
   text-decoration: none;
   padding: 8px;
 }

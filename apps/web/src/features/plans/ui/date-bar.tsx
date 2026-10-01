@@ -18,12 +18,15 @@ export function DateBar({
   startsOn,
   endsOn,
   selectedDate,
+  finished = false,
 }: {
   tripId: string;
   startsOn: string;
   endsOn: string;
   /** 選択中の日（`YYYY-MM-DD`）。期間外の表示など、無いときは null。 */
   selectedDate: string | null;
+  /** 終了した旅行はすべての日を墨にし、選択中だけ輪郭で分かるようにする（18）。 */
+  finished?: boolean;
 }) {
   const days = daysOfPeriod(startsOn, endsOn);
   const selectedRef = useRef<HTMLAnchorElement>(null);
@@ -50,7 +53,15 @@ export function DateBar({
             key={day}
             ref={selected ? selectedRef : null}
             href={`/trips/${tripId}/itinerary?date=${day}`}
-            className={selected ? "date-cell date-cell-current" : "date-cell"}
+            className={
+              selected
+                ? finished
+                  ? "date-cell date-cell-finished date-cell-current"
+                  : "date-cell date-cell-current"
+                : finished
+                  ? "date-cell date-cell-finished"
+                  : "date-cell"
+            }
             aria-current={selected ? "date" : undefined}
           >
             <span className="date-cell-num">

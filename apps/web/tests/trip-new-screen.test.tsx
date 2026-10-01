@@ -40,18 +40,39 @@ const tripBody: Trip = {
   finishedBy: null,
 };
 
+const meBody = {
+  user: { id: userId, displayName: "ひなた" },
+  sessionExpiresAt: "2026-10-03T07:43:00.000Z",
+};
+
+function urlOf(input: RequestInfo | URL): string {
+  return typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+}
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status });
+}
+
 function stubApi(
   create: (init?: RequestInit) => Response | Promise<Response>,
 ): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input.url;
+    const url = urlOf(input);
+    if (url === "/api/me") {
+      return Promise.resolve(json(meBody));
+    }
     if (url === "/api/trips" && init?.method === "POST") {
       return Promise.resolve(create(init));
+    }
+    // シートの下に敷く旅行一覧。
+    if (url.startsWith("/api/trips") && (init?.method ?? "GET") === "GET") {
+      return Promise.resolve(
+        json({ items: [tripBody], nextCursor: null }),
+      );
     }
     return Promise.resolve(
       new Response(JSON.stringify({ code: "NOT_FOUND" }), { status: 404 }),
@@ -59,6 +80,12 @@ function stubApi(
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
+}
+
+function writeCalls(fetchMock: ReturnType<typeof vi.fn>) {
+  return fetchMock.mock.calls.filter(
+    (call) => (call[1]?.method ?? "GET") !== "GET",
+  );
 }
 
 function renderScreen(): void {
@@ -82,6 +109,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  window.localStorage.clear();
 });
 
 describe("TripNewScreen (/trips/new)", () => {
@@ -126,8 +154,8 @@ describe("TripNewScreen (/trips/new)", () => {
     expect(
       screen.getByText("終了日は開始日以降の日付にしてください"),
     ).toBeInTheDocument();
-    // エラーのある送信は API に届かない。
-    expect(fetchMock).not.toHaveBeenCalled();
+    // エラーのある送信は API に届かない（一覧の読み取りだけが飛ぶ）。
+    expect(writeCalls(fetchMock)).toHaveLength(0);
   });
 
   it("W-06: 絵文字 51 個（UTF-16 で 102）の名前は通る（境界）", async () => {
@@ -145,9 +173,9 @@ describe("TripNewScreen (/trips/new)", () => {
       screen.getByRole("button", { name: "旅行をつくる" }),
     );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
     expect(
-      JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).name,
+      JSON.parse(String(writeCalls(fetchMock)[0][1]?.body)).name,
     ).toBe(emojiName);
   });
 
@@ -166,8 +194,8 @@ describe("TripNewScreen (/trips/new)", () => {
       screen.getByRole("button", { name: "旅行をつくる" }),
     );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [, init] = fetchMock.mock.calls[0];
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
+    const [, init] = writeCalls(fetchMock)[0];
     expect(JSON.parse(String(init?.body))).toEqual({
       name: emojiName,
       startsOn: "2026-10-12",
@@ -197,7 +225,7 @@ describe("TripNewScreen (/trips/new)", () => {
         `/trips/${tripId}/itinerary`,
       ),
     );
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe("/api/trips");
     const headers = new Headers(init?.headers);
     expect(headers.get("idempotency-key")).toMatch(
@@ -208,15 +236,29 @@ describe("TripNewScreen (/trips/new)", () => {
   });
 
   it("結果不明（通信失敗）は入力を固定し、同じ要求でだけ確認できる", async () => {
-    let calls = 0;
+    const posts: RequestInit[] = [];
     const fetchMock = vi.fn(
-      (_input: RequestInfo | URL, _init?: RequestInit) => {
-        calls += 1;
-        if (calls === 1) {
-          return Promise.reject(new TypeError("Failed to fetch"));
+      (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = urlOf(input);
+        if (url === "/api/me") {
+          return Promise.resolve(json(meBody));
+        }
+        if (url === "/api/trips" && init?.method === "POST") {
+          posts.push(init);
+          if (posts.length === 1) {
+            return Promise.reject(new TypeError("Failed to fetch"));
+          }
+          return Promise.resolve(json(tripBody, 201));
+        }
+        if (url.startsWith("/api/trips")) {
+          return Promise.resolve(
+            json({ items: [tripBody], nextCursor: null }),
+          );
         }
         return Promise.resolve(
-          new Response(JSON.stringify(tripBody), { status: 201 }),
+          new Response(JSON.stringify({ code: "NOT_FOUND" }), {
+            status: 404,
+          }),
         );
       },
     );
@@ -248,13 +290,36 @@ describe("TripNewScreen (/trips/new)", () => {
         `/trips/${tripId}/itinerary`,
       ),
     );
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(posts).toHaveLength(2);
     // 2 回目は 1 回目と同じキー・本文（別の要求を作らない）。
-    const first = fetchMock.mock.calls[0][1];
-    const second = fetchMock.mock.calls[1][1];
+    const [first, second] = posts;
     expect(new Headers(second?.headers).get("idempotency-key")).toBe(
       new Headers(first?.headers).get("idempotency-key"),
     );
     expect(second?.body).toBe(first?.body);
+  });
+
+  it("旅行一覧の上にシートで開き、最初の欄にフォーカスする", async () => {
+    stubApi(() => json(tripBody, 201));
+    renderScreen();
+
+    expect(
+      await screen.findByRole("dialog", { name: "新しい旅行" }),
+    ).toBeInTheDocument();
+    // シートの後ろに元の画面（旅行一覧）が透けて見える。
+    expect(await screen.findByText("沖縄")).toBeInTheDocument();
+    // 開いたときのフォーカスは「×」ではなく最初の欄。
+    expect(screen.getByLabelText("旅行名")).toHaveFocus();
+  });
+
+  it("「やめる」は送らず旅行一覧へ戻る", async () => {
+    const fetchMock = stubApi(() => json(tripBody, 201));
+    renderScreen();
+
+    await screen.findByRole("dialog", { name: "新しい旅行" });
+    await userEvent.click(screen.getByRole("button", { name: "やめる" }));
+
+    expect(pushMock).toHaveBeenCalledWith("/trips");
+    expect(writeCalls(fetchMock)).toHaveLength(0);
   });
 });

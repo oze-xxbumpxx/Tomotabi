@@ -62,6 +62,7 @@ export function Segmented({
               className="sr-only"
               name={name}
               value={option.value}
+              aria-label={option.label}
               checked={option.value === value}
               disabled={locked}
               onChange={() => onChange(option.value)}

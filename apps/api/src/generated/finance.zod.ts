@@ -20,9 +20,6 @@ export const CreatePaymentHeader = zod.object({
 })
 
 export const createPaymentBodyAmountYenRegExp = new RegExp('^[1-9][0-9]{0,6}$');
-export const createPaymentBodyAllocationsItemPercentMin = 0;
-export const createPaymentBodyAllocationsItemPercentMax = 100;
-
 export const createPaymentBodyAllocationsMin = 2;
 export const createPaymentBodyAllocationsMax = 2;
 
@@ -34,7 +31,7 @@ export const CreatePaymentBody = zod.strictObject({
   "payerUserId": zod.uuid(),
   "allocations": zod.array(zod.strictObject({
   "userId": zod.uuid(),
-  "percent": zod.int().min(createPaymentBodyAllocationsItemPercentMin).max(createPaymentBodyAllocationsItemPercentMax)
+  "percent": zod.int().describe('0〜100の整数は値の規則。サーバーが検証し違反は422 VALIDATION_FAILED（形式は整数のみここで見る）。')
 })).min(createPaymentBodyAllocationsMin).max(createPaymentBodyAllocationsMax),
   "label": zod.string().min(1).optional(),
   "planId": zod.uuid().optional()
@@ -484,7 +481,7 @@ export const CompleteSettlementHeader = zod.object({
 export const CompleteSettlementBody = zod.strictObject({
   "previewId": zod.uuid(),
   "completionKind": zod.enum(['transfer_completed', 'no_transfer_required']),
-  "acknowledgedCancellationPaymentIds": zod.array(zod.uuid())
+  "acknowledgedCancellationPaymentIds": zod.array(zod.uuid()).describe('重複を含む場合は形式違反として400（生成スキーマでは検査できず、完了処理が検査する）。')
 }).describe('非0円はtransfer_completed（元の全額を受け渡した申告）、0円はno_transfer_requiredのみ。取消了承IDは現在の取消済みBASEの集合と完全一致必須。通常は空配列。')
 
 export const completeSettlementResponseSequenceRegExp = new RegExp('^[1-9][0-9]*$');

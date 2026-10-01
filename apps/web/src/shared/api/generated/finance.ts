@@ -17,10 +17,7 @@ export interface Error {
 
 export interface AllocationInput {
   userId: string;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
+  /** 0〜100の整数は値の規則。サーバーが検証し違反は422 VALIDATION_FAILED（形式は整数のみここで見る）。 */
   percent: number;
 }
 
@@ -228,6 +225,7 @@ export const SettlementCreateCompletionKind = {
 export interface SettlementCreate {
   previewId: string;
   completionKind: SettlementCreateCompletionKind;
+  /** 重複を含む場合は形式違反として400（生成スキーマでは検査できず、完了処理が検査する）。 */
   acknowledgedCancellationPaymentIds: string[];
 }
 

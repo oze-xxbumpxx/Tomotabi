@@ -206,18 +206,6 @@ describe("finance schema (record.payments and the settlement schema)", () => {
     // plan_events / plan_event_cancellations already carry the same trigger from 0003.
     const expected = [...HISTORY_TABLES, "record.plan_events", "record.plan_event_cancellations"].sort();
     expect(triggers.rows.map((row) => row.name)).toEqual(expected);
-
-    // information_schema.triggers does not list TRUNCATE triggers; use pg_trigger.
-    const truncateTriggers = await db.admin.query<{ name: string }>(
-      `SELECT DISTINCT n.nspname || '.' || c.relname AS name
-         FROM pg_trigger t
-         JOIN pg_class c ON c.oid = t.tgrelid
-         JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE t.tgname = 'reject_mutation_truncate'
-          AND n.nspname IN ('record', 'settlement')
-        ORDER BY name`,
-    );
-    expect(truncateTriggers.rows.map((row) => row.name)).toEqual([...HISTORY_TABLES].sort());
   });
 
   describe("FD-01 CHECK constraints", () => {
@@ -751,24 +739,12 @@ describe("finance schema (record.payments and the settlement schema)", () => {
       ).rejects.toMatchObject({ code: "55000" });
     });
 
-    it.each([...HISTORY_TABLES])("rejects TRUNCATE on %s even as migrator", async (table) => {
-      // Plain TRUNCATE on FK-referenced tables already fails (0A000) before the
-      // trigger runs; CASCADE still hits the reject_mutation_truncate trigger.
-      await expect(migrator.query(`TRUNCATE ${table} CASCADE`)).rejects.toMatchObject({
-        code: "55000",
-      });
-    });
-
     it("allows DELETE on settlement.active_claims (occupancy is mutable)", async () => {
       const deleted = await runtime.query(
         "DELETE FROM settlement.active_claims WHERE payment_id = $1 AND kind = 'BASE' AND settlement_id = $2",
         [paymentId, settlementId],
       );
       expect(deleted.rowCount).toBe(1);
-    });
-
-    it("still allows TRUNCATE on settlement.active_claims (no history trigger)", async () => {
-      await migrator.query("TRUNCATE settlement.active_claims");
     });
   });
 

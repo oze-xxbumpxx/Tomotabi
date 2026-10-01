@@ -14,10 +14,12 @@ import type { Itinerary, Plan, Trip } from "@tomotabi/contracts";
 import { createQueryClient } from "@/shared/api/query-client";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 
-const { replaceMock, pushMock, backMock } = vi.hoisted(() => ({
+const { replaceMock, pushMock, backMock, nowRef } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   pushMock: vi.fn(),
   backMock: vi.fn(),
+  // 「今」の時刻。null は画面が時刻を持たない初期状態と同じ扱い。
+  nowRef: { value: null as Date | null },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -30,6 +32,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/shared/auth/auth-client", () => ({
   authClient: { signOut: vi.fn() },
+}));
+
+vi.mock("@/shared/lib/use-now", () => ({
+  useNow: () => nowRef.value,
 }));
 
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
@@ -208,6 +214,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   window.localStorage.clear();
+  nowRef.value = null;
 });
 
 describe("ItineraryScreen の予定一覧（08）", () => {
@@ -1520,4 +1527,158 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
       new Headers(moves[0][1]?.headers).get("idempotency-key"),
     );
   });
+});
+
+describe("「今 · 次まで」の線と次の予定・「あと N」（08・09）", () => {
+  // 日本時間 2026-10-13 09:41。
+  const nowAt941 = new Date("2026-10-13T00:41:00.000Z");
+
+  function renderItinerary(date: string, plans: Plan[]) {
+    stubApi({
+      itinerary: () => json(itineraryBody(trip(), plans, date)),
+    });
+    return render(
+      <QueryClientProvider client={createQueryClient()}>
+        <ItineraryScreen tripId={tripId} date={date} />
+      </QueryClientProvider>,
+    );
+  }
+
+  function renderPlanDetail() {
+    return render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />
+      </QueryClientProvider>,
+    );
+  }
+
+  it("今日の日は今の時刻の位置に「今 · 次まで」の線を出し、次の予定を強調する", async () => {
+    nowRef.value = nowAt941;
+    const plans = [
+      plan({
+        id: kindIds.place,
+        name: "伏見稲荷大社",
+        kind: "place",
+        time: "09:00",
+      }),
+      plan({
+        id: kindIds.cancelled,
+        name: "取りやめの予定",
+        kind: "place",
+        time: "10:00",
+        cancelledAt: "2026-10-13T08:00:00.000Z",
+        cancelledBy: userId,
+      }),
+      plan({ id: planId, name: "錦市場で昼食", kind: "food", time: "12:00" }),
+      plan({
+        id: kindIds.lodging,
+        name: "旅館にチェックイン",
+        kind: "lodging",
+        time: null,
+      }),
+    ];
+    const { container } = renderItinerary("2026-10-13", plans);
+
+    await screen.findByText("錦市場で昼食");
+
+    // 線は「{H:mm} 今 · 次まで {X 時間 Y 分}」（v3 08）。
+    const nowLine = container.querySelector(".plan-now");
+    expect(nowLine).not.toBeNull();
+    expect(nowLine).toHaveTextContent("9:41");
+    expect(nowLine).toHaveTextContent("今 · 次まで 2 時間 19 分");
+
+    // 線は今の時刻の位置＝時刻が今以降のいちばん早い行（10:00 の
+    // 取りやめ）の直前。次の予定（錦市場で昼食）の手前とは限らない。
+    const rows = Array.from(
+      container.querySelectorAll(".itinerary-list-items > li"),
+    ).map((li) => li.textContent ?? "");
+    const nowIndex = rows.findIndex((text) => text.includes("今 · 次まで"));
+    expect(nowIndex).toBeGreaterThan(0);
+    expect(rows[nowIndex - 1]).toContain("伏見稲荷大社");
+    expect(rows[nowIndex + 1]).toContain("取りやめの予定");
+
+    // 強調は取りやめ済み・時刻未定を除く今以降のいちばん早い予定だけ。
+    const nextCards = container.querySelectorAll(".plan-item-main-next");
+    expect(nextCards).toHaveLength(1);
+    expect(nextCards[0]).toHaveTextContent("錦市場で昼食");
+    const nextLink = screen.getByRole("link", { name: /錦市場で昼食/ });
+    expect(nextLink.querySelector(".plan-marker-next")).not.toBeNull();
+  });
+
+  it("今日でない日は線も強調も出さない", async () => {
+    nowRef.value = nowAt941;
+    const plans = [
+      plan({
+        id: planId,
+        name: "錦市場で昼食",
+        date: "2026-10-14",
+        time: "12:00",
+      }),
+    ];
+    const { container } = renderItinerary("2026-10-14", plans);
+
+    await screen.findByText("錦市場で昼食");
+    expect(container.querySelector(".plan-now")).toBeNull();
+    expect(container.querySelector(".plan-item-main-next")).toBeNull();
+    expect(screen.queryByText(/今 · 次まで/)).toBeNull();
+  });
+
+  it("次の予定が無い日（過去・取りやめ・時刻未定だけ）は線を出さない", async () => {
+    nowRef.value = nowAt941;
+    const plans = [
+      plan({ id: kindIds.place, name: "朝の予定", time: "09:00" }),
+      plan({
+        id: kindIds.cancelled,
+        name: "取りやめの予定",
+        time: "15:00",
+        cancelledAt: "2026-10-13T08:00:00.000Z",
+        cancelledBy: userId,
+      }),
+      plan({ id: kindIds.lodging, name: "宿", time: null }),
+    ];
+    const { container } = renderItinerary("2026-10-13", plans);
+
+    await screen.findByText("朝の予定");
+    expect(container.querySelector(".plan-now")).toBeNull();
+    expect(container.querySelector(".plan-item-main-next")).toBeNull();
+  });
+
+  it.each([
+    { label: "次の予定（あと 2 時間 19 分）", overrides: { time: "12:00" }, expected: "あと 2 時間 19 分" },
+    { label: "次ではない今日の今以降（あと 8 時間 49 分）", overrides: { time: "18:30" }, expected: "あと 8 時間 49 分" },
+  ])(
+    "詳細（09）: $label のとき時刻の横に「あと N」を出す",
+    async ({ overrides, expected }) => {
+      nowRef.value = nowAt941;
+      stubApi({ plan: () => json(plan(overrides)) });
+      renderPlanDetail();
+
+      await screen.findByRole("heading", { name: "錦市場で昼食" });
+      expect(screen.getByText(expected)).toBeInTheDocument();
+    },
+  );
+
+  it.each<{ label: string; overrides: Partial<Plan> }>([
+    {
+      label: "取りやめ済み",
+      overrides: {
+        time: "15:00",
+        cancelledAt: "2026-10-13T08:00:00.000Z",
+        cancelledBy: userId,
+      },
+    },
+    { label: "別の日", overrides: { date: "2026-10-14" } },
+    { label: "今日の過ぎた時刻", overrides: { time: "09:00" } },
+    { label: "時刻未定", overrides: { time: null } },
+  ])(
+    "詳細（09）: $label なら「あと N」を出さない",
+    async ({ overrides }) => {
+      nowRef.value = nowAt941;
+      stubApi({ plan: () => json(plan(overrides)) });
+      renderPlanDetail();
+
+      await screen.findByRole("heading", { name: "錦市場で昼食" });
+      expect(screen.queryByText(/あと /)).toBeNull();
+    },
+  );
 });

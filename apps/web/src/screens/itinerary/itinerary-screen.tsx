@@ -4,9 +4,14 @@ import { BookOpenText, Plus } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useMe, useSignOut } from "@/features/auth";
-import { DateBar, PlanCard } from "@/features/plans";
+import {
+  DateBar,
+  nextPlanOf,
+  nowLineIndexOf,
+  PlanCard,
+} from "@/features/plans";
 import {
   FinishTripDialog,
   sendFinishTrip,
@@ -27,8 +32,11 @@ import {
 import { takePendingToast } from "@/shared/lib/pending-toast";
 import {
   formatLocalDate,
+  formatRemaining,
   isLocalDateString,
+  tokyoTimeOf,
 } from "@/shared/lib/local-date";
+import { useNow } from "@/shared/lib/use-now";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
 import { NotAvailable } from "@/shared/ui/state/not-available";
@@ -64,6 +72,7 @@ export function ItineraryScreen({
   const { state: meState, clear: clearMe } = useMe();
   const itinerary = useTripItinerary(tripId, date);
   const online = useOnlineStatus();
+  const now = useNow();
   const [layer, setLayer] = useState<Layer | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [sheetExpired, setSheetExpired] = useState<boolean | null>(null);
@@ -307,6 +316,14 @@ export function ItineraryScreen({
   const etag = `"${trip.version}"`;
   const plans = data !== undefined ? data.plans : null;
 
+  // 「今 · 次まで」の線と次の予定の強調。表示中の日が日本時間の
+  // 今日で、次の予定がある日だけ。線の位置は今の時刻の位置
+  // （時刻が今以降のいちばん早い行の直前）。
+  const next =
+    now !== null && plans !== null ? nextPlanOf(plans, now) : null;
+  const nowIndex =
+    now !== null && plans !== null ? nowLineIndexOf(plans, now) : -1;
+
   const openMenu = () => {
     // 前回の拒否・競合は開き直したときに持ち越さない（結果不明は残す）。
     start.backToEditing();
@@ -365,16 +382,33 @@ export function ItineraryScreen({
           ) : (
             <ul className="itinerary-list-items">
               {plans.map((plan, index) => (
-                <li key={plan.id}>
-                  <PlanCard
-                    tripId={tripId}
-                    plan={plan}
-                    from={data.date}
-                    meId={userId}
-                    meName={displayName}
-                    last={index === plans.length - 1}
-                  />
-                </li>
+                <Fragment key={plan.id}>
+                  {index === nowIndex && now !== null && next !== null && (
+                    <li className="plan-now">
+                      <span className="plan-now-time tabular-nums">
+                        {tokyoTimeOf(now)}
+                      </span>
+                      <span className="plan-now-marker" aria-hidden="true">
+                        <span className="plan-now-dash" />
+                        <span className="plan-now-dot" />
+                      </span>
+                      <span className="plan-now-label">
+                        {`今 · 次まで ${formatRemaining(next.remainingMinutes)}`}
+                      </span>
+                    </li>
+                  )}
+                  <li>
+                    <PlanCard
+                      tripId={tripId}
+                      plan={plan}
+                      from={data.date}
+                      meId={userId}
+                      meName={displayName}
+                      last={index === plans.length - 1}
+                      next={next !== null && plan.id === next.plan.id}
+                    />
+                  </li>
+                </Fragment>
               ))}
             </ul>
           )}

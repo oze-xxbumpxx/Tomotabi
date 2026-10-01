@@ -65,6 +65,13 @@ description: >
      終了後に、`git -C <クローン> reflog -n 20` と `gh pr view <n> --json commits` で、force push や想定外のブランチ操作が無いかを確かめる。
    - **クラウドはユーザーが指示したときだけ**（出先のとき）。`devin --cloud -p "<依頼>"`。`--cloud` では `--model` が無視され、
      Devin Web の「セッションエージェント」の既定（SWE-2 High）で動く。High 以外が要るときは、依頼の前にユーザーに既定の切り替えを頼む。
+     起動はローカルと同じ「ログ付きの起動」にする（`LOG=$(node .claude/scripts/devin-watch.mjs --log-path <Issue>) && set -o pipefail && devin --cloud -p "<依頼>" 2>&1 | tee -a "$LOG"`）。
+     `| tail` に通すと、コマンドが終わるまで Devin の発言が見えず、止まっていても気づけない（#91・#92 は約 8 時間、ブランチも作らずに止まっていた）。
+   - **止まっていないかの見張り（ローカル・クラウドとも）**: 起動の直前にログのバイト数を控え（`OFFSET=$(stat -f%z "$LOG" 2>/dev/null || echo 0)`）、
+     起動の直後に `run_in_background` で `node .claude/scripts/devin-stall-watch.mjs <Issue> --log "$LOG" --offset "$OFFSET"` を起動する。
+     ログは同じ Issue のファイルに追記されるので、控えたバイト数より増えたかで今回のセッションの発言を見分ける。
+     終了コード 0（ブランチができた）は何もしない。5（5 分たっても今回の発言が無い）・6（1 時間たってもブランチが無い）なら、
+     Devin を止めて同じ手順で起動し直し、ユーザーに短く伝える。2 回続けて止まったらユーザーに渡す。
 3. Bash の `run_in_background` で `node .claude/scripts/wait-for-pr.mjs <Issue>` を起動する。Issue ごとに 1 本。
    このセッションでまだ起動していなければ、`node .claude/scripts/wait-for-devin-pr.mjs --since <今の UTC 時刻>` も
    `run_in_background` で起動する（セッションで 1 本。下の「Issue なし PR」）。

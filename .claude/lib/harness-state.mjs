@@ -13,6 +13,7 @@
 import {
   closeSync,
   existsSync,
+  fstatSync,
   fsyncSync,
   openSync,
   readFileSync,
@@ -195,29 +196,40 @@ export function appendJsonl(path, record) {
 }
 
 const LOCK_STALE_MS = 30_000;
+const RECLAIM_GUARD_STALE_MS = 5_000;
 
-/** O_EXCL による素朴な排他ロック。同時更新時の破損を防ぐ。 */
+/**
+ * O_EXCL による排他ロック。同時更新時の破損を防ぐ。
+ *
+ * パスだけを見てロックを消すと、その間に別のプロセスが取り直した新しいロックを
+ * 消してしまい、2 つが同時に読み書きして更新が失われる（PR #94 の CI で lint が
+ * 消えた。PR #96 の Devin Review）。そのため、stat の時点で消えていたロックは
+ * 古いとみなさず、古いロックの回収は 1 つのプロセスずつ確かめ直してから行う。
+ */
 export function withLock(lockPath, fn, { timeoutMs = 5_000, staleMs = LOCK_STALE_MS } = {}) {
   const deadline = Date.now() + timeoutMs;
   let fd = null;
+  let ownIno = null;
   for (;;) {
     try {
       fd = openSync(lockPath, 'wx', 0o600);
+      ownIno = fstatSync(fd).ino;
       break;
     } catch (error) {
       if (error?.code !== 'EEXIST') throw error;
-      // 古いロックは奪う（プロセス異常終了で残った場合の回復）。
       // 生成直後はロック内容がまだ書き込まれておらず空になりうるため、内容ではなく
       // ファイルの mtime で年齢を判定する（内容ベースだと age=Date.now()-0 の
       // 誤った巨大値になり、生きたロックを誤って「古い」と判定して奪ってしまう）。
-      let age = 0;
+      let seen;
       try {
-        age = Date.now() - statSync(lockPath).mtimeMs;
-      } catch {
-        age = staleMs + 1;
+        seen = statSync(lockPath);
+      } catch (statError) {
+        // 持ち主が外しただけなので取り直す。
+        if (statError?.code === 'ENOENT') continue;
+        throw statError;
       }
-      if (age > staleMs) {
-        rmSync(lockPath, { force: true });
+      if (Date.now() - seen.mtimeMs > staleMs) {
+        reclaimStaleLock(lockPath, staleMs);
         continue;
       }
       if (Date.now() > deadline) {
@@ -235,11 +247,53 @@ export function withLock(lockPath, fn, { timeoutMs = 5_000, staleMs = LOCK_STALE
     return fn();
   } finally {
     if (fd !== null) closeSync(fd);
+    releaseOwnLock(lockPath, ownIno);
+  }
+}
+
+/**
+ * 古いロック（異常終了したプロセスの残り）を回収する。回収は回収用のロック
+ * （`<lock>.reclaim`）を持った 1 つのプロセスだけが行い、その中でロックがまだ
+ * 古いかを確かめ直してから消す。回収のあとに別のプロセスが取った新しいロックは
+ * mtime が新しいので、確かめ直しで古いと判定されず消されない。inode では見分けない
+ * （消した直後に作られた新しいロックが同じ inode 番号を使い回すことがある）。
+ */
+function reclaimStaleLock(lockPath, staleMs) {
+  const guardPath = `${lockPath}.reclaim`;
+  let guard;
+  try {
+    guard = openSync(guardPath, 'wx', 0o600);
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+    // 回収の途中で異常終了した回収用のロックだけを片付ける（回収は一瞬で終わる）。
     try {
-      unlinkSync(lockPath);
+      if (Date.now() - statSync(guardPath).mtimeMs > RECLAIM_GUARD_STALE_MS) {
+        rmSync(guardPath, { force: true });
+      }
     } catch {
-      // 既に消えている場合は何もしない
+      // 既に消えている
     }
+    return;
+  }
+  try {
+    try {
+      if (Date.now() - statSync(lockPath).mtimeMs > staleMs) unlinkSync(lockPath);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  } finally {
+    closeSync(guard);
+    rmSync(guardPath, { force: true });
+  }
+}
+
+/** 自分が作ったロック（同じ inode）のときだけ消す。 */
+function releaseOwnLock(lockPath, ownIno) {
+  if (ownIno === null) return;
+  try {
+    if (statSync(lockPath).ino === ownIno) unlinkSync(lockPath);
+  } catch {
+    // 既に消えている場合は何もしない
   }
 }
 

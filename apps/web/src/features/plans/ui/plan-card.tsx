@@ -19,6 +19,7 @@ export function PlanCard({
   meId,
   meName,
   last = false,
+  next = false,
 }: {
   tripId: string;
   plan: Plan;
@@ -29,6 +30,8 @@ export function PlanCard({
   meName: string | null;
   /** 最後の行は繋ぎ線を出さない。 */
   last?: boolean;
+  /** 次の予定（今日の今以降のいちばん早い予定）。v3 の強調カードにする。 */
+  next?: boolean;
 }) {
   const cancelled = plan.cancelledAt !== null;
   const achieved = plan.achievement !== null;
@@ -47,12 +50,19 @@ export function PlanCard({
         className={
           plan.time === null
             ? "plan-item-time plan-item-time-unset"
-            : "plan-item-time tabular-nums"
+            : next
+              ? "plan-item-time plan-item-time-next tabular-nums"
+              : "plan-item-time tabular-nums"
         }
       >
         {plan.time ?? "未定"}
       </span>
-      <span className="plan-item-marker" aria-hidden="true">
+      <span
+        className={
+          next ? "plan-item-marker plan-item-marker-next" : "plan-item-marker"
+        }
+        aria-hidden="true"
+      >
         {cancelled ? (
           <Prohibit size={20} className="plan-marker-cancel" />
         ) : achieved ? (
@@ -61,6 +71,8 @@ export function PlanCard({
             weight="fill"
             className="plan-marker-done"
           />
+        ) : next ? (
+          <span className="plan-marker-next" />
         ) : (
           <span className="plan-marker-ring" />
         )}
@@ -74,10 +86,18 @@ export function PlanCard({
           }
         />
       </span>
-      <span className="plan-item-main">
+      <span
+        className={
+          next ? "plan-item-main plan-item-main-next" : "plan-item-main"
+        }
+      >
         <span
           className={
-            cancelled ? "plan-item-name plan-item-name-cancelled" : "plan-item-name"
+            cancelled
+              ? "plan-item-name plan-item-name-cancelled"
+              : next
+                ? "plan-item-name plan-item-name-next"
+                : "plan-item-name"
           }
         >
           {plan.name}

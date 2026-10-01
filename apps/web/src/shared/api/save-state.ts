@@ -3,6 +3,11 @@ import type { ResultAsync } from "neverthrow";
 import type { ApiErrorCode, ApiFailure } from "./api-failure";
 import type { ApiSuccess } from "./api-result";
 import {
+  deletePendingRequest,
+  savePendingRequest,
+  toPendingRequestRecord,
+} from "@/shared/browser/pending-requests";
+import {
   createMutationRequest,
   type MutationDraft,
   type MutationRequest,
@@ -19,6 +24,10 @@ export type SaveState<TData = unknown, TLatest = unknown> =
       request: MutationRequest;
     }
   | { status: "unknown"; request: MutationRequest }
+  | {
+      /** 送る前の保存（IndexedDB）が失敗し、まだ何も送っていない状態。 */
+      status: "storage-unavailable";
+    }
   | {
       status: "session-expired";
       /** 結果不明のあとの確認が 401 だったとき true（最初の要求の結果が分からない）。 */
@@ -61,6 +70,13 @@ export type UseSaveStateOptions<TData, TLatest> = {
   /** conflict になったとき最新を取得する関数（最新の ETag が「あなたの入力で保存」の If-Match になる）。 */
   fetchLatest?: (() => ResultAsync<ApiSuccess<TLatest>, ApiFailure>) | null;
   onSucceeded?: ((result: ApiSuccess<TData>) => void) | null;
+  /**
+   * 結果不明の要求を IndexedDB に残す操作の指定（ADR-0006）。
+   * 指定した操作だけ有効になり、送る前に保存し、保存に失敗したら
+   * `storage-unavailable` で止めて送らない。成功・確定した拒否で消し、
+   * 結果不明・認証期限切れでは残す。未指定の操作の振る舞いは変わらない。
+   */
+  pendingRequest?: { userId: string; tripId: string } | null;
 };
 
 /**
@@ -82,15 +98,46 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
   const sendRef = useRef(options.send);
   const fetchLatestRef = useRef(options.fetchLatest ?? null);
   const onSucceededRef = useRef(options.onSucceeded ?? null);
+  const pendingRequestRef = useRef(options.pendingRequest ?? null);
   sendRef.current = options.send;
   fetchLatestRef.current = options.fetchLatest ?? null;
   onSucceededRef.current = options.onSucceeded ?? null;
+  pendingRequestRef.current = options.pendingRequest ?? null;
 
   const run = useCallback(
     async (request: MutationRequest, afterUnknown: boolean) => {
+      const pendingLink = pendingRequestRef.current;
+      if (pendingLink !== null) {
+        try {
+          await savePendingRequest(
+            toPendingRequestRecord({
+              userId: pendingLink.userId,
+              tripId: pendingLink.tripId,
+              request,
+            }),
+          );
+        } catch {
+          // 端末の保存に失敗したら送らない（黙ってメモリだけに切り替えない）。
+          setState({ status: "storage-unavailable" });
+          return;
+        }
+      }
       setState({ status: "saving", request });
       const outcome = await sendRef.current(request);
+      // 確定した結果（成功・拒否・競合）が返ったら保留を消す。
+      // unknown・session-expired は送れたか分からないので残す。
+      const clearPending = async (): Promise<void> => {
+        if (pendingLink === null) {
+          return;
+        }
+        try {
+          await deletePendingRequest(request.idempotencyKey);
+        } catch {
+          // 消せなくても再読み込み後の確認が受領で同じ結果を返すため続ける。
+        }
+      };
       if (outcome.isOk()) {
+        await clearPending();
         setState({ status: "succeeded", result: outcome.value });
         onSucceededRef.current?.(outcome.value);
         return;
@@ -104,6 +151,7 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
           setState({ status: "session-expired", unconfirmed: afterUnknown });
           return;
         case "rejected":
+          await clearPending();
           setState({
             status: "rejected",
             code: action.code,
@@ -112,6 +160,7 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
           });
           return;
         case "conflict": {
+          await clearPending();
           setState({ status: "conflict", request, latest: null, latestFailed: false });
           const fetchLatest = fetchLatestRef.current;
           if (fetchLatest === null) {
@@ -158,7 +207,8 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
         busyRef.current ||
         (state.status !== "editing" &&
           state.status !== "rejected" &&
-          state.status !== "succeeded")
+          state.status !== "succeeded" &&
+          state.status !== "storage-unavailable")
       ) {
         return;
       }
@@ -183,6 +233,26 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
       busyRef.current = false;
     }
   }, [state, run]);
+
+  /**
+   * 再読み込み後に IndexedDB から復帰した要求を、本人の操作で同じまま送り直す。
+   * `usePendingRequestCheck` で見つけた record を
+   * `pendingRequestToMutation` で戻して渡す（自動では呼ばない）。
+   */
+  const confirmRequest = useCallback(
+    async (request: MutationRequest) => {
+      if (busyRef.current) {
+        return;
+      }
+      busyRef.current = true;
+      try {
+        await run(request, true);
+      } finally {
+        busyRef.current = false;
+      }
+    },
+    [run],
+  );
 
   const saveMineOverLatest = useCallback(async () => {
     if (
@@ -253,6 +323,7 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
     state,
     submit,
     confirmWithSameRequest,
+    confirmRequest,
     saveMineOverLatest,
     reloadLatest,
     backToEditing,

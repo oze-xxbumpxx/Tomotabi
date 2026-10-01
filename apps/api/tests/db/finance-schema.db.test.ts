@@ -68,6 +68,23 @@ async function seedTrip(
   return { tripId, planId: plan.rows[0]!.id, slot0, slot1 };
 }
 
+// A trip with only a slot-0 participant (no slot 1), for the payer_slot FK.
+async function seedSoloTrip(pool: Pool): Promise<{ tripId: string; slot0: string }> {
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const slot0 = await insertUser(`solo-${suffix}`);
+  const trip = await pool.query<{ id: string }>(
+    "INSERT INTO planning.trips (name, starts_on, ends_on, created_by) VALUES ('日帰り', '2026-10-01', '2026-10-01', $1) RETURNING id",
+    [slot0],
+  );
+  const tripId = trip.rows[0]!.id;
+  await pool.query(
+    "INSERT INTO planning.trip_participants (trip_id, slot, user_id) VALUES ($1, 0, $2)",
+    [tripId, slot0],
+  );
+  await pool.query("INSERT INTO infra.trip_finance_guards (trip_id) VALUES ($1)", [tripId]);
+  return { tripId, slot0 };
+}
+
 // Valid payment: 7,001 円, slot 0 paid, 50/50 -> burden 3,501 / 3,500, contribution +3,500.
 async function insertPayment(
   pool: Pool,
@@ -189,6 +206,18 @@ describe("finance schema (record.payments and the settlement schema)", () => {
     // plan_events / plan_event_cancellations already carry the same trigger from 0003.
     const expected = [...HISTORY_TABLES, "record.plan_events", "record.plan_event_cancellations"].sort();
     expect(triggers.rows.map((row) => row.name)).toEqual(expected);
+
+    // information_schema.triggers does not list TRUNCATE triggers; use pg_trigger.
+    const truncateTriggers = await db.admin.query<{ name: string }>(
+      `SELECT DISTINCT n.nspname || '.' || c.relname AS name
+         FROM pg_trigger t
+         JOIN pg_class c ON c.oid = t.tgrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE t.tgname = 'reject_mutation_truncate'
+          AND n.nspname IN ('record', 'settlement')
+        ORDER BY name`,
+    );
+    expect(truncateTriggers.rows.map((row) => row.name)).toEqual([...HISTORY_TABLES].sort());
   });
 
   describe("FD-01 CHECK constraints", () => {
@@ -422,6 +451,102 @@ describe("finance schema (record.payments and the settlement schema)", () => {
       );
     });
 
+    it("rejects a REVERSAL preview item whose base is another payment's settlement", async () => {
+      // preview_reversal_base_fk: (trip_id, base_settlement_id, payment_id, 'BASE') must
+      // match an items row, so the base must be a settlement of the same payment.
+      const otherPayment = await insertPayment(runtime, tripId, slot0);
+      const other = await settlePayment(runtime, tripId, otherPayment, slot0, 50);
+      const preview = await runtime.query<{ id: string }>(
+        `INSERT INTO settlement.previews (trip_id, created_by, signed_total_yen)
+         VALUES ($1, $2, -3500) RETURNING id`,
+        [tripId, slot0],
+      );
+      const revPreviewId = preview.rows[0]!.id;
+      await expectForeignKeyViolation(
+        runtime.query(
+          `INSERT INTO settlement.preview_items
+             (preview_id, trip_id, payment_id, kind, contribution_yen, base_settlement_id, expected_claim_fingerprint, expected_cancelled)
+           VALUES ($1, $2, $3, 'REVERSAL', -3500, $4, $5, true)`,
+          [revPreviewId, tripId, paymentId, other.settlementId, FINGERPRINT],
+        ),
+      );
+    });
+
+    it("rejects settlement items that break the reversal base or kind linkage", async () => {
+      // items -> preview_items (trip_id, preview_id, payment_id, kind),
+      // items_reversal_base_fk and items_no_self_base.
+      const preview = await runtime.query<{ id: string }>(
+        `INSERT INTO settlement.previews (trip_id, created_by, signed_total_yen)
+         VALUES ($1, $2, -3500) RETURNING id`,
+        [tripId, slot0],
+      );
+      const revPreviewId = preview.rows[0]!.id;
+      await runtime.query(
+        `INSERT INTO settlement.preview_items
+           (preview_id, trip_id, payment_id, kind, contribution_yen, base_settlement_id, expected_claim_fingerprint, expected_cancelled)
+         VALUES ($1, $2, $3, 'REVERSAL', -3500, $4, $5, true)`,
+        [revPreviewId, tripId, paymentId, settlementId, FINGERPRINT],
+      );
+      const settlement = await runtime.query<{ id: string }>(
+        `INSERT INTO settlement.settlements
+           (trip_id, preview_id, sequence, signed_total_yen, completion_kind, created_by)
+         VALUES ($1, $2, 60, -3500, 'transfer_completed', $3) RETURNING id`,
+        [tripId, revPreviewId, slot0],
+      );
+      const revSettlementId = settlement.rows[0]!.id;
+
+      // The preview item is REVERSAL, so a BASE item has no matching preview item.
+      await expectForeignKeyViolation(
+        runtime.query(
+          `INSERT INTO settlement.items
+             (settlement_id, trip_id, preview_id, payment_id, kind, contribution_yen)
+           VALUES ($1, $2, $3, $4, 'BASE', 3500)`,
+          [revSettlementId, tripId, revPreviewId, paymentId],
+        ),
+      );
+      // The base settlement settled a different payment: no BASE item for this one.
+      const otherPayment = await insertPayment(runtime, tripId, slot0);
+      const other = await settlePayment(runtime, tripId, otherPayment, slot0, 61);
+      await expectForeignKeyViolation(
+        runtime.query(
+          `INSERT INTO settlement.items
+             (settlement_id, trip_id, preview_id, payment_id, kind, contribution_yen, base_settlement_id)
+           VALUES ($1, $2, $3, $4, 'REVERSAL', -3500, $5)`,
+          [revSettlementId, tripId, revPreviewId, paymentId, other.settlementId],
+        ),
+      );
+      // A settlement cannot be the base of its own items.
+      await expectCheckViolation(
+        runtime.query(
+          `INSERT INTO settlement.items
+             (settlement_id, trip_id, preview_id, payment_id, kind, contribution_yen, base_settlement_id)
+           VALUES ($1, $2, $3, $4, 'REVERSAL', -3500, $5)`,
+          [revSettlementId, tripId, revPreviewId, paymentId, revSettlementId],
+        ),
+      );
+    });
+
+    it("rejects a second row for the same payment inside one preview or settlement", async () => {
+      // preview_items (preview_id, payment_id) and items (settlement_id, payment_id) are
+      // unique: a payment appears at most once per preview/settlement whatever the kind.
+      // If the preview_items unique were missing, the items unique rejects instead.
+      const attempt = async () => {
+        await runtime.query(
+          `INSERT INTO settlement.preview_items
+             (preview_id, trip_id, payment_id, kind, contribution_yen, base_settlement_id, expected_claim_fingerprint, expected_cancelled)
+           VALUES ($1, $2, $3, 'REVERSAL', -3500, $4, $5, true)`,
+          [previewId, tripId, paymentId, settlementId, FINGERPRINT],
+        );
+        await runtime.query(
+          `INSERT INTO settlement.items
+             (settlement_id, trip_id, preview_id, payment_id, kind, contribution_yen, base_settlement_id)
+           VALUES ($1, $2, $3, $4, 'REVERSAL', -3500, $5)`,
+          [settlementId, tripId, previewId, paymentId, settlementId],
+        );
+      };
+      await expect(attempt()).rejects.toMatchObject({ code: "23505" });
+    });
+
     it("rejects a second settlement for the same preview and a duplicate claim", async () => {
       await expect(
         runtime.query(
@@ -560,6 +685,21 @@ describe("finance schema (record.payments and the settlement schema)", () => {
         ),
       );
     });
+
+    it("rejects a payment whose payer_slot has no participant in the trip", async () => {
+      // payments (trip_id, payer_slot) -> trip_participants (trip_id, slot):
+      // a trip with only a slot-0 participant cannot record a slot-1 payer.
+      const solo = await seedSoloTrip(runtime);
+      await expectForeignKeyViolation(
+        runtime.query(
+          `INSERT INTO record.payments
+             (trip_id, amount_yen, payer_slot, slot0_percent,
+              slot0_burden_yen, slot1_burden_yen, contribution_yen, created_by)
+           VALUES ($1, 7001, 1, 50, 3500, 3501, -3500, $2)`,
+          [solo.tripId, solo.slot0],
+        ),
+      );
+    });
   });
 
   describe("FD-03 append-only history", () => {
@@ -611,12 +751,24 @@ describe("finance schema (record.payments and the settlement schema)", () => {
       ).rejects.toMatchObject({ code: "55000" });
     });
 
+    it.each([...HISTORY_TABLES])("rejects TRUNCATE on %s even as migrator", async (table) => {
+      // Plain TRUNCATE on FK-referenced tables already fails (0A000) before the
+      // trigger runs; CASCADE still hits the reject_mutation_truncate trigger.
+      await expect(migrator.query(`TRUNCATE ${table} CASCADE`)).rejects.toMatchObject({
+        code: "55000",
+      });
+    });
+
     it("allows DELETE on settlement.active_claims (occupancy is mutable)", async () => {
       const deleted = await runtime.query(
         "DELETE FROM settlement.active_claims WHERE payment_id = $1 AND kind = 'BASE' AND settlement_id = $2",
         [paymentId, settlementId],
       );
       expect(deleted.rowCount).toBe(1);
+    });
+
+    it("still allows TRUNCATE on settlement.active_claims (no history trigger)", async () => {
+      await migrator.query("TRUNCATE settlement.active_claims");
     });
   });
 
@@ -645,6 +797,12 @@ describe("finance schema (record.payments and the settlement schema)", () => {
         runtime,
         "UPDATE settlement.active_claims SET settlement_id = settlement_id",
       );
+    });
+
+    it("cannot TRUNCATE any finance table", async () => {
+      for (const table of FINANCE_TABLES) {
+        await expectPermissionDenied(runtime, `TRUNCATE ${table}`);
+      }
     });
 
     it("can hand out the settlement sequence and lock the guard row", async () => {

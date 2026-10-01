@@ -116,6 +116,7 @@ export const settlements = settlement.table(
       .notNull()
       .references(() => trips.id),
     previewId: uuid("preview_id").notNull().unique("settlements_preview_id_unique"),
+    // 連番は小さい整数なので mode: "number"（既存の version 系の列と同じ扱い）
     sequence: bigint("sequence", { mode: "number" }).notNull(),
     signedTotalYen: bigint("signed_total_yen", { mode: "bigint" }).notNull(),
     completionKind: text("completion_kind").notNull(),

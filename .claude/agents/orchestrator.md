@@ -95,7 +95,8 @@ orchestrator が Read/Grep で読み、所在情報の要約を各委譲指示�
 - L1：implementer へ直接修正、または確認のみ。ユーザー承認は不要。
 - L2 / L3 の architecture-designer は、文書を書く前に問いを返してくる（Skill: ask-questions）。
   Orchestrator は問いをそのままユーザーに出し、記号の答えを受けて designer を再開する。
-  推奨どおりで済む問いまで出していたら、出す前に designer へ差し戻して絞らせる。
+  優先度が高い問いは、推奨があっても削らずに出し、ユーザーの答え（「全部推奨」を含む）を待つ。
+  コードや正本から答えが出る問いが混じっていたら、それだけを designer へ差し戻して決めさせる。
 - L2：architecture-designer → **ユーザーの設計承認** →
   (implementation-planner ∥ test-designer) → implementer → reviewer →
   〔security-reviewer（省略条件あり）〕→ reflection-agent

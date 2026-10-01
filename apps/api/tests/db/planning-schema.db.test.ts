@@ -26,6 +26,12 @@ const M2_TABLES = [
   "infra.trip_finance_guards",
 ] as const;
 
+// Added by drizzle/0005_finance_tables.sql (settlement schema tables are asserted in
+// finance-schema.db.test.ts).
+const FINANCE_RECORD_TABLES = ["record.payments", "record.payment_cancellations"] as const;
+
+const ALL_TABLES = [...M2_TABLES, ...FINANCE_RECORD_TABLES] as const;
+
 const M2_INDEXES = [
   "plans_day_idx",
   "trip_participants_user_idx",
@@ -122,13 +128,13 @@ describe("planning / record / infra schema migrations and runtime privileges", (
     await db?.stop();
   });
 
-  it("D-01 creates the 8 tables, indexes, triggers and function from an empty database", async () => {
+  it("D-01 creates the tables, indexes, triggers and function from an empty database", async () => {
     const tables = await db.admin.query<{ name: string }>(
       `SELECT table_schema || '.' || table_name AS name FROM information_schema.tables
         WHERE table_schema IN ('planning', 'record', 'infra') AND table_type = 'BASE TABLE'
         ORDER BY name`,
     );
-    expect(tables.rows.map((row) => row.name)).toEqual([...M2_TABLES].sort());
+    expect(tables.rows.map((row) => row.name)).toEqual([...ALL_TABLES].sort());
 
     const indexes = await db.admin.query<{ indexname: string }>(
       `SELECT indexname FROM pg_indexes WHERE schemaname IN ('planning', 'record', 'infra')`,
@@ -141,6 +147,8 @@ describe("planning / record / infra schema migrations and runtime privileges", (
         ORDER BY event_object_table`,
     );
     expect(triggers.rows.map((row) => row.event_object_table)).toEqual([
+      "payment_cancellations",
+      "payments",
       "plan_event_cancellations",
       "plan_events",
     ]);
@@ -183,7 +191,7 @@ describe("planning / record / infra schema migrations and runtime privileges", (
         `SELECT count(*) AS count FROM information_schema.tables
           WHERE table_schema IN ('planning', 'record', 'infra')`,
       );
-      expect(tables.rows[0]!.count).toBe(String(M2_TABLES.length));
+      expect(tables.rows[0]!.count).toBe(String(ALL_TABLES.length));
     } finally {
       await secondAdmin.end();
     }
@@ -337,7 +345,7 @@ describe("planning / record / infra schema migrations and runtime privileges", (
     });
 
     it("D-08 can run every operation the design grants", async () => {
-      for (const table of M2_TABLES) {
+      for (const table of ALL_TABLES) {
         await runtime.query(`SELECT count(*) FROM ${table}`);
       }
 
@@ -369,7 +377,7 @@ describe("planning / record / infra schema migrations and runtime privileges", (
     });
 
     it("D-09 cannot run anything the design does not grant", async () => {
-      for (const table of M2_TABLES) {
+      for (const table of ALL_TABLES) {
         await expectPermissionDenied(runtime, `DELETE FROM ${table}`);
       }
       await expectPermissionDenied(
@@ -377,9 +385,10 @@ describe("planning / record / infra schema migrations and runtime privileges", (
         "UPDATE planning.trip_participants SET slot = 1 WHERE trip_id = $1 AND slot = 0",
         [tripId],
       );
+      // app_runtime may UPDATE next_settlement_sequence (granted in 0007) but no other column.
       await expectPermissionDenied(
         runtime,
-        "UPDATE infra.trip_finance_guards SET next_settlement_sequence = 2 WHERE trip_id = $1",
+        "UPDATE infra.trip_finance_guards SET trip_id = gen_random_uuid() WHERE trip_id = $1",
         [tripId],
       );
       await expectPermissionDenied(

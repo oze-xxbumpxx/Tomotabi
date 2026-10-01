@@ -36,6 +36,27 @@
       "when": 1790514452300,
       "tag": "0004_planning_record_infra_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790895083255,
+      "tag": "0005_finance_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790895090377,
+      "tag": "0006_finance_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790895090933,
+      "tag": "0007_finance_grants",
+      "breakpoints": true
     }
   ]
 }

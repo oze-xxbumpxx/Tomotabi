@@ -24,6 +24,10 @@ tools: Read, Grep, Glob, Write
 1. Orchestrator から渡された目的・対象範囲・参照ファイル・feature-name を確認。
 2. **L3 のとき**: 先に要求整理と既存調査を行い、`docs/requirements/<feature-name>.md` を保存する
    （Skill: create-requirements-document）。不明点は Orchestrator 経由でユーザー確認。
+   **書く前に問いを返す**（Skill: ask-questions）。L2 / L3 とも、要件・設計で決まっていないことを
+   札（工程・優先度）つきで洗い出し、今の工程で優先度が高い問いだけを推奨・根拠・選択肢つきで
+   Orchestrator に返して、いったん止まる。答えをもらってから文書を書く。
+   調べている途中で見つけた既存の不具合は直さず、問いとは別に報告する。
 3. プロジェクト前提は `AGENTS.md` を正典とする。スタック・アーキテクチャ文書
    （`docs/02`〜`04`）や層別ルールは未作成なので読まない。未決定の前提は設計書に
    「未決定」と書き、ADR 級の決定はユーザーに委ねる。

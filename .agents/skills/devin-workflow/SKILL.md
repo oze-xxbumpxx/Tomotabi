@@ -22,6 +22,7 @@ description: >
 ## 2. 実装
 
 - コーディング規約は `.claude/rules/coding-standards.md`（`any` 禁止、名前付きエクスポート、`import type`、値なしは `null`）。
+- PR の説明・コメント・docs の文章は `.claude/rules/writing-style.md`（結論を先に、具体的に、抽象語を並べない）。
 - テストは各 workspace の `tests/` に置き、`src/` の構造をミラーする。
 - 例外（DB ドライバー・外部ライブラリ）の `message` には、接続先の URL やトークンが入っていることがある。ログ・標準出力・API の応答にそのまま出さず、許可した項目（種類やコード）だけを出す。テストでは、実際に出た文字列に秘密が無いことを確かめる（`JSON.stringify(error)` は `message` を含まないため、それだけでは確かめられない）。
 - テストは本番と同じ組み立てで、Issue のテスト項目の経路を最後まで通す。HTTP は本番と同じ `configure-app` でアプリを作る（素の HTTP サーバーや別の `bodyParser` 設定にしない）。モックした呼び出し（例: `router.replace`）の先で起きること（再描画など）が項目に含まれるなら、`rerender` などでその状態まで進めて確かめる。

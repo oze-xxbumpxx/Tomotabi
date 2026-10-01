@@ -32,9 +32,19 @@ describe("admin CLI: disable", () => {
   });
 
   beforeEach(async () => {
-    await db.admin.query(
-      "TRUNCATE identity.sessions, identity.allowed_google_accounts, identity.accounts, identity.users CASCADE",
-    );
+    // TRUNCATE ... CASCADE は外部キーで繋がった履歴表（record/settlement）まで
+    // 連鎖し、履歴の TRUNCATE トリガー（55000）に止められる。テストの掃除用に
+    // この接続だけユーザートリガーを無効化する。
+    const client = await db.admin.connect();
+    try {
+      await client.query("SET session_replication_role = 'replica'");
+      await client.query(
+        "TRUNCATE identity.sessions, identity.allowed_google_accounts, identity.accounts, identity.users CASCADE",
+      );
+    } finally {
+      await client.query("RESET session_replication_role");
+      client.release();
+    }
   });
 
   async function counts(): Promise<Counts> {

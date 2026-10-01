@@ -14,7 +14,7 @@ async function addPlan(
   page: Page,
   plan: {
     name: string;
-    /** #91 のマージ後は役割（radio）で探す。いまは選択肢が名前を持たないためテキスト。 */
+    /** 種類の選択肢の読み上げ名（`場所`・`食べ処` など）。 */
     kindLabel: string;
     /** 期間内の日付の表示（`10/11 日` の形）。省略時はフォームの初期値の日。 */
     dateLabel?: string;
@@ -27,15 +27,20 @@ async function addPlan(
     page.getByRole("heading", { name: "予定を追加" }),
   ).toBeVisible();
   await page.getByLabel("名前").fill(plan.name);
-  await page.getByText(plan.kindLabel, { exact: true }).click();
+  // 種類の radio は sr-only で読み上げ名だけを持ち、見た目の
+  // 選択肢（label 内の span）がポインタを受けるため force で選ぶ。
+  await page
+    .getByRole("radio", { name: plan.kindLabel, exact: true })
+    .check({ force: true });
   if (plan.dateLabel !== undefined) {
     await page
       .getByRole("radio", { name: plan.dateLabel, exact: true })
       .click();
   }
   if (plan.time !== undefined) {
-    // #91 のマージ後は役割（checkbox）で探す。いまはテキスト。
-    await page.getByText("時刻未定", { exact: true }).click();
+    await page
+      .getByRole("checkbox", { name: "時刻未定" })
+      .uncheck();
     await page.getByLabel("時刻", { exact: true }).fill(plan.time);
   }
   await page.getByRole("button", { name: "保存する" }).click();

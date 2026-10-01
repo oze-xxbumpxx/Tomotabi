@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext } from "@playwright/test";
+import type { Browser, BrowserContext, Page } from "@playwright/test";
 import type { Auth } from "better-auth";
 import type { TestHelpers } from "better-auth/plugins";
 import { testUtils } from "better-auth/plugins";
@@ -69,4 +69,16 @@ export async function newLoggedInContext(
   const context = await browser.newContext();
   await context.addCookies(await sessionCookies(userId));
   return context;
+}
+
+/**
+ * 既存の page の context に、新しいセッションの Cookie を入れ直す
+ * （M-03 の再ログイン）。localStorage は残るため、ログアウトで
+ * 「前回の旅行」の保存値が消えたことも確かめられる。
+ */
+export async function addSessionCookies(
+  page: Page,
+  userId: string,
+): Promise<void> {
+  await page.context().addCookies(await sessionCookies(userId));
 }

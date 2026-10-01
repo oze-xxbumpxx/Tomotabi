@@ -65,6 +65,15 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     page.getByRole("heading", { name: TRIP.name }),
   ).toBeVisible();
   await expect(page.getByText("出発前", { exact: true })).toBeVisible();
+
+  // しおりの初期表示は「期間内なら今日・期間外なら初日」。実行日に
+  // 依存しないよう、日付バーで初日を明示して選んでから進める。
+  // 以後の日の切り替えもすべて日付バーか詳細の日付リンクで行う。
+  await page
+    .getByRole("navigation", { name: "日付を選ぶ" })
+    .getByRole("link", { name: /^1 日目/ })
+    .click();
+  await page.waitForURL(/date=2026-10-10/);
   await expect(
     page.getByText("この日の予定はまだありません"),
   ).toBeVisible();
@@ -119,25 +128,35 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     .getByRole("button", { name: "この日に移動する" })
     .click();
   await expect(page.getByRole("status").filter({ hasText: "移動しました" })).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "10/11 日", exact: true }),
-  ).toBeVisible();
 
-  // 10/10 のしおりには出ず、10/11 に出る
-  await page.getByRole("link", { name: "しおり" }).click();
-  await expect(
-    page.getByRole("listitem").filter({ hasText: "清水寺" }),
-  ).toHaveCount(0);
-  await page
-    .getByRole("navigation", { name: "日付を選ぶ" })
-    .getByRole("link", { name: /2 日目/ })
-    .click();
+  // 詳細の日付リンク（`?date=plan.date` 行き）から 10/11 のしおりへ
+  const planDateLink = page.getByRole("link", {
+    name: "10/11 日",
+    exact: true,
+  });
+  await expect(planDateLink).toBeVisible();
+  await planDateLink.click();
   await page.waitForURL(/date=2026-10-11/);
   await expect(
     page.getByRole("listitem").filter({ hasText: "清水寺（早朝参り）" }),
   ).toBeVisible();
 
-  // 取りやめ
+  // 10/10 のしおりには出ない
+  await page
+    .getByRole("navigation", { name: "日付を選ぶ" })
+    .getByRole("link", { name: /^1 日目/ })
+    .click();
+  await page.waitForURL(/date=2026-10-10/);
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "清水寺" }),
+  ).toHaveCount(0);
+
+  // 取りやめ（予定は 10/11 にある。日付バーで明示して選ぶ）
+  await page
+    .getByRole("navigation", { name: "日付を選ぶ" })
+    .getByRole("link", { name: /2 日目/ })
+    .click();
+  await page.waitForURL(/date=2026-10-11/);
   await page.getByRole("link", { name: /清水寺（早朝参り）/ }).click();
   await page.getByRole("button", { name: "取りやめにする" }).click();
   const cancelDialog = page.getByRole("dialog", {
@@ -152,7 +171,9 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
   await expect(
     page.getByRole("button", { name: "取りやめにする" }),
   ).not.toBeVisible();
-  await page.getByRole("link", { name: "しおり" }).click();
+  // 詳細の日付リンクで 10/11 のしおりへ戻る（取りやめでも日付は変わらない）
+  await page.getByRole("link", { name: "10/11 日", exact: true }).click();
+  await page.waitForURL(/date=2026-10-11/);
   await expect(
     page.getByRole("listitem").filter({ hasText: "清水寺（早朝参り）" }),
   ).toContainText("取りやめ");

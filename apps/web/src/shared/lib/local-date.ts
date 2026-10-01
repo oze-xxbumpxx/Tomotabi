@@ -62,6 +62,52 @@ export function todayLocalDate(): string {
   return `${year}-${month}-${day}`;
 }
 
+const tokyoDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const tokyoTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  hour: "numeric",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** 日本時間（Asia/Tokyo）で `now` の日付を `YYYY-MM-DD` で返す。端末のタイムゾーンに依存しない。 */
+export function tokyoDateOf(now: Date): string {
+  const parts = tokyoDateFormatter.formatToParts(now);
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  return `${year}-${month}-${day}`;
+}
+
+/** 日本時間（Asia/Tokyo）で `now` の時刻を `H:mm` で返す。 */
+export function tokyoTimeOf(now: Date): string {
+  return tokyoTimeFormatter.format(now);
+}
+
+/** `YYYY-MM-DD` と日本の現地時刻 `HH:mm` を UTC の瞬間にする。日本に夏時間はない。 */
+export function tokyoInstantOf(date: string, time: string): Date {
+  return new Date(`${date}T${time}:00+09:00`);
+}
+
+/** 残り時間（分）を `2 時間 19 分` の形にする。1 時間未満は `45 分`、ちょうどは `2 時間`。 */
+export function formatRemaining(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) {
+    return `${minutes} 分`;
+  }
+  if (minutes === 0) {
+    return `${hours} 時間`;
+  }
+  return `${hours} 時間 ${minutes} 分`;
+}
+
 /** ISO 8601 の日時を `10/10 木 20:14` の形にする（記録日時の表示用）。 */
 export function formatDateTime(value: string): string {
   const date = new Date(value);

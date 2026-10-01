@@ -238,6 +238,14 @@ const planningWebInput = {
   target: "./packages/contracts/openapi/planning.json",
   override: { transformer: stripWebValidationConstraints },
 };
+const financeInput = {
+  target: "./packages/contracts/openapi/finance.json",
+  override: { transformer: stripRequestInputConstraints },
+};
+const financeWebInput = {
+  target: "./packages/contracts/openapi/finance.json",
+  override: { transformer: stripWebValidationConstraints },
+};
 
 export default defineConfig({
   foundationClient: {
@@ -325,6 +333,33 @@ export default defineConfig({
       mode: "single",
       client: "zod",
       target: `${apiGeneratedDir}/planning.zod.ts`,
+      override: { zod: validationZod },
+    },
+  },
+  financeClient: {
+    input: { target: financeInput.target },
+    output: {
+      mode: "single",
+      client: "fetch",
+      target: `${generatedDir}/finance.ts`,
+      override: { mutator },
+    },
+  },
+  financeZod: {
+    input: financeWebInput,
+    output: {
+      mode: "single",
+      client: "zod",
+      target: `${generatedDir}/finance.zod.ts`,
+      override: { zod: validationZod },
+    },
+  },
+  financeApiZod: {
+    input: financeInput,
+    output: {
+      mode: "single",
+      client: "zod",
+      target: `${apiGeneratedDir}/finance.zod.ts`,
       override: { zod: validationZod },
     },
   },

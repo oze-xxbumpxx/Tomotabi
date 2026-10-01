@@ -96,7 +96,7 @@ Guard（Origin → セッション → userId）
 
 ### 精算の完了
 
-ロック → receipt → 確認が旅行に属するか → 確認がすでに完了していれば既存の精算（E-07）→ 今の対象を導出し、確認の明細ごとに指紋・取り消し状態を比べる → 一致なら連番を払い出し、精算・明細・占有・受領を保存。BASE の支払いだけが取り消されていて、了承の集合が今の取り消し済み BASE の集合と完全に一致すれば例外として許可（F-32）。それ以外の違いは 409。
+ロック → receipt → 確認が旅行に属するか → 確認にすでに精算があれば、その精算が取り消し済みなら 409（新しい確認へ案内。E-10）、有効なら既存の精算を返す（E-07。同じ確認の重複の完了）→ 今の対象を導出し、確認の明細ごとに指紋・取り消し状態を比べる → 一致なら連番を払い出し、精算・明細・占有・受領を保存。BASE の支払いだけが取り消されていて、了承の集合が今の取り消し済み BASE の集合と完全に一致すれば例外として許可（F-32）。それ以外の違いは 409。
 
 ### 精算の取り消し
 
@@ -144,7 +144,7 @@ Guard（Origin → セッション → userId）
 | `settlement.pending_items`（VIEW） | 作らない。対象の導出は UseCase とそのテストで確かめ、VIEW に整合を任せない（正本の注記どおり） |
 
 - 追記のみのトリガー（`infra.reject_history_mutation`）を、支払い・取り消し・確認・明細・精算・精算の取り消しに付ける（custom migration）。`active_claims` は消すので付けない。
-- `app_runtime` の権限: 履歴の表は SELECT・INSERT だけ、`active_claims` は SELECT・INSERT・DELETE、`trip_finance_guards` は SELECT・UPDATE（連番）。GRANT のテスト（旅行・予定の段階と同じ形）を足す。
+- `app_runtime` の権限: `settlement` スキーマの USAGE、履歴の表（支払い・取り消し・確認・明細・精算・精算の取り消し）は SELECT・INSERT だけ、`active_claims` は SELECT・INSERT・DELETE、`trip_finance_guards` に UPDATE（`next_settlement_sequence` の列だけ。`SELECT … FOR UPDATE` の行ロックにも UPDATE 権限が要る）を足す。`infra.command_receipts` の SELECT・INSERT と `trip_finance_guards` の SELECT・INSERT は旅行・予定の段階（migration 0004）で付与済み。GRANT のテスト（旅行・予定の段階と同じ形）を足し、`app_runtime` で最初の書き込みと同じキーの再送が通ることを確かめる。
 - 受領の `response_body` は財務の操作でも保存する（再送で元の DTO を返すため）。
 
 ## フロントエンド設計
@@ -153,7 +153,7 @@ Guard（Origin → セッション → userId）
 
 | URL | 画面 | v3 | 取得 |
 | --- | --- | --- | --- |
-| `/trips/{tripId}/payments/new?planId=` | 支払いを記録（シート。後ろにしおり） | 11・11b・11c | getTrip、getItinerary（関連する予定の選択） |
+| `/trips/{tripId}/payments/new?planId=` | 支払いを記録（シート。後ろにしおり） | 11・11b・11c | getTrip、`planId` があれば getPlan（同じ旅行の予定かを確かめて選んだ状態にする。しおりの表示日と違う日の予定でも選べる）、関連する予定の選択で選んだ日の getItinerary |
 | `/trips/{tripId}/settlement` | 精算 | 14・14b・14f・14g・14i | getBalance、listSettlementPreviews、listSettlements |
 | `/trips/{tripId}/settlement/previews/{previewId}` | 受け渡しの確認 | 14c・14d・14h | getSettlementPreview |
 
@@ -166,7 +166,7 @@ Guard（Origin → セッション → userId）
 
 | 保存 | 再取得するもの |
 | --- | --- |
-| 支払いの記録・取り消し | 残額、確認の一覧（未完了の検証が変わるため） |
+| 支払いの記録・取り消し | 残額、確認の一覧、その旅行の確認の詳細（開いている確認の検証結果が変わるため。固定した明細と金額は書き換えない） |
 | 確認の作成 | 確認の一覧 |
 | 精算の完了・取り消し | 残額、確認の一覧、精算の一覧、その確認 |
 

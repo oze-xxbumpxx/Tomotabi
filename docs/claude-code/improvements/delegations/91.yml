@@ -16,5 +16,12 @@ reviews:
         category: 'layering'
         summary: 'plan-form と trip-new が別の screen（ItineraryScreen / PlanDetailScreen / TripsScreen）を import して下に敷いている（同じ層の依存）'
 escalations: 0
-outcome: null
-gh: null
+outcome: 'merged'
+gh:
+  pr: 99
+  pr_created_at: '2026-09-30T22:41:30Z'
+  merged_at: '2026-10-01T11:35:12Z'
+  closed_at: '2026-10-01T11:35:12Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

@@ -1,0 +1,36 @@
+issue: 110
+title: 'feat(api): お金の計算と契約（負担額と寄与・精算の対象・指紋・残額、finance.json）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-10-01T22:45:53Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-01T23:10:36Z'
+    reviewed_sha: 'ed81feb57a531d08d22090041e2868d947d63332'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'Number を通しても落ちない（2^53 を超える値・上限 9,999,999 円の負担額の試験が無い）'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '了承の一覧に件数の上限と重複の拒否が無い'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '指紋の材料に支払いの ID が入っていない'
+      - severity: 'nit'
+        category: 'coding-standard'
+        summary: '占有の「値なし」が undefined で null と混ざる'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 112
+  pr_created_at: '2026-10-01T22:55:41Z'
+  merged_at: '2026-10-01T23:14:39Z'
+  closed_at: '2026-10-01T23:14:39Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

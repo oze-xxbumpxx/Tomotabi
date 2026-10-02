@@ -1,0 +1,54 @@
+issue: 111
+title: 'feat(web): 支払い・精算の web の土台（円の扱い・結果不明の要求を IndexedDB に残す）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-01T22:45:54Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-01T23:10:41Z'
+    reviewed_sha: '57f3ac306f557c2e6fe458d10875dd08311d7f6f'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '再読み込み後に未確定の保留があっても新しいキーで保存できる（二重保存）'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '送り直す前に利用者・旅行を照合していない'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '保留に保持期間が無い'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: '利用者が分かる前の読み取りを止める処理に試験が無い'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '確かめ直しで作成時刻が上書きされる'
+  - round: 1
+    reviewed_at: '2026-10-01T23:38:36Z'
+    reviewed_sha: '74f3bfbeaf7ec964b496ee2838129e62dfd8d424'
+    verdict: 'merge'
+    posted: false
+    findings: []
+  - round: 2
+    reviewed_at: '2026-10-02T11:25:55Z'
+    reviewed_sha: 'e856976b5'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 1
+outcome: 'merged'
+gh:
+  pr: 113
+  pr_created_at: '2026-10-01T23:00:06Z'
+  merged_at: '2026-10-02T11:28:35Z'
+  closed_at: '2026-10-02T11:28:35Z'
+  commits: 4
+  ci_first_pass: true
+  closes_linked: true

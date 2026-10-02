@@ -1,0 +1,44 @@
+issue: 109
+title: 'feat(api): お金の表（支払い・精算の表・制約・追記のみ・権限）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-01T22:45:52Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-01T23:11:24Z'
+    reviewed_sha: 'ab96ce8c8ada42f40a12bdb400e0b6ab1c983be0'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'missing-test'
+        summary: '7 つの制約（戻しの元の明細・明細の重複・払った人が参加者か）を外しても試験が落ちない'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: '履歴の表の TRUNCATE が拒否されることを確かめていない'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '履歴の表に TRUNCATE を止めるトリガーが無い'
+      - severity: 'nit'
+        category: 'coding-standard'
+        summary: 'settlements.sequence だけ number で扱う'
+  - round: 1
+    reviewed_at: '2026-10-01T23:22:11Z'
+    reviewed_sha: '017a217b8001458a3593ea0b6993af65163e1d9c'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-path-mismatch'
+        summary: 'TRUNCATE を止めるトリガーで E2E の初期化が失敗する（Claude Code の nit の誤りを取り下げ）'
+  - round: 2
+    reviewed_at: '2026-10-01T23:25:34Z'
+    reviewed_sha: 'd4c95c8079d81361b8924644dd9f5213433b4e1e'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: null
+gh: null

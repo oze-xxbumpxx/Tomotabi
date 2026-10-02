@@ -29,6 +29,19 @@ export type Payment = Readonly<{
 
 export type NewPayment = Omit<Payment, "id" | "createdAt">;
 
+/**
+ * 支払いの取り消し記録（record.payment_cancellations）。1 支払い 1 記録
+ * （payment_id が PK）。元の支払いの行は残る。
+ */
+export type PaymentCancellation = Readonly<{
+  paymentId: string;
+  tripId: string;
+  cancelledBy: UserId;
+  createdAt: Date;
+}>;
+
+export type NewPaymentCancellation = Omit<PaymentCancellation, "createdAt">;
+
 export const Payment = {
   /**
    * 負担額と寄与を計算して支払いを組み立てる。

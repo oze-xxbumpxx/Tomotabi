@@ -66,6 +66,18 @@ class ErrorTestController {
   }
 
   @PublicRoute()
+  @Get("db-lock-timeout")
+  dbLockTimeout(): never {
+    // guard の行ロックの lock_timeout 打ち切り（55P03 lock_not_available）
+    const wrapped = new Error("Failed query: select ... for update");
+    (wrapped as { cause?: unknown }).cause = Object.assign(
+      new Error("canceling statement due to lock timeout"),
+      { code: "55P03" },
+    );
+    throw wrapped;
+  }
+
+  @PublicRoute()
   @Get("cyclic-cause")
   cyclicCause(): never {
     // 循環する cause: フィルターの cause 走査が終わることを確かめる
@@ -192,6 +204,19 @@ describe("ApiErrorFilter（U-15。configure-app で組んだアプリ）", () =>
       retryable: true,
     });
     expect(response.text).not.toContain("SECRETPW");
+  });
+
+  it("lock_timeout の打ち切り（55P03 lock_not_available）も 503 retryable=true", async () => {
+    const response = await request(app.getHttpServer()).get(
+      "/api/error-test/db-lock-timeout",
+    );
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      code: "TEMPORARILY_UNAVAILABLE",
+      message: "Service is temporarily unavailable",
+      requestId: expect.stringMatching(UUID_PATTERN),
+      retryable: true,
+    });
   });
 
   it("cause が循環する例外でも打ち切って 500 INTERNAL_ERROR を返す", async () => {

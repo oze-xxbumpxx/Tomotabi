@@ -1718,3 +1718,387 @@ dialog.dialog[open] {
   background: var(--color-surface-inverse);
   color: var(--color-bg);
 }
+
+/* 精算（v3 の 14。白カードに向き・金額・主操作） */
+.settle-page {
+  padding-bottom: calc(var(--space-8) + 96px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settle-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settle-count {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.settle-transfer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.settle-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 72px;
+}
+
+.settle-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.settle-avatar-first {
+  background: var(--color-accent-soft);
+}
+
+.settle-avatar-second {
+  background: var(--color-info-bg);
+}
+
+.settle-avatar-plain {
+  background: var(--color-surface-muted);
+}
+
+.settle-person-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settle-person-role {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.settle-arrow {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.settle-amount {
+  margin: 0;
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.settle-empty-title {
+  margin: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.settle-empty-body {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.settle-zero-title {
+  margin: 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settle-zero-body {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.settle-action {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.settle-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settle-people {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.settle-person-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
+}
+
+.settle-person-block:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.settle-person-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settle-person-head .settle-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.settle-badge {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.settle-badge-receive {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.settle-badge-pay {
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+}
+
+.settle-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.settle-tile {
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settle-tile-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.settle-tile-value {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settle-breakdown-sentence {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.settle-breakdown-footer {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.settle-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settle-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.settle-item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.settle-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.settle-item-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settle-item-amount {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settle-item-meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.settle-item-share {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.settle-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settle-row,
+.settle-row-static {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.settle-row {
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.settle-rows > li:first-child > .settle-row,
+.settle-rows > li:first-child > .settle-row-static {
+  padding-top: 0;
+  border-top: none;
+}
+
+.settle-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.settle-row-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settle-row-title-cancelled {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.settle-row-sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.settle-row-note {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.settle-row-caret {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.settle-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1.5px var(--color-line-strong);
+}
+
+.settle-check input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--color-surface-inverse);
+  flex-shrink: 0;
+}
+
+.settle-cannot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settle-cannot-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+a.settle-action {
+  text-decoration: none;
+}
+
+.settle-preview-head {
+  margin: 0 calc(-1 * var(--space-2));
+}
+
+.settle-preview-meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.settle-fixed-note {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}

@@ -1,6 +1,11 @@
 "use client";
 
-import { BookOpenText, Plus, WifiSlash } from "@phosphor-icons/react";
+import {
+  ArrowsLeftRight,
+  BookOpenText,
+  Plus,
+  WifiSlash,
+} from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,7 +61,7 @@ type Layer = "menu" | "edit" | "finish";
  * `/trips/{tripId}/itinerary` のしおり（08）。旅行ヘッダー・日付バー
  * （期間の日を並べ、選択は URL の `date` で再現）と予定の一覧。
  * `date` を省略するとサーバーの既定、期間外なら「旅行期間外です」。
- * 下部のタブは「しおり」だけ。開けた旅行はその人の「前回の旅行」
+ * 下部のタブは「しおり」と「精算」。開けた旅行はその人の「前回の旅行」
  * として保存する（F-23）。
  */
 export function ItineraryScreen({
@@ -494,6 +499,13 @@ export function ItineraryScreen({
             <BookOpenText size={18} weight="fill" aria-hidden="true" />
             しおり
           </span>
+          <Link
+            className="tabbar-item"
+            href={`/trips/${tripId}/settlement`}
+          >
+            <ArrowsLeftRight size={18} weight="bold" aria-hidden="true" />
+            精算
+          </Link>
         </div>
       </nav>
     </main>

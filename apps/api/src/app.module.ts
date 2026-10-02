@@ -8,6 +8,7 @@ import { createPinoHttpOptions } from "./infrastructure/logging/logger";
 import { FoundationModule } from "./modules/foundation/foundation.module";
 import { IdentityModule } from "./modules/identity/identity.module";
 import { PlanningModule } from "./modules/planning/planning.module";
+import { RecordModule } from "./modules/record/record.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PlanningModule } from "./modules/planning/planning.module";
     FoundationModule,
     IdentityModule,
     PlanningModule,
+    RecordModule,
   ],
   providers: [
     {

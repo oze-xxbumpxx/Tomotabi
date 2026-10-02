@@ -1,4 +1,5 @@
 export type { ApiErrorBody } from "./error";
+export type { Payment, PaymentAllocation } from "./finance";
 export type { HealthView } from "./health";
 export type { Me } from "./me";
 export type {

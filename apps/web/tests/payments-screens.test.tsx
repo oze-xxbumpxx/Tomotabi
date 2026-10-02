@@ -263,7 +263,10 @@ async function resetDb(): Promise<void> {
 
 /** フォームが開くまで待つ（me・旅行・残額・保留の確認が全部済む）。 */
 async function waitForForm() {
-  return await screen.findByLabelText("金額");
+  const amountInput = await screen.findByLabelText("金額");
+  // 払った人の選択肢は金額の欄より遅れて出ることがある（CI で落ちた）。
+  await screen.findByRole("radio", { name: "ひなた（自分）" });
+  return amountInput;
 }
 
 /** 保留中の要求を 1 件保存する。 */

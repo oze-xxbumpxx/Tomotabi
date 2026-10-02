@@ -1083,7 +1083,8 @@ dialog.dialog[open] {
 
 /* しおり・予定の画面（08・09・追加/編集）。M2-d */
 .itinerary-page {
-  padding-bottom: calc(var(--space-8) + 96px);
+  /* タブとその上の主ボタン「支払いを記録」のぶん。 */
+  padding-bottom: calc(var(--space-8) + 168px);
 }
 
 /* 日付バー（08）。期間の日を並べ、長い旅行は横スクロール */
@@ -1717,4 +1718,284 @@ dialog.dialog[open] {
 .tabbar-item-current {
   background: var(--color-surface-inverse);
   color: var(--color-bg);
+}
+
+/* 下部の主ボタン「支払いを記録」（v3 11。タブの上に浮くオレンジの pill） */
+.main-action {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  width: min(
+    calc(100vw - var(--space-4) * 2),
+    calc(40rem - var(--space-4) * 2)
+  );
+  height: 56px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--color-accent);
+  color: var(--color-text);
+  box-shadow: var(--shadow-primary);
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.main-action-offline {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  box-shadow: none;
+}
+
+/* 支払いを記録のシート（v3 11・11b） */
+.pay-amount {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 4px 0;
+  border-bottom: 2px solid var(--color-line-strong);
+}
+
+.pay-amount-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.pay-amount-input:focus {
+  outline: none;
+}
+
+.pay-amount-input[aria-disabled="true"] {
+  color: var(--color-text-muted);
+}
+
+.pay-amount-input[aria-invalid="true"] {
+  color: var(--color-danger);
+}
+
+.pay-amount-unit {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.pay-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pay-avatar-me {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+.pay-share {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+.pay-share-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 12px;
+}
+
+.pay-share-row + .pay-share-row {
+  border-top: 1px solid var(--color-line);
+}
+
+.pay-share-name {
+  font-size: 15px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pay-share-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.pay-share-tag-payer {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+.pay-share-percent {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pay-share-percent-edit {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pay-share-percent-input {
+  width: 2.5rem;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1.5px solid var(--color-line-strong);
+  background: transparent;
+  font: inherit;
+  font-weight: inherit;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.pay-share-percent-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-surface-inverse);
+}
+
+.pay-share-percent-input[aria-invalid="true"] {
+  color: var(--color-danger);
+  border-bottom-color: var(--color-danger);
+}
+
+.pay-share-yen {
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 84px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.pay-share-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.pay-plan-row {
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  background: var(--color-surface-locked);
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.pay-plan-row-locked {
+  color: var(--color-text-muted);
+}
+
+.pay-plan-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pay-plan-failed-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.pay-plan-failed-actions .btn-secondary {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+/* 関連する予定の選択シート（v3 11c） */
+.pay-plan-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.pay-plan-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 4px;
+}
+
+.pay-plan-item + .pay-plan-item {
+  border-top: 1px solid var(--color-line);
+}
+
+.pay-plan-radio {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--color-surface-inverse);
+}
+
+.pay-plan-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pay-plan-item-time {
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 56px;
+  flex-shrink: 0;
+}
+
+.pay-plan-item-name {
+  font-size: 15px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pay-plan-empty {
+  margin: var(--space-3) 4px;
+  font-size: 14px;
+  color: var(--color-text-muted);
 }

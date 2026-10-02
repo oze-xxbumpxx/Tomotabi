@@ -5,6 +5,7 @@ import {
   CaretLeft,
   PencilSimple,
   Prohibit,
+  Wallet,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -304,6 +305,14 @@ export function PlanDetailScreen({
         meName={displayName}
       />
       <div className="plan-detail-actions">
+        {/* 予定を選んだ状態で支払いを記録のシートを開く（F-60）。 */}
+        <Link
+          className="btn-outline"
+          href={`/trips/${tripId}/payments/new?planId=${planId}`}
+        >
+          <Wallet size={18} aria-hidden="true" />
+          支払いを記録
+        </Link>
         <button
           type="button"
           className="btn-outline"

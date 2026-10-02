@@ -37,18 +37,11 @@ const ALLOWED_PATHS: readonly RegExp[] = [
   new RegExp(`^/api/trips/[^/]+/settlements/${UUID_SEGMENT}/cancel$`, "i"),
 ];
 
-/**
- * 試験用の操作名（`test-` で始まる）の経路は、操作名そのものを末尾に持つ
- * 経路だけ許す（支払い・精算の画面ができるまで試験で使う）。
- */
-const TEST_OPERATION_PREFIX = "test-";
-
 const ALLOWED_METHODS: ReadonlySet<string> = new Set(["POST", "PATCH", "PUT"]);
 
 function isAllowedPendingUrl(record: {
   url?: unknown;
   tripId?: unknown;
-  operation?: unknown;
 }): boolean {
   if (
     typeof record.url !== "string" ||
@@ -72,14 +65,7 @@ function isAllowedPendingUrl(record: {
   if (!record.url.startsWith(prefix) || !parsed.pathname.startsWith(prefix)) {
     return false;
   }
-  if (ALLOWED_PATHS.some((pattern) => pattern.test(parsed.pathname))) {
-    return true;
-  }
-  return (
-    typeof record.operation === "string" &&
-    record.operation.startsWith(TEST_OPERATION_PREFIX) &&
-    parsed.pathname === `${prefix}${record.operation}`
-  );
+  return ALLOWED_PATHS.some((pattern) => pattern.test(parsed.pathname));
 }
 
 /**

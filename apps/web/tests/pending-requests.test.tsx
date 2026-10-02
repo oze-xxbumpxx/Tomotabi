@@ -46,8 +46,9 @@ const USER_ID = "user-hinata";
 const OTHER_USER_ID = "user-aoi";
 const TRIP_ID = "trip-1";
 // 支払い・精算の操作はまだ無いため、試験用の操作名で確かめる。
+// 経路は送り直しの許可リストにある支払いの書き込みのものを使う。
 const OPERATION = "test-payment-record";
-const TEST_URL = `/api/trips/${TRIP_ID}/${OPERATION}`;
+const TEST_URL = `/api/trips/${TRIP_ID}/payments`;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function failSend(failure: ApiFailure): Send {
@@ -187,6 +188,32 @@ afterEach(() => {
 
 describe("保留中の要求（IndexedDB）", () => {
   it("FW-08: 送る前の保存が失敗したら送らずに止めて案内を出す", async () => {
+    const send = vi.fn(okSend({ id: "pay-1" }));
+    const user = userEvent.setup();
+    render(<FinanceForm send={send} userId={USER_ID} />);
+    await waitForCheckStatus("none");
+
+    // 保留の確認が通ったあとで、送る直前の書き込みだけ失敗させる。
+    const putSpy = vi
+      .spyOn(IDBObjectStore.prototype, "put")
+      .mockImplementation(() => {
+        throw new DOMException("writes blocked", "InvalidStateError");
+      });
+    try {
+      await user.click(screen.getByRole("button", { name: "保存" }));
+
+      expect(
+        await screen.findByText(
+          "この端末では保存の確認に使う領域が使えません",
+        ),
+      ).toBeInTheDocument();
+      expect(send).not.toHaveBeenCalled();
+    } finally {
+      putSpy.mockRestore();
+    }
+  });
+
+  it("IndexedDB が読めないあいだは保存を受け付けずに案内を出す", async () => {
     vi.stubGlobal("indexedDB", undefined);
     const send = vi.fn(okSend({ id: "pay-1" }));
     const user = userEvent.setup();
@@ -227,6 +254,22 @@ describe("保留中の要求（IndexedDB）", () => {
     await screen.findByText("保存できませんでした");
 
     expect(await findKept()).toBeNull();
+  });
+
+  it("競合（409）を受けたら保留を消す", async () => {
+    const send = vi.fn(
+      failSend({ kind: "http", status: 409, code: "VERSION_CONFLICT" }),
+    );
+    const user = userEvent.setup();
+    render(<FinanceForm send={send} userId={USER_ID} />);
+    await waitForCheckStatus("none");
+
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(send).toHaveBeenCalled());
+
+    await waitFor(async () => {
+      expect(await findKept()).toBeNull();
+    });
   });
 
   it("結果不明（network・5xx）と認証期限切れでは保留を残す", async () => {
@@ -397,7 +440,7 @@ describe("読み出した保留の検証", () => {
     },
     {
       name: "別の旅行を向く url",
-      record: () => makeRecord({ url: `/api/trips/other-trip/${OPERATION}` }),
+      record: () => makeRecord({ url: `/api/trips/other-trip/payments` }),
     },
     {
       name: "許可リストに無い経路の url",
@@ -462,7 +505,7 @@ describe("読み出した保留の検証", () => {
         operation: "cancel-settlement",
         url: `/api/trips/${TRIP_ID}/settlements/${crypto.randomUUID()}/cancel`,
       },
-      // 試験用の操作名の経路（操作名そのものを末尾に持つ）。
+      // 許可済みの経路であれば操作名は許可リストに依らない。
       { operation: OPERATION, url: TEST_URL },
     ];
     for (const { operation, url } of allowed) {
@@ -503,7 +546,7 @@ describe("読み出した保留の検証", () => {
     // 別の旅行の保留（url はその保留の tripId に合わせる）。
     const otherTripRequest = createMutationRequest({
       operation: OPERATION,
-      url: `/api/trips/trip-2/${OPERATION}`,
+      url: `/api/trips/trip-2/payments`,
       method: "POST",
       body: { amount: "7001" },
     });
@@ -587,6 +630,25 @@ describe("保持期間と他の利用者の掃除", () => {
       expect(lookup.record.id).toBe(fresh.id);
     }
     expect(await listPendingRequestsForUser(USER_ID)).toHaveLength(1);
+  });
+
+  it("同じ操作に保留が複数あるときは新しいもの（createdAt の大きいもの）を返す", async () => {
+    const older = makeRecord({
+      createdAt: new Date(Date.now() - DAY_MS).toISOString(),
+    });
+    const newer = makeRecord();
+    await savePendingRequest(older);
+    await savePendingRequest(newer);
+
+    const lookup = await findPendingRequest({
+      userId: USER_ID,
+      tripId: TRIP_ID,
+      operation: OPERATION,
+    });
+    expect(lookup.status).toBe("found");
+    if (lookup.status === "found") {
+      expect(lookup.record.id).toBe(newer.id);
+    }
   });
 
   it("サインインした利用者以外の保留は、利用者が分かったときに消す", async () => {

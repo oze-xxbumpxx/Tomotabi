@@ -496,6 +496,65 @@ describe("応答が消えたあとの再送（FH-15）", () => {
   });
 });
 
+describe("同時実行の整合（レビュー must 対応）", () => {
+  it("順番待ちの札が 3 秒で取れなければ 503 TEMPORARILY_UNAVAILABLE・retryable=true", async () => {
+    const tripId = await createTrip(hinataCookie);
+    const locker = await db.admin.connect();
+    try {
+      await locker.query("BEGIN");
+      await locker.query(
+        "SELECT trip_id FROM infra.trip_finance_guards WHERE trip_id = $1 FOR UPDATE",
+        [tripId],
+      );
+
+      const response = await postPayment(hinataCookie, tripId, paymentBody());
+      expect(response.status).toBe(503);
+      expect(response.body).toMatchObject({
+        code: "TEMPORARILY_UNAVAILABLE",
+        retryable: true,
+      });
+      expect(await paymentCount(tripId)).toBe(0);
+    } finally {
+      await locker.query("ROLLBACK");
+      locker.release();
+    }
+  }, 30_000);
+
+  it("同じキーを別の旅行へ同時に送っても 500 でなく 409", async () => {
+    const tripA = await createTrip(hinataCookie);
+    const tripB = await createTrip(hinataCookie, { name: "別の旅行" });
+    const key = newKey();
+
+    // 負ける側の支払いの insert を、trip_participants への参照整合
+    // （KEY SHARE ロック取得）で待たせるために、管理者が対象行を先に押さえる。
+    // FOR UPDATE は KEY SHARE と競合する。
+    const holder = await db.admin.connect();
+    let loser: Promise<request.Response>;
+    try {
+      await holder.query("BEGIN");
+      await holder.query(
+        "SELECT trip_id, slot FROM planning.trip_participants WHERE trip_id = $1 FOR UPDATE",
+        [tripB],
+      );
+      // 負ける側: 受領の照会は通り、支払いの insert でブロックされる
+      loser = postPayment(hinataCookie, tripB, paymentBody({ label: "負ける側" }), key);
+
+      // 勝った側が先に COMMIT するのを待ってからブロックを解く
+      const winner = await postPayment(hinataCookie, tripA, paymentBody({ label: "勝つ側" }), key);
+      expect(winner.status).toBe(201);
+    } finally {
+      await holder.query("COMMIT");
+      holder.release();
+    }
+
+    const response = await loser!;
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
+    expect(await paymentCount(tripA)).toBe(1);
+    expect(await paymentCount(tripB)).toBe(0);
+  }, 30_000);
+});
+
 describe("認可（FH-16）", () => {
   it("参加しない・存在しない旅行は同じ 403。別の旅行の支払い・無い支払いは同じ 404", async () => {
     const tripId = await createTrip(hinataCookie);

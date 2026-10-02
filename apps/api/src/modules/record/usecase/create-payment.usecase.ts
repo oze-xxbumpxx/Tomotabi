@@ -12,7 +12,7 @@ import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
 import { Payment } from "../domain/payment";
 import {
   executeFinanceWrite,
-  runFinanceWrite,
+  runFinanceWriteTransaction,
   type FinanceWriteOutcome,
 } from "./finance-write-flow";
 import {
@@ -49,16 +49,15 @@ export class CreatePaymentUseCase implements CreatePaymentInputPort {
   ): Promise<FinanceWriteOutcome<PaymentContract>> {
     const amount = parseAmountYen(input.amountYen);
     const label = parsePaymentLabel(input.label);
-    return this.unitOfWork.run((ctx) =>
-      runFinanceWrite<PaymentContract>(
-        ctx,
-        {
-          userId: input.userId,
-          tripId: input.tripId,
-          operation: CREATE_PAYMENT_OPERATION,
-          key: input.key,
-          requestHash: input.requestHash,
-        },
+    return runFinanceWriteTransaction<PaymentContract>(
+      this.unitOfWork,
+      {
+        userId: input.userId,
+        tripId: input.tripId,
+        operation: CREATE_PAYMENT_OPERATION,
+        key: input.key,
+        requestHash: input.requestHash,
+      },
         async (work, roster) => {
           const payerSlot = payerSlotOf(roster, input.payerUserId);
           const slot0Percent = slot0PercentOf(roster, input.allocations);
@@ -90,8 +89,7 @@ export class CreatePaymentUseCase implements CreatePaymentInputPort {
             resourceType: "payment",
             resourceId: payment.id,
           };
-        },
-      ),
+      },
     );
   }
 }

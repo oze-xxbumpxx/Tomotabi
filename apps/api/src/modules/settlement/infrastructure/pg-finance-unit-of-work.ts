@@ -107,6 +107,7 @@ export class PgFinanceUnitOfWork implements UnitOfWork<FinanceWorkContext> {
 
   async run<T>(work: (ctx: FinanceWorkContext) => Promise<T>): Promise<T> {
     const client = await this.pool.connect();
+    let released = false;
     try {
       await client.query("BEGIN");
       await client.query("SET LOCAL lock_timeout = '3s'");
@@ -121,10 +122,24 @@ export class PgFinanceUnitOfWork implements UnitOfWork<FinanceWorkContext> {
       await client.query("COMMIT");
       return result;
     } catch (error) {
-      await client.query("ROLLBACK");
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        // ROLLBACK 自体が失敗した接続（切断など）は壊れているため、
+        // プールに戻さず捨てる。
+        client.release(
+          rollbackError instanceof Error
+            ? rollbackError
+            : new Error("ROLLBACK に失敗しました", { cause: rollbackError }),
+        );
+        released = true;
+        throw error;
+      }
       throw error;
     } finally {
-      client.release();
+      if (!released) {
+        client.release();
+      }
     }
   }
 }

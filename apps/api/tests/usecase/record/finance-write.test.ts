@@ -190,6 +190,55 @@ describe("財務の書き込みの順序（FU-10）", () => {
   });
 });
 
+describe("受領の一意違反（別の旅行への同時送信。must 対応）", () => {
+  it("23505 で負けたら勝った側の受領を読み直して、本文が違えば 409", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedTrip();
+    // 別の旅行への同時送信が先に COMMIT した受領（hash が違う）
+    ctx.winningReceiptOnFailure = receiptOf(CREATE_PAYMENT_OPERATION, {
+      tripId: "11111111-1111-4111-8111-111111111111",
+      requestHash: "hash-of-other-trip",
+    });
+    ctx.failReceiptInsertTimes = 1;
+
+    await expect(
+      createUsecase(uow, writeLog).execute(createInput()),
+    ).rejects.toMatchObject({
+      code: "IDEMPOTENCY_KEY_REUSED",
+      status: 409,
+    });
+    // 1 回目: 保存まで進んで insert で負ける。2 回目: 受領の照会で 409。
+    expect(ctx.calls).toEqual([
+      "roster.find",
+      "financeGuard.lock",
+      "receipts.find",
+      "payments.insert",
+      "receipts.insert",
+      "receipts.find",
+    ]);
+    // 勝った側の受領だけが見える（負けた側の巻き戻しは実 DB の試験で確かめる）
+    expect(ctx.receiptRows.size).toBe(1);
+  });
+
+  it("23505 で負けても hash が同じなら、勝った側が保存した結果を返す", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedTrip();
+    const stored = { id: PAYMENT_ID, note: "receipt の中身" };
+    ctx.winningReceiptOnFailure = receiptOf(CREATE_PAYMENT_OPERATION, {
+      requestHash: "hash-c",
+      responseBody: stored,
+    });
+    ctx.failReceiptInsertTimes = 1;
+
+    const result = await createUsecase(uow, writeLog).execute(createInput());
+    expect(result).toEqual({ httpStatus: 201, body: stored });
+    expect(writeLog.entries.at(-1)).toMatchObject({
+      result: "replayed",
+      resourceId: PAYMENT_ID,
+    });
+  });
+});
+
 describe("支払いの記録の業務規則", () => {
   it("分け方の合計が 100 でない・参加者以外・重複は 422 で保存も receipt も残さない", async () => {
     const { ctx, uow, writeLog } = setup();
@@ -222,6 +271,22 @@ describe("支払いの記録の業務規則", () => {
     }
     expect(ctx.paymentRows.size).toBe(0);
     expect(ctx.receiptRows.size).toBe(0);
+  });
+
+  it("金額が 1〜9,999,999 円の外なら 422（生成スキーマのパターンより内側の規則）", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedTrip();
+    const usecase = createUsecase(uow, writeLog);
+
+    await expect(
+      usecase.execute(createInput({ amountYen: "10000000" })),
+    ).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 422 });
+    await expect(
+      usecase.execute(createInput({ amountYen: "0" })),
+    ).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 422 });
+    expect(ctx.paymentRows.size).toBe(0);
+    // 値の規則はトランザクションの前に検査する（文脈を呼ばない）
+    expect(ctx.calls).toEqual([]);
   });
 
   it("払った人が参加者でない・別の旅行の予定は 422", async () => {

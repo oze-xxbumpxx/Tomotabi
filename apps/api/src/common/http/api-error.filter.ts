@@ -47,7 +47,8 @@ const STATUS_FALLBACK: Readonly<
 /**
  * DB 接続の失敗・一時的な競合として 503 retryable=true に写すエラーの code。
  * node（接続系）と pg の SQLSTATE（クラス 08: 接続例外、40001: 直列化失敗、
- * 40P01: デッドロック、55P01: lock_timeout の打ち切り）を対象にする。
+ * 40P01: デッドロック、55P03: lock_not_available＝lock_timeout の打ち切り）を
+ * 対象にする。
  */
 const TRANSIENT_ERROR_CODES: ReadonlySet<string> = new Set([
   "ECONNREFUSED",
@@ -59,7 +60,7 @@ const TRANSIENT_ERROR_CODES: ReadonlySet<string> = new Set([
   "EAI_AGAIN",
   "40001",
   "40P01",
-  "55P01",
+  "55P03",
 ]);
 
 function isTransientDbError(value: unknown): boolean {

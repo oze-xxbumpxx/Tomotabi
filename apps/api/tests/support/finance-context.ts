@@ -40,6 +40,13 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
   readonly cancellationRows = new Map<string, PaymentCancellation>();
   readonly planRows = new Map<string, string>();
   private nextId = 0;
+  /** receipts.insert で 23505 を投げさせる回数（一意違反の試験用） */
+  failReceiptInsertTimes = 0;
+  /**
+   * 失敗させたときに勝った側が COMMIT したと見なす受領。null なら受領は
+   * まだ無い（読み直しで元のエラーを投げ直す経路の確認用）。
+   */
+  winningReceiptOnFailure: CommandReceipt | null = null;
 
   readonly roster: TripRosterPort = {
     find: (tripId, actorId) => {
@@ -67,6 +74,28 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
     },
     insert: (receipt) => {
       this.calls.push("receipts.insert");
+      if (this.failReceiptInsertTimes > 0) {
+        this.failReceiptInsertTimes -= 1;
+        if (this.winningReceiptOnFailure !== null) {
+          // 同時に走った勝った側の書き込みが COMMIT した受領が見える状態にする
+          const winner = this.winningReceiptOnFailure;
+          this.receiptRows.set(
+            receiptKey(
+              winner.actorId,
+              winner.operation,
+              winner.idempotencyKey,
+            ),
+            winner,
+          );
+        }
+        // pg の一意違反と同じ code を持つエラー（drizzle は cause に包む）
+        const inner = Object.assign(new Error("duplicate key"), {
+          code: "23505",
+        });
+        const outer = new Error("Failed query: insert");
+        (outer as { cause?: unknown }).cause = inner;
+        return Promise.reject(outer);
+      }
       const key = receiptKey(
         receipt.actorId,
         receipt.operation,

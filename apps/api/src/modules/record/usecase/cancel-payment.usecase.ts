@@ -10,7 +10,7 @@ import type { FinanceWorkContext } from "../adapter/outbound/finance-work-contex
 import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
 import {
   executeFinanceWrite,
-  runFinanceWrite,
+  runFinanceWriteTransaction,
   type FinanceWriteOutcome,
 } from "./finance-write-flow";
 import { paymentNotFound } from "./get-payment.usecase";
@@ -39,16 +39,15 @@ export class CancelPaymentUseCase implements CancelPaymentInputPort {
   private run(
     input: CancelPaymentInput,
   ): Promise<FinanceWriteOutcome<Cancellation>> {
-    return this.unitOfWork.run((ctx) =>
-      runFinanceWrite<Cancellation>(
-        ctx,
-        {
-          userId: input.userId,
-          tripId: input.tripId,
-          operation: CANCEL_PAYMENT_OPERATION,
-          key: input.key,
-          requestHash: input.requestHash,
-        },
+    return runFinanceWriteTransaction<Cancellation>(
+      this.unitOfWork,
+      {
+        userId: input.userId,
+        tripId: input.tripId,
+        operation: CANCEL_PAYMENT_OPERATION,
+        key: input.key,
+        requestHash: input.requestHash,
+      },
         async (work) => {
           const payment = await work.payments.findInTrip(
             input.tripId,
@@ -80,8 +79,7 @@ export class CancelPaymentUseCase implements CancelPaymentInputPort {
             resourceType: "payment_cancellation",
             resourceId: payment.id,
           };
-        },
-      ),
+      },
     );
   }
 }

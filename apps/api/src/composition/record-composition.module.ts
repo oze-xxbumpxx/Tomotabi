@@ -9,7 +9,7 @@ import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-fin
 import { PlanningCompositionModule } from "./planning-composition.module";
 
 function useDatabase(): boolean {
-  // planning と同じ判定（未設定と空文字はどちらも「DB なし」）。
+  // planningと同じ判定（未設定と空文字はどちらも「DBなし」）。
   return Boolean(process.env.DATABASE_URL);
 }
 
@@ -17,9 +17,9 @@ const missingDatabase = (): Promise<never> =>
   Promise.reject(new Error("DATABASE_URL is not set"));
 
 /**
- * record（支払い）の port と財務の UnitOfWork の実装を結ぶ組み立て。
- * 時計・receipt・書き込みログなどの共有の部品は planning の組み立てが
- * そのまま提供する（PlanningCompositionModule の exports を使う）。
+ * record（支払い）のportと財務のUnitOfWorkの実装を結ぶ組み立て。
+ * 時計・receipt・書き込みログなどの共有の部品はplanningの組み立てが
+ * そのまま提供する（PlanningCompositionModuleのexportsを使う）。
  */
 @Module({
   imports: [PlanningCompositionModule],
@@ -32,7 +32,7 @@ const missingDatabase = (): Promise<never> =>
           : { run: missingDatabase },
     },
   ],
-  // PlanningCompositionModule を再輸出して、record の UseCase が時計・
+  // PlanningCompositionModuleを再輸出して、recordのUseCaseが時計・
   // 書き込みログを同じ実装で受け取れるようにする。
   exports: [PlanningCompositionModule, FINANCE_UNIT_OF_WORK],
 })

@@ -14,13 +14,13 @@ import {
 } from "../../../src/modules/settlement/domain/settlement-target";
 
 /**
- * FU-09: 正本のモデル `finance_model_check.py` の筋書きを TypeScript の
+ * FU-09: 正本のモデル`finance_model_check.py`の筋書きをTypeScriptの
  * 単体試験に移したもの。占有・履歴の操作はこのインメモリの模型が持ち、
- * 対象の導出・指紋・残額は本物の Domain を呼ぶ。モデル中の epochs
+ * 対象の導出・指紋・残額は本物のDomainを呼ぶ。モデル中のepochs
  * （履歴の変化を表す簡略化した値）の役割は、実物の指紋が担う。
  */
 
-/** モデルの AssertionError に相当する、業務の拒否。 */
+/** モデルのAssertionErrorに相当する、業務の拒否。 */
 class Rejection extends Error {
   constructor(code: string) {
     super(code);

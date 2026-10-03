@@ -43,7 +43,7 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-  # ハーネス（.claude/ の scripts・hooks）の試験。Node の標準機能だけで動くため npm ci は要らない。
+  # ハーネス（.claude/ のscripts・hooks）の試験。Nodeの標準機能だけで動くためnpm ciは要らない。
   harness:
     name: harness
     runs-on: ubuntu-latest

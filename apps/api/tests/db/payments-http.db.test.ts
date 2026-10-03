@@ -190,7 +190,7 @@ async function paymentCount(tripId: string): Promise<number> {
   return Number(result.rows[0]!.c);
 }
 
-/** ひなたが参加しない旅行を別利用者 2 人で直接作り、支払いも 1 件入れる。 */
+/** ひなたが参加しない旅行を別利用者2人で直接作り、支払いも1件入れる。 */
 async function seedForeignTripWithPayment(): Promise<{
   tripId: string;
   paymentId: string;
@@ -306,7 +306,7 @@ describe("支払いの記録（FH-01）", () => {
       "SELECT contribution_yen::text AS contribution_yen FROM record.payments WHERE id = $1",
       [paymentId],
     );
-    // 払った人は参加者番号 0（ひなた）。寄与は 1 → 0 向きに正。
+    // 払った人は参加者番号0（ひなた）。寄与は1 → 0向きに正。
     expect(row.rows[0]!.contribution_yen).toBe("3500");
 
     const receipts = await db.admin.query(
@@ -336,7 +336,7 @@ describe("支払いの記録（FH-01）", () => {
     );
     expect(rowAoi.rows[0]!.contribution_yen).toBe("-3500");
 
-    // GET は取り消し状態を含めて同じ形で返す
+    // GETは取り消し状態を含めて同じ形で返す
     const fetched = await getPayment(hinataCookie, tripId, paymentId);
     expect(fetched.status).toBe(200);
     expect(fetched.headers["cache-control"]).toBe("private, no-store");
@@ -466,7 +466,7 @@ describe("応答が消えたあとの再送（FH-15）", () => {
     expect(replay.body).toEqual(created.body);
     expect(await paymentCount(tripId)).toBe(1);
 
-    // 同じキー・違う本文は 409
+    // 同じキー・違う本文は409
     const conflict = await postPayment(hinataCookie, tripId, {
       ...body,
       label: "別の内容",
@@ -475,7 +475,7 @@ describe("応答が消えたあとの再送（FH-15）", () => {
     expect(conflict.body).toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
     expect(await paymentCount(tripId)).toBe(1);
 
-    // 取り消しも同じく: 同じキーの再送は元の 201、別キーは 200 で既存
+    // 取り消しも同じく: 同じキーの再送は元の201、別キーは200で既存
     const cancelKey = newKey();
     const cancelled = await cancelPayment(hinataCookie, tripId, paymentId, cancelKey);
     expect(cancelled.status).toBe(201);
@@ -483,7 +483,7 @@ describe("応答が消えたあとの再送（FH-15）", () => {
     expect(replayCancel.status).toBe(201);
     expect(replayCancel.body).toEqual(cancelled.body);
 
-    // poolFor の pool は db.stop() がまとめて閉じる（ここでは閉じない）
+    // poolForのpoolはdb.stop()がまとめて閉じる（ここでは閉じない）
     const runtime = db.poolFor("app_runtime");
     const visible = await runtime.query(
       "SELECT resource_type, http_status FROM infra.command_receipts WHERE resource_id = $1 ORDER BY resource_type",
@@ -525,9 +525,9 @@ describe("同時実行の整合（レビュー must 対応）", () => {
     const tripB = await createTrip(hinataCookie, { name: "別の旅行" });
     const key = newKey();
 
-    // 負ける側の支払いの insert を、trip_participants への参照整合
-    // （KEY SHARE ロック取得）で待たせるために、管理者が対象行を先に押さえる。
-    // FOR UPDATE は KEY SHARE と競合する。
+    // 負ける側の支払いのinsertを、trip_participantsへの参照整合
+    // （KEY SHAREロック取得）で待たせるために、管理者が対象行を先に押さえる。
+    // FOR UPDATEはKEY SHAREと競合する。
     const holder = await db.admin.connect();
     let loser: Promise<request.Response>;
     try {
@@ -536,10 +536,10 @@ describe("同時実行の整合（レビュー must 対応）", () => {
         "SELECT trip_id, slot FROM planning.trip_participants WHERE trip_id = $1 FOR UPDATE",
         [tripB],
       );
-      // 負ける側: 受領の照会は通り、支払いの insert でブロックされる
+      // 負ける側: 受領の照会は通り、支払いのinsertでブロックされる
       loser = postPayment(hinataCookie, tripB, paymentBody({ label: "負ける側" }), key);
 
-      // 勝った側が先に COMMIT するのを待ってからブロックを解く
+      // 勝った側が先にCOMMITするのを待ってからブロックを解く
       const winner = await postPayment(hinataCookie, tripA, paymentBody({ label: "勝つ側" }), key);
       expect(winner.status).toBe(201);
     } finally {
@@ -564,7 +564,7 @@ describe("認可（FH-16）", () => {
     const missingTrip = crypto.randomUUID();
     const missingPayment = crypto.randomUUID();
 
-    // 参加しない旅行・存在しない旅行はどちらも同じ 403（支払いの記録・取得・取り消し）
+    // 参加しない旅行・存在しない旅行はどちらも同じ403（支払いの記録・取得・取り消し）
     for (const target of [foreign.tripId, missingTrip]) {
       const create = await postPayment(hinataCookie, target, paymentBody());
       expect(create.status).toBe(403);
@@ -578,12 +578,12 @@ describe("認可（FH-16）", () => {
       expect(cancel.status).toBe(403);
       expect(cancel.body).toMatchObject({ code: "TRIP_NOT_ACCESSIBLE" });
 
-      // 外国の旅行の支払い id でも 403 で 404 にしない（支払いの存在を漏らさない）
+      // 外国の旅行の支払いidでも403で404にしない（支払いの存在を漏らさない）
       const foreignGet = await getPayment(hinataCookie, target, foreign.paymentId);
       expect(foreignGet.status).toBe(403);
     }
 
-    // 参加している旅行の中では、無い支払いと別の旅行の支払いは同じ 404
+    // 参加している旅行の中では、無い支払いと別の旅行の支払いは同じ404
     const missing = await getPayment(hinataCookie, tripId, missingPayment);
     expect(missing.status).toBe(404);
     expect(missing.body).toMatchObject({ code: "PAYMENT_NOT_FOUND" });
@@ -604,7 +604,7 @@ describe("認可（FH-16）", () => {
       requestId: null,
     });
 
-    // 別の旅行の予定を関連付けようとしても 422（支払いは残らない）
+    // 別の旅行の予定を関連付けようとしても422（支払いは残らない）
     const otherTrip = await createTrip(hinataCookie, { name: "別の旅行" });
     const planElsewhere = await createPlan(hinataCookie, otherTrip, {
       name: "別の予定",
@@ -655,7 +655,7 @@ describe("エラーに中身を出さない（FH-17）", () => {
       expect(body).not.toContain("SELECT");
       expect(body).not.toContain("password");
     }
-    // エラーの種類が意図どおり出ていること（全部 4xx/5xx のエラー応答）
+    // エラーの種類が意図どおり出ていること（全部4xx/5xxのエラー応答）
     const statuses = responses.map((r) => r.status);
     expect(statuses).toEqual(expect.arrayContaining([400, 403, 404, 409, 422]));
   });

@@ -1,4 +1,4 @@
-// run 状態の検証・原子的書き込み・破損検出のテスト。
+// run状態の検証・原子的書き込み・破損検出のテスト。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -266,7 +266,7 @@ test('ロックは排他され、解放後に再取得できる', () => {
   }
 });
 
-// ── 再監査 2026-07-26: 同時更新で更新が失われないこと（R-004 回帰）──
+// ── 再監査2026-07-26: 同時更新で更新が失われないこと（R-004回帰）──
 
 test('並行 updateRunState で更新が失われない', async () => {
   const { opts, state: stateDirPath, cleanup } = sandbox();
@@ -300,7 +300,7 @@ test('古いロックの回収が競合しても、別プロセスの更新が�
   const { state: stateDirPath, root, opts, cleanup } = sandbox();
   try {
     saveRunState(createRunState({ taskId: 'stale-race' }), opts);
-    // 異常終了したプロセスが残した古いロック（mtime を 1 分前にする）。
+    // 異常終了したプロセスが残した古いロック（mtimeを1分前にする）。
     const lockPath = join(stateDirPath, `${RUN_STATE_FILENAME}.lock`);
     writeFileSync(lockPath, '0');
     const old = new Date(Date.now() - 60_000);

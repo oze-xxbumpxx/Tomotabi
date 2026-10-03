@@ -9,11 +9,11 @@ import { slotOf, transferDirectionOf } from "../model/breakdown";
 import { PersonAvatar } from "./person-avatar";
 
 /**
- * 残額のカード（v3 の「精算」14・14f・14g）。
- * 対象 0 件 → 「現在、精算する対象はありません」。
- * 対象あり・0 円 → 「受け渡しは不要です」と未処理の件数。
- * 非 0 円 → 向き・金額・対象の件数。
- * 主操作（確認の作成）は呼び出し側が `action` として渡す。
+ * 残額のカード（v3の「精算」14・14f・14g）。
+ * 対象0件 → 「現在、精算する対象はありません」。
+ * 対象あり・0円 → 「受け渡しは不要です」と未処理の件数。
+ * 非0円 → 向き・金額・対象の件数。
+ * 主操作（確認の作成）は呼び出し側が`action`として渡す。
  */
 export function TransferCard({
   participants,

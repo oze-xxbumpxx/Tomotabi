@@ -8,7 +8,7 @@ import {
 } from "../support/database";
 
 // Finance tables created by drizzle/0005_finance_tables.sql (reference spec
-// docs/旅行アプリ設計 3/詳細設計/sql/01_finance.sql, amount cap 9,999,999).
+// docs/旅行アプリ設計3/詳細設計/sql/01_finance.sql, amount cap 9,999,999).
 const FINANCE_TABLES = [
   "record.payments",
   "record.payment_cancellations",
@@ -85,7 +85,7 @@ async function seedSoloTrip(pool: Pool): Promise<{ tripId: string; slot0: string
   return { tripId, slot0 };
 }
 
-// Valid payment: 7,001 円, slot 0 paid, 50/50 -> burden 3,501 / 3,500, contribution +3,500.
+// Valid payment: 7,001円, slot 0 paid, 50/50 -> burden 3,501 / 3,500, contribution +3,500.
 async function insertPayment(
   pool: Pool,
   tripId: string,

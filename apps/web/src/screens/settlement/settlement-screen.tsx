@@ -53,7 +53,7 @@ function isNotAvailableFailure(error: unknown): boolean {
 }
 
 /**
- * `/trips/{tripId}/settlement` の精算（v3 の 14・14f・14g・14i）。
+ * `/trips/{tripId}/settlement`の精算（v3の14・14f・14g・14i）。
  * 残額・内訳・対象の明細・自分の未完了の確認・精算の履歴を欄ごとに出す。
  * 「受け渡しを確認する」はその時点の対象と金額を固定した確認を作り、
  * 受け渡しの確認の画面へ進む。作成は保留中の要求を通す（ADR-0006）。
@@ -86,7 +86,7 @@ export function SettlementScreen({ tripId }: { tripId: string }) {
     },
   });
 
-  // 別画面での保存成功を遷移先で 1 回だけ知らせる（精算の記録）。
+  // 別画面での保存成功を遷移先で1回だけ知らせる（精算の記録）。
   useEffect(() => {
     const pending = takePendingToast();
     if (pending !== null) {
@@ -101,7 +101,7 @@ export function SettlementScreen({ tripId }: { tripId: string }) {
   }, [meState.status, router]);
 
   // 確定した拒否のあとは残額と確認の一覧を取り直す
-  // （対象 0 件で作れない等のとき画面が新しい状態になるように）。
+  // （対象0件で作れない等のとき画面が新しい状態になるように）。
   useEffect(() => {
     if (create.state.status === "rejected") {
       void queryClient.invalidateQueries({ queryKey: ["balance", tripId] });
@@ -122,7 +122,7 @@ export function SettlementScreen({ tripId }: { tripId: string }) {
     );
   }
 
-  // 書き込みが 403 / 404 で拒否されたら C-2。新しいキーで回避しない。
+  // 書き込みが403 / 404で拒否されたらC-2。新しいキーで回避しない。
   if (
     create.state.status === "rejected" &&
     (create.state.httpStatus === 403 || create.state.httpStatus === 404)
@@ -134,7 +134,7 @@ export function SettlementScreen({ tripId }: { tripId: string }) {
     );
   }
 
-  // 取得・再取得の 401 は、表示済みのデータがあっても業務データを隠して C-1。
+  // 取得・再取得の401は、表示済みのデータがあっても業務データを隠してC-1。
   if (
     isAuthFailure(balance.error) ||
     isAuthFailure(previews.error) ||
@@ -147,7 +147,7 @@ export function SettlementScreen({ tripId }: { tripId: string }) {
     );
   }
 
-  // 残額が開けない（403 / 404）は C-2。他の欄の 403 / 404 も同じ扱い。
+  // 残額が開けない（403 / 404）はC-2。他の欄の403 / 404も同じ扱い。
   if (
     isNotAvailableFailure(balance.error) ||
     isNotAvailableFailure(previews.error) ||

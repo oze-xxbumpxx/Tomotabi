@@ -12,16 +12,16 @@ import type {
 } from "../../planning/adapter/outbound/record-history.port";
 
 /**
- * record モジュールの公開照会。planning の予定の更新・取得が使う。
- * UoW のトランザクション内からも呼ばれるため、db ハンドルを外から受ける
- * （予定行のロックを持ったまま履歴を照会する E-19 のため）。
+ * recordモジュールの公開照会。planningの予定の更新・取得が使う。
+ * UoWのトランザクション内からも呼ばれるため、dbハンドルを外から受ける
+ * （予定行のロックを持ったまま履歴を照会するE-19のため）。
  */
 export class PgRecordHistoryQuery implements RecordHistoryPort {
   constructor(private readonly db: NodePgDatabase) {}
 
   /**
-   * 履歴の有無は plan_events の存在で判定する。取り消し済みの行も残る
-   * append-only 表なので、取り消しを含めて「一度でもあれば」になる。
+   * 履歴の有無はplan_eventsの存在で判定する。取り消し済みの行も残る
+   * append-only表なので、取り消しを含めて「一度でもあれば」になる。
    */
   async hasHistory(planId: string): Promise<boolean> {
     const rows = await this.db

@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../support/fixtures";
 
 // M-01（docs/tests/m2-trips-and-plans.md）: ひなたで旅行を作る → しおりで
-// 予定を 3 件（時刻なしを含む）→ 編集・移動・取りやめ → 開始 → 終了 →
+// 予定を3件（時刻なしを含む）→ 編集・移動・取りやめ → 開始 → 終了 →
 // 終了後に予定を追加。すべて画面どおりに反映されることを確かめる。
 const TRIP = {
   name: "京都 2 泊",
@@ -14,11 +14,11 @@ async function addPlan(
   page: Page,
   plan: {
     name: string;
-    /** 種類の選択肢の読み上げ名（`場所`・`食べ処` など）。 */
+    /** 種類の選択肢の読み上げ名（`場所`・`食べ処`など）。 */
     kindLabel: string;
-    /** 期間内の日付の表示（`10/11 日` の形）。省略時はフォームの初期値の日。 */
+    /** 期間内の日付の表示（`10/11 日`の形）。省略時はフォームの初期値の日。 */
     dateLabel?: string;
-    /** `HH:MM`。null は「時刻未定」のままにする。 */
+    /** `HH:MM`。nullは「時刻未定」のままにする。 */
     time?: string;
   },
 ): Promise<void> {
@@ -27,8 +27,8 @@ async function addPlan(
     page.getByRole("heading", { name: "予定を追加" }),
   ).toBeVisible();
   await page.getByLabel("名前").fill(plan.name);
-  // 種類の radio は sr-only で読み上げ名だけを持ち、見た目の
-  // 選択肢（label 内の span）がポインタを受けるため force で選ぶ。
+  // 種類のradioはsr-onlyで読み上げ名だけを持ち、見た目の
+  // 選択肢（label内のspan）がポインタを受けるためforceで選ぶ。
   await page
     .getByRole("radio", { name: plan.kindLabel, exact: true })
     .check({ force: true });
@@ -83,7 +83,7 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     page.getByText("この日の予定はまだありません"),
   ).toBeVisible();
 
-  // 1 日目（10/10）に予定を 3 件。時刻順に並び、時刻未定は末尾。
+  // 1日目（10/10）に予定を3件。時刻順に並び、時刻未定は末尾。
   await addPlan(page, {
     name: "清水寺",
     kindLabel: "場所",
@@ -134,7 +134,7 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     .click();
   await expect(page.getByRole("status").filter({ hasText: "移動しました" })).toBeVisible();
 
-  // 詳細の日付リンク（`?date=plan.date` 行き）から 10/11 のしおりへ
+  // 詳細の日付リンク（`?date=plan.date`行き）から10/11のしおりへ
   const planDateLink = page.getByRole("link", {
     name: "10/11 日",
     exact: true,
@@ -146,7 +146,7 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     page.getByRole("listitem").filter({ hasText: "清水寺（早朝参り）" }),
   ).toBeVisible();
 
-  // 10/10 のしおりには出ない
+  // 10/10のしおりには出ない
   await page
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /^1 日目/ })
@@ -156,7 +156,7 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     page.getByRole("listitem").filter({ hasText: "清水寺" }),
   ).toHaveCount(0);
 
-  // 取りやめ（予定は 10/11 にある。日付バーで明示して選ぶ）
+  // 取りやめ（予定は10/11にある。日付バーで明示して選ぶ）
   await page
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /2 日目/ })
@@ -176,7 +176,7 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
   await expect(
     page.getByRole("button", { name: "取りやめにする" }),
   ).not.toBeVisible();
-  // 詳細の日付リンクで 10/11 のしおりへ戻る（取りやめでも日付は変わらない）
+  // 詳細の日付リンクで10/11のしおりへ戻る（取りやめでも日付は変わらない）
   await page.getByRole("link", { name: "10/11 日", exact: true }).click();
   await page.waitForURL(/date=2026-10-11/);
   await expect(
@@ -207,7 +207,7 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
   ).toBeVisible();
   await expect(page.getByText("終了", { exact: true })).toBeVisible();
 
-  // 終了後も予定を追加できる（10/12 に時刻未定で追加）
+  // 終了後も予定を追加できる（10/12に時刻未定で追加）
   await page
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /3 日目/ })

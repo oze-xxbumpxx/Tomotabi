@@ -21,7 +21,7 @@ import {
 
 /**
  * 旅行の作成。ロックする旅行がまだ無いため、旅行行ロックの代わりに
- * allowlist の二人を読む（設計書「書き込みの共通の流れ」）。
+ * allowlistの二人を読む（設計書「書き込みの共通の流れ」）。
  */
 export class CreateTripUseCase implements CreateTripInputPort {
   constructor(
@@ -41,7 +41,7 @@ export class CreateTripUseCase implements CreateTripInputPort {
     const period = parseTripPeriod(input.startsOn, input.endsOn);
     try {
       return await this.unitOfWork.run(async (ctx) => {
-        // receipt を参加者の確認より先に見る。作成に成功したあとで一方が
+        // receiptを参加者の確認より先に見る。作成に成功したあとで一方が
         // 利用停止になっても、同じキーの成功の再送は元の結果を返す（F-17）。
         const stored = await storedReceipt<TripContract>(
           ctx,
@@ -53,8 +53,8 @@ export class CreateTripUseCase implements CreateTripInputPort {
         if (stored !== null) {
           return stored;
         }
-        // allowlist の行はロックしない（行ロックは UPDATE 権限が要り、
-        // app_runtime の allowlist の UPDATE は M1 で禁止されている。差分 1）。
+        // allowlistの行はロックしない（行ロックはUPDATE権限が要り、
+        // app_runtimeのallowlistのUPDATEはM1で禁止されている。差分1）。
         const participants = await ctx.participants.listEnabled();
         if (participants.length !== 2) {
           throw new ApiError({
@@ -63,7 +63,7 @@ export class CreateTripUseCase implements CreateTripInputPort {
             message: "The two participants are not ready",
           });
         }
-        // 旅行・参加者・財務ガード・receipt はすべてこのトランザクションで
+        // 旅行・参加者・財務ガード・receiptはすべてこのトランザクションで
         // 作る。どれかが失敗すれば全体がロールバックされる。
         const trip = await ctx.trips.insert({
           name,
@@ -87,8 +87,8 @@ export class CreateTripUseCase implements CreateTripInputPort {
         return { httpStatus: 201, body, replayed: false };
       });
     } catch (error) {
-      // 同じキーの同時作成は receipt の PK 違反で負ける側が分かる（E-17）。
-      // その時点でこちらはロールバック済み。勝った側が COMMIT した receipt を
+      // 同じキーの同時作成はreceiptのPK違反で負ける側が分かる（E-17）。
+      // その時点でこちらはロールバック済み。勝った側がCOMMITしたreceiptを
       // 新しいトランザクションで読み直して同じ結果を返す。
       if (!isUniqueViolation(error)) {
         throw error;

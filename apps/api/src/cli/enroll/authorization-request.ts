@@ -10,7 +10,7 @@ export type AuthorizationSecrets = {
 
 const random = (): string => randomBytes(32).toString("base64url");
 
-/** state / nonce / PKCE verifier を毎回ランダムに生成する（使い捨て）。 */
+/** state / nonce / PKCE verifierを毎回ランダムに生成する（使い捨て）。 */
 export function createAuthorizationSecrets(): AuthorizationSecrets {
   return { state: random(), nonce: random(), codeVerifier: random() };
 }

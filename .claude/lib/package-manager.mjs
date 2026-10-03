@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// パッケージマネージャー検出。Cookpit 由来の pnpm 固定をやめる。
+// パッケージマネージャー検出。Cookpit由来のpnpm固定をやめる。
 // 優先順: pnpm-lock.yaml → yarn.lock → bun.lock(b) → package-lock.json / npm-shrinkwrap → npm。
-// lockfile が無くても npm を返す（npx / npm run が最も広く入っているため）。
+// lockfileが無くてもnpmを返す（npx / npm runが最も広く入っているため）。
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -21,7 +21,7 @@ export function detectPackageManager(root, fs = { existsSync }) {
 }
 
 /**
- * package.json scripts の起動 argv。
+ * package.json scriptsの起動argv。
  * @param {'pnpm' | 'yarn' | 'bun' | 'npm'} pm
  * @param {string} script
  * @returns {string[]}
@@ -34,7 +34,7 @@ export function scriptArgv(pm, script) {
 }
 
 /**
- * ローカル bin（prettier 等）の起動 argv。未インストールなら失敗させる（勝手に DL しない）。
+ * ローカルbin（prettier等）の起動argv。未インストールなら失敗させる（勝手にDLしない）。
  * @param {'pnpm' | 'yarn' | 'bun' | 'npm'} pm
  * @param {string} bin
  * @param {string[]} [args]
@@ -48,8 +48,8 @@ export function execArgv(pm, bin, args = []) {
 }
 
 /**
- * ハーネス試験ファイル。休眠中の review-readiness は既定で除く（D-3）。
- * @param {string[]} files basename または相対パス
+ * ハーネス試験ファイル。休眠中のreview-readinessは既定で除く（D-3）。
+ * @param {string[]} files basenameまたは相対パス
  * @param {{ includeDormant?: boolean }} [opts]
  * @returns {string[]}
  */

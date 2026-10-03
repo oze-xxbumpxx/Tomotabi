@@ -100,9 +100,9 @@ async function waitForCheckStatus(status: string) {
 }
 
 /**
- * 結果不明の要求を IndexedDB に残す操作の試験用フォーム。
+ * 結果不明の要求をIndexedDBに残す操作の試験用フォーム。
  * 支払い・精算の画面ができるまで、この形で保存の流れを通す。
- * `check` を `useSaveState` に渡しているので、保留がある・確認中・
+ * `check`を`useSaveState`に渡しているので、保留がある・確認中・
  * 確認できないあいだは「保存」（新しいキーでの送信）は受け付けない。
  */
 function FinanceForm({ send, userId }: { send: Send; userId: string }) {
@@ -307,7 +307,7 @@ describe("保留中の要求（IndexedDB）", () => {
   it("FW-09: 結果不明のあと再読み込みすると、同じ利用者だけ「同じ内容で確認する」が出て、本人の操作で同じ要求を送る", async () => {
     const user = userEvent.setup();
 
-    // 再読み込み前: network で結果不明 → 保留が残る。
+    // 再読み込み前: networkで結果不明 → 保留が残る。
     const first = render(
       <FinanceForm send={vi.fn(failSend({ kind: "network" }))} userId={USER_ID} />,
     );
@@ -351,7 +351,7 @@ describe("保留中の要求（IndexedDB）", () => {
   it("再読み込み後に保留が残っているあいだは新しいキーで保存せず、同じ内容で確かめるだけ送る", async () => {
     const user = userEvent.setup();
 
-    // network で結果不明 → 保留が残る → 再読み込み相当でアンマウント。
+    // networkで結果不明 → 保留が残る → 再読み込み相当でアンマウント。
     const first = render(
       <FinanceForm send={vi.fn(failSend({ kind: "network" }))} userId={USER_ID} />,
     );
@@ -373,7 +373,7 @@ describe("保留中の要求（IndexedDB）", () => {
     expect(send).not.toHaveBeenCalled();
     expect(await listPendingRequestsForUser(USER_ID)).toHaveLength(1);
 
-    // 「同じ内容で確認する」は同じキーで 1 回だけ送る。
+    // 「同じ内容で確認する」は同じキーで1回だけ送る。
     await user.click(
       screen.getByRole("button", { name: "同じ内容で確認する" }),
     );
@@ -468,7 +468,7 @@ describe("読み出した保留の検証", () => {
       const user = userEvent.setup();
       render(<FinanceForm send={send} userId={USER_ID} />);
 
-      // 「この保存は確かめられません」の扱い（storage-unavailable と同じ案内）。
+      // 「この保存は確かめられません」の扱い（storage-unavailableと同じ案内）。
       expect(
         await screen.findByText(
           "この端末では保存の確認に使う領域が使えません",
@@ -543,7 +543,7 @@ describe("読み出した保留の検証", () => {
     // 別の利用者の保留。
     const otherUserRecord = makeRecord({ userId: OTHER_USER_ID });
     await savePendingRequest(otherUserRecord);
-    // 別の旅行の保留（url はその保留の tripId に合わせる）。
+    // 別の旅行の保留（urlはその保留のtripIdに合わせる）。
     const otherTripRequest = createMutationRequest({
       operation: OPERATION,
       url: `/api/trips/trip-2/payments`,

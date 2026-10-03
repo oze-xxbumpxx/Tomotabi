@@ -12,10 +12,10 @@ export const SETTLEMENT_READ_UNIT_OF_WORK = Symbol(
 );
 
 /**
- * 確認・精算の書き込みの文脈。財務共通の文脈（設計書「UnitOfWork の文脈」）
- * に、支払いの読み取り口と settlement の Repository を足したもの。
- * PgFinanceUnitOfWork がこの文脈を組み立て、record の UseCase は
- * FinanceWorkContext の面だけを使う。
+ * 確認・精算の書き込みの文脈。財務共通の文脈（設計書「UnitOfWorkの文脈」）
+ * に、支払いの読み取り口とsettlementのRepositoryを足したもの。
+ * PgFinanceUnitOfWorkがこの文脈を組み立て、recordのUseCaseは
+ * FinanceWorkContextの面だけを使う。
  */
 export interface SettlementWorkContext extends FinanceWorkContext {
   paymentsRead: PaymentsReadPort;
@@ -25,8 +25,8 @@ export interface SettlementWorkContext extends FinanceWorkContext {
 export type SettlementUnitOfWork = UnitOfWork<SettlementWorkContext>;
 
 /**
- * 残額・確認の読み取りの文脈。REPEATABLE READ の短い読み取り
- * トランザクションで、1 つのスナップショットから組み立てる（設計書
+ * 残額・確認の読み取りの文脈。REPEATABLE READの短い読み取り
+ * トランザクションで、1つのスナップショットから組み立てる（設計書
  * 「読み取り」）。書き込みの口は持たない。
  */
 export interface SettlementReadContext {

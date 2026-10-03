@@ -10,9 +10,9 @@ export type EnrollmentRecord = {
 };
 
 /**
- * users → accounts（トークン列は null）→ allowed_google_accounts を 1 トランザクションで INSERT する。
- * slot / sub / email の重複は一意制約違反（23505）として throw し、全件ロールバックする。
- * 管理者接続（migrator）で実行する。app_runtime には INSERT 権限が無い。
+ * users → accounts（トークン列はnull）→ allowed_google_accountsを1トランザクションでINSERTする。
+ * slot / sub / emailの重複は一意制約違反（23505）としてthrowし、全件ロールバックする。
+ * 管理者接続（migrator）で実行する。app_runtimeにはINSERT権限が無い。
  */
 export async function insertEnrollment(pool: Pool, record: EnrollmentRecord): Promise<{ userId: string }> {
   const client = await pool.connect();

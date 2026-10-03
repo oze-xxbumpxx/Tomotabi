@@ -7,7 +7,7 @@ export const DEFAULT_CALLBACK_TIMEOUT_MS = 5 * 60 * 1000;
 
 export type LoopbackServer = {
   redirectUri: string;
-  /** 最初の callback で決着する。state 不一致・error 応答・タイムアウトは EnrollmentError。 */
+  /** 最初のcallbackで決着する。state不一致・error応答・タイムアウトはEnrollmentError。 */
   waitForCode(): Promise<string>;
   close(): Promise<void>;
 };
@@ -20,8 +20,8 @@ type LoopbackOptions = {
 };
 
 /**
- * 127.0.0.1 のランダムポートで認可コードを 1 回だけ受け取る。
- * 応答ページには受け取った値を一切書き戻さない（code / state をブラウザ履歴以外へ残さない）。
+ * 127.0.0.1のランダムポートで認可コードを1回だけ受け取る。
+ * 応答ページには受け取った値を一切書き戻さない（code / stateをブラウザ履歴以外へ残さない）。
  */
 export async function startLoopbackServer(options: LoopbackOptions): Promise<LoopbackServer> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_CALLBACK_TIMEOUT_MS;

@@ -54,7 +54,7 @@ function newKey(): string {
   return crypto.randomUUID();
 }
 
-/** 一覧カーソルの wire 形式（サーバー発行の形に合わせた base64url の JSON）。 */
+/** 一覧カーソルのwire形式（サーバー発行の形に合わせたbase64urlのJSON）。 */
 function cursorOf(previewId: string): string {
   return Buffer.from(JSON.stringify({ i: previewId }), "utf8").toString(
     "base64url",
@@ -215,9 +215,9 @@ async function previewCount(tripId: string): Promise<number> {
 }
 
 /**
- * 確認を精算済みにする（精算の完了 API はまだ無いので、管理者の接続から
- * 本番が書くのと同じ行を入れる: 精算 → 明細 → 占有）。confirmation の
- * preview_items をそのまま settlement.items に写す。
+ * 確認を精算済みにする（精算の完了APIはまだ無いので、管理者の接続から
+ * 本番が書くのと同じ行を入れる: 精算 → 明細 → 占有）。confirmationの
+ * preview_itemsをそのままsettlement.itemsに写す。
  */
 async function adminSettlePreview(
   tripId: string,
@@ -276,7 +276,7 @@ async function adminCancelSettlement(
   );
 }
 
-/** ひなたが参加しない旅行を別利用者 2 人で直接作る（guard の行も入れる）。 */
+/** ひなたが参加しない旅行を別利用者2人で直接作る（guardの行も入れる）。 */
 async function seedForeignTrip(): Promise<{ tripId: string }> {
   const suffix = crypto.randomUUID().slice(0, 8);
   const u0 = await insertUser(`foreign-${suffix}-0`, `foreign-${suffix}-0@example.test`);
@@ -376,7 +376,7 @@ describe("残額の取得（FH-04）", () => {
       { userId: aoi.userId, slot: 1, displayName: "あおい" },
     ]);
     // 寄与 +3,500（ひなたの支払い）と −2,000（あおいの支払い）→ あおいが
-    // ひなたに 1,500 円渡す向き。
+    // ひなたに1,500円渡す向き。
     expect(response.body.transfer).toEqual({
       signedTotalYen: "1500",
       amountYen: "1500",
@@ -444,7 +444,7 @@ describe("対象 0 件と 0 円（FH-05）", () => {
     expect(response.body).toMatchObject({ code: "NO_SETTLEMENT_TARGET" });
     expect(await previewCount(tripId)).toBe(0);
 
-    // 取り消し済みの支払いだけ（精算前）でも対象 0 件
+    // 取り消し済みの支払いだけ（精算前）でも対象0件
     const created = await createPayment(hinataCookie, tripId);
     await cancelPayment(hinataCookie, tripId, created.body.id);
     const again = await postPreview(hinataCookie, tripId);
@@ -545,7 +545,7 @@ describe("確認の固定（FH-06）", () => {
         (item: { payment: { id: string } }) => item.payment.id,
       ),
     ).toEqual([first.body.id, second.body.id]);
-    // +3,500 と −2,000 で 1,500 円があおいからひなたへ
+    // +3,500と −2,000で1,500円があおいからひなたへ
     expect(balance.body.transfer).toMatchObject({
       signedTotalYen: "1500",
       fromUserId: aoi.userId,
@@ -606,8 +606,8 @@ describe("未完了の確認の一覧（FH-07）", () => {
   it("同じミリ秒でマイクロ秒だけ違う確認がページの境目で抜けない", async () => {
     const tripId = await createTrip(hinataCookie, { name: "時刻の境目" });
     // 同じミリ秒でマイクロ秒だけ違う時刻と、同時刻の重複を入れる
-    // （カーソルの起点を JS のミリ秒に丸めると境目の行が抜ける）。
-    // previews は append-only で UPDATE できないため、時刻つきで直接入れる。
+    // （カーソルの起点をJSのミリ秒に丸めると境目の行が抜ける）。
+    // previewsはappend-onlyでUPDATEできないため、時刻つきで直接入れる。
     const [first, second, third] = [
       "2027-01-01T10:00:00.123001Z",
       "2027-01-01T10:00:00.123002Z",
@@ -636,7 +636,7 @@ describe("未完了の確認の一覧（FH-07）", () => {
       cursor = page.body.nextCursor;
     } while (cursor !== null);
 
-    // 同時刻の 2 件は id の降順、そのあとに .123001 の確認
+    // 同時刻の2件はidの降順、そのあとに .123001の確認
     const tieOrder = [second.id, third.id].sort().reverse();
     expect(ids).toEqual([tieOrder[0], tieOrder[1], first.id]);
   });
@@ -670,10 +670,10 @@ describe("未完了の確認の一覧（FH-07）", () => {
     ]);
     expect(page2.body.nextCursor).toBeNull();
 
-    // 形が違う・起点が無い・他人の・別の旅行の自分の確認を指す cursor は同じ 400
+    // 形が違う・起点が無い・他人の・別の旅行の自分の確認を指すcursorは同じ400
     for (const cursor of [
       "not-a-cursor",
-      // 存在しない確認 id を指す正しい形のカーソル
+      // 存在しない確認idを指す正しい形のカーソル
       cursorOf(crypto.randomUUID()),
       // あおいの確認を指す（自分の一覧の起点にできない）
       cursorOf(aoiPreview.body.id),
@@ -688,7 +688,7 @@ describe("未完了の確認の一覧（FH-07）", () => {
       expect(response.status).toBe(400);
       expect(response.body).toMatchObject({ code: "INVALID_REQUEST" });
     }
-    // status は pending だけ
+    // statusはpendingだけ
     const badStatus = await listPreviews(hinataCookie, tripId, "?status=all");
     expect(badStatus.status).toBe(400);
   });
@@ -701,7 +701,7 @@ describe("確認の検証結果（FH-08）", () => {
     const first = await createPreview(hinataCookie, tripId);
     const second = await createPreview(aoiCookie, tripId);
 
-    // 管理者の接続から second の確認を精算済みにする
+    // 管理者の接続からsecondの確認を精算済みにする
     const settlementId = await adminSettlePreview(
       tripId,
       second.body.id,
@@ -772,7 +772,7 @@ describe("確認の検証結果（FH-08）", () => {
     const settled = await createPreview(hinataCookie, tripId);
     await adminSettlePreview(tripId, settled.body.id, hinata.userId);
 
-    // 残額の対象は 0 件（精算済み）
+    // 残額の対象は0件（精算済み）
     const cleared = await getBalance(hinataCookie, tripId);
     expect(cleared.body.targetCount).toBe(0);
 
@@ -787,7 +787,7 @@ describe("確認の検証結果（FH-08）", () => {
       payment: { id: payment.body.id },
     });
     expect(balance.body.items[0].baseSettlementId).not.toBeNull();
-    // ひなたの 3,500 を戻す → ひなたからあおいへ
+    // ひなたの3,500を戻す → ひなたからあおいへ
     expect(balance.body.transfer).toMatchObject({
       signedTotalYen: "-3500",
       amountYen: "3500",
@@ -795,7 +795,7 @@ describe("確認の検証結果（FH-08）", () => {
       toUserId: aoi.userId,
     });
 
-    // 戻しの対象を含んだ確認を作れる（REVERSAL の明細の形が入る）
+    // 戻しの対象を含んだ確認を作れる（REVERSALの明細の形が入る）
     const preview = await postPreview(hinataCookie, tripId);
     expect(preview.status).toBe(201);
     expect(preview.body.items[0]).toMatchObject({
@@ -828,8 +828,8 @@ describe("確認の作成の再送", () => {
     expect(replay.body).toEqual(created.body);
     expect(await previewCount(tripA)).toBe(1);
 
-    // 同じキーを別の旅行へ: 受領の hash が違うので 409（本文が常に空でも
-    // tripId が request_hash に入る）
+    // 同じキーを別の旅行へ: 受領のhashが違うので409（本文が常に空でも
+    // tripIdがrequest_hashに入る）
     const reused = await postPreview(hinataCookie, tripB, key);
     expect(reused.status).toBe(409);
     expect(reused.body).toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
@@ -878,7 +878,7 @@ describe("認可と不在（403・404）", () => {
 
     const foreign = await getPreview(hinataCookie, tripId, elsewhere.body.id);
     expect(foreign.status).toBe(404);
-    // 無い id と別の旅行の確認は同じ応答（存在を漏らさない）
+    // 無いidと別の旅行の確認は同じ応答（存在を漏らさない）
     expect({ ...foreign.body, requestId: null }).toEqual({
       ...missing.body,
       requestId: null,

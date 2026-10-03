@@ -10,7 +10,7 @@ export type TripPeriod = Readonly<{
 
 export const TripPeriod = {
   /**
-   * @throws 開始日が終了日より後のとき Error を投げる。
+   * @throws開始日が終了日より後のときErrorを投げる。
    */
   create(startsOn: LocalDate, endsOn: LocalDate): TripPeriod {
     if (LocalDate.compare(startsOn, endsOn) > 0) {
@@ -20,7 +20,7 @@ export const TripPeriod = {
   },
 
   /**
-   * date が期間に含まれるか（開始日・終了日を含む）。
+   * dateが期間に含まれるか（開始日・終了日を含む）。
    */
   contains(period: TripPeriod, date: LocalDate): boolean {
     return (

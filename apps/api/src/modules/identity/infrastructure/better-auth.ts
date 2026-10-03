@@ -14,7 +14,7 @@ import * as identitySchema from "../../../infrastructure/database/schema/identit
 import { isAllowedGoogleAccount } from "./allowlist-query";
 
 export type AuthConfig = {
-  /** 公開アプリのオリジン（= baseURL。Next の rewrite で同一オリジンに見える前置きを使う）。 */
+  /** 公開アプリのオリジン（= baseURL。Nextのrewriteで同一オリジンに見える前置きを使う）。 */
   baseURL: string;
   secret: string;
   googleClientId: string;
@@ -23,13 +23,13 @@ export type AuthConfig = {
 };
 
 /**
- * テストだけが渡す追加設定。`testUtils` プラグインはここからしか入らない
- * （本番設定に混ぜない。apps/api/src/** から better-auth/plugins は ESLint が塞ぐ）。
+ * テストだけが渡す追加設定。`testUtils`プラグインはここからしか入らない
+ * （本番設定に混ぜない。apps/api/src/** からbetter-auth/pluginsはESLintが塞ぐ）。
  */
 export type AuthOverrides = Pick<BetterAuthOptions, "plugins">;
 
-// 公開するのは 3 経路だけ（設計書「API 設計」）。残りの既知経路を Better Auth 側でも止める。
-// 主の防御は bootstrap/auth-route-allowlist で、こちらは二重防御。
+// 公開するのは3経路だけ（設計書「API設計」）。残りの既知経路をBetter Auth側でも止める。
+// 主の防御はbootstrap/auth-route-allowlistで、こちらは二重防御。
 const DISABLED_PATHS = [
   "/account-info",
   "/change-email",
@@ -61,8 +61,8 @@ const DISABLED_PATHS = [
 
 const SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 7;
 
-// エラー body は contracts の Error スキーマ（code と一般的な message）に揃える。
-// message に入力値や内部情報を含めない。
+// エラーbodyはcontractsのErrorスキーマ（codeと一般的なmessage）に揃える。
+// messageに入力値や内部情報を含めない。
 const INVALID_REQUEST_ERROR = {
   code: "INVALID_REQUEST",
   message: "Invalid sign-in request",
@@ -72,14 +72,14 @@ const UNSUPPORTED_MEDIA_TYPE_ERROR = {
   message: "Content-Type must be application/json",
 } as const;
 
-// better-auth の内部ロガーは例外オブジェクトをそのまま出力し、DB エラー時に
-// query params（= セッション token など）が stderr に流れる。ログに秘密を出さない
-// 完了条件のため、message だけを pino に流し args は捨てる。
+// better-authの内部ロガーは例外オブジェクトをそのまま出力し、DBエラー時に
+// query params（= セッションtokenなど）がstderrに流れる。ログに秘密を出さない
+// 完了条件のため、messageだけをpinoに流しargsは捨てる。
 const internalLogger = pino({ name: "better-auth" });
 
 /**
- * sign-in/social の body 検査（U-15）。provider は google 固定、
- * idToken 持ち込みと固定以外の callbackURL は拒否する。
+ * sign-in/socialのbody検査（U-15）。providerはgoogle固定、
+ * idToken持ち込みと固定以外のcallbackURLは拒否する。
  */
 const signInSocialBodyCheck = createAuthMiddleware(async (ctx) => {
   if (ctx.path !== "/sign-in/social") {
@@ -98,7 +98,7 @@ const signInSocialBodyCheck = createAuthMiddleware(async (ctx) => {
     throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
   }
   // 失敗時・新規登録時の戻り先はサーバー側の設定（onAPIError.errorURL）だけで決める。
-  // クライアントから受け取ると open redirect になるため、値の指定自体を拒否する。
+  // クライアントから受け取るとopen redirectになるため、値の指定自体を拒否する。
   if (body.errorCallbackURL !== undefined && body.errorCallbackURL !== null) {
     throw new APIError("BAD_REQUEST", { ...INVALID_REQUEST_ERROR });
   }
@@ -108,8 +108,8 @@ const signInSocialBodyCheck = createAuthMiddleware(async (ctx) => {
 });
 
 /**
- * better-call が返す 415 の body は受け取った Content-Type の値を message に含める。
- * onResponse で body を差し替え、code と一般的な message だけにする。
+ * better-callが返す415のbodyは受け取ったContent-Typeの値をmessageに含める。
+ * onResponseでbodyを差し替え、codeと一般的なmessageだけにする。
  */
 const unsupportedMediaTypeBody: BetterAuthPlugin = {
   id: "tomotabi-unsupported-media-type-body",
@@ -129,8 +129,8 @@ const unsupportedMediaTypeBody: BetterAuthPlugin = {
 let currentAuth: Auth | null = null;
 
 /**
- * betterAuth() を生成する唯一の場所。生成したインスタンスは getAuth() で
- * IdentityModule の provider からも参照する（auth は DI 管理外で生成するため）。
+ * betterAuth()を生成する唯一の場所。生成したインスタンスはgetAuth()で
+ * IdentityModuleのproviderからも参照する（authはDI管理外で生成するため）。
  */
 export function createAuth(
   config: AuthConfig,
@@ -138,8 +138,8 @@ export function createAuth(
   options?: AuthOverrides,
 ): Auth {
   const db = drizzle(pool, { schema: identitySchema });
-  // BetterAuthOptions として明示しないと Auth<具体オプション> になり、
-  // Auth (= Auth<BetterAuthOptions>) へ代入できない（generic は不変）。
+  // BetterAuthOptionsとして明示しないとAuth<具体オプション> になり、
+  // Auth (= Auth<BetterAuthOptions>)へ代入できない（genericは不変）。
   const authOptions: BetterAuthOptions = {
     baseURL: config.baseURL,
     basePath: "/api/auth",
@@ -177,14 +177,14 @@ export function createAuth(
       database: { generateId: "uuid" },
     },
     disabledPaths: [...DISABLED_PATHS],
-    // OAuth 失敗時の戻り先。ライブラリが ?error=… を付けて 302 し、web の /sign-in が表示する
+    // OAuth失敗時の戻り先。ライブラリが ?error=… を付けて302し、webの /sign-inが表示する
     onAPIError: { errorURL: `${config.baseURL}/sign-in` },
     hooks: { before: signInSocialBodyCheck },
     databaseHooks: {
       session: {
         create: {
           before: async (session) => {
-            // false を返すとライブラリ側で発行がロールバックされる（E-02、E-05）。
+            // falseを返すとライブラリ側で発行がロールバックされる（E-02、E-05）。
             if (!(await isAllowedGoogleAccount(pool, session.userId))) {
               return false;
             }
@@ -204,7 +204,7 @@ export function createAuth(
   return auth;
 }
 
-/** createAuth がまだ呼ばれていない / DATABASE_URL が無いときは null。 */
+/** createAuthがまだ呼ばれていない / DATABASE_URLが無いときはnull。 */
 export function getAuth(): Auth | null {
   return currentAuth;
 }
@@ -218,8 +218,8 @@ function requiredEnv(name: string): string {
 }
 
 /**
- * DATABASE_URL が無いときは auth を生成しない（認証経路と Guard は 503）。
- * DATABASE_URL があるのに必須の認証用環境変数が無いのは設定ミスなので起動時に失敗させる。
+ * DATABASE_URLが無いときはauthを生成しない（認証経路とGuardは503）。
+ * DATABASE_URLがあるのに必須の認証用環境変数が無いのは設定ミスなので起動時に失敗させる。
  */
 export function createAuthFromEnv(): Auth | null {
   if (!process.env.DATABASE_URL) {

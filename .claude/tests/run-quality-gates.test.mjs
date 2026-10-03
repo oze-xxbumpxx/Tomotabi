@@ -1,4 +1,4 @@
-// run-quality-gates.sh — package.json 無しでもハーネス試験に落ち、休眠テストは既定除外。
+// run-quality-gates.sh — package.json無しでもハーネス試験に落ち、休眠テストは既定除外。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -28,8 +28,8 @@ function runGates(sb, extraArgs = []) {
     CLAUDE_PROJECT_DIR: sb.root,
     HARNESS_STATE_DIR: sb.state,
   };
-  // 親が node --test のとき、子の node --test が同じランナーに巻き込まれて
-  // 失敗しても exit 0 になる。日常ゲートの入れ子実行を再現するために切る。
+  // 親がnode --testのとき、子のnode --testが同じランナーに巻き込まれて
+  // 失敗してもexit 0になる。日常ゲートの入れ子実行を再現するために切る。
   delete env.NODE_TEST_CONTEXT;
   try {
     const stdout = execFileSync('bash', [scriptPath, ...extraArgs], {

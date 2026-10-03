@@ -6,7 +6,7 @@ import type { Trip } from "@tomotabi/contracts";
 import { formatTripPeriod } from "@/shared/lib/local-date";
 import { TripStatusBadge } from "./trip-status-badge";
 
-/** 一覧の 1 行（15）。押すとその旅行のしおりへ移る。 */
+/** 一覧の1行（15）。押すとその旅行のしおりへ移る。 */
 export function TripRow({
   trip,
   selected,

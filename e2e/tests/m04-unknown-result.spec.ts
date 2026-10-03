@@ -2,9 +2,9 @@ import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
 
 // M-04（docs/tests/m2-trips-and-plans.md、ADR-0005 Decision 3）:
-// 予定の追加の POST を page.route でサーバーに通し（route.fetch()）、
+// 予定の追加のPOSTをpage.routeでサーバーに通し（route.fetch()）、
 // 応答だけ捨てる（route.abort("failed")）→ 結果不明（C-4）と入力の固定
-// → unroute →「同じ内容で確認する」→ 成功 → その日の予定は 1 件だけ
+// → unroute →「同じ内容で確認する」→ 成功 → その日の予定は1件だけ
 // （同じ要求の再送で重複して作られない）。
 // 日はすべて明示して選ぶ（しおりの既定の日は実行する日で変わる）。
 const TRIP = {
@@ -19,7 +19,7 @@ test("M-04: 応答の届かなかった保存は同じ内容で確認する", as
 }) => {
   await createTrip(page, TRIP);
 
-  // 2 日目（11/3 火）を日付バーで明示して選ぶ。
+  // 2日目（11/3火）を日付バーで明示して選ぶ。
   await page
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /^2 日目/ })
@@ -29,8 +29,8 @@ test("M-04: 応答の届かなかった保存は同じ内容で確認する", as
     page.getByText("この日の予定はまだありません"),
   ).toBeVisible();
 
-  // 追加の POST だけを捕まえ、API に届けてから応答を捨てる
-  // （サーバーでは保存が成立し、ブラウザには network 失敗に見える）。
+  // 追加のPOSTだけを捕まえ、APIに届けてから応答を捨てる
+  // （サーバーでは保存が成立し、ブラウザにはnetwork失敗に見える）。
   await page.route("**/api/trips/*/plans", async (route) => {
     if (route.request().method() !== "POST") {
       await route.continue();
@@ -43,8 +43,8 @@ test("M-04: 応答の届かなかった保存は同じ内容で確認する", as
   await page.getByRole("link", { name: "予定を追加" }).click();
   const sheet = page.getByRole("dialog", { name: "予定を追加" });
   await sheet.getByLabel("名前").fill(PLAN_NAME);
-  // 種類の radio は sr-only（見た目の span がポインタを受ける）ため
-  // force で選ぶ。M-01 の addPlan と同じ。
+  // 種類のradioはsr-only（見た目のspanがポインタを受ける）ため
+  // forceで選ぶ。M-01のaddPlanと同じ。
   await sheet
     .getByRole("radio", { name: "場所" })
     .check({ force: true });
@@ -75,7 +75,7 @@ test("M-04: 応答の届かなかった保存は同じ内容で確認する", as
     page.getByRole("status").filter({ hasText: "追加しました" }),
   ).toBeVisible();
 
-  // その日のしおりの予定は 1 件だけ（サーバーで作られた分が再送で
+  // その日のしおりの予定は1件だけ（サーバーで作られた分が再送で
   // 重複しない）。
   await expect(page.getByRole("listitem")).toHaveCount(1);
   await expect(

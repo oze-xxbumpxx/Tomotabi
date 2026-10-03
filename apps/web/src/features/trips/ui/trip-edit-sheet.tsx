@@ -30,7 +30,7 @@ import { TripFormFields } from "./trip-form-fields";
 
 type RejectedState = Extract<TripSaveState, { status: "rejected" }>;
 
-/** 403 / 404 の拒否は C-2 に切り替える対象（欄のエラーや再送は出さない）。 */
+/** 403 / 404の拒否はC-2に切り替える対象（欄のエラーや再送は出さない）。 */
 function isNotAvailableState(state: TripSaveState): state is RejectedState {
   return (
     state.status === "rejected" &&
@@ -74,7 +74,7 @@ function sessionExpiredOf(
 
 /**
  * 「旅行名と期間を変更」のシート（作成と同じ形。値を入れた状態で開く）。
- * 名前と期間は別の API なので、変わった方だけを送る。両方変わったら
+ * 名前と期間は別のAPIなので、変わった方だけを送る。両方変わったら
  * 名前（PATCH）→ 期間（PUT）の順に送り、途中で失敗したらその時点の
  * 結果を表示する（期間が失敗しても、保存済みの名前は「保存済み」のまま）。
  */
@@ -93,7 +93,7 @@ export function TripEditSheet({
   onSaved: () => void;
   /** 401（C-1）。業務データを隠すため呼び出し側が全面を差し替える。 */
   onSessionExpired: (unconfirmed: boolean) => void;
-  /** 書き込みが 403 / 404 で拒否（C-2）。呼び出し側が全面を差し替える。 */
+  /** 書き込みが403 / 404で拒否（C-2）。呼び出し側が全面を差し替える。 */
   onNotAvailable: () => void;
 }) {
   const online = useOnlineStatus();
@@ -116,8 +116,8 @@ export function TripEditSheet({
     startsOn: trip.startsOn,
     endsOn: trip.endsOn,
   });
-  // 直近の書き込み応答が返した ETag。次の送信では prop の etag よりこちらを優先する
-  //（名前の保存が成功したあとは version が進むため）。
+  // 直近の書き込み応答が返したETag。次の送信ではpropのetagよりこちらを優先する
+  //（名前の保存が成功したあとはversionが進むため）。
   const etagRef = useRef(etag);
 
   const periodChanged = () =>

@@ -1,11 +1,11 @@
 # 回帰評価: <IMP-YYYY-NNN>
 
-> agent-evaluator が作成。改善前後（before / after）を同じ評価ケースで採点し、悪化が無いかを
-> 確認する。採点基準は [.claude/evals/rubrics/scoring-rubric.md](../../../../.claude/evals/rubrics/scoring-rubric.md)。
+> agent-evaluatorが作成。改善前後（before / after）を同じ評価ケースで採点し、悪化が無いかを
+> 確認する。採点基準は[.claude/evals/rubrics/scoring-rubric.md](../../../../.claude/evals/rubrics/scoring-rubric.md)。
 
 - **評価日**: YYYY-MM-DD
 - **対象提案**: proposals/<IMP-YYYY-NNN>.md
-- **before**: 現状の Agent 構成
+- **before**: 現状のAgent構成
 - **after**: 提案の変更差分を適用した想定構成
 - **評価の限界**: <定量実行できず定性評価にした軸があれば明記>
 
@@ -45,4 +45,4 @@
 ## 総合判定
 
 - **判定**: 採用推奨 / 採用非推奨
-- **理由**: <1 軸でも悪化があれば非推奨。指示増のみでトークン・質問が増えた場合も非推奨>
+- **理由**: <1軸でも悪化があれば非推奨。指示増のみでトークン・質問が増えた場合も非推奨>

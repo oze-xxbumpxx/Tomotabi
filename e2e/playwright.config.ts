@@ -9,9 +9,9 @@ import {
   WEB_PORT,
 } from "./support/env";
 
-// DB（Testcontainers）と環境変数は scripts/run.mjs が用意する。
-// webServer は global setup より先に起動するため、DB の起動はここではなく
-// run.mjs で行う（ADR-0005 Decision 4）。
+// DB（Testcontainers）と環境変数はscripts/run.mjsが用意する。
+// webServerはglobal setupより先に起動するため、DBの起動はここではなく
+// run.mjsで行う（ADR-0005 Decision 4）。
 const buildIfNeeded = (script: string): string =>
   SKIP_BUILD ? "" : `npm run ${script} && `;
 
@@ -29,7 +29,7 @@ export default defineConfig({
   use: {
     baseURL: WEB_ORIGIN,
     browserName: "chromium",
-    // v3 の基準のモバイル幅（375×812）。クリックは tap ではなく click を使う。
+    // v3の基準のモバイル幅（375×812）。クリックはtapではなくclickを使う。
     viewport: { width: 375, height: 812 },
     isMobile: true,
     hasTouch: true,
@@ -56,8 +56,8 @@ export default defineConfig({
     },
     {
       name: "web",
-      // rewrites の転送先は next build のときに API_ORIGIN で決まるため、
-      // build に必ず API_ORIGIN を渡す（設計書「データフロー」）。
+      // rewritesの転送先はnext buildのときにAPI_ORIGINで決まるため、
+      // buildに必ずAPI_ORIGINを渡す（設計書「データフロー」）。
       command: `${buildIfNeeded("build")}npx next start -p ${WEB_PORT}`,
       cwd: "../apps/web",
       url: `${WEB_ORIGIN}/sign-in`,

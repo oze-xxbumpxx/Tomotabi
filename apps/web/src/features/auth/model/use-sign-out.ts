@@ -7,12 +7,12 @@ import {
 import { clearSelectedTripId } from "@/shared/browser/selected-trip-store";
 
 /**
- * サインアウトを実行する。成功したときだけ true を返す。
+ * サインアウトを実行する。成功したときだけtrueを返す。
  * 成功時にはその利用者の「前回の旅行」の保存値と
  * 保留中の要求（IndexedDB）を消す（F-54）。
- * userId が取れないときは保存値を消さずにサインアウトだけ行う
- * （次の入口で 403 ならそのときに消える）。
- * /sign-in への遷移は呼び出し側（画面）が行う。
+ * userIdが取れないときは保存値を消さずにサインアウトだけ行う
+ * （次の入口で403ならそのときに消える）。
+ * /sign-inへの遷移は呼び出し側（画面）が行う。
  */
 export function useSignOut() {
   const [pending, setPending] = useState(false);

@@ -79,7 +79,7 @@ export class CreatePreviewUseCase implements CreatePreviewInputPort {
     const claims = await ctx.settlements.listActiveClaims(input.tripId);
     const targets = deriveTargets(payments, cancelledIds, claims);
     if (targets.length === 0) {
-      // 対象 0 件では作れない（合計 0 円の確認は作れる。F-12・E-04）
+      // 対象0件では作れない（合計0円の確認は作れる。F-12・E-04）
       throw new ApiError({
         code: "NO_SETTLEMENT_TARGET",
         status: 422,
@@ -124,7 +124,7 @@ export class CreatePreviewUseCase implements CreatePreviewInputPort {
       preview,
       joinPreviewItems(items, paymentsById, cancellationsById),
       roster,
-      // 作った時点では指紋・取り消し状態が明細と一致するので ready
+      // 作った時点では指紋・取り消し状態が明細と一致するのでready
       {
         status: "ready",
         cancelledPaymentIds: [],

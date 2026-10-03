@@ -72,7 +72,7 @@ function receiptKey(actorId: UserId, operation: string, key: IdempotencyKey): st
 }
 
 /**
- * UseCase 試験用のインメモリ文脈。メソッドの呼び出し順を calls に記録し、
+ * UseCase試験用のインメモリ文脈。メソッドの呼び出し順をcallsに記録し、
  * U-19（ロック順序）が検査できるようにする。
  */
 export class InMemoryPlanningContext implements PlanningWorkContext {

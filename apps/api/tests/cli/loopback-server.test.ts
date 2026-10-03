@@ -5,7 +5,7 @@ import { startLoopbackServer } from "../../src/cli/enroll/loopback-server";
 const callback = (redirectUri: string, params: Record<string, string>) =>
   fetch(`${redirectUri}?${new URLSearchParams(params).toString()}`);
 
-// 決着が先に来ても unhandled rejection にしないため、reject を値に変えて受ける
+// 決着が先に来てもunhandled rejectionにしないため、rejectを値に変えて受ける
 const settled = (promise: Promise<unknown>): Promise<unknown> =>
   promise.then(
     () => null,

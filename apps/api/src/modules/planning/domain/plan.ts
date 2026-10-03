@@ -20,9 +20,9 @@ export type Plan = Readonly<{
 }>;
 
 /**
- * 部分更新の入力。キーがある欄だけが対象で、値が同じなら version は増えない。
+ * 部分更新の入力。キーがある欄だけが対象で、値が同じならversionは増えない。
  * 取りやめ欄（cancelledAt / cancelledBy）は含めない。取りやめは一度だけで
- * 復活の API は持たないため、編集で解除されることはない（詳細設計 04 §2）。
+ * 復活のAPIは持たないため、編集で解除されることはない（詳細設計04 §2）。
  */
 export type PlanPatch = Readonly<{
   name?: BoundedText;
@@ -53,10 +53,10 @@ export class PlanCancelledError extends Error {
 
 export const Plan = {
   /**
-   * 部分更新する。差分が無ければ同じ Plan を返す（version は増やさない）。
-   * 種類が変わるときだけ hasRecordHistory を見て拒否する。
-   * @param patch キーがある欄だけが更新対象。undefined は「送られていない」。
-   * @param hasRecordHistory 予定行のロックを持ったまま照会した履歴の有無（E-19）。
+   * 部分更新する。差分が無ければ同じPlanを返す（versionは増やさない）。
+   * 種類が変わるときだけhasRecordHistoryを見て拒否する。
+   * @param patchキーがある欄だけが更新対象。undefinedは「送られていない」。
+   * @param hasRecordHistory予定行のロックを持ったまま照会した履歴の有無（E-19）。
    * @throws PlanHasRecordHistoryError
    */
   update(

@@ -21,7 +21,7 @@ function formatTime(date: Date): string {
 }
 
 /**
- * 再取得の失敗。`fetchedAt` は「表示中の内容」の取得時刻（失敗した時刻ではない）。
+ * 再取得の失敗。`fetchedAt`は「表示中の内容」の取得時刻（失敗した時刻ではない）。
  * 前回の表示は呼び出し側が残したまま、この部品を添える。
  */
 export function RefetchFailed({

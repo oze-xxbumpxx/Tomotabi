@@ -1,34 +1,34 @@
 import type { Cancellation } from "./plan";
 
-/** 参加者 1 人分の負担。percent の合計は 100。 */
+/** 参加者1人分の負担。percentの合計は100。 */
 export type PaymentAllocation = {
   userId: string;
-  /** 0〜100 の整数。 */
+  /** 0〜100の整数。 */
   percent: number;
-  /** 円単位の非負整数（10 進の文字列）。サーバーが計算して確定する。 */
+  /** 円単位の非負整数（10進の文字列）。サーバーが計算して確定する。 */
   burdenYen: string;
 };
 
-/** 支払い 1 件（取り消し状態を含む）。金額は 10 進の整数文字列。 */
+/** 支払い1件（取り消し状態を含む）。金額は10進の整数文字列。 */
 export type Payment = {
   id: string;
   tripId: string;
-  /** 関連する予定。結んでいないときは null。 */
+  /** 関連する予定。結んでいないときはnull。 */
   planId: string | null;
-  /** 用途。無いときは null。 */
+  /** 用途。無いときはnull。 */
   label: string | null;
-  /** 円単位の非負整数（10 進の文字列）。1〜9,999,999。 */
+  /** 円単位の非負整数（10進の文字列）。1〜9,999,999。 */
   amountYen: string;
   payerUserId: string;
-  /** 参加者番号 0, 1 の順。二人分で percent の合計は 100。 */
+  /** 参加者番号0, 1の順。二人分でpercentの合計は100。 */
   allocations: [PaymentAllocation, PaymentAllocation];
   createdBy: string;
-  /** ISO 8601 の日時。 */
+  /** ISO 8601の日時。 */
   createdAt: string;
   cancellation: Cancellation | null;
 };
 
-/** 旅行の参加者 1 人（残額・確認の向き表示に使う）。 */
+/** 旅行の参加者1人（残額・確認の向き表示に使う）。 */
 export type Participant = {
   userId: string;
   /** 参加者番号（0・1）。 */
@@ -37,13 +37,13 @@ export type Participant = {
 };
 
 /**
- * 受け渡しの向きと金額。0 円なら from/to は null で requiresTransfer は false。
- * 非 0 なら from と to は異なる旅行参加者（サーバーが整合性を保証する）。
+ * 受け渡しの向きと金額。0円ならfrom/toはnullでrequiresTransferはfalse。
+ * 非0ならfromとtoは異なる旅行参加者（サーバーが整合性を保証する）。
  */
 export type Transfer = {
-  /** 参加者番号 1 の人から 0 の人への向きを正とする円単位整数（10 進の文字列）。 */
+  /** 参加者番号1の人から0の人への向きを正とする円単位整数（10進の文字列）。 */
   signedTotalYen: string;
-  /** 円単位の非負整数（10 進の文字列）。 */
+  /** 円単位の非負整数（10進の文字列）。 */
   amountYen: string;
   fromUserId: string | null;
   toUserId: string | null;
@@ -51,21 +51,21 @@ export type Transfer = {
 };
 
 /**
- * 対象の明細 1 件（支払いの詳細を含む）。確認応答の payment は確認時点の
- * 表示用値で、支払いの取り消し状態の変化は PreviewValidation を参照する。
+ * 対象の明細1件（支払いの詳細を含む）。確認応答のpaymentは確認時点の
+ * 表示用値で、支払いの取り消し状態の変化はPreviewValidationを参照する。
  */
 export type TargetItem = {
   payment: Payment;
-  /** BASE は戻しでない対象（寄与 c）、REVERSAL は戻し（−c）。 */
+  /** BASEは戻しでない対象（寄与c）、REVERSALは戻し（−c）。 */
   kind: "BASE" | "REVERSAL";
-  /** 参加者番号 1 の人から 0 の人への向きを正とする円単位整数（10 進の文字列）。 */
+  /** 参加者番号1の人から0の人への向きを正とする円単位整数（10進の文字列）。 */
   signedContributionYen: string;
-  /** REVERSAL の戻す対象の精算。BASE なら null。 */
+  /** REVERSALの戻す対象の精算。BASEならnull。 */
   baseSettlementId: string | null;
 };
 
 /**
- * 確認の、取得時点の検証結果。完了の POST では必ず再検証する（ここは参考値）。
+ * 確認の、取得時点の検証結果。完了のPOSTでは必ず再検証する（ここは参考値）。
  */
 export type PreviewValidation = {
   status:
@@ -74,11 +74,11 @@ export type PreviewValidation = {
     | "target_changed"
     | "already_completed"
     | "completed_then_cancelled";
-  /** 確認の後で取り消された BASE 対象の支払い ID 全部。 */
+  /** 確認の後で取り消されたBASE対象の支払いID全部。 */
   cancelledPaymentIds: string[];
-  /** 確認の指紋と今の指紋が違う対象の支払い ID 全部。 */
+  /** 確認の指紋と今の指紋が違う対象の支払いID全部。 */
   changedPaymentIds: string[];
-  /** この確認にすでに紐づく精算。無ければ null。 */
+  /** この確認にすでに紐づく精算。無ければnull。 */
   existingSettlementId: string | null;
 };
 
@@ -87,7 +87,7 @@ export type Preview = {
   id: string;
   tripId: string;
   createdBy: string;
-  /** ISO 8601 の日時。 */
+  /** ISO 8601の日時。 */
   createdAt: string;
   participants: [Participant, Participant];
   transfer: Transfer;
@@ -95,17 +95,17 @@ export type Preview = {
   validation: PreviewValidation;
 };
 
-/** 確認の一覧の 1 件。 */
+/** 確認の一覧の1件。 */
 export type PreviewSummary = {
   id: string;
-  /** ISO 8601 の日時。 */
+  /** ISO 8601の日時。 */
   createdAt: string;
   transfer: Transfer;
   targetCount: number;
   validation: PreviewValidation;
 };
 
-/** 確認の一覧の 1 ページ（自分の未完了だけ、新しい順）。 */
+/** 確認の一覧の1ページ（自分の未完了だけ、新しい順）。 */
 export type PreviewPage = {
   items: PreviewSummary[];
   nextCursor: string | null;
@@ -118,6 +118,6 @@ export type Balance = {
   transfer: Transfer;
   targetCount: number;
   items: TargetItem[];
-  /** ISO 8601 の日時。スナップショットを読んだ時点。 */
+  /** ISO 8601の日時。スナップショットを読んだ時点。 */
   fetchedAt: string;
 };

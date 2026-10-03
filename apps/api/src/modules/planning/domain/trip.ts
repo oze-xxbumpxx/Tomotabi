@@ -5,8 +5,8 @@ import { TripPeriod } from "./trip-period";
 export type TripStatus = "planning" | "traveling" | "finished";
 
 /**
- * 旅行。version は ETag / If-Match と対応する正の整数（wire では 10 進の文字列）。
- * 状態は planning → traveling → finished で、戻す遷移は存在しない。
+ * 旅行。versionはETag / If-Matchと対応する正の整数（wireでは10進の文字列）。
+ * 状態はplanning → traveling → finishedで、戻す遷移は存在しない。
  */
 export type Trip = Readonly<{
   id: string;
@@ -24,7 +24,7 @@ export type Trip = Readonly<{
 }>;
 
 /**
- * 許可されない状態遷移。UseCase が 409 INVALID_TRIP_TRANSITION に写す。
+ * 許可されない状態遷移。UseCaseが409 INVALID_TRIP_TRANSITIONに写す。
  */
 export class InvalidTripTransitionError extends Error {
   constructor(
@@ -59,11 +59,11 @@ export const Trip = {
   },
 
   /**
-   * planning → traveling。既に traveling のときは変化なしのまま返す。
-   * 同じ状態への遷移で version・日時を変えないのは、ETag が一致する別キーの要求を
-   * 「既に目的の状態」として扱うため（B-07。version を増やすとその後の再送が
-   * VERSION_CONFLICT になる）。
-   * @throws finished からの遷移は InvalidTripTransitionError。
+   * planning → traveling。既にtravelingのときは変化なしのまま返す。
+   * 同じ状態への遷移でversion・日時を変えないのは、ETagが一致する別キーの要求を
+   * 「既に目的の状態」として扱うため（B-07。versionを増やすとその後の再送が
+   * VERSION_CONFLICTになる）。
+   * @throws finishedからの遷移はInvalidTripTransitionError。
    */
   start(trip: Trip, at: Date, by: UserId): Trip {
     if (trip.status === "traveling") {
@@ -80,8 +80,8 @@ export const Trip = {
   },
 
   /**
-   * traveling → finished。既に finished のときは変化なしのまま返す（B-07）。
-   * @throws planning からの遷移は InvalidTripTransitionError。
+   * traveling → finished。既にfinishedのときは変化なしのまま返す（B-07）。
+   * @throws planningからの遷移はInvalidTripTransitionError。
    */
   finish(trip: Trip, at: Date, by: UserId): Trip {
     if (trip.status === "finished") {

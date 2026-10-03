@@ -11,9 +11,9 @@ export class SlotNotEnrolledError extends Error {
 }
 
 /**
- * allowed_google_accounts.enabled = false と、その user_id の sessions の DELETE を 1 トランザクションで行う。
- * 再実行しても同じ結果で成功する（enabled は false のまま、削除件数は 0）。
- * @throws SlotNotEnrolledError slot に登録が無いとき（何も変更しない）
+ * allowed_google_accounts.enabled = falseと、そのuser_idのsessionsのDELETEを1トランザクションで行う。
+ * 再実行しても同じ結果で成功する（enabledはfalseのまま、削除件数は0）。
+ * @throws SlotNotEnrolledError slotに登録が無いとき（何も変更しない）
  */
 export async function disableGoogleAccount(pool: Pool, slot: Slot): Promise<DisableResult> {
   const client = await pool.connect();

@@ -1,10 +1,10 @@
 /**
- * 円の扱い。金額は常に BigInt の円で持ち、Number に通さない
+ * 円の扱い。金額は常にBigIntの円で持ち、Numberに通さない
  * （合計や符号付きの計算で丸めを持ち込まないため）。
- * API との受け渡しは 10 進の整数文字列（"7001"、符号付きは "-3500"）。
+ * APIとの受け渡しは10進の整数文字列（"7001"、符号付きは"-3500"）。
  */
 
-/** 支払い 1 件の上限（要件定義の境界条件。正本の 999,999,999 円から下げた値）。 */
+/** 支払い1件の上限（要件定義の境界条件。正本の999,999,999円から下げた値）。 */
 export const PAYMENT_YEN_MAX = 9_999_999n;
 export const PAYMENT_YEN_MIN = 1n;
 
@@ -30,7 +30,7 @@ function normalizeDigits(raw: string): string {
   return out;
 }
 
-/** 10 進の整数文字列だけを BigInt にする。形式が違えば null。符号も受ける。 */
+/** 10進の整数文字列だけをBigIntにする。形式が違えばnull。符号も受ける。 */
 function parseDecimal(text: string): bigint | null {
   if (!/^-?\d+$/.test(text)) {
     return null;
@@ -39,8 +39,8 @@ function parseDecimal(text: string): bigint | null {
 }
 
 /**
- * 契約の 10 進整数文字列（"7001"、符号付きは "-3500"）を BigInt にする。
- * 形式違い（カンマ・小数・空白・数字以外）は null。
+ * 契約の10進整数文字列（"7001"、符号付きは"-3500"）をBigIntにする。
+ * 形式違い（カンマ・小数・空白・数字以外）はnull。
  */
 export function yenFromDecimalString(value: string): bigint | null {
   return parseDecimal(value);
@@ -49,7 +49,7 @@ export function yenFromDecimalString(value: string): bigint | null {
 /**
  * 画面の入力を円にする。全角数字とカンマ区切りを受け、前後の空白
  * （全角スペースを含む）を除く。正の整数だけを受け、空・小数・
- * 符号・数字以外が混ざる入力は null。
+ * 符号・数字以外が混ざる入力はnull。
  */
 export function yenFromInput(raw: string): bigint | null {
   const normalized = normalizeDigits(raw);
@@ -59,12 +59,12 @@ export function yenFromInput(raw: string): bigint | null {
   return BigInt(normalized);
 }
 
-/** BigInt の円を契約の 10 進整数文字列にする（"7001"・"-3500"）。 */
+/** BigIntの円を契約の10進整数文字列にする（"7001"・"-3500"）。 */
 export function yenToDecimalString(yen: bigint): string {
   return yen.toString();
 }
 
-/** 3 桁区切りの表示（"7,001 円"・負は "-3,500 円"）。 */
+/** 3桁区切りの表示（"7,001円"・負は"-3,500円"）。 */
 export function formatYen(yen: bigint): string {
   const negative = yen < 0n;
   const digits = (negative ? -yen : yen).toString();
@@ -79,7 +79,7 @@ export function formatYen(yen: bigint): string {
   return `${negative ? "-" : ""}${grouped} 円`;
 }
 
-/** 支払い 1 件として受け付ける範囲（1〜9,999,999 円）か。 */
+/** 支払い1件として受け付ける範囲（1〜9,999,999円）か。 */
 export function isPaymentYenAmount(yen: bigint): boolean {
   return yen >= PAYMENT_YEN_MIN && yen <= PAYMENT_YEN_MAX;
 }

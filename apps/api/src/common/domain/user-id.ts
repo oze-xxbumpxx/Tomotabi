@@ -5,7 +5,7 @@ const UUID_PATTERN =
 
 export const UserId = {
   /**
-   * @throws 引数が UUID 形式でないとき Error を投げる。
+   * @throws引数がUUID形式でないときErrorを投げる。
    */
   parse(value: string): UserId {
     if (!UUID_PATTERN.test(value)) {

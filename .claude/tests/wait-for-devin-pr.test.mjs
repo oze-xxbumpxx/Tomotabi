@@ -1,5 +1,5 @@
-// wait-for-devin-pr.mjs の「Issue に紐づかない Devin の PR」の判定と引数検査のテスト。gh は呼ばない。
-// 観点 ID は docs/tests/devin-unlinked-pr-review.md（S- で始まるものは docs/tests/devin-delegation-status.md）。
+// wait-for-devin-pr.mjsの「Issueに紐づかないDevinのPR」の判定と引数検査のテスト。ghは呼ばない。
+// 観点IDはdocs/tests/devin-unlinked-pr-review.md（S- で始まるものはdocs/tests/devin-delegation-status.md）。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';

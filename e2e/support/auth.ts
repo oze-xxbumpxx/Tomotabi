@@ -7,9 +7,9 @@ import { createAuth } from "../../apps/api/src/modules/identity/infrastructure/b
 import { AUTH_SECRET, RUNTIME_DATABASE_URL, WEB_ORIGIN } from "./env";
 
 /**
- * Playwright 側で testUtils を使ってセッションを作る。API に試験用の
- * 経路は足さない（ADR-0005 Decision 2）。`createAuth` は API と同じ
- * `BETTER_AUTH_SECRET`・同じ DB（app_runtime）で組み立てる。
+ * Playwright側でtestUtilsを使ってセッションを作る。APIに試験用の
+ * 経路は足さない（ADR-0005 Decision 2）。`createAuth`はAPIと同じ
+ * `BETTER_AUTH_SECRET`・同じDB（app_runtime）で組み立てる。
  */
 let helpersPromise: Promise<TestHelpers> | null = null;
 let authPool: Pool | null = null;
@@ -42,7 +42,7 @@ async function sessionCookies(userId: string) {
   if (header === null) {
     throw new Error("testHelpers.login did not return a cookie");
   }
-  // `name=value` の組が "; " 区切りで並ぶ（Cookie ヘッダーの形式）。
+  // `name=value`の組が"; "区切りで並ぶ（Cookieヘッダーの形式）。
   return header.split(/;\s*/).map((pair) => {
     const separator = pair.indexOf("=");
     if (separator <= 0) {
@@ -59,8 +59,8 @@ async function sessionCookies(userId: string) {
 }
 
 /**
- * 利用者のセッション Cookie を入れたブラウザの context を返す。
- * 試験ごとに呼ぶ（M-03 のログアウトでセッションが消えるため）。
+ * 利用者のセッションCookieを入れたブラウザのcontextを返す。
+ * 試験ごとに呼ぶ（M-03のログアウトでセッションが消えるため）。
  */
 export async function newLoggedInContext(
   browser: Browser,
@@ -72,8 +72,8 @@ export async function newLoggedInContext(
 }
 
 /**
- * 既存の page の context に、新しいセッションの Cookie を入れ直す
- * （M-03 の再ログイン）。localStorage は残るため、ログアウトで
+ * 既存のpageのcontextに、新しいセッションのCookieを入れ直す
+ * （M-03の再ログイン）。localStorageは残るため、ログアウトで
  * 「前回の旅行」の保存値が消えたことも確かめられる。
  */
 export async function addSessionCookies(

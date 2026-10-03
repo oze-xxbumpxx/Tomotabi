@@ -1,8 +1,8 @@
 /**
- * 前回開いた旅行を利用者ごとに localStorage へ保存する（F-23）。
- * 値は tripId だけで、認証情報は入れない。localStorage が使えない・
- * 壊れていても、読み書きの失敗で画面の動作を止めない（try/catch で飲み込む）。
- * サーバー描画で window を触らないよう、呼び出しは effect 以降に限る。
+ * 前回開いた旅行を利用者ごとにlocalStorageへ保存する（F-23）。
+ * 値はtripIdだけで、認証情報は入れない。localStorageが使えない・
+ * 壊れていても、読み書きの失敗で画面の動作を止めない（try/catchで飲み込む）。
+ * サーバー描画でwindowを触らないよう、呼び出しはeffect以降に限る。
  */
 
 const KEY_PREFIX = "tomotabi:selected-trip:";

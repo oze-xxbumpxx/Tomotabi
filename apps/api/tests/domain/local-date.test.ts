@@ -36,7 +36,7 @@ describe("LocalDate", () => {
         LocalDate.parse("2026-09-03"),
       ),
     ).toBe(2);
-    // うるう年の 2/29 をまたぐ
+    // うるう年の2/29をまたぐ
     expect(
       LocalDate.daysBetween(
         LocalDate.parse("2028-02-28"),

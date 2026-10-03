@@ -43,7 +43,7 @@ import { Toast } from "@/shared/ui/toast";
 type Layer = "move" | "cancel";
 
 /**
- * `/trips/{tripId}/plans/{planId}` の予定の詳細（09）。種類・名前・時刻・
+ * `/trips/{tripId}/plans/{planId}`の予定の詳細（09）。種類・名前・時刻・
  * 記録に、編集・日の移動・取りやめの操作を添える。
  * 「← しおり」は表示していた日（`?from=`）に戻る。未指定なら予定の日。
  */
@@ -91,7 +91,7 @@ export function PlanDetailScreen({
     },
   });
 
-  // 別画面での保存成功（編集）を遷移先で 1 回だけ知らせる。
+  // 別画面での保存成功（編集）を遷移先で1回だけ知らせる。
   useEffect(() => {
     const pending = takePendingToast();
     if (pending !== null) {
@@ -152,7 +152,7 @@ export function PlanDetailScreen({
     );
   }
 
-  // 書き込みが 403 / 404 で拒否されたら C-2。新しいキーで回避しない（07 §10）。
+  // 書き込みが403 / 404で拒否されたらC-2。新しいキーで回避しない（07 §10）。
   const writeNotAvailable = saves.find(
     (state): state is Extract<PlanSaveState, { status: "rejected" }> =>
       state.status === "rejected" &&
@@ -176,8 +176,8 @@ export function PlanDetailScreen({
     );
   }
 
-  // 日の移動のための旅行の取得も同じ拒否の出し分け。401 は表示済みの
-  // 予定も隠して C-1、403 / 404 は C-2。
+  // 日の移動のための旅行の取得も同じ拒否の出し分け。401は表示済みの
+  // 予定も隠してC-1、403 / 404はC-2。
   if (
     layer === "move" &&
     tripFailure !== null &&
@@ -215,7 +215,7 @@ export function PlanDetailScreen({
     );
   }
 
-  // 取得・再取得の 401 は、表示済みのデータがあっても業務データを隠して C-1。
+  // 取得・再取得の401は、表示済みのデータがあっても業務データを隠してC-1。
   if (failure !== null && failure.kind === "http" && failure.status === 401) {
     return (
       <main>
@@ -266,7 +266,7 @@ export function PlanDetailScreen({
   };
 
   const onWriteClose = (save: PlanSave) => {
-    // 拒否のあとに閉じたら最新を取り直す（再送は最新の ETag で）。
+    // 拒否のあとに閉じたら最新を取り直す（再送は最新のETagで）。
     if (save.state.status === "rejected") {
       void planQuery.refetch();
     }

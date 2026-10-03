@@ -102,7 +102,7 @@ describe("httpClient", () => {
       status: 409,
       code: "VERSION_CONFLICT",
     });
-    // message・requestId は取り出さない（画面に出さない方針）。
+    // message・requestIdは取り出さない（画面に出さない方針）。
     expect(JSON.stringify(failure)).not.toContain("バージョンが古いです");
     expect(JSON.stringify(failure)).not.toContain("req-secret-1");
   });

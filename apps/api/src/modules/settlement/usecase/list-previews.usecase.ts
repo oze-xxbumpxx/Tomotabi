@@ -19,9 +19,9 @@ import {
 import { toPreviewSummaryDto } from "./settlement-dto";
 
 /**
- * 確認の一覧（F-22・未決事項 3）。自分が作った未完了の確認だけを
+ * 確認の一覧（F-22・未決事項3）。自分が作った未完了の確認だけを
  * 新しい順に返す。一覧に出る確認は精算がまだ無いものだけなので、
- * 検証結果の existingSettlement は常に null。
+ * 検証結果のexistingSettlementは常にnull。
  */
 export class ListPreviewsUseCase implements ListPreviewsInputPort {
   constructor(private readonly unitOfWork: SettlementReadUnitOfWork) {}
@@ -89,7 +89,7 @@ export class ListPreviewsUseCase implements ListPreviewsInputPort {
 
   /**
    * カーソルの起点を自分の確認から引く。形が不正・起点が無い・
-   * 他人の確認を指すカーソルは 400（一覧の続きを偽造できない）。
+   * 他人の確認を指すカーソルは400（一覧の続きを偽造できない）。
    */
   private async anchor(
     ctx: SettlementReadContext,

@@ -1,23 +1,23 @@
 #!/usr/bin/env node
-// Issue に紐づく PR ができるまで待つ（Devin など他のエージェントに渡した Issue の自動レビュー用）。
+// Issueに紐づくPRができるまで待つ（Devinなど他のエージェントに渡したIssueの自動レビュー用）。
 //
 // 使い方:
-//   node .claude/scripts/wait-for-pr.mjs <issue番号> [--interval 秒] [--timeout 秒]
-//     既定: 60 秒ごとに確認し、8 時間で諦める。
-//   Claude Code からは Bash の run_in_background で起動する。終了するとセッションが呼び戻される。
+//   node .claude/scripts/wait-for-pr.mjs <issue番号> [--interval秒] [--timeout秒]
+//     既定: 60秒ごとに確認し、8時間で諦める。
+//   Claude CodeからはBashのrun_in_backgroundで起動する。終了するとセッションが呼び戻される。
 //
 // 終了コード:
-//   0 … 見つかった。標準出力に {"issue","number","url","title","headRefName"} の JSON を 1 行出す
+//   0 … 見つかった。標準出力に {"issue","number","url","title","headRefName"} のJSONを1行出す
 //   2 … 引数の誤り
 //   3 … 時間切れ
 //
 // 方針:
-// - 「紐づく」の判定は findLinkedPr に閉じ込め、テストで固定する。
-//   GitHub が認識した紐づけ（closingIssuesReferences）、本文の Closes / Fixes / Resolves #N、
-//   またはブランチ名の末尾 -N。Devin は本文に Closes を書き忘れることがあった（#33）ため
-//   ブランチ名も見る。本文の「Issue #N」という言及だけでは紐づけとみなさない（別 PR の誤検出）。
-// - 対象は Issue の作成以降に作られた PR だけ。取得も作成日時で絞り、件数の上限で取りこぼさない。
-// - gh の一時的な失敗（ネットワーク等）では止めず、次の周期で再試行する。
+// - 「紐づく」の判定はfindLinkedPrに閉じ込め、テストで固定する。
+//   GitHubが認識した紐づけ（closingIssuesReferences）、本文のCloses / Fixes / Resolves #N、
+//   またはブランチ名の末尾 -N。Devinは本文にClosesを書き忘れることがあった（#33）ため
+//   ブランチ名も見る。本文の「Issue #N」という言及だけでは紐づけとみなさない（別PRの誤検出）。
+// - 対象はIssueの作成以降に作られたPRだけ。取得も作成日時で絞り、件数の上限で取りこぼさない。
+// - ghの一時的な失敗（ネットワーク等）では止めず、次の周期で再試行する。
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -29,8 +29,8 @@ const DEFAULT_TIMEOUT_SEC = 8 * 60 * 60;
  * @param {Array<{number:number,title?:string,body?:string,headRefName?:string,url?:string,
  *   createdAt?:string,closingIssuesReferences?:Array<{number:number}>}>} prs
  * @param {number} issue
- * @param {string | null} since Issue の作成日時（ISO 8601）。これより前に作られた PR は対象外。
- * @returns {object | null} 紐づく PR のうち番号が最小のもの。無ければ null。
+ * @param {string | null} since Issueの作成日時（ISO 8601）。これより前に作られたPRは対象外。
+ * @returns {object | null} 紐づくPRのうち番号が最小のもの。無ければnull。
  */
 export function findLinkedPr(prs, issue, since = null) {
   const n = String(issue);

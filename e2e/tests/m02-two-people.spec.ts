@@ -18,13 +18,13 @@ test("M-02: 二人の変更の競合は C-5 で見比べてから保存する", 
 }) => {
   const tripId = await createTrip(hinataPage, TRIP);
 
-  // あおいも同じ旅行のしおりを開く（別の context）。
+  // あおいも同じ旅行のしおりを開く（別のcontext）。
   await aoiPage.goto(`/trips/${tripId}/itinerary`);
   await expect(
     aoiPage.getByRole("heading", { name: TRIP.name }),
   ).toBeVisible();
 
-  // 二人とも同じ時点（同じ version）の「旅行名と期間を変更」を開く。
+  // 二人とも同じ時点（同じversion）の「旅行名と期間を変更」を開く。
   const hinataSheet = await openTripEditSheet(hinataPage, TRIP.name);
   const aoiSheet = await openTripEditSheet(aoiPage, TRIP.name);
 

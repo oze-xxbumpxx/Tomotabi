@@ -6,7 +6,7 @@ import { GetMeUseCase } from "../../src/modules/identity/usecase/get-me.usecase"
 const USER_ID = UserId.parse("550e8400-e29b-41d4-a716-446655440000");
 
 describe("GetMeUseCase", () => {
-  // U-16: id・displayName・sessionExpiresAt だけを返す
+  // U-16: id・displayName・sessionExpiresAtだけを返す
   it("returns only user.id, user.displayName, and sessionExpiresAt", async () => {
     const identities: IdentityReader = {
       findDisplayName: async () => "ひなた",

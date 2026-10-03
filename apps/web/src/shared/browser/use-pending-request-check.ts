@@ -6,10 +6,10 @@ import {
 } from "./pending-requests";
 
 /**
- * 再読み込み後の復帰の状態。`found` のときは呼び出し側が
+ * 再読み込み後の復帰の状態。`found`のときは呼び出し側が
  * 「保存されたか確認できません」と「同じ内容で確認する」を出す
  * （自動では送らない。送るのは本人の操作だけ）。
- * `unavailable` は IndexedDB が読めなかったとき、または読めたが
+ * `unavailable`はIndexedDBが読めなかったとき、または読めたが
  * 形を確かめられず保留を消したとき（保存の送信も止める案内を出す）。
  */
 export type PendingRequestCheck =
@@ -19,8 +19,8 @@ export type PendingRequestCheck =
   | { status: "unavailable" };
 
 /**
- * 画面を開いたときに、同じ利用者・旅行・操作の保留を IndexedDB で探す。
- * `userId` が null のあいだ（利用者がまだ分からない）は `checking` のままにし、
+ * 画面を開いたときに、同じ利用者・旅行・操作の保留をIndexedDBで探す。
+ * `userId`がnullのあいだ（利用者がまだ分からない）は`checking`のままにし、
  * 別の利用者の保留を見せない。利用者が分かったら、先に他の利用者の保留を消す。
  */
 export function usePendingRequestCheck(input: {

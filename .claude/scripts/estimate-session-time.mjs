@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 // 作業ログ（logs/YYYY-MM-DD.md）の「所要時間」欄を自動推定する。
 //
-// 層: harness-core（Plugin 分割時）。write-work-log（core）の雛形にある「所要時間」節を
-// 埋めるため core に置く。メトリクスの*集計*側は improvement 層。
+// 層: harness-core（Plugin分割時）。write-work-log（core）の雛形にある「所要時間」節を
+// 埋めるためcoreに置く。メトリクスの*集計*側はimprovement層。
 //
 // 使い方:
 //   node .claude/scripts/estimate-session-time.mjs [YYYY-MM-DD]
-//   （日付省略時は HARNESS_TZ（旧 COOKPIT_TZ・既定 Asia/Tokyo）での今日）
+//   （日付省略時はHARNESS_TZ（旧COOKPIT_TZ・既定Asia/Tokyo）での今日）
 //
 // 入力ソース（あるものだけ使う。どれも無ければ「記録なし」を出力して正常終了）:
-//   1. .claude/state/activity-log.jsonl — record-activity.mjs Hook の活動タイムスタンプ
+//   1. .claude/state/activity-log.jsonl — record-activity.mjs Hookの活動タイムスタンプ
 //   2. git log（現在ブランチ）の当日コミット時刻
 //
 // 推定方法:
-//   全イベントを時刻順に並べ、連続イベント間の間隔を GAP_CAP_MIN（既定 30 分）で
+//   全イベントを時刻順に並べ、連続イベント間の間隔をGAP_CAP_MIN（既定30分）で
 //   打ち切って合計 = 「活動時間」。休憩や放置の長い空白を作業時間に数えないため。
 //   併せて「セッション帯（最初〜最後）」も出す。
-// 出力: そのまま logs/ に貼れる 1 行の Markdown。
+// 出力: そのままlogs/ に貼れる1行のMarkdown。
 
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -64,8 +64,8 @@ if (activityLog !== '' && existsSync(activityLog)) {
   }
 }
 
-// 2. 当日コミット（現在ブランチ）。窓は「直近 48 時間」ではなく対象日の暦日
-// （HARNESS_TZ）。3 日前のログを埋めるときにコミットが消えないようにする。
+// 2. 当日コミット（現在ブランチ）。窓は「直近48時間」ではなく対象日の暦日
+// （HARNESS_TZ）。3日前のログを埋めるときにコミットが消えないようにする。
 try {
   const { since, until } = gitDayRange(targetDay, TZ);
   const out = execFileSync(
@@ -86,7 +86,7 @@ try {
     }
   }
 } catch {
-  // git が使えない環境でも活動ログだけで推定する
+  // gitが使えない環境でも活動ログだけで推定する
 }
 
 if (timestamps.length === 0) {

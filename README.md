@@ -1,21 +1,21 @@
 # Tomotabi
 
-本人とパートナー向けの旅行 Web アプリ。いまは **M0（開発基盤と互換性の検証）** までです。旅行・精算・認証は未実装です。
+本人とパートナー向けの旅行Webアプリ。いまは **M0（開発基盤と互換性の検証）** までです。旅行・精算・認証は未実装です。
 
 ## 採用構成
 
 | 領域 | 内容 |
 |---|---|
 | 言語 | TypeScript / Node 22.x |
-| web | Next.js App Router。`app` → `screens` → `features` → `shared`。機能内は `ui` / `model` / `api` |
-| api | NestJS モジュラーモノリス。業務モジュール内は Controller / UseCase / Service / Domain / Infrastructure / Adapter |
-| 契約 | `packages/contracts` に公開 API の型と OpenAPI だけを置く |
-| web の API 通信 | OpenAPI から Orval で fetch 関数と Zod スキーマを生成（`apps/web/src/shared/api/generated/`、手編集禁止）。応答は Zod で検証し、neverthrow の `ResultAsync` で成功と失敗を返す |
-| DB | Drizzle ORM + `pg`。M0 の表は検証用 `infra.m0_probes` のみ |
-| テスト | Vitest（web / api 共通ランナー）。API は `@nestjs/testing` と Supertest。実 PostgreSQL は Testcontainers |
-| CI | GitHub Actions の quality / build / api-db |
+| web | Next.js App Router。`app` → `screens` → `features` → `shared`。機能内は`ui` / `model` / `api` |
+| api | NestJSモジュラーモノリス。業務モジュール内はController / UseCase / Service / Domain / Infrastructure / Adapter |
+| 契約 | `packages/contracts`に公開APIの型とOpenAPIだけを置く |
+| webのAPI通信 | OpenAPIからOrvalでfetch関数とZodスキーマを生成（`apps/web/src/shared/api/generated/`、手編集禁止）。応答はZodで検証し、neverthrowの`ResultAsync`で成功と失敗を返す |
+| DB | Drizzle ORM + `pg`。M0の表は検証用`infra.m0_probes`のみ |
+| テスト | Vitest（web / api共通ランナー）。APIは`@nestjs/testing`とSupertest。実PostgreSQLはTestcontainers |
+| CI | GitHub Actionsのquality / build / api-db |
 
-**Adapter の意味**: このリポジトリでは Adapter は **IF 定義の置き場** です。一般的な Ports and Adapters でいう「外部接続の実装」は Infrastructure に置きます。UseCase は IF に依存し、Service / Infrastructure の実装は Module で注入します。
+**Adapterの意味**: このリポジトリではAdapterは **IF定義の置き場** です。一般的なPorts and Adaptersでいう「外部接続の実装」はInfrastructureに置きます。UseCaseはIFに依存し、Service / Infrastructureの実装はModuleで注入します。
 
 ## ディレクトリ
 
@@ -32,13 +32,13 @@ apps/api/src/
 packages/contracts/    wire 型と foundation OpenAPI
 ```
 
-未実装の trips / payments などの空クラスは作っていません。
+未実装のtrips / paymentsなどの空クラスは作っていません。
 
 ## 前提
 
-- Node 22.18 以上の 22.x（orval の要件。リポジトリは 22.23.2 で確認）
-- Docker Desktop が動いていること（`npm run test:api-db` と `npm run test:e2e`。単体テストと build には不要）
-- E2E を初めて動かす前に `npx playwright install chromium`（ブラウザの取得。以後は不要）
+- Node 22.18以上の22.x（orvalの要件。リポジトリは22.23.2で確認）
+- Docker Desktopが動いていること（`npm run test:api-db`と`npm run test:e2e`。単体テストとbuildには不要）
+- E2Eを初めて動かす前に`npx playwright install chromium`（ブラウザの取得。以後は不要）
 
 ## コマンド
 
@@ -58,20 +58,20 @@ npm run api:generate  # OpenAPI から web の API クライアントを再生�
 npm run api:check     # 再生成して差分が無いことを確認（CI でも実行）
 ```
 
-`DATABASE_URL` が無いときの API は in-memory です。起動確認用であり、実 PostgreSQL 検証の合格には使いません。PGlite への自動フォールバックはありません。
+`DATABASE_URL`が無いときのAPIはin-memoryです。起動確認用であり、実PostgreSQL検証の合格には使いません。PGliteへの自動フォールバックはありません。
 
 ```bash
 npm run db:check      # migration の整合と、スキーマ変更の生成漏れが無いことを確認（CI でも実行）
 ```
 
-## ローカル DB と migration（M1）
+## ローカルDBとmigration（M1）
 
-DB のスキーマは `apps/api/src/infrastructure/database/schema/` の Drizzle 定義が正で、`apps/api/drizzle/` に migration の SQL 履歴を残します（ADR-0003）。アプリの起動時に migration は適用しません。
+DBのスキーマは`apps/api/src/infrastructure/database/schema/`のDrizzle定義が正で、`apps/api/drizzle/`にmigrationのSQL履歴を残します（ADR-0003）。アプリの起動時にmigrationは適用しません。
 
 | ロール | 用途 | 権限 |
 |---|---|---|
-| `migrator` | migration の適用（管理者だけ） | スキーマと表の所有、DDL |
-| `app_runtime` | API の実行時接続（`DATABASE_URL`） | 表ごとに必要な DML だけ（`drizzle/0001_app_runtime_grants.sql`）。`statement_timeout` 5 秒 |
+| `migrator` | migrationの適用（管理者だけ） | スキーマと表の所有、DDL |
+| `app_runtime` | APIの実行時接続（`DATABASE_URL`） | 表ごとに必要なDMLだけ（`drizzle/0001_app_runtime_grants.sql`）。`statement_timeout` 5秒 |
 
 ```bash
 docker compose up -d --wait                  # 初回起動時にロールと DB の権限を作り、healthcheck が通るまで待つ
@@ -79,21 +79,21 @@ MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
   npm run db:migrate -w @tomotabi/api        # identity スキーマを作る。2 回目以降は差分だけ
 ```
 
-- ローカルのパスワード（`migrator` / `app_runtime`）は compose.yaml の既定値で、ローカル専用です。本番のロールとパスワードは別の管理手順で作ります。
-- 管理手順は 2 つの SQL に分かれています（`apps/api/db/admin/`）。どちらも superuser で、`psql -v ON_ERROR_STOP=1` を付けて実行します。
-  1. `create-roles.sql`: ロールの作成。ロールはクラスタ全体で共有されるため、**クラスタごとに 1 回だけ**。2 回目はわざと失敗します（パスワードの変更は `ALTER ROLE` で明示的に行う）。
-  2. `grant-database.sql`: DB ごとの接続・作成権限。**DB ごとに**実行し、何度実行しても同じ結果になります。
-- スキーマを変えたら `npm run db:generate -w @tomotabi/api` で migration を作り、生成された SQL をレビューしてコミットします。GRANT などは `npx drizzle-kit generate --custom` の空ファイルに書きます。
-- 表を追加したら、`0001_app_runtime_grants.sql` と同じ形で GRANT の migration を追加し、`apps/api/tests/db/identity-schema.db.test.ts` と同じ形で権限テストを足します。
-- `DATABASE_URL` をローカル DB に向けると、検証用の foundation カウンタ（`infra.m0_probes`）は使えません。この表は migration に含めていないためです（M2 の開始時に撤去予定）。
+- ローカルのパスワード（`migrator` / `app_runtime`）はcompose.yamlの既定値で、ローカル専用です。本番のロールとパスワードは別の管理手順で作ります。
+- 管理手順は2つのSQLに分かれています（`apps/api/db/admin/`）。どちらもsuperuserで、`psql -v ON_ERROR_STOP=1`を付けて実行します。
+  1. `create-roles.sql`: ロールの作成。ロールはクラスタ全体で共有されるため、**クラスタごとに1回だけ**。2回目はわざと失敗します（パスワードの変更は`ALTER ROLE`で明示的に行う）。
+  2. `grant-database.sql`: DBごとの接続・作成権限。**DBごとに**実行し、何度実行しても同じ結果になります。
+- スキーマを変えたら`npm run db:generate -w @tomotabi/api`でmigrationを作り、生成されたSQLをレビューしてコミットします。GRANTなどは`npx drizzle-kit generate --custom`の空ファイルに書きます。
+- 表を追加したら、`0001_app_runtime_grants.sql`と同じ形でGRANTのmigrationを追加し、`apps/api/tests/db/identity-schema.db.test.ts`と同じ形で権限テストを足します。
+- `DATABASE_URL`をローカルDBに向けると、検証用のfoundationカウンタ（`infra.m0_probes`）は使えません。この表はmigrationに含めていないためです（M2の開始時に撤去予定）。
 
-## 管理 CLI：Google アカウントの初期登録と利用停止（M1-c）
+## 管理CLI：Googleアカウントの初期登録と利用停止（M1-c）
 
-管理者端末でだけ実行します。アプリの HTTP ルートには載せません。接続には `MIGRATION_DATABASE_URL`（migrator ロール）を使います。
+管理者端末でだけ実行します。アプリのHTTPルートには載せません。接続には`MIGRATION_DATABASE_URL`（migratorロール）を使います。
 
 **初期登録（`cli:enroll`）**
 
-Google Cloud で **デスクトップ型** の OAuth クライアントを別途作り、`.env` の `ENROLL_GOOGLE_CLIENT_ID` / `ENROLL_GOOGLE_CLIENT_SECRET` に入れます（リダイレクト URI の登録は不要。クライアントは動作中のポートを自動で使います）。
+Google Cloudで **デスクトップ型** のOAuthクライアントを別途作り、`.env`の`ENROLL_GOOGLE_CLIENT_ID` / `ENROLL_GOOGLE_CLIENT_SECRET`に入れます（リダイレクトURIの登録は不要。クライアントは動作中のポートを自動で使います）。
 
 ```bash
 MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
@@ -101,7 +101,7 @@ ENROLL_GOOGLE_CLIENT_ID=... ENROLL_GOOGLE_CLIENT_SECRET=... \
   npm run cli:enroll -w @tomotabi/api -- --slot 0   # スロットは 0 か 1
 ```
 
-表示される URL をブラウザで開き（5 分以内）、表示名・メール・sub の末尾 4 文字を確認して `yes` と入力すると、users → accounts → allowlist を 1 トランザクションで登録します。重複（同じスロットや同じ Google アカウント）は失敗して何も残りません。
+表示されるURLをブラウザで開き（5分以内）、表示名・メール・subの末尾4文字を確認して`yes`と入力すると、users → accounts → allowlistを1トランザクションで登録します。重複（同じスロットや同じGoogleアカウント）は失敗して何も残りません。
 
 **利用停止（`cli:disable`）**
 
@@ -110,21 +110,21 @@ MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
   npm run cli:disable -w @tomotabi/api -- --slot 0
 ```
 
-allowlist を `enabled = false` にして、そのユーザーの全セッションを削除します。再実行しても同じ結果で成功します。
+allowlistを`enabled = false`にして、そのユーザーの全セッションを削除します。再実行しても同じ結果で成功します。
 
-## 検証用 HTTP
+## 検証用HTTP
 
 | 方法 | 経路 | 意味 |
 |---|---|---|
 | GET | `/api/health` | プロセス生存 |
 | GET | `/api/foundation/probes` | 検証カウンタ |
-| POST | `/api/foundation/probes/increment` | 検証カウンタを 1 加算 |
+| POST | `/api/foundation/probes/increment` | 検証カウンタを1加算 |
 
-公開用のログイン裏口はありません。foundation 経路は M0 検証専用で、本番公開前に閉じます。
+公開用のログイン裏口はありません。foundation経路はM0検証専用で、本番公開前に閉じます。
 
 ## 確認した依存バージョン
 
-確認環境: Node 22.23.2 / npm 10.9.8（2026-09-11）。lockfile で固定。
+確認環境: Node 22.23.2 / npm 10.9.8（2026-09-11）。lockfileで固定。
 
 | パッケージ | 実測 |
 |---|---|
@@ -140,28 +140,28 @@ allowlist を `enabled = false` にして、そのユーザーの全セッショ
 | neverthrow | 8.2.0（2026-09-23） |
 | eslint | 9.39.5 |
 | @testcontainers/postgresql | 11.14.0 |
-| Testcontainers のイメージ | `postgres:16-alpine`（2026-09-12 に起動・破棄を確認） |
+| Testcontainersのイメージ | `postgres:16-alpine`（2026-09-12に起動・破棄を確認） |
 
 ## 検証結果（2026-09-11）
 
 | 項目 | 結果 |
 |---|---|
-| 層間依存制約 | PASS。禁止 import の fixture 4 件を ESLint が検知 |
-| IF 経由の Nest DI | PASS。`@nestjs/testing` で InputPort token から UseCase を解決し increment が成立 |
-| web 単体 | PASS。5 件 |
-| api 単体 + HTTP | PASS。13 件（Supertest で health / increment / get） |
-| web 本番 build | PASS（Next.js 16.3.4 Turbopack） |
-| api 本番 build | PASS（`nest build`） |
-| 画面入口と Client 境界 | PASS。`/` は Server Component。加算 UI は Client。表示は「現在の件数: 2」まで確認。rewrite 経由の GET/POST `/api/*` も成功 |
-| 実 PostgreSQL 起動・破棄 | PASS（2026-09-12）。Testcontainers で `postgres:16-alpine` を起動し、IF 経由の increment 後に破棄。PGlite には置換していない |
+| 層間依存制約 | PASS。禁止importのfixture 4件をESLintが検知 |
+| IF経由のNest DI | PASS。`@nestjs/testing`でInputPort tokenからUseCaseを解決しincrementが成立 |
+| web単体 | PASS。5件 |
+| api単体 + HTTP | PASS。13件（Supertestでhealth / increment / get） |
+| web本番build | PASS（Next.js 16.3.4 Turbopack） |
+| api本番build | PASS（`nest build`） |
+| 画面入口とClient境界 | PASS。`/`はServer Component。加算UIはClient。表示は「現在の件数: 2」まで確認。rewrite経由のGET/POST `/api/*`も成功 |
+| 実PostgreSQL起動・破棄 | PASS（2026-09-12）。Testcontainersで`postgres:16-alpine`を起動し、IF経由のincrement後に破棄。PGliteには置換していない |
 | Playwright E2E | 未作成。成功扱いにしていない |
-| ハーネス | PASS。`node --test .claude/tests/*.test.mjs` 88 件 |
+| ハーネス | PASS。`node --test .claude/tests/*.test.mjs` 88件 |
 
-## 残課題（M1 以降）
+## 残課題（M1以降）
 
-- Better Auth 標準表、二人の初期登録、Cookie / Guard
-- 本番 migration と runtime 権限。`sql/00_validation_prerequisites.sql` は本番 migration ではない
+- Better Auth標準表、二人の初期登録、Cookie / Guard
+- 本番migrationとruntime権限。`sql/00_validation_prerequisites.sql`は本番migrationではない
 - 旅行・予定・支払い・精算・通知
-- Playwright E2E の有効化
-- Vercel / Neon の作成と公開（M0 対象外）
-- GitHub Actions の action を commit SHA で固定する
+- Playwright E2Eの有効化
+- Vercel / Neonの作成と公開（M0対象外）
+- GitHub Actionsのactionをcommit SHAで固定する

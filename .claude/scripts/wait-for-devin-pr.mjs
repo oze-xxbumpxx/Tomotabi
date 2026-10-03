@@ -1,30 +1,30 @@
 #!/usr/bin/env node
-// Issue に紐づかない Devin の PR（知見の PR など）ができるまで待つ。
+// Issueに紐づかないDevinのPR（知見のPRなど）ができるまで待つ。
 // 設計: docs/designs/devin-unlinked-pr-review.md
 //
 // 使い方:
-//   node .claude/scripts/wait-for-devin-pr.mjs --since <ISO 8601> [--interval 秒] [--timeout 秒]
-//     既定: 60 秒ごとに確認し、8 時間で諦める。セッションで 1 本だけ run_in_background で起動する。
-//     見つけると終了するので、見つかった PR の記録を init してから、同じ --since で起動し直す
-//     （記録がある PR は通知しない。docs/designs/devin-delegation-status.md）。
+//   node .claude/scripts/wait-for-devin-pr.mjs --since <ISO 8601> [--interval秒] [--timeout秒]
+//     既定: 60秒ごとに確認し、8時間で諦める。セッションで1本だけrun_in_backgroundで起動する。
+//     見つけると終了するので、見つかったPRの記録をinitしてから、同じ --sinceで起動し直す
+//     （記録があるPRは通知しない。docs/designs/devin-delegation-status.md）。
 //
 // 終了コード:
-//   0 … 見つかった。見つかった PR ごとに {"pr","url","title","headRefName","author"} の JSON を 1 行ずつ出す
+//   0 … 見つかった。見つかったPRごとに {"pr","url","title","headRefName","author"} のJSONを1行ずつ出す
 //   2 … 引数の誤り
 //   3 … 時間切れ
 //
 // 方針:
-// - 判定は findUnlinkedDevinPrs に閉じ込め、テストで固定する。
-// - 「紐づく」は、委譲の記録がある Issue に wait-for-pr.mjs の規則で紐づくときだけ。
-//   その PR は wait-for-pr.mjs が待っているので、ここでは拾わない（二重レビューを避ける）。
-//   記録の無い Issue に紐づく PR は誰も待っていないので拾う。
-//   ブランチ名の末尾 -N の規則だけで判定すると、devin/update-skills-1790414398 のような
-//   時刻の数字を Issue 番号と誤読するため、記録のある番号に限る。
-// - 既知の PR は、委譲の記録（Issue の記録の gh.pr、または pr-<n>.yml。reviews が空でもよい）か、
-//   PR のコメントの <!-- claude-review の印で判断する。init だけで中断したレビューは、
+// - 判定はfindUnlinkedDevinPrsに閉じ込め、テストで固定する。
+// - 「紐づく」は、委譲の記録があるIssueにwait-for-pr.mjsの規則で紐づくときだけ。
+//   そのPRはwait-for-pr.mjsが待っているので、ここでは拾わない（二重レビューを避ける）。
+//   記録の無いIssueに紐づくPRは誰も待っていないので拾う。
+//   ブランチ名の末尾 -Nの規則だけで判定すると、devin/update-skills-1790414398のような
+//   時刻の数字をIssue番号と誤読するため、記録のある番号に限る。
+// - 既知のPRは、委譲の記録（Issueの記録のgh.pr、またはpr-<n>.yml。reviewsが空でもよい）か、
+//   PRのコメントの <!-- claude-reviewの印で判断する。initだけで中断したレビューは、
 //   セッション開始時の表示（delegation-status）が「初回レビュー前」として出す。
-// - コメントの取得は PR ごとに失敗を扱う（1 件の失敗で他の PR を捨てない）。
-// - 取得の都度、記録（正 ∪ 写し）を読み直す（待機中に init された記録を、別の worktree のものも含めて反映する）。
+// - コメントの取得はPRごとに失敗を扱う（1件の失敗で他のPRを捨てない）。
+// - 取得の都度、記録（正 ∪ 写し）を読み直す（待機中にinitされた記録を、別のworktreeのものも含めて反映する）。
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -41,8 +41,8 @@ export const REVIEW_MARKER = '<!-- claude-review';
  * @param {Array<{number:number,headRefName?:string,createdAt?:string,title?:string,body?:string,
  *   closingIssuesReferences?:Array<{number:number}>}>} prs
  * @param {{since?: string | null, delegatedIssues?: number[], knownPrs?: number[]}} options
- *   since より前に作られた PR は対象外（null なら絞らない）。knownPrs は記録がある PR。
- * @returns {Array<object>} 対象の PR を番号の昇順で。
+ *   sinceより前に作られたPRは対象外（nullなら絞らない）。knownPrsは記録があるPR。
+ * @returns {Array<object>} 対象のPRを番号の昇順で。
  */
 export function findUnlinkedDevinPrs(prs, { since = null, delegatedIssues = [], knownPrs = [] } = {}) {
   const sinceMs = since === null ? null : Date.parse(since);
@@ -55,7 +55,7 @@ export function findUnlinkedDevinPrs(prs, { since = null, delegatedIssues = [], 
     .sort((a, b) => a.number - b.number);
 }
 
-/** 記録から「委譲した Issue」と「記録がある PR」を取り出す。 */
+/** 記録から「委譲したIssue」と「記録があるPR」を取り出す。 */
 export function knownFromRecords(records) {
   const delegatedIssues = [];
   const knownPrs = [];
@@ -71,7 +71,7 @@ export function knownFromRecords(records) {
 export const hasReviewMarker = (comments) => (comments ?? []).some((c) => (c.body ?? '').includes(REVIEW_MARKER));
 
 /**
- * 候補からレビューの印があるものを除く。コメントの取得に失敗した PR は unchecked に分け、他の PR は捨てない。
+ * 候補からレビューの印があるものを除く。コメントの取得に失敗したPRはuncheckedに分け、他のPRは捨てない。
  * @param {Array<{number:number}>} prs
  * @param {(pr: number) => Array<{body?: string}>} commentsOf
  */
@@ -106,7 +106,7 @@ export const toOutputLine = (pr) =>
     author: pr.author?.login ?? null,
   });
 
-/** OPEN の Devin の PR。since を渡すと作成日時で絞る。 */
+/** OPENのDevinのPR。sinceを渡すと作成日時で絞る。 */
 export function listOpenDevinPrs(since = null, timeout = GH_TIMEOUT_MS) {
   const args = ['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,body,headRefName,url,createdAt,closingIssuesReferences,author'];
   if (since !== null) args.push('--search', `created:>=${since}`);

@@ -1,29 +1,29 @@
 ---
 name: create-requirements-document
 description: >
-  要件定義書を docs/requirements/<feature-name>.md に作成する手順とテンプレート。
-  architecture-designer が Level 3（および必要な Level 2）で使う（IMP-2026-031）。
+  要件定義書をdocs/requirements/<feature-name>.mdに作成する手順とテンプレート。
+  architecture-designerがLevel 3（および必要なLevel 2）で使う（IMP-2026-031）。
   対象外項目は削除せず「対象外」と明記する。
 ---
 
 # 要件定義書作成スキル
 
-architecture-designer が `docs/requirements/<feature-name>.md` を作成するための手順と雛形
-（旧 requirements-analyst の責務を吸収。IMP-2026-031）。
+architecture-designerが`docs/requirements/<feature-name>.md`を作成するための手順と雛形
+（旧requirements-analystの責務を吸収。IMP-2026-031）。
 **コードは変更しない。** 既存の要件文書があれば新規作成せず更新する（重複作成しない）。
 
 ## 進め方
 
-1. Orchestrator から渡された目的・対象範囲・参照ファイルを確認する。
-2. プロジェクト前提は `AGENTS.md` で押さえる。未作成の `docs/01`〜`04` は読まない。
-   既存実装・既存仕様があれば Grep/Glob/Read で調査する。
-3. 書く前に問いを出す。[checklist.md](checklist.md) の観点で決まっていないことを探し、
-   [ask-questions](../ask-questions/SKILL.md) の手順で札を付けて、「工程: 要件・優先度: 高」の問いだけを
-   推奨・根拠・選択肢つきで Orchestrator に返す。ユーザーの答えが来るまで本文を書かない。
+1. Orchestratorから渡された目的・対象範囲・参照ファイルを確認する。
+2. プロジェクト前提は`AGENTS.md`で押さえる。未作成の`docs/01`〜`04`は読まない。
+   既存実装・既存仕様があればGrep/Glob/Readで調査する。
+3. 書く前に問いを出す。[checklist.md](checklist.md)の観点で決まっていないことを探し、
+   [ask-questions](../ask-questions/SKILL.md)の手順で札を付けて、「工程: 要件・優先度: 高」の問いだけを
+   推奨・根拠・選択肢つきでOrchestratorに返す。ユーザーの答えが来るまで本文を書かない。
 4. 答えを「決めたこと（問いと答え）」に記録し、下記テンプレートを埋める。残りの問いは札つきで「未決事項」に残す。
    対象外項目は削除せず「対象外」「該当なし」と書く。
-5. L3 で最初の Write 担当のときは Orchestrator の指示により `.claude/state/current-feature` に
-   feature-name を 1 行で書く。
+5. L3で最初のWrite担当のときはOrchestratorの指示により`.claude/state/current-feature`に
+   feature-nameを1行で書く。
 
 ## テンプレート
 
@@ -60,14 +60,14 @@ architecture-designer が `docs/requirements/<feature-name>.md` を作成する�
 
 ## 良い例（実タスクの成果物）
 
-- `cookpit/store-master 要件` §5 — 正常系 N-xx / 異常系 E-xx / 境界 B-xx の採番つき
-  観点表で列挙。この採番が下流工程の照合基準になり（create-test-plan 手順8 は「要件書を正」
-  として全観点の反映を照合する）、reviewer の「要件・設計・実装計画・実装の整合性」確認を
-  通過した（出典: `cookpit/store-master レビュー`。同レビュー Should-2 は、要件書 N-02 を
+- `cookpit/store-master 要件` §5 — 正常系N-xx / 異常系E-xx / 境界B-xxの採番つき
+  観点表で列挙。この採番が下流工程の照合基準になり（create-test-plan手順8は「要件書を正」
+  として全観点の反映を照合する）、reviewerの「要件・設計・実装計画・実装の整合性」確認を
+  通過した（出典: `cookpit/store-master レビュー`。同レビューShould-2は、要件書N-02を
   下流が省略したことを要件書側の採番のおかげで検出できた例でもある）。
 
 ## 禁止事項
 
-- コードの変更・設計の確定（設計は architecture-designer）。
+- コードの変更・設計の確定（設計はarchitecture-designer）。
 - 推測での仕様確定（未決は「未決事項」に残す）。
-- 調べている途中で見つけた既存の不具合を直すこと（ask-questions の「既存の不具合を見つけたとき」で報告する）。
+- 調べている途中で見つけた既存の不具合を直すこと（ask-questionsの「既存の不具合を見つけたとき」で報告する）。

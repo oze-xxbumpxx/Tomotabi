@@ -99,7 +99,7 @@ describe("予定の書き込みの呼び出し順", () => {
       memo: undefined,
     });
 
-    // hasHistory（ロック中の E-19 照会）と応答用の activeEvents / hasHistory が挟まる
+    // hasHistory（ロック中のE-19照会）と応答用のactiveEvents / hasHistoryが挟まる
     expect(ctx.calls).toEqual([
       "trips.lockForShare",
       "receipts.find",

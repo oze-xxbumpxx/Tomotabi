@@ -13,15 +13,15 @@ export type CreatePlanInput = Readonly<{
   name: string;
   kind: string;
   date: string;
-  /** `HH:mm` または null。 */
+  /** `HH:mm`またはnull。 */
   time: string | null;
   memo: string | null;
 }>;
 
 export interface CreatePlanInputPort {
   /**
-   * @throws 旅行が無い・参加していないとき 403 TRIP_NOT_ACCESSIBLE。
-   *   日付が期間外のとき 422 PLAN_OUTSIDE_TRIP_PERIOD。
+   * @throws旅行が無い・参加していないとき403 TRIP_NOT_ACCESSIBLE。
+   *   日付が期間外のとき422 PLAN_OUTSIDE_TRIP_PERIOD。
    */
   execute(input: CreatePlanInput): Promise<PlanWriteResult>;
 }

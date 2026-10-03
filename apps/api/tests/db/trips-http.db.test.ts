@@ -143,7 +143,7 @@ async function createTrip(cookie: string, name = "京都 2 泊"): Promise<string
   return response.body.id as string;
 }
 
-/** ひなたが参加しない旅行を別利用者 2 人で直接作る（T-07・T-09 用）。 */
+/** ひなたが参加しない旅行を別利用者2人で直接作る（T-07・T-09用）。 */
 async function seedForeignTrip(): Promise<string> {
   const suffix = crypto.randomUUID().slice(0, 8);
   const u0 = await insertUser(`foreign-${suffix}-0`, `foreign-${suffix}-0@example.test`);
@@ -392,7 +392,7 @@ describe("一覧と取得（T-07〜T-09）", () => {
     const t2 = await createTrip(hinataCookie, "旅行 2");
     const t3 = await createTrip(hinataCookie, "旅行 3");
 
-    // 他の試験で作った旅行より先頭に来るよう、created_at を未来の既知の値にする
+    // 他の試験で作った旅行より先頭に来るよう、created_atを未来の既知の値にする
     await db.admin.query(
       "UPDATE planning.trips SET created_at = '2027-01-01T10:00:00Z' WHERE id = $1",
       [t1],
@@ -405,7 +405,7 @@ describe("一覧と取得（T-07〜T-09）", () => {
       "UPDATE planning.trips SET created_at = '2027-01-03T10:00:00Z' WHERE id = $1",
       [t3],
     );
-    // 同時刻の 2 件は id の降順になる
+    // 同時刻の2件はidの降順になる
     const tieOrder = [t2, t3].sort().reverse();
 
     const response = await authed(http().get("/api/trips"), hinataCookie);
@@ -444,14 +444,14 @@ describe("一覧と取得（T-07〜T-09）", () => {
       cursor = page.body.nextCursor;
     } while (cursor !== null);
 
-    // ページをまたいで重複なく、作った 25 件が全部含まれ、参加しない旅行は出ない
+    // ページをまたいで重複なく、作った25件が全部含まれ、参加しない旅行は出ない
     expect(new Set(allIds).size).toBe(allIds.length);
     for (const id of created) {
       expect(allIds).toContain(id);
     }
     expect(allIds).not.toContain(foreignTripId);
 
-    // 絞り込み: 3 件を finished にする（ライフサイクル制約上の必須列も合わせて）
+    // 絞り込み: 3件をfinishedにする（ライフサイクル制約上の必須列も合わせて）
     const finished = created.slice(0, 3);
     await db.admin.query(
       `UPDATE planning.trips
@@ -485,8 +485,8 @@ describe("一覧と取得（T-07〜T-09）", () => {
     expect(tampered.status).toBe(400);
     expect(tampered.body).toMatchObject({ code: "INVALID_REQUEST" });
 
-    // 同じミリ秒・違うマイクロ秒の 3 件を足す。カーソルがミリ秒に丸まると
-    // ページの境目でこれらが抜け落ちる。finished にして limit=1 でたどる。
+    // 同じミリ秒・違うマイクロ秒の3件を足す。カーソルがミリ秒に丸まると
+    // ページの境目でこれらが抜け落ちる。finishedにしてlimit=1でたどる。
     const microIds: string[] = [];
     for (const micro of ["123900", "123500", "123100"]) {
       const id = await createTrip(aoiCookie, `sub-ms ${micro}`);
@@ -540,7 +540,7 @@ describe("一覧と取得（T-07〜T-09）", () => {
       expect(response.status).toBe(403);
       expect(response.body.code).toBe("TRIP_NOT_ACCESSIBLE");
     }
-    // 存在しない・参加していないで本文が同じ（requestId は要求ごとに違う）
+    // 存在しない・参加していないで本文が同じ（requestIdは要求ごとに違う）
     const { requestId: _f, ...foreignBody } = foreign.body;
     const { requestId: _m, ...missingBody } = missing.body;
     expect(foreignBody).toEqual(missingBody);
@@ -606,7 +606,7 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
       [tripId, hinata.userId],
     );
 
-    // 取りやめ済みの予定（2026-09-12）がはみ出す期間 → 422 で何も変わらない
+    // 取りやめ済みの予定（2026-09-12）がはみ出す期間 → 422で何も変わらない
     const shrink = await authed(
       http().put(`/api/trips/${tripId}/period`),
       hinataCookie,
@@ -703,7 +703,7 @@ describe("開始・終了（T-13〜T-16）", () => {
       .set("If-Match", '"1"');
     const before = await authed(http().get(`/api/trips/${tripId}`), hinataCookie);
 
-    // 別のキーで start（ETag は現在値に一致）
+    // 別のキーでstart（ETagは現在値に一致）
     const againKey = newKey();
     const again = await authed(
       http().post(`/api/trips/${tripId}/start`),

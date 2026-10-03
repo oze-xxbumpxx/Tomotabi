@@ -1,7 +1,7 @@
 import { EyeSlash, ListBullets } from "@phosphor-icons/react";
 
 /**
- * C-2 開けない。403 と 404 で文言を分けない（両方でこの部品を使う）。
+ * C-2開けない。403と404で文言を分けない（両方でこの部品を使う）。
  * 他の旅行の情報は出さない。
  */
 export function NotAvailable({

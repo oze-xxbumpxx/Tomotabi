@@ -14,8 +14,8 @@ const CONFIG: AuthConfig = {
   useSecureCookies: false,
 };
 
-// 拒否系は body 検査が DB より先に走るため、繋がらない Pool で良い。
-// 受理系（DB に state を書く）は tests/db/auth-http.db.test.ts が実 DB で見る。
+// 拒否系はbody検査がDBより先に走るため、繋がらないPoolで良い。
+// 受理系（DBにstateを書く）はtests/db/auth-http.db.test.tsが実DBで見る。
 const UNREACHABLE_POOL = () =>
   new Pool({ connectionString: "postgres://127.0.0.1:1/nowhere" });
 

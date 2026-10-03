@@ -5,7 +5,7 @@ const MILLIS_PER_DAY = 86_400_000;
 
 function isRealDate(year: number, month: number, day: number): boolean {
   const date = new Date(Date.UTC(year, month - 1, day));
-  // Date.UTC は年 0〜99 を 1900 年代と解釈するため、実年を上書きしてから比べる
+  // Date.UTCは年0〜99を1900年代と解釈するため、実年を上書きしてから比べる
   date.setUTCFullYear(year);
   return (
     date.getUTCFullYear() === year &&
@@ -23,8 +23,8 @@ function toUtcMillis(value: LocalDate): number {
 
 export const LocalDate = {
   /**
-   * `YYYY-MM-DD` の形式で実在する日付だけを受け付ける。
-   * @throws 形式が違う・実在しない日付のとき Error を投げる。
+   * `YYYY-MM-DD`の形式で実在する日付だけを受け付ける。
+   * @throws形式が違う・実在しない日付のときErrorを投げる。
    */
   parse(value: string): LocalDate {
     const match = LOCAL_DATE_PATTERN.exec(value);
@@ -39,14 +39,14 @@ export const LocalDate = {
   },
 
   /**
-   * 前後関係を比べる。a が前なら負、同じなら 0、後なら正を返す。
+   * 前後関係を比べる。aが前なら負、同じなら0、後なら正を返す。
    */
   compare(a: LocalDate, b: LocalDate): number {
     return a < b ? -1 : a > b ? 1 : 0;
   },
 
   /**
-   * a から b までの日数（b - a）。b が前なら負を返す。
+   * aからbまでの日数（b - a）。bが前なら負を返す。
    */
   daysBetween(a: LocalDate, b: LocalDate): number {
     return Math.round((toUtcMillis(b) - toUtcMillis(a)) / MILLIS_PER_DAY);

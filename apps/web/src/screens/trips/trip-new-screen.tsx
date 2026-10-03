@@ -21,8 +21,8 @@ import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 import { StatusText } from "@/shared/ui/status-text";
 
 /**
- * `/trips/new` の旅行の作成。v3 に無い画面のため、11「支払いを記録」と
- * 同じシートの形（上端の角丸 xl・見出し・閉じる）で組む。元の画面
+ * `/trips/new`の旅行の作成。v3に無い画面のため、11「支払いを記録」と
+ * 同じシートの形（上端の角丸xl・見出し・閉じる）で組む。元の画面
  * （旅行一覧）をシートの後ろに敷き、透けて見えるようにする。
  * 成功したら作った旅行のしおりへ移る（選択値の保存はしおり側で行う）。
  */

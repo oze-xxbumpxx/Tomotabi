@@ -17,7 +17,7 @@ function createApp(authAvailable = true): Express {
 }
 
 describe("authRouteAllowlist", () => {
-  // U-11: 公開 3 経路は次の handler（Better Auth 本体）へ渡す
+  // U-11: 公開3経路は次のhandler（Better Auth本体）へ渡す
   it.each([
     ["post", "/api/auth/sign-in/social", { origin: PUBLIC_ORIGIN }],
     ["get", "/api/auth/callback/google", {}],
@@ -29,7 +29,7 @@ describe("authRouteAllowlist", () => {
     expect(response.status).toBe(HANDLER_STATUS);
   });
 
-  // U-12: 公開以外の /api/auth/* は 404
+  // U-12: 公開以外の /api/auth/* は404
   it.each([
     "/api/auth/get-session",
     "/api/auth/list-sessions",
@@ -58,7 +58,7 @@ describe("authRouteAllowlist", () => {
     }
   });
 
-  // U-13: 公開経路でもメソッド違いは 404
+  // U-13: 公開経路でもメソッド違いは404
   it.each([
     ["get", "/api/auth/sign-in/social"],
     ["put", "/api/auth/sign-in/social"],
@@ -75,7 +75,7 @@ describe("authRouteAllowlist", () => {
     expect(response.status).toBe(404);
   });
 
-  // U-14: POST の公開経路は Origin 完全一致
+  // U-14: POSTの公開経路はOrigin完全一致
   it.each(["sign-in/social", "sign-out"] as const)(
     "rejects POST /api/auth/%s without a matching Origin (U-14)",
     async (path) => {

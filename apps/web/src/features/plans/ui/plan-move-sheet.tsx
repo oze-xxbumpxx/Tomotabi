@@ -14,7 +14,7 @@ import { DatePickerGrid } from "./date-picker-grid";
 
 type RejectedState = Extract<PlanSaveState, { status: "rejected" }>;
 
-/** 403 / 404 の拒否は C-2 に切り替える対象（欄のエラーや再送は出さない）。 */
+/** 403 / 404の拒否はC-2に切り替える対象（欄のエラーや再送は出さない）。 */
 function isNotAvailableState(state: PlanSaveState): state is RejectedState {
   return (
     state.status === "rejected" &&
@@ -37,7 +37,7 @@ function rejectedMessage(state: RejectedState): string {
 }
 
 /**
- * 日の移動の小さなシート（11c の日付選択だけ）。
+ * 日の移動の小さなシート（11cの日付選択だけ）。
  * 同じ日なら保存ボタンを押せない（W-20）。結果不明・競合・拒否は
  * シートの中で状態を出し、同じ要求で確かめる。
  */
@@ -56,7 +56,7 @@ export function PlanMoveSheet({
   move: PlanSave;
   onClose: () => void;
   onSessionExpired: (unconfirmed: boolean) => void;
-  /** 書き込みが 403 / 404 で拒否（C-2）。呼び出し側が全面を差し替える。 */
+  /** 書き込みが403 / 404で拒否（C-2）。呼び出し側が全面を差し替える。 */
   onNotAvailable: (target: "trip" | "item") => void;
 }) {
   const online = useOnlineStatus();
@@ -68,7 +68,7 @@ export function PlanMoveSheet({
       ? state.latest.etag
       : etag;
 
-  // C-1 / C-2 は呼び出し側の全面表示に切り替える。
+  // C-1 / C-2は呼び出し側の全面表示に切り替える。
   useEffect(() => {
     if (state.status === "session-expired") {
       onSessionExpired(state.unconfirmed);
@@ -116,7 +116,7 @@ export function PlanMoveSheet({
               type="button"
               className="btn-ink"
               onClick={submit}
-              // 止めるのは 428（ETag が古い）のときだけ。ほかの拒否は
+              // 止めるのは428（ETagが古い）のときだけ。ほかの拒否は
               // 別の日を選び直せば編集に戻り、新しいキーで送り直せる。
               disabled={
                 sameDay ||
@@ -197,8 +197,8 @@ export function PlanMoveSheet({
             onSelect={(date) => {
               setSelected(date);
               // 拒否（期間外など）のあと別の日を選び直したら編集に戻す。
-              // 拒否した要求でサーバーは予定を変えないので ETag は
-              // そのまま使え、送り直しは新しいキーになる。428 だけは
+              // 拒否した要求でサーバーは予定を変えないのでETagは
+              // そのまま使え、送り直しは新しいキーになる。428だけは
               // 取り直すまで送らせない。
               if (
                 state.status === "rejected" &&

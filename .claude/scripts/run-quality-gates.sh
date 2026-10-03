@@ -3,19 +3,19 @@
 #
 # 使い方:
 #   bash .claude/scripts/run-quality-gates.sh [--level 0|1|2|3] [--format] [--build] [--all]
-#     既定（--level 1 相当）: harness, lint, type-check, test
+#     既定（--level 1相当）: harness, lint, type-check, test
 #     --level 2 / 3       : + build, format-check
-#     --format            : format-check を追加
-#     --build             : build を追加
-#     --all               : 実在する全ゲート + 休眠中の review-readiness 試験
+#     --format            : format-checkを追加
+#     --build             : buildを追加
+#     --all               : 実在する全ゲート + 休眠中のreview-readiness試験
 #
 # 方針:
-# - 1 つのゲート失敗で即終了せず、全ゲートを実行して最後に集計する（既存失敗の可視化）。
-# - 実在しないコマンドは実行せず unknown と報告する（推測で通過扱いにしない）。
-# - パッケージマネージャーは lockfile から検出する（pnpm 固定にしない）。
-# - ハーネス試験は既定では休眠中の review-readiness.test.mjs を除いて
-#   `node --test` で実行する（D-3）。--all のときだけ package.json の test:harness
-#   （全件実行）を使い、無ければ `node --test .claude/tests/*.test.mjs` に落ちる。
+# - 1つのゲート失敗で即終了せず、全ゲートを実行して最後に集計する（既存失敗の可視化）。
+# - 実在しないコマンドは実行せずunknownと報告する（推測で通過扱いにしない）。
+# - パッケージマネージャーはlockfileから検出する（pnpm固定にしない）。
+# - ハーネス試験は既定では休眠中のreview-readiness.test.mjsを除いて
+#   `node --test`で実行する（D-3）。--allのときだけpackage.jsonのtest:harness
+#   （全件実行）を使い、無ければ`node --test .claude/tests/*.test.mjs`に落ちる。
 set -uo pipefail
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
@@ -120,7 +120,7 @@ run_harness() {
     skip_gate "harness" "unavailable"
     return
   fi
-  # 親が node --test のとき子ランナーが巻き込まれないよう環境を切る
+  # 親がnode --testのとき子ランナーが巻き込まれないよう環境を切る
   run_gate "harness" env -u NODE_TEST_CONTEXT node --test "${tests[@]}"
 }
 
@@ -144,9 +144,9 @@ echo "FAIL: ${FAIL[*]:-(none)}"
 echo "SKIP/unknown: ${SKIP[*]:-(none)}"
 echo
 
-# 実行結果を永続領域の quality-gates-log.jsonl へ機械記録する（保存先は harness-paths.mjs が決定。
+# 実行結果を永続領域のquality-gates-log.jsonlへ機械記録する（保存先はharness-paths.mjsが決定。
 # 既定はリポジトリ外のユーザー状態ディレクトリで、環境破棄でも失われない）。
-# あわせて run 状態のゲート結果を更新する。記録に失敗してもゲート判定は変えない。
+# あわせてrun状態のゲート結果を更新する。記録に失敗してもゲート判定は変えない。
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 node --input-type=module -e '
 import { appendJsonl, loadRunState, updateRunState } from "./.claude/lib/harness-state.mjs";

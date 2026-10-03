@@ -11,8 +11,8 @@ export type GetPlanInput = Readonly<{
 
 export interface GetPlanInputPort {
   /**
-   * @throws 旅行が無い・参加していないとき 403 TRIP_NOT_ACCESSIBLE。
-   *   予定が無い・別の旅行の予定のとき 404 PLAN_NOT_FOUND。
+   * @throws旅行が無い・参加していないとき403 TRIP_NOT_ACCESSIBLE。
+   *   予定が無い・別の旅行の予定のとき404 PLAN_NOT_FOUND。
    */
   execute(input: GetPlanInput): Promise<Plan>;
 }

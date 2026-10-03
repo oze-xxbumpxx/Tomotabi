@@ -21,7 +21,7 @@ import {
 } from "./trip-write-flow";
 
 /**
- * 予定の追加。旅行行は FOR SHARE にする。期間の変更は FOR UPDATE を取るため、
+ * 予定の追加。旅行行はFOR SHAREにする。期間の変更はFOR UPDATEを取るため、
  * こちらが先に取れば期間変更が待ち、後なら確定した期間で検証する（E-18）。
  */
 export class CreatePlanUseCase implements CreatePlanInputPort {
@@ -97,8 +97,8 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
         return { httpStatus: 201, body, replayed: false };
       });
     } catch (error) {
-      // 同じキーの同時作成は receipt の PK 違反で負ける側が分かる（旅行の
-      // 作成と同じ仕組み）。勝った側が COMMIT した receipt を読み直す。
+      // 同じキーの同時作成はreceiptのPK違反で負ける側が分かる（旅行の
+      // 作成と同じ仕組み）。勝った側がCOMMITしたreceiptを読み直す。
       if (!isUniqueViolation(error)) {
         throw error;
       }

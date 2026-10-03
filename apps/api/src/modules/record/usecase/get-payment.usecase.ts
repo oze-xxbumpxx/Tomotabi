@@ -11,7 +11,7 @@ import { toPaymentDto } from "./payment-dto";
 
 /**
  * 参加している旅行の中で、支払いが無い・別の旅行の支払いはどちらも
- * 同じ 404（どちらも同じ応答で、存在を漏らさない）。
+ * 同じ404（どちらも同じ応答で、存在を漏らさない）。
  */
 export function paymentNotFound(): ApiError {
   return new ApiError({
@@ -22,8 +22,8 @@ export function paymentNotFound(): ApiError {
 }
 
 /**
- * 支払い 1 件の取得（取り消し状態を含む）。読み取りだけなので
- * guard の行のロックは取らない。
+ * 支払い1件の取得（取り消し状態を含む）。読み取りだけなので
+ * guardの行のロックは取らない。
  */
 export class GetPaymentUseCase implements GetPaymentInputPort {
   constructor(

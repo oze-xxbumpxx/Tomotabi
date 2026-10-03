@@ -7,7 +7,7 @@ import { transferLabel } from "../model/breakdown";
 
 /**
  * 精算の履歴（新しい順）。各行は記録の日時・向き・金額と、
- * 取り消し済みならその印を出す。0 円の精算は「受け渡し不要」と出す。
+ * 取り消し済みならその印を出す。0円の精算は「受け渡し不要」と出す。
  */
 export function SettlementHistory({
   settlements,

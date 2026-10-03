@@ -4,17 +4,17 @@ import { ApiError } from "./api-error";
 
 export type ZodBodyPipeOptions = {
   /**
-   * PATCH の部分更新（契約の `minProperties: 1`）用。パース後のオブジェクトが
-   * 空なら 400 にする。
+   * PATCHの部分更新（契約の`minProperties: 1`）用。パース後のオブジェクトが
+   * 空なら400にする。
    */
   readonly nonEmptyObject?: boolean;
 };
 
 /**
- * contracts の OpenAPI から生成した Zod スキーマで body / query を検証する Pipe
- * （ADR-0004）。形式違反（型・未知の項目・パターン）は 400 INVALID_REQUEST、
- * 値の規則（コードポイントの文字数・実在日・期間）は Domain の値型が 422 にする。
- * コントローラでは `@Body(new ZodBodyPipe(CreateTripBody))` のように使う。
+ * contractsのOpenAPIから生成したZodスキーマでbody / queryを検証するPipe
+ * （ADR-0004）。形式違反（型・未知の項目・パターン）は400 INVALID_REQUEST、
+ * 値の規則（コードポイントの文字数・実在日・期間）はDomainの値型が422にする。
+ * コントローラでは`@Body(new ZodBodyPipe(CreateTripBody))`のように使う。
  */
 export class ZodBodyPipe<S extends zod.ZodType> implements PipeTransform {
   constructor(

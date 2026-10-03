@@ -3,14 +3,14 @@ import { Warning } from "@phosphor-icons/react";
 export type ConflictRow = {
   label: string;
   mine: string;
-  /** 違いがある項目だけ最新の値。null は違いなし（1 行で表示）。 */
+  /** 違いがある項目だけ最新の値。nullは違いなし（1行で表示）。 */
   latest: string | null;
 };
 
 /**
- * C-5 競合。違いのある項目ごとに「最新（相手）」と「あなたの入力」を並べ、
- * 違いのない項目は 1 行で出す。`onSaveMine` は最新の ETag と新しいキーでの送信、
- * `onUseLatest` はフォームを最新の内容で置き換える操作に繋ぐ。
+ * C-5競合。違いのある項目ごとに「最新（相手）」と「あなたの入力」を並べ、
+ * 違いのない項目は1行で出す。`onSaveMine`は最新のETagと新しいキーでの送信、
+ * `onUseLatest`はフォームを最新の内容で置き換える操作に繋ぐ。
  */
 export function ConflictNotice({
   rows,

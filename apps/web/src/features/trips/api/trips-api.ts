@@ -42,9 +42,9 @@ import type {
 } from "@/shared/api/mutation-request";
 
 /**
- * 旅行 API の薄い入口。呼び出しは callApi / callApiWithMeta / sendMutationRequest
- * を通し、応答は契約の Zod で検証してから返す（失敗は ApiFailure になる）。
- * 生成クライアントと zod への参照はこの層だけに閉じる。
+ * 旅行APIの薄い入口。呼び出しはcallApi / callApiWithMeta / sendMutationRequest
+ * を通し、応答は契約のZodで検証してから返す（失敗はApiFailureになる）。
+ * 生成クライアントとzodへの参照はこの層だけに閉じる。
  */
 
 // ---- 読み取り ----
@@ -70,8 +70,8 @@ export function getTrip(
 }
 
 /**
- * GET /api/trips/{tripId} の応答全体（ETag つき）。
- * conflict になったとき最新の If-Match を組み立て直すために使う。
+ * GET /api/trips/{tripId} の応答全体（ETagつき）。
+ * conflictになったとき最新のIf-Matchを組み立て直すために使う。
  */
 export function getTripWithMeta(
   tripId: string,
@@ -80,8 +80,8 @@ export function getTripWithMeta(
 }
 
 /**
- * しおり（GET /api/trips/{tripId}/itinerary）。応答の trip が
- * 旅行ヘッダーのデータ元になる。date は省略するとサーバーの既定
+ * しおり（GET /api/trips/{tripId}/itinerary）。応答のtripが
+ * 旅行ヘッダーのデータ元になる。dateは省略するとサーバーの既定
  * （期間内の今日、期間外なら初日）になり、空文字は絶対に送らない。
  */
 export function getTripItinerary(

@@ -26,8 +26,8 @@ function trip(overrides: Record<string, unknown> = {}): Record<string, unknown> 
 
 describe("生成した web 用 Zod の応答スキーマ", () => {
   it("絵文字を含む有効な名前（UTF-16 で 100 超）の応答を弾かない", () => {
-    // API はコードポイントで数えるため、絵文字 51 個（51 コードポイント / UTF-16 で 102）の
-    // 名前は有効。callApi の応答検証が UTF-16 の .max() だとこれを誤って弾く（レビュー指摘）
+    // APIはコードポイントで数えるため、絵文字51個（51コードポイント / UTF-16で102）の
+    // 名前は有効。callApiの応答検証がUTF-16の .max()だとこれを誤って弾く（レビュー指摘）
     const name = "🍣".repeat(51);
     expect(name.length).toBe(102);
 

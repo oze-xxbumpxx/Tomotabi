@@ -3,9 +3,9 @@ import type { IdempotencyKey } from "../http/idempotency-key";
 import type { UserId } from "../domain/user-id";
 
 /**
- * 書き込みの結果を記録する receipt（infra.command_receipts 行の値）。
- * (actorId, operation, idempotencyKey) が主キー。同じキーの成功再送は
- * responseBody と httpStatus をそのまま返す。requestHash が違う同一キーは
+ * 書き込みの結果を記録するreceipt（infra.command_receipts行の値）。
+ * (actorId, operation, idempotencyKey)が主キー。同じキーの成功再送は
+ * responseBodyとhttpStatusをそのまま返す。requestHashが違う同一キーは
  * 409 IDEMPOTENCY_KEY_REUSED。
  */
 export type CommandReceipt = Readonly<{
@@ -13,10 +13,10 @@ export type CommandReceipt = Readonly<{
   operation: string;
   idempotencyKey: IdempotencyKey;
   tripId: string;
-  /** 64 桁の 16 進（computeRequestHash の結果） */
+  /** 64桁の16進（computeRequestHashの結果） */
   requestHash: string;
-  // infra.command_receipts の CHECK が許す種類。財務（支払い・確認・精算）の
-  // 種類は M3 の表に合わせて先に含めてある（plan_event 系は M4 の記録 API で使う）。
+  // infra.command_receiptsのCHECKが許す種類。財務（支払い・確認・精算）の
+  // 種類はM3の表に合わせて先に含めてある（plan_event系はM4の記録APIで使う）。
   resourceType:
     | "trip"
     | "plan"
@@ -32,19 +32,19 @@ export type CommandReceipt = Readonly<{
 
 export type RequestHashInput = Readonly<{
   operation: string;
-  /** 対象の旅行。作成時（まだ旅行が無い）は null */
+  /** 対象の旅行。作成時（まだ旅行が無い）はnull */
   tripId: string | null;
-  /** 対象行の id。作成時は null */
+  /** 対象行のid。作成時はnull */
   resourceId: string | null;
-  /** 検証後の正規化した body。body の無い操作は null */
+  /** 検証後の正規化したbody。bodyの無い操作はnull */
   body: unknown;
-  /** If-Match の version。不要な操作は null */
+  /** If-Matchのversion。不要な操作はnull */
   ifMatch: string | null;
 }>;
 
 /**
- * request_hash のための正規化 JSON。オブジェクトのキー順を固定し、
- * 文字列は前後の空白を除く（BoundedText が検証時に除く規則と揃える）。
+ * request_hashのための正規化JSON。オブジェクトのキー順を固定し、
+ * 文字列は前後の空白を除く（BoundedTextが検証時に除く規則と揃える）。
  */
 function normalize(value: unknown): unknown {
   if (typeof value === "string") {
@@ -64,8 +64,8 @@ function normalize(value: unknown): unknown {
 }
 
 /**
- * `sha256(正規化 JSON { operation, tripId, resourceId, body, ifMatch })` を返す。
- * キーの順序や前後の空白だけが違う同一の操作は同じ hash になる。
+ * `sha256(正規化 JSON { operation, tripId, resourceId, body, ifMatch })`を返す。
+ * キーの順序や前後の空白だけが違う同一の操作は同じhashになる。
  */
 export function computeRequestHash(input: RequestHashInput): string {
   const canonical = JSON.stringify(

@@ -1,4 +1,4 @@
-// harness-time.mjs — HARNESS_TZ での「今日」と git の暦日窓。
+// harness-time.mjs — HARNESS_TZでの「今日」とgitの暦日窓。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dayInTz, gitDayRange, harnessTz, nextCalendarDay, tzOffsetIso } from '../lib/harness-time.mjs';

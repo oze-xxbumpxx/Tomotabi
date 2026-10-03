@@ -15,13 +15,13 @@ import {
 import type { PaymentsReadPort } from "../adapter/outbound/payments-read.port";
 
 /**
- * record の支払いの読み取り（settlement から port 越しに使う）。
- * UoW のトランザクション内の db ハンドルを受けて使う。
+ * recordの支払いの読み取り（settlementからport越しに使う）。
+ * UoWのトランザクション内のdbハンドルを受けて使う。
  */
 export class PgPaymentsRead implements PaymentsReadPort {
   constructor(private readonly db: NodePgDatabase) {}
 
-  /** 支払いを記録順（created_at, id の昇順）で返す。 */
+  /** 支払いを記録順（created_at, idの昇順）で返す。 */
   async listInTrip(tripId: string): Promise<readonly Payment[]> {
     const rows = await this.db
       .select()

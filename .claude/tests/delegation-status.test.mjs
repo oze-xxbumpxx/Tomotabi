@@ -1,5 +1,5 @@
-// delegation-status.mjs（記録を状態として使う）と SessionStart Hook のテスト。gh は呼ばない。
-// 観点 ID は docs/tests/devin-delegation-status.md。
+// delegation-status.mjs（記録を状態として使う）とSessionStart Hookのテスト。ghは呼ばない。
+// 観点IDはdocs/tests/devin-delegation-status.md。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -57,7 +57,7 @@ function withTmp(fn) {
 test('S-07: 完了した記録（merged / closed）には次の動きを出さない', () => {
   assert.equal(nextAction(issueRec(1, { outcome: 'merged' }), { prs: [], now: NOW }), null);
   assert.equal(nextAction(issueRec(2, { outcome: 'closed' }), { prs: [], now: NOW }), null);
-  // finalize を PR が開いている間に実行した記録（outcome: open）は完了ではない
+  // finalizeをPRが開いている間に実行した記録（outcome: open）は完了ではない
   assert.equal(nextAction(issueRec(3, { outcome: 'open', gh: { pr: 30 } }), { prs: [ghPr(30)], now: NOW }).state, 'review');
   const status = buildStatus({ records: [issueRec(1, { outcome: 'merged' })], now: NOW });
   assert.deepEqual(status.actions, []);
@@ -93,7 +93,7 @@ test('S-11: head が最後の reviewed_sha と違えば再レビュー（round n
   const rec = reviewed(issueRec(61, { gh: { pr: 65 } }), 'fix');
   const a = nextAction(rec, { prs: [ghPr(65, { headRefOid: NEW_HEAD })], now: NOW });
   assert.deepEqual([a.state, a.round], ['re-review', 1]);
-  // マージ可と判定した後に push された（衝突の解消など）ときも再レビュー
+  // マージ可と判定した後にpushされた（衝突の解消など）ときも再レビュー
   assert.equal(nextAction(reviewed(issueRec(62, { gh: { pr: 66 } }), 'merge'), { prs: [ghPr(66, { headRefOid: NEW_HEAD })], now: NOW }).state, 're-review');
 });
 
@@ -101,7 +101,7 @@ test('S-12: fix で head が同じなら修正待ち、escalate / merge なら�
   const rec = reviewed(issueRec(61, { gh: { pr: 65 } }), 'fix');
   const a = nextAction(rec, { prs: [ghPr(65)], now: NOW });
   assert.deepEqual([a.state, a.since, a.sha, a.local], ['wait-update', '2026-09-27T10:00:00Z', HEAD.slice(0, 10), true]);
-  // reviewed_at の無い古い記録は delegated_at を使う。クラウドは注記しない
+  // reviewed_atの無い古い記録はdelegated_atを使う。クラウドは注記しない
   const legacy = addReview(issueRec(62, { gh: { pr: 66 }, runner: 'cloud' }), { round: 0, sha: HEAD.slice(0, 10), verdict: 'fix', posted: true });
   const b = nextAction(legacy, { prs: [ghPr(66)], now: NOW });
   assert.deepEqual([b.since, b.local], ['2026-09-27T09:00:00Z', false]);
@@ -119,7 +119,7 @@ test('S-13: PR の特定は pr・gh.pr・Issue への紐づけの順。番号が
   assert.equal(nextAction(issueRec(51), { prs, now: NOW }).pr, 52);
   assert.equal(nextAction(issueRec(55), { prs, now: NOW }).pr, 56);
   assert.equal(nextAction(issueRec(55, { gh: { pr: 52 } }), { prs, now: NOW }).pr, 52);
-  // 委譲より前に作られた PR は紐づけない
+  // 委譲より前に作られたPRは紐づけない
   assert.equal(nextAction(issueRec(51), { prs: [ghPr(52, { body: 'Closes #51', createdAt: '2026-09-27T08:00:00Z' })], now: NOW }).state, 'wait-pr');
   const unknown = nextAction(issueRec(57, { gh: { pr: 99 } }), { prs, now: NOW });
   assert.deepEqual([unknown.state, unknown.pr], ['unknown', 99]);
@@ -164,7 +164,7 @@ test('S-16: 表示は 1 委譲 1 行。タイトルは改行を落として切�
   assert.equal(oneLine('a\n\nb\tc'), 'a b c');
   assert.equal(oneLine('x'.repeat(100), 10), `${'x'.repeat(9)}…`);
   assert.equal(formatStatus(buildStatus({ records: [], now: NOW })), '');
-  // gh が失敗しただけ（進行中の委譲も候補も無い）なら何も出さない
+  // ghが失敗しただけ（進行中の委譲も候補も無い）なら何も出さない
   assert.equal(formatStatus(buildStatus({ records: [issueRec(1, { outcome: 'merged' })], now: NOW, offline: true, ghError: 'spawnSync gh ENOENT' })), '');
   const unlinked = buildStatus({
     records: [],

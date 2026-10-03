@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 既存設定から実在する品質コマンドを検出する（§12）。
-# プロジェクトを変更せず、検出結果だけを標準出力に出す。実在しないものは unavailable とする。
+# プロジェクトを変更せず、検出結果だけを標準出力に出す。実在しないものはunavailableとする。
 set -euo pipefail
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"

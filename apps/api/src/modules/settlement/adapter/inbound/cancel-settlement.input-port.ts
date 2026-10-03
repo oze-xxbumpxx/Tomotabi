@@ -17,8 +17,8 @@ export type CancelSettlementInput = Readonly<{
 
 /**
  * 最新の有効な精算を取り消す。取り消しの追記と占有の削除は同じ
- * トランザクション。取り消し済みなら 200 で既存の取り消しを返す。
- * 最新でなければ 409。
+ * トランザクション。取り消し済みなら200で既存の取り消しを返す。
+ * 最新でなければ409。
  */
 export interface CancelSettlementInputPort {
   execute(

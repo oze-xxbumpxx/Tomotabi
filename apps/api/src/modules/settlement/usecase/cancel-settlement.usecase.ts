@@ -24,8 +24,8 @@ import { toSettlementCancellationDto } from "./settlement-dto";
  * （占有を先に消して別のトランザクションで取り消しを書く構成は禁止）。
  *
  * 取り消せるのは最新の有効な精算だけ（旅行内連番の最大）。それ以外は
- * 409 SETTLEMENT_NOT_LATEST。取り消し済みなら 200 で既存の取り消しを
- * 返す（1 精算 1 取消）。
+ * 409 SETTLEMENT_NOT_LATEST。取り消し済みなら200で既存の取り消しを
+ * 返す（1精算1取消）。
  */
 export class CancelSettlementUseCase implements CancelSettlementInputPort {
   constructor(

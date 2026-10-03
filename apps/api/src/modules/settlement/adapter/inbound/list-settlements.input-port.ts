@@ -6,7 +6,7 @@ export const LIST_SETTLEMENTS_INPUT_PORT = Symbol("LIST_SETTLEMENTS_INPUT_PORT")
 export type ListSettlementsInput = Readonly<{
   userId: UserId;
   tripId: string;
-  /** サーバー発行の不透明カーソル。最初のページは null。 */
+  /** サーバー発行の不透明カーソル。最初のページはnull。 */
   cursor: string | null;
   limit: number;
 }>;

@@ -58,7 +58,7 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
     },
   };
 
-  /** 旅行ごとの次の精算連番（guard の行が持つ値と同じ役割）。 */
+  /** 旅行ごとの次の精算連番（guardの行が持つ値と同じ役割）。 */
   private readonly nextSettlementSequence = new Map<string, number>();
 
   readonly financeGuard: FinanceGuardLocker = {

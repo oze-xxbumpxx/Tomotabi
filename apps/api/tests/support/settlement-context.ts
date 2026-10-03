@@ -264,7 +264,7 @@ export class InMemorySettlementContext
         createdAt: BASE_TIME,
       };
       this.settlementRecordRows.set(stored.id, stored);
-      // 確認と精算は UNIQUE preview_id で 1 対 1（完了の検証が見る行）。
+      // 確認と精算はUNIQUE preview_idで1対1（完了の検証が見る行）。
       this.settlementRows.set(stored.previewId, {
         id: stored.id,
         cancelled: false,
@@ -298,7 +298,7 @@ export class InMemorySettlementContext
       };
       this.settlementCancellationRows.set(stored.settlementId, stored);
       // 確認から見える精算の「取り消し済み」も同時に立てる（完了の検証と
-      // 取り消しの存在を表す previewId→settlement の行の整合を保つ）。
+      // 取り消しの存在を表すpreviewId→settlementの行の整合を保つ）。
       for (const [previewId, entry] of this.settlementRows) {
         if (entry.id === stored.settlementId) {
           this.settlementRows.set(previewId, { ...entry, cancelled: true });
@@ -364,8 +364,8 @@ export class InMemorySettlementContext
   }
 
   /**
-   * 精算を直接登録する（取り消し・一覧の試験用）。previewId は
-   * 確認の行が無ければ適当な値でよい（精算の行の preview_id は
+   * 精算を直接登録する（取り消し・一覧の試験用）。previewIdは
+   * 確認の行が無ければ適当な値でよい（精算の行のpreview_idは
    * 検証に使われない）。
    */
   seedSettlement(

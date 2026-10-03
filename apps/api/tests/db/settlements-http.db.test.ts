@@ -194,7 +194,7 @@ function settlementBody(
   };
 }
 
-/** 確認を完了して 201 の精算（応答本体）を返す。 */
+/** 確認を完了して201の精算（応答本体）を返す。 */
 async function settle(
   cookie: string,
   tripId: string,
@@ -242,7 +242,7 @@ async function postSettlementCancel(
 }
 
 /**
- * 精算まわりの行数。receipts はこの機能の受領（settlement /
+ * 精算まわりの行数。receiptsはこの機能の受領（settlement /
  * settlement_cancellation）だけ数える（旅行・支払い・確認の受領を混ぜない）。
  */
 async function tableCounts(tripId: string): Promise<{
@@ -280,11 +280,13 @@ async function tableCounts(tripId: string): Promise<{
 }
 
 /**
- * trip_finance_guards の行ロックで待っている実行が minWaiters 件
- * 現れるまで pg_locks を見る（時間待ちにしない）。行の FOR UPDATE 待ちは
- * そのテーブルへの未付与ロック、または保持側 xact への transactionid
- * 待ちとして現れる。app_runtime の lock_timeout は 3 秒なので、待ちを
- * 検出したら速やかに解放する。
+ * trip_finance_guardsの行ロックで待っている実行がminWaiters件
+ * 現れるまで見る（時間待ちにしない）。札の表へのロックを持つ接続に
+ * 塞がれている接続をpg_blocking_pidsで数える。行そのものの待ち
+ * （tuple）と、保持側のxactを待つ待ち（transactionid）の両方を拾う。
+ * 後から来た待ちは先の待ちに塞がれるので、遮る側が表のロックを
+ * 持つことだけを条件にする（モードは問わない）。
+ * app_runtimeのlock_timeoutは3秒なので、待ちを検出したら速やかに解放する。
  */
 async function waitForGuardLockWaiters(
   minWaiters: number,
@@ -294,10 +296,15 @@ async function waitForGuardLockWaiters(
   while (Date.now() < deadline) {
     const result = await db.admin.query<{ c: string }>(
       `SELECT count(*)::text AS c
-         FROM pg_locks
-        WHERE NOT granted
-          AND (relation = 'infra.trip_finance_guards'::regclass
-               OR locktype = 'transactionid')`,
+         FROM pg_stat_activity a
+        WHERE a.wait_event_type = 'Lock'
+          AND EXISTS (
+            SELECT 1
+              FROM pg_locks h
+             WHERE h.relation = 'infra.trip_finance_guards'::regclass
+               AND h.granted
+               AND h.pid = ANY (pg_blocking_pids(a.pid))
+          )`,
     );
     if (Number(result.rows[0]!.c) >= minWaiters) {
       return;
@@ -307,7 +314,7 @@ async function waitForGuardLockWaiters(
   throw new Error("timed out waiting for the finance guard lock waiters");
 }
 
-/** ひなたが参加しない旅行を別利用者 2 人で直接作る（guard の行も入れる）。 */
+/** ひなたが参加しない旅行を別利用者2人で直接作る（guardの行も入れる）。 */
 async function seedForeignTrip(): Promise<{ tripId: string }> {
   const suffix = crypto.randomUUID().slice(0, 8);
   const u0 = await insertUser(
@@ -334,7 +341,7 @@ async function seedForeignTrip(): Promise<{ tripId: string }> {
   return { tripId };
 }
 
-/** 別の旅行の精算を 1 件作り、その id を返す（cursor の起点の検証用）。 */
+/** 別の旅行の精算を1件作り、そのidを返す（cursorの起点の検証用）。 */
 async function seedForeignSettlement(tripId: string): Promise<string> {
   const preview = await db.admin.query<{ id: string }>(
     `INSERT INTO settlement.previews (trip_id, created_by, signed_total_yen)
@@ -541,7 +548,7 @@ describe("完了の記録（FH-09）", () => {
     expect(after.settlements).toBe(before.settlements);
     expect(after.items).toBe(before.items);
     expect(after.claims).toBe(before.claims);
-    // 受領は別の利用者・別のキーの分が 1 件残る（200 で既存を返した記録）
+    // 受領は別の利用者・別のキーの分が1件残る（200で既存を返した記録）
     expect(after.receipts).toBe(before.receipts + 1);
   });
 });
@@ -549,7 +556,7 @@ describe("完了の記録（FH-09）", () => {
 describe("対象の変化と取り消し例外（FH-10・FH-11・FH-12）", () => {
   it("FH-10: 確認のあとに別の精算が立って取り消されると 409 PREVIEW_CHANGED", async () => {
     const tripId = await createTrip(hinataCookie);
-    await createPayment(hinataCookie, tripId);
+    const payment = await createPayment(hinataCookie, tripId);
     const stale = await createPreview(hinataCookie, tripId);
     const other = await createPreview(aoiCookie, tripId);
 
@@ -566,6 +573,8 @@ describe("対象の変化と取り消し例外（FH-10・FH-11・FH-12）", () =
     );
     expect(response.status).toBe(409);
     expect(response.body).toMatchObject({ code: "PREVIEW_CHANGED" });
+    // 指紋が変わった対象の支払いIDが本文に出る
+    expect(response.body.changedPaymentIds).toEqual([payment.body.id]);
     expect((await tableCounts(tripId)).settlements).toBe(1);
   });
 
@@ -600,7 +609,7 @@ describe("対象の変化と取り消し例外（FH-10・FH-11・FH-12）", () =
     });
     expect((await tableCounts(tripId)).settlements).toBe(0);
 
-    // 完全一致 → 201（完了の記録に取り消し済み支払いの BASE 明細が残る）
+    // 完全一致 → 201（完了の記録に取り消し済み支払いのBASE明細が残る）
     const settled = await postSettlement(
       hinataCookie,
       tripId,
@@ -622,7 +631,7 @@ describe("対象の変化と取り消し例外（FH-10・FH-11・FH-12）", () =
       }),
     ]);
 
-    // 次の残額には戻し（REVERSAL）がちょうど 1 件出る
+    // 次の残額には戻し（REVERSAL）がちょうど1件出る
     const balance = await getBalance(hinataCookie, tripId);
     expect(balance.body.items).toEqual([
       expect.objectContaining({
@@ -665,6 +674,28 @@ describe("対象の変化と取り消し例外（FH-10・FH-11・FH-12）", () =
     expect(again.body).toMatchObject({ code: "PREVIEW_CHANGED" });
     expect((await tableCounts(tripId)).settlements).toBe(1);
   });
+
+  it("同じ対象を別の確認で済ませた精算があれば 409 TARGET_ALREADY_SETTLED（existingSettlementIdが本文に出る）", async () => {
+    const tripId = await createTrip(hinataCookie);
+    await createPayment(hinataCookie, tripId);
+    // 同じ対象を2枚の確認が掴んでいる状態で片方で精算する
+    const first = await createPreview(hinataCookie, tripId);
+    const second = await createPreview(aoiCookie, tripId);
+    const settled = await settle(hinataCookie, tripId, first.body.id);
+
+    const response = await postSettlement(
+      aoiCookie,
+      tripId,
+      settlementBody(second.body.id),
+    );
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({
+      code: "TARGET_ALREADY_SETTLED",
+      // 既存の精算を表示する手がかりを本文に添える
+      existingSettlementId: settled.id,
+    });
+    expect((await tableCounts(tripId)).settlements).toBe(1);
+  });
 });
 
 describe("精算の取り消し（FH-13・FH-14）", () => {
@@ -676,7 +707,7 @@ describe("精算の取り消し（FH-13・FH-14）", () => {
       tripId,
       (await createPreview(hinataCookie, tripId)).body.id,
     );
-    // 次の対象を足して 2 件目の精算（連番 2）
+    // 次の対象を足して2件目の精算（連番2）
     await createPayment(hinataCookie, tripId, {
       amountYen: "4001",
       payerUserId: aoi.userId,
@@ -709,7 +740,7 @@ describe("精算の取り消し（FH-13・FH-14）", () => {
   });
 
   it("FH-14: 支払いの取り消しと精算の取り消しの順を入れ替えても残額は同じ", async () => {
-    // 順 A: 精算 → 支払いの取り消し → 精算の取り消し
+    // 順A: 精算 → 支払いの取り消し → 精算の取り消し
     const tripA = await createTrip(hinataCookie, { name: "順 A" });
     const paymentA = await createPayment(hinataCookie, tripA);
     const settledA = await settle(
@@ -722,7 +753,7 @@ describe("精算の取り消し（FH-13・FH-14）", () => {
     expect((await postSettlementCancel(hinataCookie, tripA, settledA.id)).status)
       .toBe(201);
 
-    // 順 B: 精算 → 精算の取り消し → 支払いの取り消し
+    // 順B: 精算 → 精算の取り消し → 支払いの取り消し
     const tripB = await createTrip(hinataCookie, { name: "順 B" });
     const paymentB = await createPayment(hinataCookie, tripB);
     const settledB = await settle(
@@ -806,7 +837,7 @@ describe("精算の一覧と取得", () => {
     });
     expect(page2.body.nextCursor).toBeNull();
 
-    // 不正なカーソル・消えた起点・別の旅行の起点・範囲外の件数は同じ 400
+    // 不正なカーソル・消えた起点・別の旅行の起点・範囲外の件数は同じ400
     const cursorOf = (id: string) =>
       Buffer.from(JSON.stringify({ i: id }), "utf8").toString("base64url");
     const foreign = await seedForeignTrip();
@@ -877,7 +908,7 @@ describe("完了・取り消しの再送", () => {
     expect(replay.body).toEqual(created.body);
     expect((await tableCounts(tripId)).settlements).toBe(1);
 
-    // 同じキーで別の要求（支払いを足したあと作った別の確認の完了）は 409
+    // 同じキーで別の要求（支払いを足したあと作った別の確認の完了）は409
     await createPayment(hinataCookie, tripId, {
       amountYen: "4001",
       payerUserId: aoi.userId,
@@ -965,46 +996,71 @@ describe("同時実行の整合（FD-05〜FD-12）", () => {
     expect(counts.settlements).toBe(1);
     expect(counts.items).toBe(1);
     expect(counts.claims).toBe(1);
-    // 両方の受領が残る（勝ちは 201、負けは既存参照の 200）
+    // 両方の受領が残る（勝ちは201、負けは既存参照の200）
     expect(counts.receipts).toBe(2);
   }, 30_000);
 
-  it("FD-06: 一部の対象だけ別の精算に占有されていると 409 TARGET_PARTIALLY_SETTLED", async () => {
+  it("FD-06: 一部だけ重なる2つの確認の同時完了は、片方だけ201・片方は409 TARGET_PARTIALLY_SETTLED", async () => {
     const tripId = await createTrip(hinataCookie);
-    await createPayment(hinataCookie, tripId);
-    // 対象が 1 件の確認を先に作り、それで精算する
+    const payment = await createPayment(hinataCookie, tripId);
+    // 対象1件の確認（この時点で未精算の対象は1件だけ）
     const partial = await createPreview(hinataCookie, tripId);
     await createPayment(hinataCookie, tripId, {
       amountYen: "4001",
       payerUserId: aoi.userId,
     });
-    // 対象が 2 件の確認
+    // 対象2件の確認
     const full = await createPreview(aoiCookie, tripId);
     expect(full.body.items).toHaveLength(2);
 
-    const settled = await settle(hinataCookie, tripId, partial.body.id);
-    const response = await postSettlement(
-      aoiCookie,
-      tripId,
-      settlementBody(full.body.id),
-    );
+    // 小さい方の完了を先に待たせてから大きい方を送る（行ロックはFIFOで
+    // 先着に付く）→ partialが立ち、fullは一部占有で弾かれる
+    const holder = await db.admin.connect();
+    let first: Promise<request.Response>;
+    let second: Promise<request.Response>;
+    try {
+      await holder.query("BEGIN");
+      await holder.query(
+        "SELECT trip_id FROM infra.trip_finance_guards WHERE trip_id = $1 FOR UPDATE",
+        [tripId],
+      );
+      first = postSettlement(
+        hinataCookie,
+        tripId,
+        settlementBody(partial.body.id),
+      );
+      await waitForGuardLockWaiters(1);
+      second = postSettlement(
+        aoiCookie,
+        tripId,
+        settlementBody(full.body.id),
+      );
+      await waitForGuardLockWaiters(2);
+    } finally {
+      await holder.query("COMMIT");
+      holder.release();
+    }
 
-    expect(response.status).toBe(409);
-    expect(response.body).toMatchObject({
+    const [won, lost] = await Promise.all([first!, second!]);
+    expect(won.status).toBe(201);
+    expect(lost.status).toBe(409);
+    expect(lost.body).toMatchObject({
       code: "TARGET_PARTIALLY_SETTLED",
     });
+    // 指紋が変わった対象の支払いIDが本文に出る
+    expect(lost.body.changedPaymentIds).toEqual([payment.body.id]);
     const counts = await tableCounts(tripId);
     expect(counts.settlements).toBe(1);
-    // 占有は先の精算の 1 件だけ残る
+    // 占有は勝った側の1件だけ残る
     const claims = await db.admin.query(
       "SELECT settlement_id FROM settlement.active_claims WHERE trip_id = $1",
       [tripId],
     );
-    expect(claims.rows).toEqual([{ settlement_id: settled.id }]);
+    expect(claims.rows).toEqual([{ settlement_id: won.body.id }]);
   }, 30_000);
 
   it("FD-07: 支払いの取り消しと完了の記録が並ぶと、先に来た方の結果と残額が一致する", async () => {
-    // 順 A: 支払いの取り消しが先 → 完了は 409（了承が要る）
+    // 順A: 支払いの取り消しが先 → 完了は409（了承が要る）
     const tripA = await createTrip(hinataCookie, { name: "取消先" });
     const paymentA = await createPayment(hinataCookie, tripA);
     const previewA = await createPreview(hinataCookie, tripA);
@@ -1041,8 +1097,8 @@ describe("同時実行の整合（FD-05〜FD-12）", () => {
     expect(balanceA.body.targetCount).toBe(0);
     expect((await tableCounts(tripA)).settlements).toBe(0);
 
-    // 順 B: 完了の記録が先 → 支払いは精算済みのまま取り消され、
-    // 残額には戻し（REVERSAL）が 1 件出る
+    // 順B: 完了の記録が先 → 支払いは精算済みのまま取り消され、
+    // 残額には戻し（REVERSAL）が1件出る
     const tripB = await createTrip(hinataCookie, { name: "完了先" });
     const paymentB = await createPayment(hinataCookie, tripB);
     const previewB = await createPreview(hinataCookie, tripB);
@@ -1194,7 +1250,7 @@ describe("同時実行の整合（FD-05〜FD-12）", () => {
     await createPayment(hinataCookie, tripB);
     const previewB = await createPreview(hinataCookie, tripB);
 
-    // 旅行 A の札を押さえても、旅行 B の完了は待たずに通る
+    // 旅行Aの札を押さえても、旅行Bの完了は待たずに通る
     const holder = await db.admin.connect();
     try {
       await holder.query("BEGIN");
@@ -1210,7 +1266,7 @@ describe("同時実行の整合（FD-05〜FD-12）", () => {
       expect(doneB.status).toBe(201);
       expect(doneB.body.sequence).toBe("1");
 
-      // 旅行 A の要求は自分の札の行ロックでだけ待つ（本当に待っていることを確認してから放つ）
+      // 旅行Aの要求は自分の札の行ロックでだけ待つ（本当に待っていることを確認してから放つ）
       const pendingA = postSettlement(
         hinataCookie,
         tripA,
@@ -1222,57 +1278,106 @@ describe("同時実行の整合（FD-05〜FD-12）", () => {
       expect(doneA.status).toBe(201);
       expect(doneA.body.sequence).toBe("1");
     } finally {
-      // すでに COMMIT 済みなら ROLLBACK は no-op（NOTICE）
+      // すでにCOMMIT済みならROLLBACKはno-op（NOTICE）
       await holder.query("ROLLBACK");
       holder.release();
     }
   }, 30_000);
 
   it("FD-11: 占有の表は履歴（明細 − 取り消し）から作り直せる", async () => {
+    // 作り直した占有（有効な精算の明細）と今の占有が一致することを、
+    // 戻し・取り消し・取り消された対象の例外をまたぐ各段階で確かめる。
+    const expectClaimsRebuilt = async (tripId: string) => {
+      const actual = await db.admin.query(
+        `SELECT payment_id, kind, settlement_id FROM settlement.active_claims
+          WHERE trip_id = $1 ORDER BY payment_id, kind`,
+        [tripId],
+      );
+      const rebuilt = await db.admin.query(
+        `SELECT i.payment_id, i.kind, i.settlement_id
+           FROM settlement.items i
+          WHERE i.trip_id = $1
+            AND NOT EXISTS (SELECT 1 FROM settlement.cancellations c
+                              WHERE c.settlement_id = i.settlement_id)
+          ORDER BY i.payment_id, i.kind`,
+        [tripId],
+      );
+      expect(actual.rows).toEqual(rebuilt.rows);
+      return actual.rows;
+    };
+
     const tripId = await createTrip(hinataCookie);
     await createPayment(hinataCookie, tripId);
-    const first = await settle(
+    const settledPayment = await createPayment(hinataCookie, tripId, {
+      amountYen: "4001",
+      payerUserId: aoi.userId,
+    });
+    // S1: 2件のBASEを占有
+    await settle(
       hinataCookie,
       tripId,
       (await createPreview(hinataCookie, tripId)).body.id,
     );
-    await createPayment(hinataCookie, tripId, {
-      amountYen: "4001",
-      payerUserId: aoi.userId,
-    });
-    await settle(
-      aoiCookie,
-      tripId,
-      (await createPreview(aoiCookie, tripId)).body.id,
-    );
-    // 最新の方を取り消す → 占有には最初の精算の明細だけ残るはず
-    const latest = await db.admin.query<{ id: string }>(
-      `SELECT id FROM settlement.settlements
-        WHERE trip_id = $1
-          AND NOT EXISTS (SELECT 1 FROM settlement.cancellations c
-                            WHERE c.settlement_id = settlement.settlements.id)
-        ORDER BY sequence DESC LIMIT 1`,
-      [tripId],
-    );
-    await postSettlementCancel(hinataCookie, tripId, latest.rows[0]!.id);
+    expect(await expectClaimsRebuilt(tripId)).toHaveLength(2);
 
-    const actual = await db.admin.query(
-      `SELECT payment_id, kind, settlement_id FROM settlement.active_claims
-        WHERE trip_id = $1 ORDER BY payment_id, kind`,
-      [tripId],
+    // 精算済みの支払いを取り消す → 戻し（REVERSAL）の対象ができる
+    await cancelPayment(hinataCookie, tripId, settledPayment.body.id);
+    // S2: 戻しを含む確認で精算 → REVERSALの占有が1件増える
+    const reversalSettlement = await settle(
+      hinataCookie,
+      tripId,
+      (await createPreview(hinataCookie, tripId)).body.id,
     );
-    const rebuilt = await db.admin.query(
-      `SELECT i.payment_id, i.kind, i.settlement_id
-         FROM settlement.items i
-        WHERE i.trip_id = $1
-          AND NOT EXISTS (SELECT 1 FROM settlement.cancellations c
-                            WHERE c.settlement_id = i.settlement_id)
-        ORDER BY i.payment_id, i.kind`,
-      [tripId],
+    expect(await expectClaimsRebuilt(tripId)).toHaveLength(3);
+
+    // 戻しを含む精算を取り消す → REVERSALの占有が外れる
+    const cancelledReversal = await postSettlementCancel(
+      hinataCookie,
+      tripId,
+      reversalSettlement.id,
     );
-    expect(actual.rows).toEqual(rebuilt.rows);
-    expect(actual.rows).toHaveLength(1);
-    expect(actual.rows[0]).toMatchObject({ settlement_id: first.id });
+    expect(cancelledReversal.status).toBe(201);
+    expect(await expectClaimsRebuilt(tripId)).toHaveLength(2);
+
+    // S3: もう一度戻しを精算 → REVERSALの占有が戻る
+    await settle(
+      hinataCookie,
+      tripId,
+      (await createPreview(hinataCookie, tripId)).body.id,
+    );
+    expect(await expectClaimsRebuilt(tripId)).toHaveLength(3);
+
+    // 取り消された対象の例外: 確認のあとに対象を取り消し、了承して完了
+    const ackPayment = await createPayment(hinataCookie, tripId, {
+      amountYen: "2000",
+    });
+    const ackPreview = await createPreview(hinataCookie, tripId);
+    await cancelPayment(hinataCookie, tripId, ackPayment.body.id);
+    const acked = await postSettlement(
+      hinataCookie,
+      tripId,
+      settlementBody(ackPreview.body.id, {
+        acknowledgedCancellationPaymentIds: [ackPayment.body.id],
+      }),
+    );
+    expect(acked.status).toBe(201);
+
+    const final = await expectClaimsRebuilt(tripId);
+    expect(final).toHaveLength(4);
+    // 戻しと、取り消された支払いの了承つきBASEの両方が占有に残っている
+    expect(final).toContainEqual(
+      expect.objectContaining({
+        payment_id: settledPayment.body.id,
+        kind: "REVERSAL",
+      }),
+    );
+    expect(final).toContainEqual(
+      expect.objectContaining({
+        payment_id: ackPayment.body.id,
+        kind: "BASE",
+        settlement_id: acked.body.id,
+      }),
+    );
   });
 
   it("FD-12: 札の行ロックが 3 秒で取れなければ 503 retryable で何も残らない", async () => {
@@ -1300,7 +1405,7 @@ describe("同時実行の整合（FD-05〜FD-12）", () => {
         code: "TEMPORARILY_UNAVAILABLE",
         retryable: true,
       });
-      // 3 秒の lock_timeout まで待って諦めている
+      // 3秒のlock_timeoutまで待って諦めている
       expect(elapsed).toBeGreaterThanOrEqual(2_500);
       expect(elapsed).toBeLessThan(15_000);
       expect(await tableCounts(tripId)).toEqual({
@@ -1358,7 +1463,7 @@ describe("認可と不在（403・404）", () => {
       elsewherePreview.body.id,
     );
 
-    // 無い確認と別の旅行の確認は同じ 404
+    // 無い確認と別の旅行の確認は同じ404
     const missingPreview = await postSettlement(
       hinataCookie,
       tripId,
@@ -1377,7 +1482,7 @@ describe("認可と不在（403・404）", () => {
       requestId: null,
     });
 
-    // 無い精算と別の旅行の精算は同じ 404（取得・取り消しともに）
+    // 無い精算と別の旅行の精算は同じ404（取得・取り消しともに）
     const missingGet = await getSettlement(
       hinataCookie,
       tripId,

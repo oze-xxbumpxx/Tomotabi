@@ -50,19 +50,19 @@ function previewItemKey(item: {
  * 検証 → 履歴と占有と受領を同じトランザクションで保存）に乗せる。
  *
  * 順序（設計書「完了」）:
- *   1. 確認が旅行に属するか → 無ければ 404
+ *   1. 確認が旅行に属するか → 無ければ404
  *   2. 確認に精算があれば: 取り消し済み → 409（E-10。新しい確認へ）、
- *      有効 → 200 で既存の精算を返す（E-07。対象全体が同じ精算で
+ *      有効 → 200で既存の精算を返す（E-07。対象全体が同じ精算で
  *      処理されているときだけ既存を返せる）
- *   3. 確認の金額と完了の種類の対応（非 0 円は transfer_completed、
- *      0 円は no_transfer_required）→ 違えば 422
+ *   3. 確認の金額と完了の種類の対応（非0円はtransfer_completed、
+ *      0円はno_transfer_required）→ 違えば422
  *   4. 明細ごとの指紋・取り消し状態を今と比べる:
  *      - 一部だけ別の精算で占有 → 409 TARGET_PARTIALLY_SETTLED（E-08）
- *      - 全部が同じ 1 つの精算で同じ対象として占有 → 409
+ *      - 全部が同じ1つの精算で同じ対象として占有 → 409
  *        TARGET_ALREADY_SETTLED（既存の精算を表示できる）
  *      - それ以外の指紋の違い → 409 PREVIEW_CHANGED（E-05）
- *      - BASE 対象だけが取り消されていて、了承の集合が今の取り消し
- *        済み BASE の集合と一致 → 許可（F-32）。違えば 409
+ *      - BASE対象だけが取り消されていて、了承の集合が今の取り消し
+ *        済みBASEの集合と一致 → 許可（F-32）。違えば409
  *        CANCELLED_ITEMS_ACK_REQUIRED（E-06）
  *   5. 連番を払い出し、精算・明細・占有・受領を保存
  */
@@ -107,6 +107,16 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
     if (preview === null) {
       throw previewNotFound();
     }
+    // 確認に精算があるかを、入力の形式検査より先に見る（設計書「完了」の
+    // 順序。すでに精算済みの確認へ、古い画面から違う種類や違う了承を
+    // 送り直しても、422/400でなく既存の精算または409を返す）。
+    const existing = await ctx.settlements.findSettlementForPreview(
+      input.tripId,
+      preview.id,
+    );
+    if (existing !== null) {
+      return this.existingSettlement(ctx, roster, input.tripId, existing);
+    }
     if (
       new Set(input.acknowledgedCancellationPaymentIds).size !==
       input.acknowledgedCancellationPaymentIds.length
@@ -145,14 +155,6 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
       itemRows.map((item) => item.paymentId),
     );
 
-    const existing = await ctx.settlements.findSettlementForPreview(
-      input.tripId,
-      preview.id,
-    );
-    if (existing !== null) {
-      return this.existingSettlement(ctx, roster, input.tripId, existing);
-    }
-
     const validation = validatePreview(
       itemRows,
       currentClaimStates(
@@ -163,10 +165,16 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
       null,
     );
     if (validation.status === "target_changed") {
-      await this.rejectChangedTarget(ctx, input.tripId, itemRows, histories);
+      await this.rejectChangedTarget(
+        ctx,
+        input.tripId,
+        itemRows,
+        histories,
+        validation.changedPaymentIds,
+      );
     }
-    // existing が null のとき、already_completed / completed_then_cancelled
-    // は起きない（validatePreview がその状態を返すのは精算があるときだけ）。
+    // existingがnullのとき、already_completed / completed_then_cancelled
+    // は起きない（validatePreviewがその状態を返すのは精算があるときだけ）。
     const acknowledged = new Set(input.acknowledgedCancellationPaymentIds);
     if (
       validation.status === "cancelled_items_ack_required" ||
@@ -209,8 +217,8 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
       preview.id,
       items,
     );
-    // 占有は明細と同じ (payment_id, kind) の行（active_claims の PK）。
-    // 履歴と占有の更新は同じトランザクション（FD-11 から作り直せる補助状態）。
+    // 占有は明細と同じ(payment_id, kind)の行（active_claimsのPK）。
+    // 履歴と占有の更新は同じトランザクション（FD-11から作り直せる補助状態）。
     await ctx.settlements.insertActiveClaims(input.tripId, settlement.id, items);
 
     const paymentsById = new Map(
@@ -239,7 +247,7 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
   }
 
   /**
-   * 既存の精算があればその結果を返す。取り消し済みなら 409（E-10:
+   * 既存の精算があればその結果を返す。取り消し済みなら409（E-10:
    * 新しい確認を作り直す案内）。
    */
   private async existingSettlement(
@@ -279,10 +287,10 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
   }
 
   /**
-   * target_changed の細分（E-05/E-08・設計書「明細ごとの比較」）。
+   * target_changedの細分（E-05/E-08・設計書「明細ごとの比較」）。
    * 明細の占有の有無で分ける:
    *   - 一部だけ別の精算に占有 → TARGET_PARTIALLY_SETTLED
-   *   - 全部が同じ 1 つの精算の、同じ対象として占有 → TARGET_ALREADY_SETTLED
+   *   - 全部が同じ1つの精算の、同じ対象として占有 → TARGET_ALREADY_SETTLED
    *   - それ以外 → PREVIEW_CHANGED
    */
   private async rejectChangedTarget(
@@ -290,6 +298,7 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
     tripId: string,
     itemRows: readonly PreviewItemRecord[],
     histories: ReadonlyMap<string, ClaimHistory>,
+    changedPaymentIds: readonly string[],
   ): Promise<never> {
     const claimedBy = new Map<string, string>(); // paymentId|kind -> settlementId
     for (const item of itemRows) {
@@ -303,6 +312,7 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
         code: "PREVIEW_CHANGED",
         status: 409,
         message: "Settlement targets changed since the preview",
+        details: { changedPaymentIds },
       });
     }
     if (claimedBy.size < itemRows.length) {
@@ -310,6 +320,7 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
         code: "TARGET_PARTIALLY_SETTLED",
         status: 409,
         message: "Some targets were settled by another settlement",
+        details: { changedPaymentIds },
       });
     }
     const settlementIds = new Set(claimedBy.values());
@@ -339,10 +350,11 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
       code: "PREVIEW_CHANGED",
       status: 409,
       message: "Settlement targets changed since the preview",
+      details: { changedPaymentIds },
     });
   }
 
-  /** 精算の DTO を組み立てる（明細・取り消し・最新の有効な精算の照会）。 */
+  /** 精算のDTOを組み立てる（明細・取り消し・最新の有効な精算の照会）。 */
   private async assembleSettlementDto(
     ctx: SettlementWorkContext,
     roster: readonly TripRosterEntry[],

@@ -491,7 +491,7 @@ export class DrizzleSettlementRepository implements SettlementRepository {
     if (settlementIds.length === 0) {
       return new Map();
     }
-    // 明細は支払いの記録順で返す（listPreviewItems と同じ仕組み）。
+    // 明細は支払いの記録順で返す（listPreviewItemsと同じ仕組み）。
     const rows = await this.db
       .select({
         settlementId: settlementItems.settlementId,

@@ -225,7 +225,10 @@ export const SettlementCreateCompletionKind = {
 export interface SettlementCreate {
   previewId: string;
   completionKind: SettlementCreateCompletionKind;
-  /** 重複を含む場合は形式違反として400（生成スキーマでは検査できず、完了処理が検査する）。 */
+  /**
+     * 重複を含む場合は形式違反として400（生成スキーマでは検査できず、完了処理が検査する）。上限はAPIの一覧limitの上限（100）にそろえる。
+     * @maxItems 100
+     */
   acknowledgedCancellationPaymentIds: string[];
 }
 

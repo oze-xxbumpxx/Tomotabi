@@ -4,9 +4,9 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * 精算の一覧のページ位置を不透明な文字列にする（base64url の JSON { i }）。
- * 中身は起点の精算 id だけ。連番を直接入れないのは preview-cursor と同じ
- * 仕組みに揃えるため。比較には DB の値をそのまま使う（findSettlementAnchor）。
+ * 精算の一覧のページ位置を不透明な文字列にする（base64urlのJSON { i }）。
+ * 中身は起点の精算idだけ。連番を直接入れないのはpreview-cursorと同じ
+ * 仕組みに揃えるため。比較にはDBの値をそのまま使う（findSettlementAnchor）。
  * 秘密ではないため署名はしない。
  */
 export function encodeSettlementCursor(settlementId: string): string {
@@ -16,7 +16,7 @@ export function encodeSettlementCursor(settlementId: string): string {
 }
 
 /**
- * @throws デコード不能・形が違う・値が不正なカーソルは 400 INVALID_REQUEST。
+ * @throwsデコード不能・形が違う・値が不正なカーソルは400 INVALID_REQUEST。
  */
 export function decodeSettlementCursor(value: string): string {
   let decoded: unknown;

@@ -100,7 +100,7 @@ describe("精算の一覧", () => {
       canCancel: false,
       cannotCancelReason: "not_latest",
     });
-    // REVERSAL 明細は戻す対象の精算を指す
+    // REVERSAL明細は戻す対象の精算を指す
     expect(result.items[1].items[0]).toMatchObject({
       kind: "REVERSAL",
       baseSettlementId: SETTLEMENT1_ID,

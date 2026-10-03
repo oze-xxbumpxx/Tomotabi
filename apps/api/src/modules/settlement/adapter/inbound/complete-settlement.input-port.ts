@@ -19,8 +19,8 @@ export type CompleteSettlementInput = Readonly<{
 
 /**
  * 受け渡しの確認を完了にする。同じ確認の既存の精算は、取り消されて
- * いなければ 200 でそのまま返す（二人が同時に完了した側）。取り消し
- * 済みなら 409。確認のあとに対象が変わっていれば 409。
+ * いなければ200でそのまま返す（二人が同時に完了した側）。取り消し
+ * 済みなら409。確認のあとに対象が変わっていれば409。
  */
 export interface CompleteSettlementInputPort {
   execute(

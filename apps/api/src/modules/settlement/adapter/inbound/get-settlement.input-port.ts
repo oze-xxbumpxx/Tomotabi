@@ -10,8 +10,8 @@ export type GetSettlementInput = Readonly<{
 }>;
 
 /**
- * 精算を 1 件返す。元の明細・記録した人・取り消し履歴を含む。
- * 無い・別の旅行の精算は同じ 404（存在を漏らさない）。
+ * 精算を1件返す。元の明細・記録した人・取り消し履歴を含む。
+ * 無い・別の旅行の精算は同じ404（存在を漏らさない）。
  */
 export interface GetSettlementInputPort {
   execute(input: GetSettlementInput): Promise<Settlement>;

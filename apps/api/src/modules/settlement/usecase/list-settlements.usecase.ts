@@ -18,7 +18,7 @@ import {
 import { joinPreviewItems, toSettlementDto } from "./settlement-dto";
 
 /**
- * 精算の一覧（F-33）。旅行内連番の降順・取り消し済みを含む・20 件ずつの
+ * 精算の一覧（F-33）。旅行内連番の降順・取り消し済みを含む・20件ずつの
  * カーソル。各件に取り消し状態と取り消せるかを付ける（取り消せるのは
  * 最新の有効な精算だけ）。
  */
@@ -83,7 +83,7 @@ export class ListSettlementsUseCase implements ListSettlementsInputPort {
 
   /**
    * カーソルの起点をこの旅行の精算から引く。形が不正・起点が無い・
-   * 別の旅行の精算を指すカーソルは 400（一覧の続きを偽造できない）。
+   * 別の旅行の精算を指すカーソルは400（一覧の続きを偽造できない）。
    */
   private async anchor(
     ctx: SettlementReadContext,

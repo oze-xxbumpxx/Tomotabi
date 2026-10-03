@@ -19,7 +19,7 @@ export function settlementNotFound(): ApiError {
 
 /**
  * 精算の取得（F-34）。元の明細・記録した人・取り消し履歴を返す。
- * 無い・別の旅行の精算は同じ 404（存在を漏らさない）。
+ * 無い・別の旅行の精算は同じ404（存在を漏らさない）。
  */
 export class GetSettlementUseCase implements GetSettlementInputPort {
   constructor(private readonly unitOfWork: SettlementReadUnitOfWork) {}

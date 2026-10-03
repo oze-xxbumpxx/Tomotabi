@@ -124,11 +124,11 @@ describe("完了の記録の順序（FU-10 の完了側）", () => {
       "financeGuard.lock",
       "receipts.find",
       "settlements.findPreviewInTrip",
+      "settlements.findSettlementForPreview",
       "settlements.listPreviewItems",
       "paymentsRead.listInTrip",
       "paymentsRead.listCancellationsInTrip",
       "settlements.claimHistories",
-      "settlements.findSettlementForPreview",
       "financeGuard.issueNextSettlementSequence",
       "settlements.insertSettlement",
       "settlements.insertSettlementItems",
@@ -208,7 +208,7 @@ describe("完了の記録の業務規則", () => {
         signedContributionYen: "3500",
       }),
     ]);
-    // 明細と占有は同じ (payment_id, kind)
+    // 明細と占有は同じ(payment_id, kind)
     expect(ctx.settlementItemRows.get(settlement.id)).toEqual([
       {
         paymentId: PAYMENT_ID,
@@ -220,7 +220,7 @@ describe("完了の記録の業務規則", () => {
     expect([...ctx.activeClaimRows.values()]).toEqual([
       { paymentId: PAYMENT_ID, kind: "BASE", settlementId: settlement.id },
     ]);
-    // 受領は精算の id を対象行に持つ
+    // 受領は精算のidを対象行に持つ
     expect([...ctx.receiptRows.values()][0]).toMatchObject({
       resourceType: "settlement",
       resourceId: settlement.id,
@@ -232,7 +232,7 @@ describe("完了の記録の業務規則", () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedTrip();
     ctx.seedPayment(storedPayment());
-    // 0 円の確認（支払いの寄与が 0 になる形で 0 にした確認）
+    // 0円の確認（支払いの寄与が0になる形で0にした確認）
     seedPreview(
       ctx,
       [
@@ -337,7 +337,7 @@ describe("完了の記録の業務規則", () => {
     // 新しい精算・占有・受領は増えない
     expect(ctx.settlementRecordRows.size).toBe(1);
     expect(ctx.activeClaimRows.size).toBe(0);
-    // receipt は既存の精算を指して残る（同じ再送は同じ結果）
+    // receiptは既存の精算を指して残る（同じ再送は同じ結果）
     expect([...ctx.receiptRows.values()][0]).toMatchObject({
       resourceType: "settlement",
       resourceId: SETTLEMENT_ID,
@@ -394,7 +394,7 @@ describe("完了の記録の業務規則", () => {
         expectedFingerprint: EMPTY_FINGERPRINT,
       }),
     ]);
-    // PAYMENT_ID だけが別の精算で占有されている
+    // PAYMENT_IDだけが別の精算で占有されている
     ctx.seedClaim(PAYMENT_ID, "BASE", OTHER_SETTLEMENT_ID);
     ctx.seedClaimHistory(PAYMENT_ID, {
       activeClaims: { BASE: OTHER_SETTLEMENT_ID },
@@ -446,7 +446,7 @@ describe("完了の記録の業務規則", () => {
     ctx.seedTrip();
     ctx.seedPayment(storedPayment());
     ctx.seedPayment(storedPayment2());
-    // 確認は {P1} だけだが、占有している精算は {P1, P2}
+    // 確認は{P1}だけだが、占有している精算は{P1, P2}
     seedPreview(ctx, [previewItemOf({ expectedFingerprint: EMPTY_FINGERPRINT })]);
     ctx.seedClaim(PAYMENT_ID, "BASE", OTHER_SETTLEMENT_ID);
     ctx.seedClaimHistory(PAYMENT_ID, {

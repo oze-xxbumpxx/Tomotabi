@@ -40,8 +40,8 @@ export interface FinanceGuardLocker {
   lock(tripId: string): Promise<void>;
 
   /**
-   * 精算の旅行内連番を 1 つ払い出す（guard の行の next_settlement_sequence
-   * を進める）。lock() で行を取ったあと・同じトランザクションで呼ぶ。
+   * 精算の旅行内連番を1つ払い出す（guardの行のnext_settlement_sequence
+   * を進める）。lock()で行を取ったあと・同じトランザクションで呼ぶ。
    * 行ロックで同じ旅行の精算に一意の連番になる。
    */
   issueNextSettlementSequence(tripId: string): Promise<number>;

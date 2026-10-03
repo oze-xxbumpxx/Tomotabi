@@ -87,8 +87,8 @@ class PgFinanceGuardLock implements FinanceGuardLocker {
   }
 
   async issueNextSettlementSequence(tripId: string): Promise<number> {
-    // 行は lock() で FOR UPDATE 済み。「次の連番」を 1 進めて、
-    // 進める前の値を払い出す（RETURNING は更新後の値を返すので 1 戻す）。
+    // 行はlock()でFOR UPDATE済み。「次の連番」を1進めて、
+    // 進める前の値を払い出す（RETURNINGは更新後の値を返すので1戻す）。
     const rows = await this.db
       .update(tripFinanceGuards)
       .set({

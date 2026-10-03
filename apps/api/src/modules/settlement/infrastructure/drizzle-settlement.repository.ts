@@ -109,12 +109,15 @@ export class DrizzleSettlementRepository implements SettlementRepository {
 
   async listPreviewItems(
     tripId: string,
-    previewId: string,
-  ): Promise<readonly PreviewItemRecord[]> {
+    previewIds: readonly string[],
+  ): Promise<ReadonlyMap<string, readonly PreviewItemRecord[]>> {
+    if (previewIds.length === 0) {
+      return new Map();
+    }
     // 明細は支払いの記録順で返す（確認を作った時点の対象の並びを
     // そのまま再現する。preview_items 自体に順序の列は持たない）。
     const rows = await this.db
-      .select({ item: previewItems })
+      .select({ previewId: previewItems.previewId, item: previewItems })
       .from(previewItems)
       .innerJoin(
         payments,
@@ -126,11 +129,17 @@ export class DrizzleSettlementRepository implements SettlementRepository {
       .where(
         and(
           eq(previewItems.tripId, tripId),
-          eq(previewItems.previewId, previewId),
+          inArray(previewItems.previewId, [...previewIds]),
         ),
       )
       .orderBy(asc(payments.createdAt), asc(payments.id));
-    return rows.map((row) => toPreviewItemRecord(row.item));
+    const grouped = new Map<string, PreviewItemRecord[]>();
+    for (const row of rows) {
+      const list = grouped.get(row.previewId) ?? [];
+      list.push(toPreviewItemRecord(row.item));
+      grouped.set(row.previewId, list);
+    }
+    return grouped;
   }
 
   async findSettlementForPreview(

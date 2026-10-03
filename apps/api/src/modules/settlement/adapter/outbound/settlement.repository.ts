@@ -84,11 +84,15 @@ export interface SettlementRepository {
     previewId: string,
   ): Promise<PreviewRecord | null>;
 
-  /** 確認の明細を支払いの記録順（payments.created_at, id の昇順）で返す。 */
+  /**
+   * 確認の明細を支払いの記録順（payments.created_at, id の昇順）で返す。
+   * 複数の確認の明細は 1 回の問い合わせでまとめて取り、確認 id ごとに
+   * まとめて返す（一覧で確認ごとに 1 回ずつ問い合わせないため）。
+   */
   listPreviewItems(
     tripId: string,
-    previewId: string,
-  ): Promise<readonly PreviewItemRecord[]>;
+    previewIds: readonly string[],
+  ): Promise<ReadonlyMap<string, readonly PreviewItemRecord[]>>;
 
   /** その確認に紐づく精算（あれば 1 件）。取り消しの有無を含む。 */
   findSettlementForPreview(

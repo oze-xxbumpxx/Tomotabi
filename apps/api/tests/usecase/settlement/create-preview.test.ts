@@ -7,7 +7,6 @@ import { CREATE_PREVIEW_OPERATION } from "../../../src/modules/settlement/adapte
 import type { SettlementWorkContext } from "../../../src/modules/settlement/adapter/outbound/settlement-work-context";
 import { fingerprintOf } from "../../../src/modules/settlement/domain/fingerprint";
 import { CreatePreviewUseCase } from "../../../src/modules/settlement/usecase/create-preview.usecase";
-import type { Payment } from "../../../src/modules/record/domain/payment";
 import { Payment } from "../../../src/modules/record/domain/payment";
 import {
   ACTOR,

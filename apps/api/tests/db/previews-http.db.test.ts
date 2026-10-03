@@ -54,6 +54,13 @@ function newKey(): string {
   return crypto.randomUUID();
 }
 
+/** 一覧カーソルの wire 形式（サーバー発行の形に合わせた base64url の JSON）。 */
+function cursorOf(previewId: string): string {
+  return Buffer.from(JSON.stringify({ i: previewId }), "utf8").toString(
+    "base64url",
+  );
+}
+
 async function login(userId: string): Promise<string> {
   const result = await testHelpers.login({ userId });
   const cookie = result.headers.get("cookie");
@@ -596,11 +603,54 @@ describe("未完了の確認の一覧（FH-07）", () => {
     ).toEqual([hinataFirst.body.id]);
   });
 
+  it("同じミリ秒でマイクロ秒だけ違う確認がページの境目で抜けない", async () => {
+    const tripId = await createTrip(hinataCookie, { name: "時刻の境目" });
+    // 同じミリ秒でマイクロ秒だけ違う時刻と、同時刻の重複を入れる
+    // （カーソルの起点を JS のミリ秒に丸めると境目の行が抜ける）。
+    // previews は append-only で UPDATE できないため、時刻つきで直接入れる。
+    const [first, second, third] = [
+      "2027-01-01T10:00:00.123001Z",
+      "2027-01-01T10:00:00.123002Z",
+      "2027-01-01T10:00:00.123002Z",
+    ].map((at) => ({ id: crypto.randomUUID(), at }));
+    for (const { id, at } of [first, second, third]) {
+      await db.admin.query(
+        `INSERT INTO settlement.previews
+           (id, trip_id, created_by, created_at, signed_total_yen)
+         VALUES ($1, $2, $3, $4::timestamptz, 0)`,
+        [id, tripId, hinata.userId, at],
+      );
+    }
+
+    const ids: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const query =
+        cursor === null
+          ? "?limit=1"
+          : `?limit=1&cursor=${encodeURIComponent(cursor)}`;
+      const page = await listPreviews(hinataCookie, tripId, query);
+      expect(page.status).toBe(200);
+      expect(page.body.items).toHaveLength(1);
+      ids.push((page.body.items as { id: string }[])[0]!.id);
+      cursor = page.body.nextCursor;
+    } while (cursor !== null);
+
+    // 同時刻の 2 件は id の降順、そのあとに .123001 の確認
+    const tieOrder = [second.id, third.id].sort().reverse();
+    expect(ids).toEqual([tieOrder[0], tieOrder[1], first.id]);
+  });
+
   it("limit と cursor で次のページを取る。壊れた・他人の・消えた確認の cursor は 400", async () => {
     const tripId = await createTrip(hinataCookie, { name: "ページの旅行" });
     await createPayment(hinataCookie, tripId);
     const first = await createPreview(hinataCookie, tripId);
     const second = await createPreview(hinataCookie, tripId);
+    // 同じ旅行であおいが作った確認と、別の旅行で自分が作った確認
+    const aoiPreview = await createPreview(aoiCookie, tripId);
+    const otherTrip = await createTrip(hinataCookie, { name: "他の旅行" });
+    await createPayment(hinataCookie, otherTrip);
+    const elsewhere = await createPreview(hinataCookie, otherTrip);
 
     const page1 = await listPreviews(hinataCookie, tripId, "?limit=1");
     expect(page1.status).toBe(200);
@@ -620,19 +670,15 @@ describe("未完了の確認の一覧（FH-07）", () => {
     ]);
     expect(page2.body.nextCursor).toBeNull();
 
-    // 形が違う・起点が無い・他人の確認を指す cursor は同じ 400
+    // 形が違う・起点が無い・他人の・別の旅行の自分の確認を指す cursor は同じ 400
     for (const cursor of [
       "not-a-cursor",
       // 存在しない確認 id を指す正しい形のカーソル
-      Buffer.from(
-        JSON.stringify({ i: crypto.randomUUID() }),
-        "utf8",
-      ).toString("base64url"),
+      cursorOf(crypto.randomUUID()),
       // あおいの確認を指す（自分の一覧の起点にできない）
-      Buffer.from(
-        JSON.stringify({ i: aoiPreviewIdForCursor() }),
-        "utf8",
-      ).toString("base64url"),
+      cursorOf(aoiPreview.body.id),
+      // 別の旅行で自分が作った確認を指す（この旅行の一覧の起点にできない）
+      cursorOf(elsewhere.body.id),
     ]) {
       const response = await listPreviews(
         hinataCookie,
@@ -645,10 +691,6 @@ describe("未完了の確認の一覧（FH-07）", () => {
     // status は pending だけ
     const badStatus = await listPreviews(hinataCookie, tripId, "?status=all");
     expect(badStatus.status).toBe(400);
-
-    function aoiPreviewIdForCursor(): string {
-      return "99999999-9999-4999-8999-999999999999";
-    }
   });
 });
 

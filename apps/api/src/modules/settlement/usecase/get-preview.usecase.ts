@@ -34,10 +34,10 @@ export class GetPreviewUseCase implements GetPreviewInputPort {
           message: "Preview not found",
         });
       }
-      const itemRows = await ctx.settlements.listPreviewItems(
-        input.tripId,
-        input.previewId,
-      );
+      const itemRows =
+        (await ctx.settlements.listPreviewItems(input.tripId, [
+          input.previewId,
+        ])).get(input.previewId) ?? [];
       const payments = await ctx.paymentsRead.listInTrip(input.tripId);
       const cancellations = await ctx.paymentsRead.listCancellationsInTrip(
         input.tripId,

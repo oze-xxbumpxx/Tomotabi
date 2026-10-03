@@ -9,6 +9,7 @@ import type {
 import type { ParticipantSlot } from "../../../common/domain/participant-slot";
 import { SignedYen } from "../../../common/domain/yen";
 import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context";
+import { transferOf } from "../domain/balance";
 import type {
   Payment,
   PaymentCancellation,
@@ -64,19 +65,17 @@ export function toTransferDto(
   signedTotal: SignedYen,
   roster: readonly TripRosterEntry[],
 ): Transfer {
-  const amount = SignedYen.fromBigInt(
-    signedTotal < 0n ? -signedTotal : signedTotal,
-  );
-  const fromSlot: ParticipantSlot | null =
-    signedTotal > 0n ? 1 : signedTotal < 0n ? 0 : null;
-  const toSlot: ParticipantSlot | null =
-    signedTotal > 0n ? 0 : signedTotal < 0n ? 1 : null;
+  const direction = transferOf(signedTotal);
   return {
-    signedTotalYen: SignedYen.toDecimalString(signedTotal),
-    amountYen: SignedYen.toDecimalString(amount),
-    fromUserId: fromSlot === null ? null : userOf(roster, fromSlot),
-    toUserId: toSlot === null ? null : userOf(roster, toSlot),
-    requiresTransfer: signedTotal !== 0n,
+    signedTotalYen: SignedYen.toDecimalString(direction.signedTotal),
+    amountYen: SignedYen.toDecimalString(direction.amount),
+    fromUserId:
+      direction.fromSlot === null
+        ? null
+        : userOf(roster, direction.fromSlot),
+    toUserId:
+      direction.toSlot === null ? null : userOf(roster, direction.toSlot),
+    requiresTransfer: direction.signedTotal !== 0n,
   };
 }
 

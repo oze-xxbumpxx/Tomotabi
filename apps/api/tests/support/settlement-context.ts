@@ -94,11 +94,16 @@ export class InMemorySettlementContext
         preview === undefined || preview.tripId !== tripId ? null : preview,
       );
     },
-    listPreviewItems: (tripId, previewId) => {
+    listPreviewItems: (_tripId, previewIds) => {
       this.calls.push("settlements.listPreviewItems");
-      return Promise.resolve(
-        this.previewItemRows.get(previewId) ?? [],
-      );
+      const grouped = new Map<string, readonly PreviewItemRecord[]>();
+      for (const previewId of previewIds) {
+        grouped.set(
+          previewId,
+          this.previewItemRows.get(previewId) ?? [],
+        );
+      }
+      return Promise.resolve(grouped);
     },
     findSettlementForPreview: (_tripId, previewId) => {
       this.calls.push("settlements.findSettlementForPreview");

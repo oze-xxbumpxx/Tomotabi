@@ -7,8 +7,8 @@ export type ListPreviewsInput = Readonly<{
   userId: UserId;
   tripId: string;
   status: "pending";
-  /** サーバー発行の不透明カーソル。最初のページは未指定。 */
-  cursor: string | undefined;
+  /** サーバー発行の不透明カーソル。最初のページは null。 */
+  cursor: string | null;
   limit: number;
 }>;
 

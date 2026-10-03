@@ -97,7 +97,7 @@ export class PreviewsController {
       userId,
       tripId: params.tripId,
       status: query.status,
-      cursor: query.cursor,
+      cursor: query.cursor ?? null,
       limit: query.limit,
     });
     response.setHeader("Cache-Control", "private, no-store");

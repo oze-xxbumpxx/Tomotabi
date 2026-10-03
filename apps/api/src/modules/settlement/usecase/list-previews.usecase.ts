@@ -46,14 +46,15 @@ export class ListPreviewsUseCase implements ListPreviewsInputPort {
       const cancelledIds = new Set(
         cancellations.map((cancellation) => cancellation.paymentId),
       );
-      const itemsByPreview = await Promise.all(
-        page.items.map((preview) =>
-          ctx.settlements.listPreviewItems(input.tripId, preview.id),
-        ),
+      const itemsByPreview = await ctx.settlements.listPreviewItems(
+        input.tripId,
+        page.items.map((preview) => preview.id),
       );
       const paymentIds = [
         ...new Set(
-          itemsByPreview.flat().map((item) => item.paymentId),
+          [...itemsByPreview.values()]
+            .flat()
+            .map((item) => item.paymentId),
         ),
       ];
       const histories = await ctx.settlements.claimHistories(
@@ -66,8 +67,8 @@ export class ListPreviewsUseCase implements ListPreviewsInputPort {
         cancelledIds,
       );
 
-      const items = page.items.map((preview, index) => {
-        const previewItems = itemsByPreview[index]!;
+      const items = page.items.map((preview) => {
+        const previewItems = itemsByPreview.get(preview.id) ?? [];
         const validation = validatePreview(previewItems, current, null);
         return toPreviewSummaryDto(
           preview,
@@ -94,7 +95,7 @@ export class ListPreviewsUseCase implements ListPreviewsInputPort {
     ctx: SettlementReadContext,
     input: ListPreviewsInput,
   ): Promise<PreviewAnchor | null> {
-    if (input.cursor === undefined) {
+    if (input.cursor === null) {
       return null;
     }
     const previewId = decodePreviewCursor(input.cursor);

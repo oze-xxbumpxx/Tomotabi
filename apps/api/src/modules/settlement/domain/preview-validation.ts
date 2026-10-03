@@ -1,11 +1,14 @@
 import type { ClaimFingerprint } from "./fingerprint";
+import type { ClaimKind } from "./settlement-target";
 
 /**
  * 確認の明細 1 件が期待する、その支払いの状態（確認を作った時点の値）。
- * preview_items の expected_claim_fingerprint・expected_cancelled と対応する。
+ * preview_items の kind・expected_claim_fingerprint・expected_cancelled
+ * と対応する。
  */
 export type PreviewItemExpectation = Readonly<{
   paymentId: string;
+  kind: ClaimKind;
   expectedFingerprint: ClaimFingerprint | string;
   expectedCancelled: boolean;
 }>;
@@ -79,7 +82,14 @@ export function validatePreview(
       changedPaymentIds.push(item.paymentId);
       continue;
     }
-    if (!item.expectedCancelled && state.cancelled) {
+    if (
+      item.kind === "BASE" &&
+      !item.expectedCancelled &&
+      state.cancelled
+    ) {
+      // 了承が要るのは「BASE 対象があとで取り消された」場合だけ
+      // （戻しの明細は取り消しを前提にしている）。次の精算の完了は
+      // 「了承の集合が今の取り消し済み BASE の集合と一致」を見る。
       cancelledPaymentIds.push(item.paymentId);
     }
   }

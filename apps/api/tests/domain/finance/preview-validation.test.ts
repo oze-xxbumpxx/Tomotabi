@@ -18,6 +18,7 @@ function item(
 ): PreviewItemExpectation {
   return {
     paymentId: PAYMENT_ID,
+    kind: "BASE",
     expectedFingerprint: FINGERPRINT,
     expectedCancelled: false,
     ...overrides,
@@ -107,9 +108,9 @@ describe("確認の検証結果", () => {
     });
   });
 
-  it("戻しの明細（expectedCancelled=true）で支払いが取り消しのままなら ready", () => {
+  it("戻しの明細（kind=REVERSAL）は支払いが取り消しでも了承の対象にしない", () => {
     const result = validatePreview(
-      [item({ expectedCancelled: true })],
+      [item({ kind: "REVERSAL", expectedCancelled: true })],
       states([[PAYMENT_ID, { fingerprint: FINGERPRINT, cancelled: true }]]),
       null,
     );

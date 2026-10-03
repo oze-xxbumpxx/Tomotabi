@@ -38,6 +38,13 @@ export interface FinanceGuardLocker {
    * 参加者の確認のあと・receipt の照会の前に呼ぶ（設計書「書き込みの共通の流れ」）。
    */
   lock(tripId: string): Promise<void>;
+
+  /**
+   * 精算の旅行内連番を 1 つ払い出す（guard の行の next_settlement_sequence
+   * を進める）。lock() で行を取ったあと・同じトランザクションで呼ぶ。
+   * 行ロックで同じ旅行の精算に一意の連番になる。
+   */
+  issueNextSettlementSequence(tripId: string): Promise<number>;
 }
 
 /**

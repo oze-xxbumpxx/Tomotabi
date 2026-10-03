@@ -9,7 +9,11 @@ import type { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 import type { ApiErrorBody } from "@tomotabi/contracts";
 import { someInCauseChain } from "../errors/find-in-cause-chain";
-import { ApiError, type ApiErrorCode } from "./api-error";
+import {
+  ApiError,
+  type ApiErrorCode,
+  type ApiErrorDetails,
+} from "./api-error";
 
 /**
  * 想定外の例外に返す固定文。例外の message（DB の URL・接続情報を含み得る）を
@@ -80,6 +84,7 @@ type NormalizedError = {
   status: number;
   message: string;
   retryable: boolean;
+  details?: ApiErrorDetails;
 };
 
 function normalize(exception: unknown): NormalizedError {
@@ -89,6 +94,7 @@ function normalize(exception: unknown): NormalizedError {
       status: exception.status,
       message: exception.message,
       retryable: exception.retryable,
+      details: exception.details,
     };
   }
   if (exception instanceof HttpException) {
@@ -156,6 +162,12 @@ export class ApiErrorFilter implements ExceptionFilter {
       requestId: requestIdOf(request),
       retryable: normalized.retryable,
     };
+    if (normalized.details?.existingSettlementId !== undefined) {
+      body.existingSettlementId = normalized.details.existingSettlementId;
+    }
+    if (normalized.details?.changedPaymentIds !== undefined) {
+      body.changedPaymentIds = [...normalized.details.changedPaymentIds];
+    }
     response.status(normalized.status).json(body);
   }
 }

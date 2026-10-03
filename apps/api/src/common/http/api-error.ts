@@ -33,6 +33,15 @@ export type ApiErrorCode =
   | "TEMPORARILY_UNAVAILABLE";
 
 /**
+ * 競合の応答に添える任意の詳細（契約の Error の任意項目）。
+ * 利用者が同じ旅行で参照できる行の id だけ入れる。
+ */
+export type ApiErrorDetails = Readonly<{
+  existingSettlementId?: string;
+  changedPaymentIds?: readonly string[];
+}>;
+
+/**
  * 業務エラー。UseCase・Controller の境界が投げ、ApiErrorFilter が
  * `{ code, message, requestId, retryable }` の応答に変換する。
  * この型自身は Nest に依存しない（UseCase からも投げられるようにするため）。
@@ -41,17 +50,20 @@ export class ApiError extends Error {
   readonly code: ApiErrorCode;
   readonly status: number;
   readonly retryable: boolean;
+  readonly details: ApiErrorDetails;
 
   constructor(input: {
     code: ApiErrorCode;
     status: number;
     message: string;
     retryable?: boolean;
+    details?: ApiErrorDetails;
   }) {
     super(input.message);
     this.name = "ApiError";
     this.code = input.code;
     this.status = input.status;
     this.retryable = input.retryable ?? input.status === 503;
+    this.details = input.details ?? {};
   }
 }

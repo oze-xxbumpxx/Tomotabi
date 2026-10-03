@@ -111,6 +111,38 @@ export type PreviewPage = {
   nextCursor: string | null;
 };
 
+/** 精算を取り消せない理由（取り消せるときは null）。 */
+export type CannotCancelReason = "not_latest" | "already_cancelled" | null;
+
+/**
+ * 完了した受け渡し（精算）。旅行内連番・元の確認・明細・取り消し履歴を
+ * 含む。完了と取り消しは同じ精算で 1 回ずつだけ成立する。
+ */
+export type Settlement = {
+  id: string;
+  tripId: string;
+  previewId: string;
+  /** 旅行の中の連番（1 からの 10 進の文字列）。 */
+  sequence: string;
+  createdBy: string;
+  /** ISO 8601 の日時。 */
+  createdAt: string;
+  /** 非 0 円は受け渡しを完了した申告、0 円は受け渡し不要。 */
+  completionKind: "transfer_completed" | "no_transfer_required";
+  transfer: Transfer;
+  items: TargetItem[];
+  cancellation: Cancellation | null;
+  /** 今取り消せるか（最新の有効な精算のときだけ true）。 */
+  canCancel: boolean;
+  cannotCancelReason: CannotCancelReason;
+};
+
+/** 精算の一覧の 1 ページ（旅行内連番の降順。取り消し済みを含む）。 */
+export type SettlementPage = {
+  items: Settlement[];
+  nextCursor: string | null;
+};
+
 /** 残額（向き・金額・対象の件数・明細）。保存済みの支払い・精算・取り消しから導出する。 */
 export type Balance = {
   tripId: string;

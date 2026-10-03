@@ -866,8 +866,16 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
     const record = await screen.findByRole("button", {
       name: "受け渡し完了を記録",
     });
+    // 保留中の要求の確認が終わるまでチェックは押せない（押しても効かない）。
+    await waitFor(() =>
+      expect(
+        screen.getByRole("checkbox", {
+          name: "表示の全額を受け渡しました",
+        }),
+      ).toBeEnabled(),
+    );
     await user.click(
-      await screen.findByRole("checkbox", {
+      screen.getByRole("checkbox", {
         name: "表示の全額を受け渡しました",
       }),
     );

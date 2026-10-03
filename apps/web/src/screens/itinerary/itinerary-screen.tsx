@@ -4,6 +4,7 @@ import {
   ArrowsLeftRight,
   BookOpenText,
   Plus,
+  WifiSlash,
 } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -476,6 +477,21 @@ export function ItineraryScreen({
       )}
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
+      )}
+      {/* 下部の主ボタン「支払いを記録」（v3 11。オフラインは灰色の固定表示）。 */}
+      {online ? (
+        <Link
+          className="main-action"
+          href={`/trips/${tripId}/payments/new`}
+        >
+          <Plus size={20} weight="bold" aria-hidden="true" />
+          支払いを記録
+        </Link>
+      ) : (
+        <span className="main-action main-action-offline" aria-disabled="true">
+          <WifiSlash size={18} weight="bold" aria-hidden="true" />
+          支払いを記録
+        </span>
       )}
       <nav className="tabbar" aria-label="タブ">
         <div className="tabbar-inner">

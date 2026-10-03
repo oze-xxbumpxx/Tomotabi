@@ -156,8 +156,8 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
     const slot0 = members?.slot0 ?? ACTOR;
     const slot1 = members?.slot1 ?? PARTNER;
     this.rosterRows.set(tripId, [
-      { slot: 0 as ParticipantSlot, userId: slot0 },
-      { slot: 1 as ParticipantSlot, userId: slot1 },
+      { slot: 0 as ParticipantSlot, userId: slot0, displayName: "ひなた" },
+      { slot: 1 as ParticipantSlot, userId: slot1, displayName: "あおい" },
     ]);
   }
 

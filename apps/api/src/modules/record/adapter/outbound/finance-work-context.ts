@@ -6,10 +6,14 @@ import type { PaymentRepository } from "./payment.repository";
 
 export const FINANCE_UNIT_OF_WORK = Symbol("FINANCE_UNIT_OF_WORK");
 
-/** 旅行の参加者 1 人。参加者番号（0・1）と利用者の対応。 */
+/**
+ * 旅行の参加者 1 人。参加者番号（0・1）と利用者の対応。
+ * displayName は残額・確認の向き表示に使う（identity.users の name）。
+ */
 export type TripRosterEntry = Readonly<{
   slot: ParticipantSlot;
   userId: UserId;
+  displayName: string;
 }>;
 
 /**

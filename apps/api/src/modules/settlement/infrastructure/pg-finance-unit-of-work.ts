@@ -5,6 +5,7 @@ import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
 import { ParticipantSlot } from "../../../common/domain/participant-slot";
 import type { UserId } from "../../../common/domain/user-id";
 import { PgCommandReceipts } from "../../../infrastructure/database/pg-command-receipts";
+import { users } from "../../../infrastructure/database/schema/identity";
 import { tripFinanceGuards } from "../../../infrastructure/database/schema/infra";
 import {
   plans,
@@ -12,19 +13,21 @@ import {
 } from "../../../infrastructure/database/schema/planning";
 import type {
   FinanceGuardLocker,
-  FinanceWorkContext,
   TripPlansPort,
   TripRosterEntry,
   TripRosterPort,
 } from "../../record/adapter/outbound/finance-work-context";
 import { DrizzlePaymentRepository } from "../../record/infrastructure/drizzle-payment.repository";
+import type { SettlementWorkContext } from "../adapter/outbound/settlement-work-context";
+import { DrizzleSettlementRepository } from "./drizzle-settlement.repository";
+import { PgPaymentsRead } from "./pg-payments-read";
 
 /**
  * 旅行の参加者の照会。認可は SQL の条件で行う: actor が旅行の参加者
  * でなければ roster を返さない（EXISTS 副問い合わせ。設計書「認可は
  * SQL の条件」）。
  */
-class PgTripRosterQuery implements TripRosterPort {
+export class PgTripRosterQuery implements TripRosterPort {
   constructor(private readonly db: NodePgDatabase) {}
 
   async find(
@@ -46,8 +49,10 @@ class PgTripRosterQuery implements TripRosterPort {
       .select({
         slot: tripParticipants.slot,
         userId: tripParticipants.userId,
+        displayName: users.name,
       })
       .from(tripParticipants)
+      .innerJoin(users, eq(users.id, tripParticipants.userId))
       .where(and(eq(tripParticipants.tripId, tripId), participates))
       .orderBy(asc(tripParticipants.slot));
     if (rows.length === 0) {
@@ -56,6 +61,7 @@ class PgTripRosterQuery implements TripRosterPort {
     return rows.map((row) => ({
       slot: ParticipantSlot.parse(row.slot),
       userId: row.userId as UserId,
+      displayName: row.displayName,
     }));
   }
 }
@@ -102,10 +108,14 @@ class PgTripPlansQuery implements TripPlansPort {
  * 文脈には型付きの Repository・照会・receipt の限定集合だけを渡し、
  * 生の接続は渡さない。
  */
-export class PgFinanceUnitOfWork implements UnitOfWork<FinanceWorkContext> {
+export class PgFinanceUnitOfWork
+  implements UnitOfWork<SettlementWorkContext>
+{
   constructor(private readonly pool: Pool) {}
 
-  async run<T>(work: (ctx: FinanceWorkContext) => Promise<T>): Promise<T> {
+  async run<T>(
+    work: (ctx: SettlementWorkContext) => Promise<T>,
+  ): Promise<T> {
     const client = await this.pool.connect();
     let released = false;
     try {
@@ -118,6 +128,8 @@ export class PgFinanceUnitOfWork implements UnitOfWork<FinanceWorkContext> {
         receipts: new PgCommandReceipts(db),
         payments: new DrizzlePaymentRepository(db),
         plans: new PgTripPlansQuery(db),
+        paymentsRead: new PgPaymentsRead(db),
+        settlements: new DrizzleSettlementRepository(db),
       });
       await client.query("COMMIT");
       return result;

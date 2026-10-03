@@ -41,7 +41,7 @@ export type FinanceWritePersist<T> = Readonly<{
 }>;
 
 async function storedFinanceReceipt<T>(
-  ctx: FinanceWorkContext,
+  ctx: Pick<FinanceWorkContext, "receipts">,
   command: FinanceWriteCommand,
 ): Promise<FinanceWriteOutcome<T> | null> {
   const receipt = await ctx.receipts.find(
@@ -80,12 +80,19 @@ async function storedFinanceReceipt<T>(
  * 同じ旅行の同一キーは guard の行ロックで直列化される（先着の receipt を後着が
  * 読む）。ただし receipt の主キーは旅行を含まないため、別の旅行への同時送信は
  * runFinanceWriteTransaction の一意違反の扱いが要る。
+ *
+ * 文脈は FinanceWorkContext を広げたものでも渡せる（C）。settlement の
+ * 書き込みは支払いの読み取り口と settlement の Repository を足した文脈で
+ * 同じ流れを通る。
  */
-export async function runFinanceWrite<T>(
-  ctx: FinanceWorkContext,
+export async function runFinanceWrite<
+  T,
+  C extends FinanceWorkContext = FinanceWorkContext,
+>(
+  ctx: C,
   command: FinanceWriteCommand,
   work: (
-    ctx: FinanceWorkContext,
+    ctx: C,
     roster: readonly TripRosterEntry[],
   ) => Promise<FinanceWritePersist<T>>,
 ): Promise<FinanceWriteOutcome<T>> {
@@ -129,11 +136,14 @@ export async function runFinanceWrite<T>(
  * 勝った側が COMMIT した受領を新しいトランザクションで読み直す（hash が
  * 一致すれば保存した結果、違えば 409）。旅行・予定の作成と同じ仕組み。
  */
-export async function runFinanceWriteTransaction<T>(
-  unitOfWork: UnitOfWork<FinanceWorkContext>,
+export async function runFinanceWriteTransaction<
+  T,
+  C extends FinanceWorkContext = FinanceWorkContext,
+>(
+  unitOfWork: UnitOfWork<C>,
   command: FinanceWriteCommand,
   work: (
-    ctx: FinanceWorkContext,
+    ctx: C,
     roster: readonly TripRosterEntry[],
   ) => Promise<FinanceWritePersist<T>>,
 ): Promise<FinanceWriteOutcome<T>> {

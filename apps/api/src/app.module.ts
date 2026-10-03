@@ -9,6 +9,7 @@ import { FoundationModule } from "./modules/foundation/foundation.module";
 import { IdentityModule } from "./modules/identity/identity.module";
 import { PlanningModule } from "./modules/planning/planning.module";
 import { RecordModule } from "./modules/record/record.module";
+import { SettlementModule } from "./modules/settlement/settlement.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RecordModule } from "./modules/record/record.module";
     IdentityModule,
     PlanningModule,
     RecordModule,
+    SettlementModule,
   ],
   providers: [
     {

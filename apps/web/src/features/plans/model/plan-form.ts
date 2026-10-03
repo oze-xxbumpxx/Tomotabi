@@ -4,10 +4,10 @@ import { boundedTextLength } from "@/shared/lib/text-length";
 import { isLocalDateString } from "@/shared/lib/local-date";
 
 /**
- * 予定の追加・編集フォームで共通の検証と、編集時の diff（変更のあった
- * 項目だけを入れる PlanPatch）の組み立て。
- * 名前はコードポイントで 1〜100、日付は旅行期間内、時刻は `HH:mm` か
- * 「時刻未定」（null）、メモは 2000 文字まで（07 §6）。
+ * 予定の追加・編集フォームで共通の検証と、編集時のdiff（変更のあった
+ * 項目だけを入れるPlanPatch）の組み立て。
+ * 名前はコードポイントで1〜100、日付は旅行期間内、時刻は`HH:mm`か
+ * 「時刻未定」（null）、メモは2000文字まで（07 §6）。
  */
 
 export const PLAN_NAME_MAX_CODEPOINTS = 100;
@@ -27,9 +27,9 @@ export type PlanFormValues = {
   kind: PlanKind | null;
   /** `YYYY-MM-DD`。追加フォームだけで使う（編集は日の移動で変える）。 */
   date: string;
-  /** 「時刻未定」なら true。true のあいだ time は送らない。 */
+  /** 「時刻未定」ならtrue。trueのあいだtimeは送らない。 */
   timeUndecided: boolean;
-  /** `HH:mm`。timeUndecided が false のときだけ意味を持つ。 */
+  /** `HH:mm`。timeUndecidedがfalseのときだけ意味を持つ。 */
   time: string;
   memo: string;
 };
@@ -107,7 +107,7 @@ function memoOf(values: PlanFormValues): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-/** 追加の body（時刻未定は `time: null` を明示して送る）。検証済みの値にだけ使う。 */
+/** 追加のbody（時刻未定は`time: null`を明示して送る）。検証済みの値にだけ使う。 */
 export function planCreateOf(
   values: PlanFormValues & { kind: PlanKind },
 ): PlanCreate {
@@ -121,7 +121,7 @@ export function planCreateOf(
 }
 
 /**
- * 編集の body。基準の欄（フォームを開いたとき、または競合で
+ * 編集のbody。基準の欄（フォームを開いたとき、または競合で
  * 「最新の内容で入力し直す」を選んだあとの欄）と違う項目だけを入れる
  * （送っていない = 変えない）。
  */

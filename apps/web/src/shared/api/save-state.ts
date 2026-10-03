@@ -33,13 +33,13 @@ export type SaveState<TData = unknown, TLatest = unknown> =
     }
   | {
       status: "session-expired";
-      /** 結果不明のあとの確認が 401 だったとき true（最初の要求の結果が分からない）。 */
+      /** 結果不明のあとの確認が401だったときtrue（最初の要求の結果が分からない）。 */
       unconfirmed: boolean;
     }
   | {
       status: "conflict";
       request: MutationRequest;
-      /** 最新の取得が終わるまで null。 */
+      /** 最新の取得が終わるまでnull。 */
       latest: ApiSuccess<TLatest> | null;
       latestFailed: boolean;
     };
@@ -50,8 +50,8 @@ type FailureAction =
   | { status: "conflict" }
   | { status: "rejected"; code: ApiErrorCode | null; httpStatus: number };
 
-// network・5xx・応答の解釈の失敗は保存失敗と断定できないため unknown にする。
-// 409 は VERSION_CONFLICT のときだけ conflict、ほかの code は rejected。
+// network・5xx・応答の解釈の失敗は保存失敗と断定できないためunknownにする。
+// 409はVERSION_CONFLICTのときだけconflict、ほかのcodeはrejected。
 function classifyFailure(failure: ApiFailure): FailureAction {
   if (failure.kind !== "http") {
     return { status: "unknown" };
@@ -70,16 +70,16 @@ function classifyFailure(failure: ApiFailure): FailureAction {
 
 export type UseSaveStateOptions<TData, TLatest> = {
   send: (request: MutationRequest) => ResultAsync<ApiSuccess<TData>, ApiFailure>;
-  /** conflict になったとき最新を取得する関数（最新の ETag が「あなたの入力で保存」の If-Match になる）。 */
+  /** conflictになったとき最新を取得する関数（最新のETagが「あなたの入力で保存」のIf-Matchになる）。 */
   fetchLatest?: (() => ResultAsync<ApiSuccess<TLatest>, ApiFailure>) | null;
   onSucceeded?: ((result: ApiSuccess<TData>) => void) | null;
   /**
-   * 結果不明の要求を IndexedDB に残す操作の指定（ADR-0006）。
+   * 結果不明の要求をIndexedDBに残す操作の指定（ADR-0006）。
    * 指定した操作だけ有効になり、送る前に保存し、保存に失敗したら
-   * `storage-unavailable` で止めて送らない。成功・確定した拒否で消し、
+   * `storage-unavailable`で止めて送らない。成功・確定した拒否で消し、
    * 結果不明・認証期限切れでは残す。未指定の操作の振る舞いは変わらない。
-   * `check` に `usePendingRequestCheck` の結果を渡すと、保留がある・
-   * まだ確認中・確認できないあいだは `submit`（新しいキーでの保存）を
+   * `check`に`usePendingRequestCheck`の結果を渡すと、保留がある・
+   * まだ確認中・確認できないあいだは`submit`（新しいキーでの保存）を
    * 受け付けない（同じ要求の再送で二重に作られないようにする）。
    */
   pendingRequest?: {
@@ -90,13 +90,13 @@ export type UseSaveStateOptions<TData, TLatest> = {
 };
 
 /**
- * 書き込みの保存状態。`submit` は送るたびに新しい要求（新しいキー）を作る。
- * 結果不明（network・5xx・応答の解釈失敗）は `unknown` で、その要求は
- * `confirmWithSameRequest` で同じキー・本文・If-Match のままだけ送り直せる
- * （`unknown` の間は `submit` を受け付けず、別の入力で保存し直させない）。
- * 401 は `session-expired`。`unknown` のあとの確認が 401 なら `unconfirmed: true`。
- * 409 かつ code が VERSION_CONFLICT のときだけ `conflict`。
- * `conflict` で `saveMineOverLatest` を呼ぶと、同じ本文・最新の ETag・新しいキーで送る。
+ * 書き込みの保存状態。`submit`は送るたびに新しい要求（新しいキー）を作る。
+ * 結果不明（network・5xx・応答の解釈失敗）は`unknown`で、その要求は
+ * `confirmWithSameRequest`で同じキー・本文・If-Matchのままだけ送り直せる
+ * （`unknown`の間は`submit`を受け付けず、別の入力で保存し直させない）。
+ * 401は`session-expired`。`unknown`のあとの確認が401なら`unconfirmed: true`。
+ * 409かつcodeがVERSION_CONFLICTのときだけ`conflict`。
+ * `conflict`で`saveMineOverLatest`を呼ぶと、同じ本文・最新のETag・新しいキーで送る。
  */
 export function useSaveState<TData = unknown, TLatest = unknown>(
   options: UseSaveStateOptions<TData, TLatest>,
@@ -135,7 +135,7 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
       setState({ status: "saving", request });
       const outcome = await sendRef.current(request);
       // 確定した結果（成功・拒否・競合）が返ったら保留を消す。
-      // unknown・session-expired は送れたか分からないので残す。
+      // unknown・session-expiredは送れたか分からないので残す。
       const clearPending = async (): Promise<void> => {
         if (pendingLink === null) {
           return;
@@ -249,8 +249,8 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
   }, [state, run]);
 
   /**
-   * 再読み込み後に IndexedDB から復帰した保留を、本人の操作で同じまま送り直す。
-   * `usePendingRequestCheck` で見つけた record をそのまま渡す（自動では呼ばない）。
+   * 再読み込み後にIndexedDBから復帰した保留を、本人の操作で同じまま送り直す。
+   * `usePendingRequestCheck`で見つけたrecordをそのまま渡す（自動では呼ばない）。
    * 形・経路が確かめられないもの、今の利用者・旅行と合わないものは送らずに消す。
    */
   const confirmRequest = useCallback(
@@ -343,9 +343,9 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
   }, [state]);
 
   const backToEditing = useCallback(() => {
-    // unknown（送信結果が分からない）・saving・session-expired からは戻せない。
-    // unknown で許すのは confirmWithSameRequest による同じ要求の確認だけで、
-    // editing に戻して別のキーで送り直させない（元の保存が成功していれば二重になる）。
+    // unknown（送信結果が分からない）・saving・session-expiredからは戻せない。
+    // unknownで許すのはconfirmWithSameRequestによる同じ要求の確認だけで、
+    // editingに戻して別のキーで送り直させない（元の保存が成功していれば二重になる）。
     setState((current) =>
       current.status === "unknown" ||
       current.status === "saving" ||

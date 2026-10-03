@@ -2,9 +2,9 @@
 // PreCompact Hook — コンパクション前に機械的な作業状態を再注入する（非ブロッキング）
 //
 // 方針:
-// - 長いセッションで feature 名や「所要時間が未記録」が要約から落ちるのを防ぐ。
+// - 長いセッションでfeature名や「所要時間が未記録」が要約から落ちるのを防ぐ。
 // - 会話本文・custom_instructions・秘密情報は出さない。
-// - コンパクション自体は止めない（常に exit 0）。
+// - コンパクション自体は止めない（常にexit 0）。
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';

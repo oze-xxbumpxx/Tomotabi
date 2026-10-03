@@ -18,7 +18,7 @@ import { toCancellationDto } from "./payment-dto";
 
 /**
  * 支払いの取り消し。取り消しは別の記録を足す形（元の支払いの行は残る）。
- * 既に取り消し済みなら既存の取り消し記録を 200 で返す（1 支払い 1 取消）。
+ * 既に取り消し済みなら既存の取り消し記録を200で返す（1支払い1取消）。
  */
 export class CancelPaymentUseCase implements CancelPaymentInputPort {
   constructor(

@@ -1,5 +1,5 @@
-// wait-for-pr-update.mjs の「PR が更新されたか」の判定と引数検査のテスト。gh は呼ばない。
-// 観点 ID は docs/tests/devin-delegation-loop.md。
+// wait-for-pr-update.mjsの「PRが更新されたか」の判定と引数検査のテスト。ghは呼ばない。
+// 観点IDはdocs/tests/devin-delegation-loop.md。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -28,7 +28,7 @@ test('W-01: head のコミットが since より前なら未更新', () => {
   const r = detectUpdate(p, { since: SINCE, nowMs: NOW });
   assert.equal(r.status, 'waiting');
   assert.equal(r.newCommits, 0);
-  // --sha と同じ head も未更新（コミット時刻にかかわらず）
+  // --shaと同じheadも未更新（コミット時刻にかかわらず）
   assert.equal(detectUpdate(pr({ rollup: [run('COMPLETED', 'SUCCESS')] }), { since: SINCE, sha: 'bbbbbbb', nowMs: NOW }).status, 'waiting');
 });
 
@@ -97,7 +97,7 @@ test('W-09: 新しいコミットの数は --sha より後ろで数える（投�
   });
   assert.equal(r.status, 'updated');
   assert.equal(r.newCommits, 2);
-  // SHA が一覧に無い（force push）か --sha が無いときは時刻で数える
+  // SHAが一覧に無い（force push）か --shaが無いときは時刻で数える
   assert.equal(countNewCommits(commits, { since: '2026-09-26T09:52:00Z', sha: 'eeeeeee' }), 1);
   assert.equal(countNewCommits(commits, { since: '2026-09-26T09:52:00Z' }), 1);
 });

@@ -29,9 +29,9 @@ import type {
 } from "@/shared/api/mutation-request";
 
 /**
- * 予定 API の薄い入口。呼び出しは callApi / callApiWithMeta /
- * sendMutationRequest を通し、応答は契約の Zod で検証してから返す。
- * 生成クライアントと zod への参照はこの層だけに閉じる。
+ * 予定APIの薄い入口。呼び出しはcallApi / callApiWithMeta /
+ * sendMutationRequestを通し、応答は契約のZodで検証してから返す。
+ * 生成クライアントとzodへの参照はこの層だけに閉じる。
  */
 
 // ---- 読み取り ----
@@ -44,8 +44,8 @@ export function getPlan(
 }
 
 /**
- * GET /api/trips/{tripId}/plans/{planId} の応答全体（ETag つき）。
- * conflict になったとき最新の If-Match を組み立て直すために使う。
+ * GET /api/trips/{tripId}/plans/{planId} の応答全体（ETagつき）。
+ * conflictになったとき最新のIf-Matchを組み立て直すために使う。
  */
 export function getPlanWithMeta(
   tripId: string,
@@ -68,7 +68,7 @@ export function createPlanDraft(
   };
 }
 
-/** PATCH は変更のあった項目だけを入れた body で作る（diff は呼び出し側）。 */
+/** PATCHは変更のあった項目だけを入れたbodyで作る（diffは呼び出し側）。 */
 export function updatePlanDraft(
   tripId: string,
   planId: string,

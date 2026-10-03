@@ -23,9 +23,9 @@ export type FakePayload = {
 export type PayloadOverride = Partial<FakePayload>;
 
 /**
- * Google 通信の fake。ブラウザ（openBrowser）が認可 URL から state / nonce を取り出して callback を叩き、
- * exchangeCode は JSON を埋め込んだ「ID トークン」を返し、verifyIdToken が aud / iss / exp を検査する
- * （google-auth-library の verifyIdToken と同じ失敗条件を模す）。nonce の照合は CLI 側の責務。
+ * Google通信のfake。ブラウザ（openBrowser）が認可URLからstate / nonceを取り出してcallbackを叩き、
+ * exchangeCodeはJSONを埋め込んだ「IDトークン」を返し、verifyIdTokenがaud / iss / expを検査する
+ * （google-auth-libraryのverifyIdTokenと同じ失敗条件を模す）。nonceの照合はCLI側の責務。
  */
 export class FakeGoogle implements GoogleEnrollmentClient {
   readonly exchanges: ExchangeCodeInput[] = [];
@@ -41,7 +41,7 @@ export class FakeGoogle implements GoogleEnrollmentClient {
     private readonly override: PayloadOverride = {},
   ) {}
 
-  /** 認可 URL を開いた「ブラウザ」。state はそのまま（tamperState で改ざん）、code を付けて callback へ。 */
+  /** 認可URLを開いた「ブラウザ」。stateはそのまま（tamperStateで改ざん）、codeを付けてcallbackへ。 */
   async openBrowser(authorizationUrl: string, tamperState?: (state: string) => string): Promise<void> {
     const url = new URL(authorizationUrl);
     const redirectUri = url.searchParams.get("redirect_uri")!;
@@ -99,7 +99,7 @@ export class FakeGoogle implements GoogleEnrollmentClient {
   }
 }
 
-/** 標準出力を溜め、confirm には決めた答えを返す io。 */
+/** 標準出力を溜め、confirmには決めた答えを返すio。 */
 export class RecordingIo implements CliIo {
   readonly lines: string[] = [];
   readonly prompts: string[] = [];
@@ -110,7 +110,7 @@ export class RecordingIo implements CliIo {
   print(line: string): void {
     this.lines.push(line);
     if (line.startsWith("https://accounts.google.com/") && this.onAuthorizationUrl) {
-      // 実際の利用者がブラウザで URL を開く動作を非同期に模す
+      // 実際の利用者がブラウザでURLを開く動作を非同期に模す
       void this.onAuthorizationUrl(line);
     }
   }

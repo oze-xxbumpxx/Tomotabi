@@ -12,7 +12,7 @@ import { joinPreviewItems, toPreviewDto } from "./settlement-dto";
 
 /**
  * 確認の取得（F-23）。固定した明細と、取得時点の検証結果を返す。
- * 明細・金額は変わらない（F-21）。無い・別の旅行の確認は同じ 404。
+ * 明細・金額は変わらない（F-21）。無い・別の旅行の確認は同じ404。
  */
 export class GetPreviewUseCase implements GetPreviewInputPort {
   constructor(private readonly unitOfWork: SettlementReadUnitOfWork) {}

@@ -1,6 +1,6 @@
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** `YYYY-MM-DD` の形で、かつ実在する日付なら true。 */
+/** `YYYY-MM-DD`の形で、かつ実在する日付ならtrue。 */
 export function isLocalDateString(value: string): boolean {
   const match = DATE_PATTERN.exec(value);
   if (match === null) {
@@ -25,19 +25,19 @@ function weekdayOf(value: string): string {
   return weekday ?? "";
 }
 
-/** `YYYY-MM-DD` を `10/12 土` の形にする。呼び出し側で実在日を確かめてから使う。 */
+/** `YYYY-MM-DD`を`10/12 土`の形にする。呼び出し側で実在日を確かめてから使う。 */
 export function formatLocalDate(value: string): string {
   const [, month, day] = value.split("-");
   return `${Number(month)}/${Number(day)} ${weekdayOf(value)}`;
 }
 
-/** 旅行の期間を `10/12 土 – 10/14 月` の形にする。1 日だけなら 1 つだけ出す。 */
+/** 旅行の期間を`10/12 土 – 10/14 月`の形にする。1日だけなら1つだけ出す。 */
 export function formatTripPeriod(startsOn: string, endsOn: string): string {
   const start = formatLocalDate(startsOn);
   return startsOn === endsOn ? start : `${start} – ${formatLocalDate(endsOn)}`;
 }
 
-/** 期間の日を `YYYY-MM-DD` の配列で返す（両端を含む）。異常な入力でも空で返す。 */
+/** 期間の日を`YYYY-MM-DD`の配列で返す（両端を含む）。異常な入力でも空で返す。 */
 export function daysOfPeriod(startsOn: string, endsOn: string): string[] {
   if (!isLocalDateString(startsOn) || !isLocalDateString(endsOn)) {
     return [];
@@ -45,7 +45,7 @@ export function daysOfPeriod(startsOn: string, endsOn: string): string[] {
   const days: string[] = [];
   const cursor = new Date(`${startsOn}T00:00:00.000Z`);
   const end = new Date(`${endsOn}T00:00:00.000Z`);
-  // 期間の上限（1 年超は入力ミスとみなして打ち切る）。
+  // 期間の上限（1年超は入力ミスとみなして打ち切る）。
   while (cursor <= end && days.length < 366) {
     days.push(cursor.toISOString().slice(0, 10));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
@@ -53,7 +53,7 @@ export function daysOfPeriod(startsOn: string, endsOn: string): string[] {
   return days;
 }
 
-/** 端末のローカル日付を `YYYY-MM-DD` で返す（「今日」の印用）。 */
+/** 端末のローカル日付を`YYYY-MM-DD`で返す（「今日」の印用）。 */
 export function todayLocalDate(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -76,7 +76,7 @@ const tokyoTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
   hourCycle: "h23",
 });
 
-/** 日本時間（Asia/Tokyo）で `now` の日付を `YYYY-MM-DD` で返す。端末のタイムゾーンに依存しない。 */
+/** 日本時間（Asia/Tokyo）で`now`の日付を`YYYY-MM-DD`で返す。端末のタイムゾーンに依存しない。 */
 export function tokyoDateOf(now: Date): string {
   const parts = tokyoDateFormatter.formatToParts(now);
   const year = parts.find((part) => part.type === "year")?.value ?? "";
@@ -85,17 +85,17 @@ export function tokyoDateOf(now: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/** 日本時間（Asia/Tokyo）で `now` の時刻を `H:mm` で返す。 */
+/** 日本時間（Asia/Tokyo）で`now`の時刻を`H:mm`で返す。 */
 export function tokyoTimeOf(now: Date): string {
   return tokyoTimeFormatter.format(now);
 }
 
-/** `YYYY-MM-DD` と日本の現地時刻 `HH:mm` を UTC の瞬間にする。日本に夏時間はない。 */
+/** `YYYY-MM-DD`と日本の現地時刻`HH:mm`をUTCの瞬間にする。日本に夏時間はない。 */
 export function tokyoInstantOf(date: string, time: string): Date {
   return new Date(`${date}T${time}:00+09:00`);
 }
 
-/** 残り時間（分）を `2 時間 19 分` の形にする。1 時間未満は `45 分`、ちょうどは `2 時間`。 */
+/** 残り時間（分）を`2 時間 19 分`の形にする。1時間未満は`45 分`、ちょうどは`2 時間`。 */
 export function formatRemaining(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -108,7 +108,7 @@ export function formatRemaining(totalMinutes: number): string {
   return `${hours} 時間 ${minutes} 分`;
 }
 
-/** ISO 8601 の日時を `10/10 木 20:14` の形にする（記録日時の表示用）。 */
+/** ISO 8601の日時を`10/10 木 20:14`の形にする（記録日時の表示用）。 */
 export function formatDateTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {

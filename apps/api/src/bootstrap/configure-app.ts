@@ -7,14 +7,14 @@ import { createRequestLogger } from "../infrastructure/logging/logger";
 import { authRouteAllowlist } from "./auth-route-allowlist";
 
 /**
- * main.ts と HTTP テストの両方から呼ぶ組み込み（ADR-0002）。
- * 順序は設計書「main.ts の組み込み順」とおりで、入れ替えない:
- *   0. pino-http の要求ログを先頭に載せる（認証経路も 1 要求 1 行に乗せる。
- *      Nest の nestjs-pino は useExisting でこの req.log を使う）
- *   1. bodyParser: false で生成されたアプリに認証経路の制限を先に載せる
- *   2. Better Auth の公式 Node handler を /api/auth/*splat に載せる（auth があるときだけ）
- *   3. その後ろで Nest 用の JSON parser を有効化する（認証経路の body はライブラリが読む）
- *   4. 最後に /api プレフィックスを付ける
+ * main.tsとHTTPテストの両方から呼ぶ組み込み（ADR-0002）。
+ * 順序は設計書「main.tsの組み込み順」とおりで、入れ替えない:
+ *   0. pino-httpの要求ログを先頭に載せる（認証経路も1要求1行に乗せる。
+ *      Nestのnestjs-pinoはuseExistingでこのreq.logを使う）
+ *   1. bodyParser: falseで生成されたアプリに認証経路の制限を先に載せる
+ *   2. Better Authの公式Node handlerを /api/auth/*splatに載せる（authがあるときだけ）
+ *   3. その後ろでNest用のJSON parserを有効化する（認証経路のbodyはライブラリが読む）
+ *   4. 最後に /apiプレフィックスを付ける
  */
 export function configureApp(
   app: NestExpressApplication,

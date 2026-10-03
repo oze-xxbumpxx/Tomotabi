@@ -9,8 +9,8 @@ import {
 } from "@/shared/lib/local-date";
 
 /**
- * しおりの日付バー（08）。期間の日を `N 日目` + 日付で並べ、選択は
- * `?date=` のリンクで再現する。長い旅行は横スクロールにし、
+ * しおりの日付バー（08）。期間の日を`N 日目` + 日付で並べ、選択は
+ * `?date=`のリンクで再現する。長い旅行は横スクロールにし、
  * 選択中の日は見える位置までスクロールする。
  */
 export function DateBar({
@@ -23,14 +23,14 @@ export function DateBar({
   tripId: string;
   startsOn: string;
   endsOn: string;
-  /** 選択中の日（`YYYY-MM-DD`）。期間外の表示など、無いときは null。 */
+  /** 選択中の日（`YYYY-MM-DD`）。期間外の表示など、無いときはnull。 */
   selectedDate: string | null;
   /** 終了した旅行はすべての日を墨にし、選択中だけ輪郭で分かるようにする（18）。 */
   finished?: boolean;
 }) {
   const days = daysOfPeriod(startsOn, endsOn);
   const selectedRef = useRef<HTMLAnchorElement>(null);
-  // 「今日」の印は端末の日付に依存するため、描画の不一致を避けて effect で付ける。
+  // 「今日」の印は端末の日付に依存するため、描画の不一致を避けてeffectで付ける。
   const [today, setToday] = useState<string | null>(null);
 
   useEffect(() => {

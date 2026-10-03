@@ -1,4 +1,4 @@
-// package-manager.mjs — lockfile 検出と休眠テストの除外。
+// package-manager.mjs — lockfile検出と休眠テストの除外。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {

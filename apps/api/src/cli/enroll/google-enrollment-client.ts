@@ -1,6 +1,6 @@
 /**
- * Google から返った ID トークンの、登録に使う項目だけ。
- * nonce は CLI 側で照合するため、検証済みかどうかに関わらずそのまま返す。
+ * Googleから返ったIDトークンの、登録に使う項目だけ。
+ * nonceはCLI側で照合するため、検証済みかどうかに関わらずそのまま返す。
  */
 export type IdTokenClaims = {
   sub: string;
@@ -17,10 +17,10 @@ export type ExchangeCodeInput = {
 };
 
 /**
- * 初期登録 CLI が Google と通信する 2 操作。テストでは fake に差し替える。
+ * 初期登録CLIがGoogleと通信する2操作。テストではfakeに差し替える。
  *
- * - `exchangeCode`: 認可コードを交換し、ID トークンだけを返す（access / refresh は捨てる）。
- * - `verifyIdToken`: 署名・iss・aud・exp を検証し、失敗したら throw する。
+ * - `exchangeCode`: 認可コードを交換し、IDトークンだけを返す（access / refreshは捨てる）。
+ * - `verifyIdToken`: 署名・iss・aud・expを検証し、失敗したらthrowする。
  */
 export interface GoogleEnrollmentClient {
   exchangeCode(input: ExchangeCodeInput): Promise<string>;

@@ -6,8 +6,8 @@ export const UPDATE_PLAN_INPUT_PORT = Symbol("UPDATE_PLAN_INPUT_PORT");
 export const UPDATE_PLAN_OPERATION = "updatePlan";
 
 /**
- * 部分更新の入力。undefined は「送られていない欄」（触れない）。
- * time / memo の null は「未定・なしに戻す」。
+ * 部分更新の入力。undefinedは「送られていない欄」（触れない）。
+ * time / memoのnullは「未定・なしに戻す」。
  */
 export type UpdatePlanInput = Readonly<{
   userId: UserId;
@@ -24,8 +24,8 @@ export type UpdatePlanInput = Readonly<{
 
 export interface UpdatePlanInputPort {
   /**
-   * @throws 旅行が無い・参加していないとき 403 TRIP_NOT_ACCESSIBLE、
-   *   予定が無いとき 404 PLAN_NOT_FOUND、履歴がある種類変更は
+   * @throws旅行が無い・参加していないとき403 TRIP_NOT_ACCESSIBLE、
+   *   予定が無いとき404 PLAN_NOT_FOUND、履歴がある種類変更は
    *   409 PLAN_HAS_RECORD_HISTORY。
    */
   execute(input: UpdatePlanInput): Promise<PlanWriteResult>;

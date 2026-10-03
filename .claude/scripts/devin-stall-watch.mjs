@@ -1,24 +1,24 @@
 #!/usr/bin/env node
-// 起動した Devin（特にクラウド）が止まっていないかを見張る。止まっていたら終了して Claude Code を呼び戻す。
+// 起動したDevin（特にクラウド）が止まっていないかを見張る。止まっていたら終了してClaude Codeを呼び戻す。
 //
 // 使い方:
 //   node .claude/scripts/devin-stall-watch.mjs <issue番号> --log <ログのパス> --offset <起動直前のログのバイト数>
-//     [--first-output 秒] [--branch 秒] [--interval 秒]
-//     既定: 最初の発言を 300 秒、ブランチを 3600 秒待つ。60 秒ごとに確かめる。
-//   Claude Code からは Bash の run_in_background で、Devin を起動した直後に起動する。
+//     [--first-output秒] [--branch秒] [--interval秒]
+//     既定: 最初の発言を300秒、ブランチを3600秒待つ。60秒ごとに確かめる。
+//   Claude CodeからはBashのrun_in_backgroundで、Devinを起動した直後に起動する。
 //
 // 終了コード:
-//   0 … ブランチ（devin/…-<issue>）ができた。以後は wait-for-pr.mjs に任せる
+//   0 … ブランチ（devin/…-<issue>）ができた。以後はwait-for-pr.mjsに任せる
 //   2 … 引数の誤り
-//   5 … 起動してから --first-output 秒たっても、今回のセッションの発言がログに増えない
-//   6 … 起動してから --branch 秒たっても、ブランチができない
+//   5 … 起動してから --first-output秒たっても、今回のセッションの発言がログに増えない
+//   6 … 起動してから --branch秒たっても、ブランチができない
 //
 // 方針:
-// - ログは同じ Issue のファイルに追記されるため、起動直前のバイト数（--offset）より増えたかで
+// - ログは同じIssueのファイルに追記されるため、起動直前のバイト数（--offset）より増えたかで
 //   今回のセッションの発言を見分ける（前のセッションの発言を今回のものと誤らない）。
-// - wait-for-pr.mjs は PR ができるか 8 時間たつまで終わらないので、止まったセッションの検知はここで行う
-//   （#91・#92 はクラウドで約 8 時間、ブランチも作らずに止まっていた）。
-// - gh / git の一時的な失敗では止めず、次の周期で再試行する。
+// - wait-for-pr.mjsはPRができるか8時間たつまで終わらないので、止まったセッションの検知はここで行う
+//   （#91・#92はクラウドで約8時間、ブランチも作らずに止まっていた）。
+// - gh / gitの一時的な失敗では止めず、次の周期で再試行する。
 
 import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
@@ -38,7 +38,7 @@ export function judgeStall(s) {
   return 'wait';
 }
 
-/** ブランチ名の末尾が -<issue> の devin/ ブランチを探す。 */
+/** ブランチ名の末尾が -<issue> のdevin/ ブランチを探す。 */
 export function findIssueBranch(lsRemoteOutput, issue) {
   const suffix = new RegExp(`refs/heads/(devin/\\S*-${issue})$`);
   for (const line of lsRemoteOutput.split('\n')) {

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// review-readiness.mjs — レビュー対象の鮮度と、人間向け handoff packet の構造を検証する。
+// review-readiness.mjs — レビュー対象の鮮度と、人間向けhandoff packetの構造を検証する。
 //
-// このスクリプトは read-only。render は marker 全体を stdout へ出すだけで、
-// docs/reviews を直接変更しない。意味判断は Reviewer、人間の受容はマージ判断が担う。
+// このスクリプトはread-only。renderはmarker全体をstdoutへ出すだけで、
+// docs/reviewsを直接変更しない。意味判断はReviewer、人間の受容はマージ判断が担う。
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -265,7 +265,7 @@ const PROCESS_BEHAVIOR_PATTERN =
   /(UseCase|use case|schema\.ts|\bdrizzle\b|\bOrchestrator\b|current-state packet|CI step)/i;
 
 /**
- * Gate B の人間向け文言を warn 検査する。schema は通っても、判断 UI として弱い表現を検出する。
+ * Gate Bの人間向け文言をwarn検査する。schemaは通っても、判断UIとして弱い表現を検出する。
  * 失敗にはしない（warn-first）。
  */
 export function lintHandoffContent(assessment) {
@@ -851,7 +851,7 @@ export function checkReview({
     );
   }
 
-  // Gate B 文言は warn-first。requireHandoff でも内容 lint 単独では止めない。
+  // Gate B文言はwarn-first。requireHandoffでも内容lint単独では止めない。
   for (const item of lintHandoffContent(assessmentFromState(state))) {
     diagnostics.push(diagnostic('warning', item.code, item.message));
   }

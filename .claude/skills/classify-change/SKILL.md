@@ -2,12 +2,12 @@
 name: classify-change
 description: >
   ユーザー要求を変更レベル（Level 0〜3）へ分類し、判定理由・必須Agent・必須成果物・省略工程を
-  決める手順。Orchestrator がタスク開始時に使う。小規模変更を過剰工程にしないための判断に用いる。
+  決める手順。Orchestratorがタスク開始時に使う。小規模変更を過剰工程にしないための判断に用いる。
 ---
 
 # 変更レベル分類スキル
 
-Orchestrator がタスク開始時に変更レベルを判定するための手順。レベル定義の正典は
+Orchestratorがタスク開始時に変更レベルを判定するための手順。レベル定義の正典は
 [docs/claude-code/document-policy.md](../../../docs/claude-code/document-policy.md)、完了条件は
 [definition-of-done.md](../../../docs/claude-code/definition-of-done.md)。
 
@@ -20,57 +20,57 @@ Orchestrator がタスク開始時に変更レベルを判定するための手�
 ## 判定フロー
 
 1. **コード変更が無いか？** → Level 0（調査・相談）。
-2. 変更はあるが**既存仕様を変えない軽微修正**（文言・コメント・CSS 微調整・明らかな typo・
-   単純な null チェック・小規模バグ修正）か？ → Level 1。
-3. **既存 API/画面/ロジック/Repository の変更**で、複数ファイルに及ぶが後方互換を壊さないか？
+2. 変更はあるが**既存仕様を変えない軽微修正**（文言・コメント・CSS微調整・明らかなtypo・
+   単純なnullチェック・小規模バグ修正）か？ → Level 1。
+3. **既存API/画面/ロジック/Repositoryの変更**で、複数ファイルに及ぶが後方互換を壊さないか？
    → Level 2。
-4. **新規 API・DB スキーマ変更・データ移行・認証認可・外部/AWS 連携・
+4. **新規API・DBスキーマ変更・データ移行・認証認可・外部/AWS連携・
    アーキテクチャ変更・大規模リファクタ・後方互換に影響**するか？ → Level 3。
-   - **新規画面だけでは L3 にしない。** 新規 API / DB 変更を伴う場合のみ L3。既存 API・既存契約
-     だけを使う画面追加は L2（配布元 Cookpit の recipe-edit-screen 実判定）。
-     「新規画面」を L3 トリガー一覧の見出しだけで読まないこと。
-5. 境界例（例：API 項目追加だが DB スキーマも変わる）は**上位レベル**として扱う。
+   - **新規画面だけではL3にしない。** 新規API / DB変更を伴う場合のみL3。既存API・既存契約
+     だけを使う画面追加はL2（配布元Cookpitのrecipe-edit-screen実判定）。
+     「新規画面」をL3トリガー一覧の見出しだけで読まないこと。
+5. 境界例（例：API項目追加だがDBスキーマも変わる）は**上位レベル**として扱う。
 
 ### 判定例（実タスクの実績）
 
-- **L2 の例**: recipe-edit-screen — 新規画面だがバックエンド・契約は既存のまま
-  （Presentation 層のみ）→ L2。手戻りゼロで完走
-  （出典: `cookpit/recipe-edit-screen` 事象 1・3）。
-- **L3 の例**: store-master — 新規 API（`GET/POST /api/stores`）+ DB スキーマ変更
-  （stores テーブル）を含む全層変更 → L3
+- **L2の例**: recipe-edit-screen — 新規画面だがバックエンド・契約は既存のまま
+  （Presentation層のみ）→ L2。手戻りゼロで完走
+  （出典: `cookpit/recipe-edit-screen`事象1・3）。
+- **L3の例**: store-master — 新規API（`GET/POST /api/stores`）+ DBスキーマ変更
+  （storesテーブル）を含む全層変更 → L3
   （出典: `cookpit/store-master 要件` / `cookpit/store-master 設計書`）。
-- **L2 の例（テストのみの変更）**: test-infra-expansion — プロダクションコード変更 0 の
-  テスト基盤拡張だが、新規 9 ファイル・複数パッケージ（infrastructure / apps/web）に及ぶ
-  → 「軽微修正」ではなく L2。手戻りゼロで完走
-  （出典: `cookpit/test-infra-expansion` 対象タスク概要・事象 1）。
+- **L2の例（テストのみの変更）**: test-infra-expansion — プロダクションコード変更0の
+  テスト基盤拡張だが、新規9ファイル・複数パッケージ（infrastructure / apps/web）に及ぶ
+  → 「軽微修正」ではなくL2。手戻りゼロで完走
+  （出典: `cookpit/test-infra-expansion`対象タスク概要・事象1）。
 
 ## 出力（会話でユーザーへ提示）
 
 - **判定レベル**（0〜3）
-- **判定理由**（なぜそのレベルか、1〜3 行）
+- **判定理由**（なぜそのレベルか、1〜3行）
 - **ユーザー承認**（必要 / 不要）
   - L0 / L1: 不要。小さな修正は直接進める。
-  - L2 / L3: 必要。設計書の承認後に実装へ進む。ADR 級の決定（スタック・アーキテクチャ・後方互換）もユーザーが決める。
-  - 正典は `AGENTS.md` の「作業分担（AI 駆動開発）」。
-- **必要 Agent**（このレベルで起動する Subagent）
-- **必要成果物**（document-policy のレベル別成果物）
+  - L2 / L3: 必要。設計書の承認後に実装へ進む。ADR級の決定（スタック・アーキテクチャ・後方互換）もユーザーが決める。
+  - 正典は`AGENTS.md`の「作業分担（AI駆動開発）」。
+- **必要Agent**（このレベルで起動するSubagent）
+- **必要成果物**（document-policyのレベル別成果物）
 - **省略する工程と理由**（過剰工程を避けるため、何を作らないか）
 
-### レベル別の必要 Agent・成果物（早見）
+### レベル別の必要Agent・成果物（早見）
 
-| Level | 必要 Agent                                                                                                                                                           | 必須成果物                                                                                  |
+| Level | 必要Agent                                                                                                                                                           | 必須成果物                                                                                  |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | 0     | （調査のみ。読み取りで完結）                                                                                                                                         | なし（必要なら提案書）                                                                      |
-| 1     | implementer（必要なら reviewer）                                                                                                                                     | なし（最終報告に変更理由）                                                                  |
+| 1     | implementer（必要ならreviewer）                                                                                                                                     | なし（最終報告に変更理由）                                                                  |
 | 2     | architecture-designer → (planner ∥ test-designer) → implementer → reviewer →〔security-reviewer（省略条件あり）〕→〔reflection-agent※〕 | designs / implementation-plans / tests                                                      |
-| 3     | architecture-designer（requirements + design）→ 上記 + ADR。E2E は implementer が条件付きで担当                                                                      | requirements / designs / implementation-plans / tests / decisions(ADR) / reviews / 振り返り |
+| 3     | architecture-designer（requirements + design）→ 上記 + ADR。E2Eはimplementerが条件付きで担当                                                                      | requirements / designs / implementation-plans / tests / decisions(ADR) / reviews / 振り返り |
 
-※ `reflection-agent` は改善サイクルを運用しているときだけ起動する。契約の設計は
-architecture-designer が担う（専用の contract-designer は未定義）。無い工程は飛ばし、
+※ `reflection-agent`は改善サイクルを運用しているときだけ起動する。契約の設計は
+architecture-designerが担う（専用のcontract-designerは未定義）。無い工程は飛ばし、
 飛ばした旨を報告に書く。
 
 ## 注意
 
-- 小規模変更に Level 3 相当の工程を当てない。
-- 判定後、L2/L3 では最初の Write 担当 Subagent が `.claude/state/current-feature` に
-  feature-name を書く。L0/L1 では設定しない（Hook 誤検知防止）。
+- 小規模変更にLevel 3相当の工程を当てない。
+- 判定後、L2/L3では最初のWrite担当Subagentが`.claude/state/current-feature`に
+  feature-nameを書く。L0/L1では設定しない（Hook誤検知防止）。

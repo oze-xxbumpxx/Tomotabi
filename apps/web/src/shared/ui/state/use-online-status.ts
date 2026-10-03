@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 
 /**
- * 端末のオンライン状態。false のあいだは、保存につながるボタンを
- * `disabled` にし、押せない理由を隣に出す（C-3）。
+ * 端末のオンライン状態。falseのあいだは、保存につながるボタンを
+ * `disabled`にし、押せない理由を隣に出す（C-3）。
  */
 export function useOnlineStatus(): boolean {
-  // 初期値はサーバー描画と同じ true にする（navigator はクライアントにしか無い）。
+  // 初期値はサーバー描画と同じtrueにする（navigatorはクライアントにしか無い）。
   const [online, setOnline] = useState(true);
 
   useEffect(() => {

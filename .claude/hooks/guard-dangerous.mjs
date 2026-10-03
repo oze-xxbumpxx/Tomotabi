@@ -1,18 +1,18 @@
-// PreToolUse Hook — 危険・破壊的・秘密情報アクセス・Hook 回避の防止
+// PreToolUse Hook — 危険・破壊的・秘密情報アクセス・Hook回避の防止
 //
 // 方針:
-// - 決定論的に判定できる操作だけをブロックする（exit 2 で deny、理由を stderr に出す）。
-// - 誤検知を避けるため、日常的に正当な操作（rm -rf node_modules 等）はブロックしない。
-//   破壊的 rm は「再帰+強制フラグ」かつ「壊滅的ターゲット（/, ~, $HOME, *, ., .., ./, ../,
-//   /var /etc /usr /opt /home）」のみ deny。
+// - 決定論的に判定できる操作だけをブロックする（exit 2でdeny、理由をstderrに出す）。
+// - 誤検知を避けるため、日常的に正当な操作（rm -rf node_modules等）はブロックしない。
+//   破壊的rmは「再帰+強制フラグ」かつ「壊滅的ターゲット（/, ~, $HOME, *, ., .., ./, ../,
+//   /var /etc /usr /opt /home）」のみdeny。
 // - 読み取り・調査は妨げない。
 //
 // 保護ファイルの人間承認層は撤去した。個人開発では承認する人とされる人が同一であり、
 // 承認ファイルが実行中コンテナ内に置かれるためリモートから発行できず、ハーネスが自分自身の
-// 修正を拒否するデッドロックを生んでいた。構成変更の承認境界は **PR レビュー**が担う。
-// 詳細は docs/claude-code/improvement-cycle.md（承認境界は PR レビュー）。
+// 修正を拒否するデッドロックを生んでいた。構成変更の承認境界は **PRレビュー**が担う。
+// 詳細はdocs/claude-code/improvement-cycle.md（承認境界はPRレビュー）。
 //
-// 限界（隠さない）: 同一 OS ユーザーで任意シェルを実行できる相手に対し、文字列マッチングは
+// 限界（隠さない）: 同一OSユーザーで任意シェルを実行できる相手に対し、文字列マッチングは
 // 難読化で回避されうる。本フックは事故を防ぐ層であり、認証境界ではない。
 //
 // 対象ツール: Bash（コマンド検査） / Read・Edit・Write・MultiEdit・NotebookEdit（パス検査）。
@@ -36,7 +36,7 @@ function deny(reason, extra = '') {
   process.exit(2);
 }
 
-// ── Bash コマンド判定 ───────────────────────────────────────────────
+// ── Bashコマンド判定 ───────────────────────────────────────────────
 function rmHasRecursiveForce(cmd) {
   const m = cmd.match(/\brm\s+((?:-\S+\s+)+)/);
   if (m) return /r/.test(m[1]) && /f/.test(m[1]);
@@ -112,8 +112,8 @@ const ALWAYS_DENY = [
   { re: /\bDATABASE_URL=[^\s]*prod/i, why: '本番 DB への接続文字列' },
 ];
 
-// ローカル Hook（lefthook）の回避。ローカル Hook は早期フィードバック層であり、
-// 最終ゲートは CI が担うが、回避操作は検出して止める。
+// ローカルHook（lefthook）の回避。ローカルHookは早期フィードバック層であり、
+// 最終ゲートはCIが担うが、回避操作は検出して止める。
 const HOOK_BYPASS_DENY = [
   { re: /--no-verify\b/, why: 'Git Hook の回避（--no-verify）' },
   { re: /\bLEFTHOOK\s*=\s*0\b/, why: 'Git Hook の無効化（LEFTHOOK=0）' },
@@ -167,7 +167,7 @@ function checkBash(cmd) {
   if (secret) deny(secret);
 }
 
-// ── 秘密ファイルへの Read/Edit/Write 判定 ──────────────────────────
+// ── 秘密ファイルへのRead/Edit/Write判定 ──────────────────────────
 function isSecretDirFile(p) {
   const m = p.match(/(?:^|\/)(secrets?|credentials?)(?:\/(.*))?$/i);
   if (!m) return false;

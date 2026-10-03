@@ -19,7 +19,7 @@ export function toPlanDomain(row: PlanRow): Plan {
     name: row.name as BoundedText,
     kind: row.kind as PlanKind,
     date: LocalDate.parse(row.plannedDate),
-    // time(0) は DB から 'HH:mm:ss' で返る。ドメインの LocalTime は 'HH:mm'。
+    // time(0)はDBから'HH:mm:ss'で返る。ドメインのLocalTimeは'HH:mm'。
     time:
       row.plannedTime === null
         ? null
@@ -34,7 +34,7 @@ export function toPlanDomain(row: PlanRow): Plan {
 }
 
 /**
- * 取りやめ済みも含めるため、どの問い合わせも cancelled_at で絞り込まない。
+ * 取りやめ済みも含めるため、どの問い合わせもcancelled_atで絞り込まない。
  */
 export class DrizzlePlanRepository implements PlanRepository {
   constructor(private readonly db: NodePgDatabase) {}
@@ -59,8 +59,8 @@ export class DrizzlePlanRepository implements PlanRepository {
   }
 
   /**
-   * FOR NO KEY UPDATE にする。FOR UPDATE はキー無し列だけの更新でも強すぎて、
-   * M4 の達成・予約 INSERT が取る行ロック（FK の親行参照）と衝突しやすい。
+   * FOR NO KEY UPDATEにする。FOR UPDATEはキー無し列だけの更新でも強すぎて、
+   * M4の達成・予約INSERTが取る行ロック（FKの親行参照）と衝突しやすい。
    */
   async lockForUpdate(tripId: string, planId: string): Promise<Plan | null> {
     const rows = await this.db

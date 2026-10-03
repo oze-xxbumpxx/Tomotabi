@@ -32,7 +32,7 @@ export function useBalance(tripId: string) {
   });
 }
 
-/** 受け渡しの確認 1 件（元の明細と現在の検証結果）。 */
+/** 受け渡しの確認1件（元の明細と現在の検証結果）。 */
 export function useSettlementPreview(tripId: string, previewId: string) {
   return useQuery({
     queryKey: settlementPreviewQueryKey(tripId, previewId),
@@ -47,7 +47,7 @@ export function useSettlementPreview(tripId: string, previewId: string) {
 }
 
 /**
- * 自分の未完了の確認（新しい順）。20 件を超えるときは
+ * 自分の未完了の確認（新しい順）。20件を超えるときは
  * 「さらに読み込む」で続きを取る。
  */
 export function usePendingSettlementPreviews(tripId: string) {
@@ -65,7 +65,7 @@ export function usePendingSettlementPreviews(tripId: string) {
   });
 }
 
-/** 精算の履歴（新しい順）。20 件を超えるときは「さらに読み込む」で続きを取る。 */
+/** 精算の履歴（新しい順）。20件を超えるときは「さらに読み込む」で続きを取る。 */
 export function useSettlements(tripId: string) {
   return useInfiniteQuery({
     queryKey: settlementsQueryKey(tripId),

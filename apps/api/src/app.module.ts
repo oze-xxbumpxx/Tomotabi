@@ -13,8 +13,8 @@ import { SettlementModule } from "./modules/settlement/settlement.module";
 
 @Module({
   imports: [
-    // 要求ログの middleware は configureApp が express の先頭に載せる（認証経路も含めるため）。
-    // useExisting で Nest 側はその req.log を使い、二重に出さない。
+    // 要求ログのmiddlewareはconfigureAppがexpressの先頭に載せる（認証経路も含めるため）。
+    // useExistingでNest側はそのreq.logを使い、二重に出さない。
     LoggerModule.forRoot({ pinoHttp: createPinoHttpOptions(), useExisting: true }),
     FoundationModule,
     IdentityModule,
@@ -32,8 +32,8 @@ import { SettlementModule } from "./modules/settlement/settlement.module";
     },
     // 全例外を { code, message, requestId, retryable } に揃える（設計書「エラー応答」）。
     { provide: APP_FILTER, useClass: ApiErrorFilter },
-    // 全体適用。保護が既定で、公開は @PublicRoute() の明示だけにする。
-    // 順序は OriginGuard → SessionGuard（Origin 不一致を認証状態に関係なく先に止める）。
+    // 全体適用。保護が既定で、公開は @PublicRoute()の明示だけにする。
+    // 順序はOriginGuard → SessionGuard（Origin不一致を認証状態に関係なく先に止める）。
     { provide: APP_GUARD, useClass: OriginGuard },
     { provide: APP_GUARD, useClass: SessionGuard },
   ],

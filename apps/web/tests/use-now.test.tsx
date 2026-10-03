@@ -62,7 +62,7 @@ describe("useNow（1 分ごとの現在時刻）", () => {
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    // 表に戻った時点で最新に進む（裏で進んだ 5 分を反映）。
+    // 表に戻った時点で最新に進む（裏で進んだ5分を反映）。
     expect(
       screen.getByText("2026-10-13T00:46:00.000Z"),
     ).toBeInTheDocument();

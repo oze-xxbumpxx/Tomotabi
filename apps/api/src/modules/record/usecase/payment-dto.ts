@@ -24,7 +24,7 @@ function userOf(
 ): UserId {
   const entry = roster.find((candidate) => candidate.slot === slot);
   if (entry === undefined) {
-    // 支払いは参加者二人の旅行にしか記録できず、(trip_id, slot) の FK も
+    // 支払いは参加者二人の旅行にしか記録できず、(trip_id, slot)のFKも
     // あるため、保存済みの支払いでここには来ない（来たらデータの不整合）。
     throw new Error(`Trip roster is missing participant slot ${slot}`);
   }
@@ -32,8 +32,8 @@ function userOf(
 }
 
 /**
- * Domain の支払いを公開契約の形にする。負担額・寄与は保存時に確定した値。
- * allocations は参加者番号 0, 1 の順（もう一人の percent は 100 から引く）。
+ * Domainの支払いを公開契約の形にする。負担額・寄与は保存時に確定した値。
+ * allocationsは参加者番号0, 1の順（もう一人のpercentは100から引く）。
  */
 export function toPaymentDto(
   payment: Payment,

@@ -18,7 +18,7 @@ const { replaceMock, pushMock, backMock, nowRef } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   pushMock: vi.fn(),
   backMock: vi.fn(),
-  // 「今」の時刻。null は画面が時刻を持たない初期状態と同じ扱い。
+  // 「今」の時刻。nullは画面が時刻を持たない初期状態と同じ扱い。
   nowRef: { value: null as Date | null },
 }));
 
@@ -129,7 +129,7 @@ function notFound(): Response {
   return json({ code: "NOT_FOUND" }, 404);
 }
 
-/** /api/me と /api/trips/* を URL・メソッドで振り分ける fake。 */
+/** /api/meと /api/trips/* をURL・メソッドで振り分けるfake。 */
 function stubApi(handlers: {
   me?: Handler;
   itinerary?: Handler;
@@ -272,17 +272,17 @@ describe("ItineraryScreen の予定一覧（08）", () => {
       ),
     ).toBe(true);
 
-    // 日付バーの選択は aria-current で出る。
+    // 日付バーの選択はaria-currentで出る。
     expect(
       screen.getByRole("link", { name: /2 日目/ }),
     ).toHaveAttribute("aria-current", "date");
 
-    // 2 日目の一覧（時刻未定は「未定」）。
+    // 2日目の一覧（時刻未定は「未定」）。
     expect(screen.getByText("錦市場で昼食")).toBeInTheDocument();
     expect(screen.getByText("未定")).toBeInTheDocument();
     expect(screen.getByText("予約")).toBeInTheDocument();
     expect(screen.getByText("達成 · ひなた")).toBeInTheDocument();
-    // 予定名は詳細へのリンク（戻り用の from を持つ）。
+    // 予定名は詳細へのリンク（戻り用のfromを持つ）。
     const link = screen.getByRole("link", { name: /錦市場で昼食/ });
     expect(link).toHaveAttribute(
       "href",
@@ -298,8 +298,8 @@ describe("ItineraryScreen の予定一覧（08）", () => {
   });
 
   it("W-16: 5 種類・同時刻・時刻未定・取りやめを試験データで並べる", async () => {
-    // 試験計画 W-16: 種類 5 件ずつ。09:00 が 2 件（同時刻は応答の順）、
-    // 時刻未定 1 件（後ろ）、取りやめ済み 1 件。
+    // 試験計画W-16: 種類5件ずつ。09:00が2件（同時刻は応答の順）、
+    // 時刻未定1件（後ろ）、取りやめ済み1件。
     const plans = [
       plan({ id: kindIds.place, name: "美ら海水族館", kind: "place", time: "09:00" }),
       plan({ id: kindIds.food, name: "朝食", kind: "food", time: "09:00" }),
@@ -337,7 +337,7 @@ describe("ItineraryScreen の予定一覧（08）", () => {
       "お土産",
       "宿",
     ]);
-    // 5 種類はすべて文字で示す。
+    // 5種類はすべて文字で示す。
     for (const label of ["場所", "食べ処", "移動", "宿", "買い物"]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
@@ -405,7 +405,7 @@ describe("ItineraryScreen の予定一覧（08）", () => {
     expect(
       await screen.findByText(/旅行期間の外です/),
     ).toBeInTheDocument();
-    // 期間編集へ行けるよう TripHeader（旅行名とメニュー）は出す。
+    // 期間編集へ行けるようTripHeader（旅行名とメニュー）は出す。
     expect(
       screen.getByRole("heading", { name: "沖縄" }),
     ).toBeInTheDocument();
@@ -478,7 +478,7 @@ describe("ItineraryScreen の予定一覧（08）", () => {
     expect(
       container.querySelector(".itinerary-list-title")?.textContent,
     ).toBe("10/13 火 5 件");
-    // 「予定を追加」は青い文字リンクではなく見出し右の pill（墨ボタン）。
+    // 「予定を追加」は青い文字リンクではなく見出し右のpill（墨ボタン）。
     const add = container.querySelector(".itinerary-list-add");
     expect(add).not.toBeNull();
     expect(add).toHaveAttribute(
@@ -652,7 +652,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
       client.getQueryState(["itinerary", tripId, "2026-10-14"])
         ?.isInvalidated,
     ).toBe(true);
-    // 表示中の予定詳細は無効化されて再取得される（初回 + 再取得で 2 回）。
+    // 表示中の予定詳細は無効化されて再取得される（初回 + 再取得で2回）。
     await waitFor(() =>
       expect(
         fetchMock.mock.calls.filter(
@@ -750,7 +750,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
         `/trips/${tripId}/itinerary?date=2026-10-13`,
       ),
     );
-    // 時刻未定（既定）は time: null で送る。
+    // 時刻未定（既定）はtime: nullで送る。
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/plans`);
     expect(JSON.parse(String(init?.body))).toEqual({
@@ -763,10 +763,10 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     expect(
       new Headers(init?.headers).get("idempotency-key"),
     ).not.toBeNull();
-    // 追加しましたの表示（しおり側で出す pending toast）としおりの無効化。
+    // 追加しましたの表示（しおり側で出すpending toast）としおりの無効化。
     expect(takePendingToast()).toBe("追加しました");
     // シートの後ろに敷いたしおりは開いているため、無効化されると
-    // その場で取り直す（2 回目の itinerary 取得）。
+    // その場で取り直す（2回目のitinerary取得）。
     await waitFor(() =>
       expect(
         fetchMock.mock.calls.filter(([url]) =>
@@ -794,7 +794,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
       await screen.findByText("種類を選んでください"),
     ).toBeInTheDocument();
     expect(writeCalls(fetchMock)).toHaveLength(0);
-    // 種類の欄（Segmented の fieldset）にフォーカスする。
+    // 種類の欄（Segmentedのfieldset）にフォーカスする。
     expect(
       document.activeElement instanceof HTMLElement &&
         document.activeElement.classList.contains("segmented"),
@@ -962,7 +962,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     const fetchMock = stubApi({
       plan: () => {
         planCalls += 1;
-        // conflict で取り直した最新は相手が変えた内容。
+        // conflictで取り直した最新は相手が変えた内容。
         return json(
           planCalls === 1
             ? plan({ name: "錦市場で昼食", version: "1" })
@@ -1137,7 +1137,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
       );
 
       expect(await screen.findByText(text)).toBeInTheDocument();
-      // 401 は業務データを隠す。
+      // 401は業務データを隠す。
       if (status === 401) {
         expect(
           screen.queryByRole("heading", { name: "錦市場で昼食" }),
@@ -1304,7 +1304,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
   });
 
   it("保存が 401 なら C-1、結果不明のあとの確認なら確認できていない旨を出す", async () => {
-    // 直接の 401。
+    // 直接の401。
     stubApi({
       trip: () => json(trip()),
       create: () => json({ code: "UNAUTHENTICATED" }, 401),
@@ -1326,7 +1326,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
       await screen.findByText("もう一度ログインしてください"),
     ).toBeInTheDocument();
 
-    // network 失敗（結果不明）→ 同じ内容で確認 → 401 は「確認できていません」。
+    // network失敗（結果不明）→ 同じ内容で確認 → 401は「確認できていません」。
     cleanup();
     let calls = 0;
     stubApi({
@@ -1389,7 +1389,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     expect(
       await screen.findByText("入力内容を確認してください"),
     ).toBeInTheDocument();
-    // 欄を直したら保存できる（送り直しは新しい idempotency-key）。
+    // 欄を直したら保存できる（送り直しは新しいidempotency-key）。
     fireEvent.change(nameInput, { target: { value: "直した名前" } });
     const submit = screen.getByRole("button", { name: "保存する" });
     expect(submit).toBeEnabled();
@@ -1407,7 +1407,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     expect(key1).not.toBeNull();
     expect(key2).not.toBeNull();
     expect(key2).not.toBe(key1);
-    // サーバーは拒否した要求で予定を変えないので同じ ETag でよい。
+    // サーバーは拒否した要求で予定を変えないので同じETagでよい。
     expect(new Headers(writes[1][1]?.headers).get("if-match")).toBe('"3"');
   });
 
@@ -1446,13 +1446,13 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     expect(
       await screen.findByText("画面を更新してからやり直してください"),
     ).toBeInTheDocument();
-    // 欄を変えても送り直せない（ETag が古い）。
+    // 欄を変えても送り直せない（ETagが古い）。
     fireEvent.change(nameInput, { target: { value: "もう一度直す" } });
     expect(
       screen.getByRole("button", { name: "保存する" }),
     ).toBeDisabled();
 
-    // 最新を取り直すと予定を再取得し、新しい ETag で送れる。
+    // 最新を取り直すと予定を再取得し、新しいETagで送れる。
     await userEvent.click(
       screen.getByRole("button", { name: "最新を取り直す" }),
     );
@@ -1508,7 +1508,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     const submit = screen.getByRole("button", {
       name: "この日に移動する",
     });
-    // 選んだ日が拒否と同じなら押せない（sameDay は今の日ではなく選択比較
+    // 選んだ日が拒否と同じなら押せない（sameDayは今の日ではなく選択比較
     // なので、別の日に選び直すと編集に戻る）。
     await userEvent.click(
       screen.getByRole("radio", { name: "10/12 月" }),
@@ -1530,7 +1530,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
 });
 
 describe("「今 · 次まで」の線と次の予定・「あと N」（08・09）", () => {
-  // 日本時間 2026-10-13 09:41。
+  // 日本時間2026-10-13 09:41。
   const nowAt941 = new Date("2026-10-13T00:41:00.000Z");
 
   function renderItinerary(date: string, plans: Plan[]) {
@@ -1581,13 +1581,13 @@ describe("「今 · 次まで」の線と次の予定・「あと N」（08・09
 
     await screen.findByText("錦市場で昼食");
 
-    // 線は「{H:mm} 今 · 次まで {X 時間 Y 分}」（v3 08）。
+    // 線は「{H:mm} 今 · 次まで {X時間Y分}」（v3 08）。
     const nowLine = container.querySelector(".plan-now");
     expect(nowLine).not.toBeNull();
     expect(nowLine).toHaveTextContent("9:41");
     expect(nowLine).toHaveTextContent("今 · 次まで 2 時間 19 分");
 
-    // 線は今の時刻の位置＝時刻が今以降のいちばん早い行（10:00 の
+    // 線は今の時刻の位置＝時刻が今以降のいちばん早い行（10:00の
     // 取りやめ）の直前。次の予定（錦市場で昼食）の手前とは限らない。
     const rows = Array.from(
       container.querySelectorAll(".itinerary-list-items > li"),

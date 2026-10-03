@@ -24,7 +24,7 @@ export type PaymentFormChange =
   | { field: "payerUserId"; value: string }
   | { field: "mode"; value: PaymentSplitMode };
 
-/** 「関連する予定」欄の表示状態。getPlan の確認が要る間だけ pending/failed になる。 */
+/** 「関連する予定」欄の表示状態。getPlanの確認が要る間だけpending/failedになる。 */
 export type PlanRowState = "ready" | "pending" | "failed";
 
 const SPLIT_OPTIONS: SegmentedOption[] = [
@@ -67,7 +67,7 @@ export function PaymentFormFields({
   errors: PaymentFormErrors;
   /** 送信中・結果不明・保留の確認のあいだは欄全体を固定する。 */
   locked?: boolean;
-  /** 参加者二人（残額の応答の participants）。 */
+  /** 参加者二人（残額の応答のparticipants）。 */
   participants: readonly Participant[];
   meUserId: string;
   planRowState?: PlanRowState;
@@ -76,7 +76,7 @@ export function PaymentFormFields({
   >;
   onChange: (change: PaymentFormChange) => void;
   onOpenPlanPicker: () => void;
-  /** URL の予定の確認に失敗したときの再取得と解除。 */
+  /** URLの予定の確認に失敗したときの再取得と解除。 */
   onPlanRetry: () => void;
   onPlanClear: () => void;
 }) {

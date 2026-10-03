@@ -94,9 +94,9 @@ export class DrizzleTripRepository implements TripRepository {
   }
 
   /**
-   * 参加者の確認は EXISTS 副問い合わせにする。JOIN で FOR UPDATE / FOR SHARE を
-   * 取ると trip_participants の行もロック対象になるが、app_runtime はその表に
-   * UPDATE 権限を持たず行ロックできないため。
+   * 参加者の確認はEXISTS副問い合わせにする。JOINでFOR UPDATE / FOR SHAREを
+   * 取るとtrip_participantsの行もロック対象になるが、app_runtimeはその表に
+   * UPDATE権限を持たず行ロックできないため。
    */
   private async lock(
     tripId: string,

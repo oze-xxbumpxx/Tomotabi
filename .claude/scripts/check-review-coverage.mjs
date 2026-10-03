@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// check-review-coverage.mjs — Codex ルート feature の受け入れレビュー記録の Task 網羅を照合する
+// check-review-coverage.mjs — Codexルートfeatureの受け入れレビュー記録のTask網羅を照合する
 // 使い方: node .claude/scripts/check-review-coverage.mjs <feature>
-// 出力: ブリーフはあるが docs/reviews/<feature>.md に「## Task N」見出しが無い Task 番号の配列（JSON）
-// 非ブロッキング前提（呼び出し側が警告表示に使う）。exit は常に 0。
-// 出典: IMP-2026-026（pantry-core 事象 2 — ファイル存在チェックだけでは Task 2/3 の欠落を見逃す）
+// 出力: ブリーフはあるがdocs/reviews/<feature>.mdに「## Task N」見出しが無いTask番号の配列（JSON）
+// 非ブロッキング前提（呼び出し側が警告表示に使う）。exitは常に0。
+// 出典: IMP-2026-026（pantry-core事象2 — ファイル存在チェックだけではTask 2/3の欠落を見逃す）
 import { readdirSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -23,7 +23,7 @@ export function uncovered(feature) {
   return briefTasks.filter((n) => !recorded.has(n)).sort((a, b) => a - b);
 }
 
-// CLI として直接実行されたときのみ出力する（check-improvement-cycle.mjs からは import で使う）
+// CLIとして直接実行されたときのみ出力する（check-improvement-cycle.mjsからはimportで使う）
 if (process.argv[1] && process.argv[1].endsWith('check-review-coverage.mjs')) {
   process.stdout.write(JSON.stringify(uncovered(process.argv[2])));
 }

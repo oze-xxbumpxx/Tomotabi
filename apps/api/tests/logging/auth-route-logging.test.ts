@@ -90,7 +90,7 @@ describe("/api/auth/* の要求ログ（U-17 と同じ観点）", () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-    // auth は null（DATABASE_URL 無し）。経路制限は auth の有無に関係なく同じ位置で応答する。
+    // authはnull（DATABASE_URL無し）。経路制限はauthの有無に関係なく同じ位置で応答する。
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
     });

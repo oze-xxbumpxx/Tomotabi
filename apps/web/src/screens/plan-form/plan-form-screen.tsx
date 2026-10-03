@@ -76,11 +76,11 @@ const EMPTY_VALUES = (date: string): PlanFormValues => ({
 });
 
 /**
- * 予定の追加・編集（v3 に無い画面。11 と同じシートの組み方）。
- * 追加は `/trips/{tripId}/plans/new?date=`、編集は
+ * 予定の追加・編集（v3に無い画面。11と同じシートの組み方）。
+ * 追加は`/trips/{tripId}/plans/new?date=`、編集は
  * `/trips/{tripId}/plans/{planId}/edit`。ルートはそのままに、追加は
  * しおり・編集は詳細をシートの後ろに敷いて重ねて見せる。
- * - 編集の PATCH は変更のあった項目だけを送る（送っていない = 変えない）。
+ * - 編集のPATCHは変更のあった項目だけを送る（送っていない = 変えない）。
  *   何も変えずに閉じれば送らない。
  * - 達成・予約の記録がある予定は種類を固定し、理由の文を出す（W-19）。
  * - 保存成功で「追加しました」/「変更しました」を遷移先のトーストに渡す。
@@ -95,7 +95,7 @@ export function PlanFormScreen({
   tripId: string;
   /** 編集では必須。 */
   planId?: string;
-  /** 追加の初期日（URL の `date`）。未指定は期間の初日。 */
+  /** 追加の初期日（URLの`date`）。未指定は期間の初日。 */
   date?: string | null;
 }) {
   const router = useRouter();
@@ -144,8 +144,8 @@ export function PlanFormScreen({
     }
   }, [mode, plan]);
 
-  // 428（If-Match 必須）で拒否されたら ETag が古いので、最新を取り直す
-  // までは送り直せない。取り直しで ETag を差し替えて編集に戻す。
+  // 428（If-Match必須）で拒否されたらETagが古いので、最新を取り直す
+  // までは送り直せない。取り直しでETagを差し替えて編集に戻す。
   const reloadLatest = async () => {
     if (mode === "edit") {
       const result = await planQuery.refetch();
@@ -158,7 +158,7 @@ export function PlanFormScreen({
     save.backToEditing();
   };
 
-  // 追加で日が未指定なら期間の初日を初期値にする（設計書「v3 に無い画面」）。
+  // 追加で日が未指定なら期間の初日を初期値にする（設計書「v3に無い画面」）。
   useEffect(() => {
     if (
       mode === "new" &&
@@ -193,7 +193,7 @@ export function PlanFormScreen({
   const save = mode === "new" ? create : update;
   const state = save.state;
 
-  // conflict の最新値で欄を埋め直すときの基準になる ETag。
+  // conflictの最新値で欄を埋め直すときの基準になるETag。
   const etagNow =
     state.status === "conflict" && state.latest !== null
       ? state.latest.etag
@@ -206,7 +206,7 @@ export function PlanFormScreen({
   }, [meState.status, router]);
 
   // 保存が「期間外」で拒否されたら期間を取り直し（07 §10）。
-  // 日付欄のエラーとして表示するのは下の displayErrors。
+  // 日付欄のエラーとして表示するのは下のdisplayErrors。
   const refetchTrip = tripQuery.refetch;
   useEffect(() => {
     if (
@@ -219,10 +219,10 @@ export function PlanFormScreen({
   }, [mode, state, refetchTrip]);
 
   const applyChange = (change: PlanFormChange) => {
-    // 拒否（422 など）のあと欄を直したら編集に戻す。サーバーは拒否した
-    // 要求で予定を変えないので ETag はそのまま使え、送り直しは新しい
-    // キーになる（07 §10 / W-10 と同じ考え方）。428（If-Match 必須）
-    // だけは ETag が古いので、欄を変えても先に最新を取り直させる。
+    // 拒否（422など）のあと欄を直したら編集に戻す。サーバーは拒否した
+    // 要求で予定を変えないのでETagはそのまま使え、送り直しは新しい
+    // キーになる（07 §10 / W-10と同じ考え方）。428（If-Match必須）
+    // だけはETagが古いので、欄を変えても先に最新を取り直させる。
     if (state.status === "rejected" && state.httpStatus !== 428) {
       save.backToEditing();
     }
@@ -299,7 +299,7 @@ export function PlanFormScreen({
     router.push(backHref);
   };
 
-  // C-1 セッション切れ。
+  // C-1セッション切れ。
   if (state.status === "session-expired") {
     return (
       <main>
@@ -311,7 +311,7 @@ export function PlanFormScreen({
     );
   }
 
-  // C-2 開けない（読み取り・書き込みのどちらの 403 / 404 も同じ扱い）。
+  // C-2開けない（読み取り・書き込みのどちらの403 / 404も同じ扱い）。
   const queryFailure =
     mode === "new"
       ? tripQuery.error instanceof ApiRequestError
@@ -327,7 +327,7 @@ export function PlanFormScreen({
     (mode === "new"
       ? tripQuery.data === undefined
       : planQuery.data === undefined);
-  // 書き込みの 403 / 404 も C-2（403 は旅行、404 は予定が無い）。
+  // 書き込みの403 / 404もC-2（403は旅行、404は予定が無い）。
   const writeNotAvailable =
     state.status === "rejected" &&
     (state.httpStatus === 403 || state.httpStatus === 404);
@@ -352,7 +352,7 @@ export function PlanFormScreen({
     );
   }
 
-  // 読み取りの 401 は業務データを隠して C-1。
+  // 読み取りの401は業務データを隠してC-1。
   if (
     queryFailure !== null &&
     queryFailure.kind === "http" &&
@@ -365,7 +365,7 @@ export function PlanFormScreen({
     );
   }
 
-  // 編集はデータが届いたあと欄の hydrate を待つが、取得が失敗した
+  // 編集はデータが届いたあと欄のhydrateを待つが、取得が失敗した
   // （データが無い）ときは失敗の画面に進ませる。
   const loading =
     mode === "new"
@@ -457,7 +457,7 @@ export function PlanFormScreen({
                 disabled={
                   locked ||
                   !online ||
-                  // 428（ETag が古い）のときだけ止める。ほかの拒否は欄を
+                  // 428（ETagが古い）のときだけ止める。ほかの拒否は欄を
                   // 直せば編集に戻り、新しいキーで送り直せる。
                   (state.status === "rejected" && state.httpStatus === 428)
                 }
@@ -519,7 +519,7 @@ export function PlanFormScreen({
               },
             ]}
             onSaveMine={() => {
-              // 同じ要求を最新の ETag と新しいキーで送り直す。
+              // 同じ要求を最新のETagと新しいキーで送り直す。
               void update.saveMineOverLatest();
             }}
             onUseLatest={() => {

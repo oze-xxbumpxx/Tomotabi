@@ -80,7 +80,7 @@ function rejectedMessage(
  * しおりの上に重ねるシート。保存は保留中の要求（IndexedDB）を通し、
  * 同じ利用者・旅行・操作の保留があれば入力を固定して「保存されたか
  * 確認できません」と「同じ内容で確認する」を出す（ADR-0006・F-50〜F-53）。
- * URL の planId は getPlan で同じ旅行の予定か確かめてから選んだ状態に
+ * URLのplanIdはgetPlanで同じ旅行の予定か確かめてから選んだ状態に
  * する。確認できないときは勝手に関連なしへ変えず、再取得か解除を促す。
  */
 export function PaymentFormScreen({
@@ -88,7 +88,7 @@ export function PaymentFormScreen({
   planId,
 }: {
   tripId: string;
-  /** URL の `planId`（予定の詳細から開いた入口。無ければ null）。 */
+  /** URLの`planId`（予定の詳細から開いた入口。無ければnull）。 */
   planId: string | null;
 }) {
   const router = useRouter();
@@ -101,7 +101,7 @@ export function PaymentFormScreen({
   const [errors, setErrors] = useState<PaymentFormErrors>({});
   const [hydrated, setHydrated] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  // URL の予定の確認: pending（getPlan で確認中）→ none（選択済み・解除）
+  // URLの予定の確認: pending（getPlanで確認中）→ none（選択済み・解除）
   // / failed（確認に失敗。勝手に関連なしへ変えず再取得か解除を待つ）。
   const [urlPlanCheck, setUrlPlanCheck] = useState<
     "pending" | "none" | "failed"
@@ -129,7 +129,7 @@ export function PaymentFormScreen({
       ? paymentBodyFromJson(pendingRecord.bodyJson)
       : null;
 
-  // 確認が要る予定は 1 件だけ: 固定表示は保留の planId、編集中は URL の planId。
+  // 確認が要る予定は1件だけ: 固定表示は保留のplanId、編集中はURLのplanId。
   const displayPlanId = locked
     ? (storedBody?.planId ?? null)
     : urlPlanCheck !== "none"
@@ -150,8 +150,8 @@ export function PaymentFormScreen({
     }
   }, [locked, hydrated, meUserId]);
 
-  // URL の予定を getPlan で確かめて選んだ状態にする（別の旅行の予定は
-  // 404 になり failed へ。選び直しは選んだ日の getItinerary を使う）。
+  // URLの予定をgetPlanで確かめて選んだ状態にする（別の旅行の予定は
+  // 404になりfailedへ。選び直しは選んだ日のgetItineraryを使う）。
   useEffect(() => {
     if (locked || urlPlanCheck !== "pending") {
       return;
@@ -189,7 +189,7 @@ export function PaymentFormScreen({
 
   const applyChange = (change: PaymentFormChange) => {
     // 拒否のあと欄を直したら編集に戻る（サーバーは拒否した要求で
-    // 支払いを作らない。428 は最新を取り直すまで送り直せない）。
+    // 支払いを作らない。428は最新を取り直すまで送り直せない）。
     if (state.status === "rejected" && state.httpStatus !== 428) {
       save.backToEditing();
     }
@@ -241,7 +241,7 @@ export function PaymentFormScreen({
     router.push(backHref);
   };
 
-  // C-1 セッション切れ（保存の 401。unconfirmed は結果不明のあとの確認）。
+  // C-1セッション切れ（保存の401。unconfirmedは結果不明のあとの確認）。
   if (state.status === "session-expired") {
     return (
       <main>
@@ -253,7 +253,7 @@ export function PaymentFormScreen({
     );
   }
 
-  // 読み取り・書き込みの 403 / 404 は C-2（403 は旅行、404 は旅行の不在）。
+  // 読み取り・書き込みの403 / 404はC-2（403は旅行、404は旅行の不在）。
   const queryFailures = [tripQuery, balanceQuery].map((query) =>
     query.error instanceof ApiRequestError ? query.error.failure : null,
   );
@@ -286,7 +286,7 @@ export function PaymentFormScreen({
     );
   }
 
-  // 読み取りの 401 は業務データを隠して C-1。
+  // 読み取りの401は業務データを隠してC-1。
   if (
     queryFailures.some(
       (failure) =>

@@ -6,9 +6,9 @@ function codePointLength(value: string): number {
 
 export const BoundedText = {
   /**
-   * 前後の空白を除き、1〜maxCodePoints コードポイントの文字列を作る。
-   * 長さは UTF-16 ではなく Unicode コードポイントで数える。
-   * @throws 空白だけ・空・上限超過のとき Error を投げる。
+   * 前後の空白を除き、1〜maxCodePointsコードポイントの文字列を作る。
+   * 長さはUTF-16ではなくUnicodeコードポイントで数える。
+   * @throws空白だけ・空・上限超過のときErrorを投げる。
    */
   parse(value: string, maxCodePoints: number): BoundedText {
     const trimmed = value.trim();
@@ -22,8 +22,8 @@ export const BoundedText = {
   },
 
   /**
-   * メモなど省略可の項目用。未指定・空白だけ・空は null、それ以外は parse と同じ規則。
-   * @throws 上限超過のとき Error を投げる。
+   * メモなど省略可の項目用。未指定・空白だけ・空はnull、それ以外はparseと同じ規則。
+   * @throws上限超過のときErrorを投げる。
    */
   parseOptional(
     value: string | null | undefined,

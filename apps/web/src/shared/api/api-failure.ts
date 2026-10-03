@@ -1,6 +1,6 @@
 /**
- * API が返し得る code の一覧。apps/api の api-error.ts と同じ集合を写す
- * （web は apps/api を import できないため）。未知の文字列は既知の code として
+ * APIが返し得るcodeの一覧。apps/apiのapi-error.tsと同じ集合を写す
+ * （webはapps/apiをimportできないため）。未知の文字列は既知のcodeとして
  * 取り出さず、画面に出さない。
  */
 export const API_ERROR_CODES = [
@@ -45,7 +45,7 @@ export function isApiErrorCode(value: unknown): value is ApiErrorCode {
 }
 
 // Response bodies and error messages are deliberately not carried: the UI must not display server text.
-// http の code だけは分岐に使うために取り出す。message・requestId は持たない。
+// httpのcodeだけは分岐に使うために取り出す。message・requestIdは持たない。
 export type ApiFailure =
   | { kind: "network" }
   | { kind: "http"; status: number; code: ApiErrorCode | null }

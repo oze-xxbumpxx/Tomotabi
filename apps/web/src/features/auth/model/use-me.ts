@@ -3,7 +3,7 @@ import type { Me } from "@tomotabi/contracts";
 import type { ApiFailure } from "@/shared/api/api-failure";
 import { getMe } from "../api/me-api";
 
-/** 401 と 503 は画面の出し分けに使うため、他の失敗と区別する。 */
+/** 401と503は画面の出し分けに使うため、他の失敗と区別する。 */
 export type MeState =
   | { status: "loading" }
   | { status: "ready"; me: Me }

@@ -12,7 +12,7 @@ import { someInCauseChain } from "../errors/find-in-cause-chain";
 import { ApiError, type ApiErrorCode } from "./api-error";
 
 /**
- * 想定外の例外に返す固定文。例外の message（DB の URL・接続情報を含み得る）を
+ * 想定外の例外に返す固定文。例外のmessage（DBのURL・接続情報を含み得る）を
  * そのまま応答へ出さない。
  */
 const INTERNAL_ERROR_BODY = {
@@ -30,7 +30,7 @@ const TEMPORARILY_UNAVAILABLE_BODY = {
 } as const;
 
 /**
- * `code`・`message` を持たない HttpException の、HTTP 状態からの既定の写像。
+ * `code`・`message`を持たないHttpExceptionの、HTTP状態からの既定の写像。
  */
 const STATUS_FALLBACK: Readonly<
   Record<number, { code: ApiErrorCode; message: string }>
@@ -45,9 +45,9 @@ const STATUS_FALLBACK: Readonly<
 };
 
 /**
- * DB 接続の失敗・一時的な競合として 503 retryable=true に写すエラーの code。
- * node（接続系）と pg の SQLSTATE（クラス 08: 接続例外、40001: 直列化失敗、
- * 40P01: デッドロック、55P03: lock_not_available＝lock_timeout の打ち切り）を
+ * DB接続の失敗・一時的な競合として503 retryable=trueに写すエラーのcode。
+ * node（接続系）とpgのSQLSTATE（クラス08: 接続例外、40001: 直列化失敗、
+ * 40P01: デッドロック、55P03: lock_not_available＝lock_timeoutの打ち切り）を
  * 対象にする。
  */
 const TRANSIENT_ERROR_CODES: ReadonlySet<string> = new Set([
@@ -64,8 +64,8 @@ const TRANSIENT_ERROR_CODES: ReadonlySet<string> = new Set([
 ]);
 
 function isTransientDbError(value: unknown): boolean {
-  // drizzle は pg のエラーを DrizzleQueryError の cause に包んで投げるため、
-  // cause チェーンを辿って SQLSTATE / errno を見る。
+  // drizzleはpgのエラーをDrizzleQueryErrorのcauseに包んで投げるため、
+  // causeチェーンを辿ってSQLSTATE / errnoを見る。
   return someInCauseChain(value, (node) => {
     const code = (node as { code?: unknown }).code;
     return (
@@ -134,10 +134,10 @@ function requestIdOf(request: Request): string {
 }
 
 /**
- * すべての例外を `{ code, message, requestId, retryable }` の形に揃える（APP_FILTER）。
- * requestId は pino-http が req.id に振る要求 id（UUID）。pino-http が無い経路では
- * その場で UUID を振る。想定外の例外は 500 の固定文で、スタックや外部ライブラリの
- * message は出さない（ログ側でも同様に握りつぶす）。
+ * すべての例外を`{ code, message, requestId, retryable }`の形に揃える（APP_FILTER）。
+ * requestIdはpino-httpがreq.idに振る要求id（UUID）。pino-httpが無い経路では
+ * その場でUUIDを振る。想定外の例外は500の固定文で、スタックや外部ライブラリの
+ * messageは出さない（ログ側でも同様に握りつぶす）。
  */
 @Catch()
 export class ApiErrorFilter implements ExceptionFilter {
@@ -147,7 +147,7 @@ export class ApiErrorFilter implements ExceptionFilter {
     const request = context.getRequest<Request>();
     const normalized = normalize(exception);
 
-    // M1-b2 の取り決め: 結果コードを res.locals.code に書く（ログは既知の code だけを出す）
+    // M1-b2の取り決め: 結果コードをres.locals.codeに書く（ログは既知のcodeだけを出す）
     (response.locals ??= {}).code = normalized.code;
 
     const body: ApiErrorBody = {

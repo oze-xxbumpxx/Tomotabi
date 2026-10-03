@@ -1,4 +1,4 @@
-// devin-watch.mjs の解釈と表示のテスト。ps・git・gh は呼ばない。
+// devin-watch.mjsの解釈と表示のテスト。ps・git・ghは呼ばない。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {

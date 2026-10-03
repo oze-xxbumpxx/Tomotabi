@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # セッション開始ブリーフィング（読み取り専用・何も変更しない）。
-# kickoff-session Skill の Step 1 で使う。前回ログの「次回やること」・改善バックログの
-# 未決定項目・git 状態を 1 画面に集約し、段取り（今日のタスク決め）の材料を出す。
+# kickoff-session SkillのStep 1で使う。前回ログの「次回やること」・改善バックログの
+# 未決定項目・git状態を1画面に集約し、段取り（今日のタスク決め）の材料を出す。
 #
 # 使い方: bash .claude/scripts/session-briefing.sh
 set -euo pipefail
@@ -9,7 +9,7 @@ set -euo pipefail
 ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$ROOT"
 
-# COOKPIT_TZ は旧名（後方互換）。新規は HARNESS_TZ を使う。
+# COOKPIT_TZは旧名（後方互換）。新規はHARNESS_TZを使う。
 echo "# セッションブリーフィング（$(TZ="${HARNESS_TZ:-${COOKPIT_TZ:-Asia/Tokyo}}" date +%F)）"
 echo
 
@@ -40,7 +40,7 @@ if [ -f "$BACKLOG" ]; then
   echo
 fi
 
-# ── git 状態 ────────────────────────────────────────────────
+# ── git状態 ────────────────────────────────────────────────
 echo "## git 状態"
 echo
 echo "- ブランチ: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '不明')"

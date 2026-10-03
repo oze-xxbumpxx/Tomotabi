@@ -1,12 +1,12 @@
 import type { Pool } from "pg";
 
 /**
- * 利用許可の共通判定。セッション発行時の databaseHooks と、要求ごとの
- * SessionVerifier の両方がこのクエリを使う（判定のずれを防ぐため分けない）。
+ * 利用許可の共通判定。セッション発行時のdatabaseHooksと、要求ごとの
+ * SessionVerifierの両方がこのクエリを使う（判定のずれを防ぐため分けない）。
  *
- * identity.accounts の google 行（account_id = Google の sub）と
- * identity.allowed_google_accounts の user_id・google_sub・enabled を突き合わせる。
- * app_runtime は両表とも SELECT のみで足りる。
+ * identity.accountsのgoogle行（account_id = Googleのsub）と
+ * identity.allowed_google_accountsのuser_id・google_sub・enabledを突き合わせる。
+ * app_runtimeは両表ともSELECTのみで足りる。
  */
 export async function isAllowedGoogleAccount(
   pool: Pool,

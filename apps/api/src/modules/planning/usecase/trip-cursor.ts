@@ -5,10 +5,10 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * 一覧のページ位置を不透明な文字列にする（base64url の JSON { i }）。
- * 中身は起点の旅行 id だけ。created_at を入れないのは、JS の Date や ISO
+ * 一覧のページ位置を不透明な文字列にする（base64urlのJSON { i }）。
+ * 中身は起点の旅行idだけ。created_atを入れないのは、JSのDateやISO
  * 文字列にするとミリ秒に丸まり、同じミリ秒内の違う行がページの境目で
- * 抜け落ちるため。比較には DB の値をそのまま使う（findTripAnchor）。
+ * 抜け落ちるため。比較にはDBの値をそのまま使う（findTripAnchor）。
  * 秘密ではないため署名はしない。
  */
 export function encodeTripCursor(cursor: TripListCursor): string {
@@ -18,7 +18,7 @@ export function encodeTripCursor(cursor: TripListCursor): string {
 }
 
 /**
- * @throws デコード不能・形が違う・値が不正なカーソルは 400 INVALID_REQUEST。
+ * @throwsデコード不能・形が違う・値が不正なカーソルは400 INVALID_REQUEST。
  */
 export function decodeTripCursor(value: string): TripListCursor {
   let decoded: unknown;

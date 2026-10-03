@@ -17,7 +17,7 @@ import {
 import { tripParticipants, trips } from "./planning";
 import { payments } from "./record";
 
-// Reference spec: docs/旅行アプリ設計 3/詳細設計/sql/01_finance.sql
+// Reference spec: docs/旅行アプリ設計3/詳細設計/sql/01_finance.sql
 // previews, preview_items, settlements, items and cancellations are append-only; the
 // BEFORE UPDATE OR DELETE triggers live in a custom migration (drizzle/0006_finance_triggers.sql).
 // active_claims is mutable occupancy state, kept in the same transaction as the history rows
@@ -116,7 +116,7 @@ export const settlements = settlement.table(
       .notNull()
       .references(() => trips.id),
     previewId: uuid("preview_id").notNull().unique("settlements_preview_id_unique"),
-    // 連番は小さい整数なので mode: "number"（既存の version 系の列と同じ扱い）
+    // 連番は小さい整数なのでmode: "number"（既存のversion系の列と同じ扱い）
     sequence: bigint("sequence", { mode: "number" }).notNull(),
     signedTotalYen: bigint("signed_total_yen", { mode: "bigint" }).notNull(),
     completionKind: text("completion_kind").notNull(),

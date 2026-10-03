@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 const TICK_MS = 60_000;
 
 /**
- * 1 分ごとに更新される現在時刻。タブが裏にある間はタイマーを
+ * 1分ごとに更新される現在時刻。タブが裏にある間はタイマーを
  * 止め、表に戻ったときに最新へ進める（visibilitychange）。
- * 描画中に window / document を触らないため、初期値は null で
- * 実際の時刻はマウント後の effect でセットする。
+ * 描画中にwindow / documentを触らないため、初期値はnullで
+ * 実際の時刻はマウント後のeffectでセットする。
  */
 export function useNow(): Date | null {
   const [now, setNow] = useState<Date | null>(null);

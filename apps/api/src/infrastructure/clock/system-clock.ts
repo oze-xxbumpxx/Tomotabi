@@ -24,8 +24,8 @@ export class SystemClock implements Clock {
   }
 
   /**
-   * Asia/Tokyo の今日。`this.now()` を経由するので、テストは `now()` を
-   * 差し替えて UTC 15:00 の日付境界を確かめられる。
+   * Asia/Tokyoの今日。`this.now()`を経由するので、テストは`now()`を
+   * 差し替えてUTC 15:00の日付境界を確かめられる。
    */
   today(): LocalDate {
     return tokyoDate(this.now());

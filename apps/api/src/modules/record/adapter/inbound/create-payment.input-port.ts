@@ -5,7 +5,7 @@ import type { PaymentWriteResult } from "./payment-write.result";
 export const CREATE_PAYMENT_INPUT_PORT = Symbol("CREATE_PAYMENT_INPUT_PORT");
 export const CREATE_PAYMENT_OPERATION = "createPayment";
 
-/** 負担の割合 1 人分（契約の allocations の項目）。percent は検証前の生の値。 */
+/** 負担の割合1人分（契約のallocationsの項目）。percentは検証前の生の値。 */
 export type CreatePaymentAllocation = Readonly<{
   userId: string;
   percent: number;

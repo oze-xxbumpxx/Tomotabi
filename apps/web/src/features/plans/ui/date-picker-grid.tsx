@@ -6,8 +6,8 @@ import {
 } from "@/shared/lib/local-date";
 
 /**
- * 期間の日を 3 等分の格子で選ぶ選択部品（11c）。予定の追加の日付と
- * 日の移動で使う。選択はリンクではなく `onSelect` で返す（form / sheet の値）。
+ * 期間の日を3等分の格子で選ぶ選択部品（11c）。予定の追加の日付と
+ * 日の移動で使う。選択はリンクではなく`onSelect`で返す（form / sheetの値）。
  */
 export function DatePickerGrid({
   startsOn,

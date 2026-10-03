@@ -22,8 +22,8 @@ describe("PlanningModule DI", () => {
   });
 
   it("DATABASE_URL が空文字でも AppModule を組める（未設定と同じ扱い）", async () => {
-    // .env.example の `DATABASE_URL=` は空文字。空文字を「DB あり」と
-    // 誤認すると getPool() が起動時に失敗して API 全体が上がらない。
+    // .env.exampleの`DATABASE_URL=`は空文字。空文字を「DBあり」と
+    // 誤認するとgetPool()が起動時に失敗してAPI全体が上がらない。
     process.env.DATABASE_URL = "";
     moduleRef = await Test.createTestingModule({
       imports: [AppModule],

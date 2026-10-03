@@ -15,9 +15,9 @@ export type TripParticipantSlot = Readonly<{
 }>;
 
 /**
- * 旅行行の永続化。lockFor* は「旅行が存在し、actorId がその参加者」のときだけ
- * 行を返す。存在しない・参加していないは同じ null で、どちらでも
- * 403 TRIP_NOT_ACCESSIBLE にする（存在を漏らさない。設計書「正本からの差分」3）。
+ * 旅行行の永続化。lockFor* は「旅行が存在し、actorIdがその参加者」のときだけ
+ * 行を返す。存在しない・参加していないは同じnullで、どちらでも
+ * 403 TRIP_NOT_ACCESSIBLEにする（存在を漏らさない。設計書「正本からの差分」3）。
  */
 export interface TripRepository {
   lockForUpdate(tripId: string, actorId: UserId): Promise<Trip | null>;

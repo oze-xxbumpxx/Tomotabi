@@ -8,7 +8,7 @@ export class CliUsageError extends Error {
 }
 
 /**
- * `--slot 0` / `--slot=1` だけを受け付ける。他の値・欠落・重複・未知の引数は CliUsageError。
+ * `--slot 0` / `--slot=1`だけを受け付ける。他の値・欠落・重複・未知の引数はCliUsageError。
  */
 export function parseSlot(argv: readonly string[]): Slot {
   let raw: string | null = null;

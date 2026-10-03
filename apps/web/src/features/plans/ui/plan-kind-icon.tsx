@@ -18,7 +18,7 @@ const KIND_ICON: Record<PlanKind, typeof MapPin> = {
 
 export { PLAN_KIND_LABEL, PLAN_KINDS };
 
-/** 種類のアイコン（design の対応：map-pin / fork-knife / shopping-bag / bed / train）。 */
+/** 種類のアイコン（designの対応：map-pin / fork-knife / shopping-bag / bed / train）。 */
 export function PlanKindIcon({
   kind,
   size = 14,

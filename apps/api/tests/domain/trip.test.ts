@@ -32,7 +32,7 @@ function baseTrip(overrides: Partial<Trip> = {}): Trip {
   };
 }
 
-// U-08: Trip の状態遷移（F-08、E-14、B-07）
+// U-08: Tripの状態遷移（F-08、E-14、B-07）
 describe("Trip の状態遷移", () => {
   it("planning → traveling は version・started_at・started_by・updated_at を更新する", () => {
     const started = Trip.start(baseTrip(), T1, ACTOR);

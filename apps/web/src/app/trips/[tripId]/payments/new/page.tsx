@@ -4,7 +4,7 @@ import { isUuidString } from "@/shared/lib/uuid";
 
 /**
  * 支払いを記録（/trips/{tripId}/payments/new?planId=）。
- * planId は UUID の形のときだけ渡す（形の合わない指定は無かったことにする）。
+ * planIdはUUIDの形のときだけ渡す（形の合わない指定は無かったことにする）。
  */
 export default async function PaymentNewPage({
   params,

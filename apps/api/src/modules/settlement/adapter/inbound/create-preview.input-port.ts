@@ -14,7 +14,7 @@ export type CreatePreviewInput = Readonly<{
 
 /**
  * その時点の対象をすべて固定した受け渡しの確認を作る。
- * 対象 0 件は 422（合計 0 円の確認は作れる）。
+ * 対象0件は422（合計0円の確認は作れる）。
  */
 export interface CreatePreviewInputPort {
   execute(

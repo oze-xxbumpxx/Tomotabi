@@ -17,8 +17,8 @@ import {
 } from "./settlement-dto";
 
 /**
- * 残額の取得（F-10）。支払い・取り消し・占有を REPEATABLE READ の
- * 1 スナップショットから読み、対象の導出（F-11）と残額で組み立てる。
+ * 残額の取得（F-10）。支払い・取り消し・占有をREPEATABLE READの
+ * 1スナップショットから読み、対象の導出（F-11）と残額で組み立てる。
  */
 export class GetBalanceUseCase implements GetBalanceInputPort {
   constructor(

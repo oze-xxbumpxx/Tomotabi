@@ -1,4 +1,4 @@
-// estimate-session-time.mjs — 対象日の git 窓が 48 時間固定ではないこと。
+// estimate-session-time.mjs — 対象日のgit窓が48時間固定ではないこと。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';

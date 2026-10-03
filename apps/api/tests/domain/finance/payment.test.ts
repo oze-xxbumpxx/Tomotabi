@@ -31,7 +31,7 @@ describe("Payment.create", () => {
         payerSlot,
         slot0Percent: 50,
       });
-      // 端数 1 円は払った人が負担する
+      // 端数1円は払った人が負担する
       if (payerSlot === 0) {
         expect(payment.slot1Burden).toBe(500n);
         expect(payment.slot0Burden).toBe(501n);
@@ -66,7 +66,7 @@ describe("Payment.create", () => {
   );
 
   it("FU-04: 寄与の符号。払った人が 0 なら 1 の人の負担、1 なら 0 の人の負担の負値", () => {
-    // 7,001 円・0 の人が 30%: 1 の人の負担は floor(7001×70/100)=4,900
+    // 7,001円・0の人が30%: 1の人の負担はfloor(7001×70/100)=4,900
     const paidBy0 = createPayment({
       amount: "7001",
       payerSlot: 0,
@@ -74,7 +74,7 @@ describe("Payment.create", () => {
     });
     expect(paidBy0.slot1Burden).toBe(4900n);
     expect(paidBy0.contribution).toBe(4900n);
-    // 0 の人の負担は floor(7001×30/100)=2,100
+    // 0の人の負担はfloor(7001×30/100)=2,100
     const paidBy1 = createPayment({
       amount: "7001",
       payerSlot: 1,

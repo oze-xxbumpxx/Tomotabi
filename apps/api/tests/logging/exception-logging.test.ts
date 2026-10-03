@@ -54,7 +54,7 @@ describe("exception logging through the Nest application", () => {
       const baseUrl = (await app.getUrl()).replace("[::1]", "127.0.0.1");
       const response = await fetch(`${baseUrl}/api/explode`);
       expect(response.status).toBe(500);
-      // HttpException 応答の形は変えない
+      // HttpException応答の形は変えない
       expect(await response.json()).toEqual({
         statusCode: 500,
         message: "Internal server error",
@@ -70,12 +70,12 @@ describe("exception logging through the Nest application", () => {
     const lines = capture.lines();
     const whole = lines.join("\n");
 
-    // 起動ログを含む全行に URL や例外メッセージの断片が出ない
+    // 起動ログを含む全行にURLや例外メッセージの断片が出ない
     for (const fragment of ["SECRETPW", "postgres://", "db.internal.example", "connect failed"]) {
       expect(whole).not.toContain(fragment);
     }
 
-    // ExceptionsHandler の行: err は type と errorCode だけを持ち、message / stack を持たない
+    // ExceptionsHandlerの行: errはtypeとerrorCodeだけを持ち、message / stackを持たない
     const exceptionLines = lines
       .map((line) => JSON.parse(line) as Record<string, unknown>)
       .filter((line) => "err" in line);
@@ -86,11 +86,11 @@ describe("exception logging through the Nest application", () => {
       expect(err.errorCode).toBe("INTERNAL_ERROR");
       expect(err).not.toHaveProperty("message");
       expect(err).not.toHaveProperty("stack");
-      // msg への err.message 自動転記も止まっている
+      // msgへのerr.message自動転記も止まっている
       expect(line.msg).toBe("unhandled exception");
     }
 
-    // リクエスト行は既知の code だけを出す（ExceptionsHandler 行も requestId を持つので method で絞る）
+    // リクエスト行は既知のcodeだけを出す（ExceptionsHandler行もrequestIdを持つのでmethodで絞る）
     const requestLines = lines
       .map((line) => JSON.parse(line) as Record<string, unknown>)
       .filter((line) => "method" in line);

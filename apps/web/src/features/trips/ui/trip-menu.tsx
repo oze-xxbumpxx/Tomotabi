@@ -61,7 +61,7 @@ function StartStateBlock({ start }: { start: TripSave }) {
     case "saving":
       return <StatusText>開始しています</StatusText>;
     case "rejected":
-      // 拒否のあとは同じ ETag で再送しない。閉じると最新を取り直す。
+      // 拒否のあとは同じETagで再送しない。閉じると最新を取り直す。
       return (
         <div className="menu-status">
           <StatusText tone="error">

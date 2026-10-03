@@ -129,7 +129,7 @@ async function login(userId: string): Promise<string> {
   return cookie;
 }
 
-// Set-Cookie 一覧から Cookie ヘッダ用の `name=value; …` を作る。
+// Set-Cookie一覧からCookieヘッダ用の`name=value; …`を作る。
 function cookieHeader(setCookies: string[] | string | undefined): string {
   const list = Array.isArray(setCookies)
     ? setCookies
@@ -139,8 +139,8 @@ function cookieHeader(setCookies: string[] | string | undefined): string {
   return list.map((value) => value.split(";")[0] ?? "").join("; ");
 }
 
-// 正規の sign-in で state と署名済み state Cookie を取得する
-// （callback は Cookie の state とクエリの state の一致を検査する）。
+// 正規のsign-inでstateと署名済みstate Cookieを取得する
+// （callbackはCookieのstateとクエリのstateの一致を検査する）。
 async function startGoogleSignIn(): Promise<{ state: string; cookie: string }> {
   const response = await http()
     .post("/api/auth/sign-in/social")
@@ -156,9 +156,9 @@ async function startGoogleSignIn(): Promise<{ state: string; cookie: string }> {
 }
 
 /**
- * Google のトークン交換だけを差し替える（better-fetch は呼び出し時に
- * globalThis.fetch を解決する）。id_token は getUserInfo が署名を見ずに
- * decodeJwt で読むだけなので、payload だけの偽 JWT で足りる。
+ * Googleのトークン交換だけを差し替える（better-fetchは呼び出し時に
+ * globalThis.fetchを解決する）。id_tokenはgetUserInfoが署名を見ずに
+ * decodeJwtで読むだけなので、payloadだけの偽JWTで足りる。
  * 戻り値の関数で元に戻す。
  */
 function stubGoogleTokenEndpoint(account: {
@@ -232,8 +232,8 @@ beforeAll(async () => {
   await createRoles(db);
   await migrateAsMigrator(db);
 
-  // A-14 の 200 側だけ、M0 の検査表を admin が作って app_runtime に読み書き権を渡す
-  // （m0_probe.sql は本番 migration ではないため migrate では入らない）。
+  // A-14の200側だけ、M0の検査表をadminが作ってapp_runtimeに読み書き権を渡す
+  // （m0_probe.sqlは本番migrationではないためmigrateでは入らない）。
   await db.admin.query(
     readFileSync(
       join(__dirname, "../../src/infrastructure/database/sql/m0_probe.sql"),
@@ -251,7 +251,7 @@ beforeAll(async () => {
   }
 
   runtimePool = getPool();
-  // DB 停止試験（A-18）でアイドル接続が切られたとき Pool が投げる error イベントを握る
+  // DB停止試験（A-18）でアイドル接続が切られたときPoolが投げるerrorイベントを握る
   for (const pool of [runtimePool, db.admin]) {
     pool.on("error", () => {});
   }
@@ -266,7 +266,7 @@ beforeAll(async () => {
     runtimePool,
     { plugins: [testUtils()] },
   );
-  // ctx.test は testUtils プラグインの init が差し込む。プラグインを経由しない
+  // ctx.testはtestUtilsプラグインのinitが差し込む。プラグインを経由しない
   // Auth<BetterAuthOptions> の型には表れないため、ここで絞り込む。
   testHelpers = ((await auth.$context) as unknown as { test: TestHelpers })
     .test;
@@ -723,7 +723,7 @@ describe("A: 許可リストとセッションの保護", () => {
 describe("A-18: DB 停止中は 503 で Set-Cookie を出さない", () => {
   it("container restart で検証して復帰する", async () => {
     const cookie = await login(hinata.userId);
-    // remove:false を付けないと stop がコンテナを消し restart できない
+    // remove:falseを付けないとstopがコンテナを消しrestartできない
     await db.container.stop({ remove: false });
 
     try {
@@ -732,10 +732,10 @@ describe("A-18: DB 停止中は 503 で Set-Cookie を出さない", () => {
       expect(response.body).toMatchObject({ code: "AUTH_UNAVAILABLE" });
       expect(response.headers["set-cookie"]).toBeUndefined();
     } finally {
-      // Docker は restart でホスト側の ephemeral ポートを振り直す（stop/start で
-      // 32776→32777 になることを確認済み）。pg Pool は接続ごとに
-      // options.connectionString を parse するので、既存 pool の接続先を
-      // 新しい URL に向け直す。
+      // Dockerはrestartでホスト側のephemeralポートを振り直す（stop/startで
+      // 32776→32777になることを確認済み）。pg Poolは接続ごとに
+      // options.connectionStringをparseするので、既存poolの接続先を
+      // 新しいURLに向け直す。
       await db.container.restart();
       const repoint = (pool: Pool, url: string): void => {
         (pool as unknown as { options: { connectionString: string } }).options
@@ -745,8 +745,8 @@ describe("A-18: DB 停止中は 503 で Set-Cookie を出さない", () => {
       repoint(db.admin, db.container.getConnectionUri());
     }
 
-    // 再起動直後は接続が張り直され、pool 内の死んだクライアントが
-    // 取り除かれるまで待つ（初回の /api/me は古い接続で落ちることがある）。
+    // 再起動直後は接続が張り直され、pool内の死んだクライアントが
+    // 取り除かれるまで待つ（初回の /api/meは古い接続で落ちることがある）。
     const deadline = Date.now() + 60_000;
     for (;;) {
       try {

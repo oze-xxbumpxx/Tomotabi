@@ -1,27 +1,27 @@
 #!/usr/bin/env node
-// レビュー指摘を PR に投稿したあと、PR が更新される（新しい head のコミット → CI 完了）まで待つ。
+// レビュー指摘をPRに投稿したあと、PRが更新される（新しいheadのコミット → CI完了）まで待つ。
 // 設計: docs/designs/devin-delegation-loop.md
 //
 // 使い方:
-//   node .claude/scripts/wait-for-pr-update.mjs <PR番号> --since <ISO 8601> [--sha <レビューした head>]
-//     [--interval 秒] [--timeout 秒] [--grace 秒]
-//     既定: 60 秒ごとに確認し、4 時間で諦める。
-//   Claude Code からは Bash の run_in_background で起動する。終了するとセッションが呼び戻される。
+//   node .claude/scripts/wait-for-pr-update.mjs <PR番号> --since <ISO 8601> [--sha <レビューしたhead>]
+//     [--interval秒] [--timeout秒] [--grace秒]
+//     既定: 60秒ごとに確認し、4時間で諦める。
+//   Claude CodeからはBashのrun_in_backgroundで起動する。終了するとセッションが呼び戻される。
 //
 // 終了コード:
-//   0 … 更新あり。標準出力に {"pr","state","headSha","ciConclusion","newCommits"} の JSON を 1 行出す
-//       ciConclusion は success | failure | none（チェックが無い）。失敗でも 0 で返す
-//       （Devin が CI を直している途中かは Claude が判断し、必要ならもう一度待つ）
+//   0 … 更新あり。標準出力に {"pr","state","headSha","ciConclusion","newCommits"} のJSONを1行出す
+//       ciConclusionはsuccess | failure | none（チェックが無い）。失敗でも0で返す
+//       （DevinがCIを直している途中かはClaudeが判断し、必要ならもう一度待つ）
 //   2 … 引数の誤り
 //   3 … 時間切れ
-//   4 … PR が閉じた / マージされた（JSON 行の state に CLOSED / MERGED）
+//   4 … PRが閉じた / マージされた（JSON行のstateにCLOSED / MERGED）
 //
 // 方針:
-// - 判定は detectUpdate に閉じ込め、テストで固定する。gh の呼び出しは薄くする（wait-for-pr.mjs と同じ）。
-// - 「更新」は head が --sha と違う（--sha が無ければ head のコミット時刻が --since より後）こと。
-// - push の直後はチェックがまだ登録されていないことがあるため、チェックが 0 件のときは
-//   その head を初めて見てから --grace 秒（既定 180 秒）待ってから「チェックなし」とみなす。
-// - gh の一時的な失敗では止めず、次の周期で再試行する。gh には 30 秒のタイムアウトを付ける。
+// - 判定はdetectUpdateに閉じ込め、テストで固定する。ghの呼び出しは薄くする（wait-for-pr.mjsと同じ）。
+// - 「更新」はheadが --shaと違う（--shaが無ければheadのコミット時刻が --sinceより後）こと。
+// - pushの直後はチェックがまだ登録されていないことがあるため、チェックが0件のときは
+//   そのheadを初めて見てから --grace秒（既定180秒）待ってから「チェックなし」とみなす。
+// - ghの一時的な失敗では止めず、次の周期で再試行する。ghには30秒のタイムアウトを付ける。
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -31,19 +31,19 @@ const DEFAULT_TIMEOUT_SEC = 4 * 60 * 60;
 const DEFAULT_GRACE_SEC = 180;
 const GH_TIMEOUT_MS = 30_000;
 
-// 成功とみなす結論だけを列挙する。それ以外（FAILURE・TIMED_OUT・CANCELLED・STALE など）は失敗。
-// 失敗を列挙する方式だと、STALE のような想定外の結論が成功に倒れる。
+// 成功とみなす結論だけを列挙する。それ以外（FAILURE・TIMED_OUT・CANCELLED・STALEなど）は失敗。
+// 失敗を列挙する方式だと、STALEのような想定外の結論が成功に倒れる。
 const PASSING_CHECK_RUN = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);
 const PENDING_STATUS = new Set(['PENDING', 'EXPECTED']);
 
 const isCheckRun = (item) => item.__typename === 'CheckRun' || 'conclusion' in item;
 
-/** statusCheckRollup のすべてが完了しているか。CheckRun と StatusContext（commit status）が混在する。 */
+/** statusCheckRollupのすべてが完了しているか。CheckRunとStatusContext（commit status）が混在する。 */
 export function checksComplete(rollup) {
   return rollup.every((item) => (isCheckRun(item) ? item.status === 'COMPLETED' : !PENDING_STATUS.has(item.state)));
 }
 
-/** 完了済みの statusCheckRollup の結論。0 件なら none。 */
+/** 完了済みのstatusCheckRollupの結論。0件ならnone。 */
 export function ciConclusion(rollup) {
   if (rollup.length === 0) return 'none';
   const failed = rollup.some((item) =>
@@ -54,15 +54,15 @@ export function ciConclusion(rollup) {
 
 /**
  * @param {{state:string, headRefOid:string, commits?:Array<{oid:string,committedDate:string}>,
- *   statusCheckRollup?:Array<object>}} pr gh pr view の JSON
+ *   statusCheckRollup?:Array<object>}} pr gh pr viewのJSON
  * @param {{since:string, sha?:string|null, headSeenAtMs?:number|null, nowMs:number, graceSec?:number}} opts
- *   headSeenAtMs はこの head を初めて見た時刻（チェック 0 件の猶予の起点）。
+ *   headSeenAtMsはこのheadを初めて見た時刻（チェック0件の猶予の起点）。
  * @returns {{status:'waiting'|'updated'|'closed', headSha:string, ciConclusion:string|null, newCommits:number}}
  */
 /**
- * 新しいコミットの数。--sha があれば、その SHA より後ろのコミットを数える（コミットの作成時刻と push の時刻は
- * 一致しないため、時刻では数え落とす）。SHA が一覧に無い（force push で履歴が変わった）か --sha が無いときだけ、
- * コミット時刻が since より後のものを数える。
+ * 新しいコミットの数。--shaがあれば、そのSHAより後ろのコミットを数える（コミットの作成時刻とpushの時刻は
+ * 一致しないため、時刻では数え落とす）。SHAが一覧に無い（force pushで履歴が変わった）か --shaが無いときだけ、
+ * コミット時刻がsinceより後のものを数える。
  */
 export function countNewCommits(commits, { since, sha = null }) {
   if (sha !== null) {

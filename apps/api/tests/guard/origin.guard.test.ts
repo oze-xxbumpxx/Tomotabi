@@ -41,7 +41,7 @@ function expectGuardError(
   const httpError = result as HttpException;
   expect(httpError.getStatus()).toBe(status);
   expect(httpError.getResponse()).toMatchObject({ code });
-  // M1-b2 の取り決め: 拒否コードを res.locals.code に書く
+  // M1-b2の取り決め: 拒否コードをres.locals.codeに書く
   expect(response.locals.code).toBe(code);
 }
 

@@ -48,9 +48,9 @@ export function toPaymentCancellationDomain(
 }
 
 /**
- * record.payments・record.payment_cancellations への追記と照会。
- * 更新・削除はしない（追記のみの履歴表。BEFORE UPDATE OR DELETE トリガー）。
- * UoW のトランザクション内の db ハンドルを受けて使う。
+ * record.payments・record.payment_cancellationsへの追記と照会。
+ * 更新・削除はしない（追記のみの履歴表。BEFORE UPDATE OR DELETEトリガー）。
+ * UoWのトランザクション内のdbハンドルを受けて使う。
  */
 export class DrizzlePaymentRepository implements PaymentRepository {
   constructor(private readonly db: NodePgDatabase) {}

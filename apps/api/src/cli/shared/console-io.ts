@@ -1,11 +1,11 @@
 import { createInterface } from "node:readline/promises";
 
 /**
- * CLI の入出力。テストでは fake に差し替え、出力にトークンや sub 全体が無いことを確かめる。
+ * CLIの入出力。テストではfakeに差し替え、出力にトークンやsub全体が無いことを確かめる。
  */
 export interface CliIo {
   print(line: string): void;
-  /** `yes` と入力されたときだけ true。 */
+  /** `yes`と入力されたときだけtrue。 */
   confirm(prompt: string): Promise<boolean>;
 }
 

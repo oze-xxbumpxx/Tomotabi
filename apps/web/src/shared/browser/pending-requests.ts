@@ -2,11 +2,11 @@ import { openDB, type DBSchema } from "idb";
 import type { MutationRequest } from "@/shared/api/mutation-request";
 
 /**
- * 結果不明の要求を IndexedDB に残す（ADR-0006、詳細設計「保存状態と再送」）。
+ * 結果不明の要求をIndexedDBに残す（ADR-0006、詳細設計「保存状態と再送」）。
  * 送る直前に保存し、成功・確定した拒否で消す。結果不明・認証期限切れでは残す。
  * 保存するのは要求を送り直すのに要る組だけで、Cookie・セッショントークン・
- * Google の情報・未送信の入力は入れない。
- * サーバー描画で IndexedDB を触らないよう、呼び出しは effect 以降に限る。
+ * Googleの情報・未送信の入力は入れない。
+ * サーバー描画でIndexedDBを触らないよう、呼び出しはeffect以降に限る。
  *
  * 読み出した値は書いたときのままとは限らない（端末上の保存は利用者が触れる）。
  * 形・経路・宛先を確かめてから使い、合わないものは送らずに消す。
@@ -16,7 +16,7 @@ const DB_NAME = "tomotabi";
 const DB_VERSION = 1;
 const STORE_NAME = "pending-requests";
 
-/** 保留を残す期間。createdAt からこれを超えたものは読むときに消して返さない。 */
+/** 保留を残す期間。createdAtからこれを超えたものは読むときに消して返さない。 */
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const UUID_PATTERN =
@@ -25,7 +25,7 @@ const UUID_SEGMENT =
   "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
 /**
- * 送り直せる経路の許可リスト。{tripId} 部はその保留の tripId と一致させる。
+ * 送り直せる経路の許可リスト。{tripId} 部はその保留のtripIdと一致させる。
  * 支払い・精算の書き込み（createPayment・cancelPayment・createSettlementPreview・
  * completeSettlement・cancelSettlement）だけを許す。
  */
@@ -70,8 +70,8 @@ function isAllowedPendingUrl(record: {
 
 /**
  * 読み出した保留が送り直せる形か確かめる。経路は同一オリジンの
- * `/api/trips/{その保留の tripId}/` 配下で許可リストの経路だけ。
- * `idempotencyKey` は UUID、`bodyJson` は JSON として読める文字列だけ。
+ * `/api/trips/{その保留の tripId}/`配下で許可リストの経路だけ。
+ * `idempotencyKey`はUUID、`bodyJson`はJSONとして読める文字列だけ。
  */
 export function isValidPendingRequest(record: {
   id?: unknown;
@@ -119,7 +119,7 @@ function isExpired(record: PendingRequestRecord, now: number): boolean {
 }
 
 export type PendingRequestRecord = {
-  /** 要求を一意に指す id（UUID）。再送に使う冪等キーと同じ値にする。 */
+  /** 要求を一意に指すid（UUID）。再送に使う冪等キーと同じ値にする。 */
   id: string;
   userId: string;
   tripId: string;
@@ -203,7 +203,7 @@ export function toPendingRequestRecord(input: {
 
 /**
  * 送る直前に保存する。失敗したら例外を投げる（呼び出し側は送らずに止める）。
- * 同じ id の保留が既にある（同じキーでの確かめ直し）ときは、最初の createdAt を保つ。
+ * 同じidの保留が既にある（同じキーでの確かめ直し）ときは、最初のcreatedAtを保つ。
  */
 export async function savePendingRequest(
   record: PendingRequestRecord,
@@ -221,9 +221,9 @@ export async function savePendingRequest(
 
 /**
  * 同じ利用者・旅行・操作の保留を探す。複数残っていたら
- * 新しいもの（createdAt の大きいもの）を返す。
- * 形・経路が確かめられないものと、保持期間（7 日）を超えたものは消す。
- * 確かめられないものだけがあったときは `invalid` を返す。
+ * 新しいもの（createdAtの大きいもの）を返す。
+ * 形・経路が確かめられないものと、保持期間（7日）を超えたものは消す。
+ * 確かめられないものだけがあったときは`invalid`を返す。
  */
 export async function findPendingRequest(input: {
   userId: string;
@@ -269,7 +269,7 @@ export async function deletePendingRequest(id: string): Promise<void> {
 }
 
 /**
- * サインインした利用者以外の userId の保留をすべて消す。
+ * サインインした利用者以外のuserIdの保留をすべて消す。
  * 利用者が分かったときに呼ぶ（別の利用者の保留を残さない）。
  */
 export async function deletePendingRequestsForOtherUsers(
@@ -331,7 +331,7 @@ export async function clearPendingRequestsForUser(
 
 /**
  * 保存されていた要求を送り直せる形に戻す（同じキー・本文・If-Match）。
- * 形・経路が確かめられないレコードには null を返す（呼び出し側は送らずに消す）。
+ * 形・経路が確かめられないレコードにはnullを返す（呼び出し側は送らずに消す）。
  */
 export function pendingRequestToMutation(
   record: PendingRequestRecord,

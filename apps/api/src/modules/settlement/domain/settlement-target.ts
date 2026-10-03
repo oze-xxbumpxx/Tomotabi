@@ -1,8 +1,8 @@
 import { SignedYen } from "../../../common/domain/yen";
 
 /**
- * 精算の明細の種類。BASE は支払いをそのまま精算すること（寄与 c）、
- * REVERSAL は精算済みの支払いがあとで取り消されたときの戻し（−c）。
+ * 精算の明細の種類。BASEは支払いをそのまま精算すること（寄与c）、
+ * REVERSALは精算済みの支払いがあとで取り消されたときの戻し（−c）。
  */
 export type ClaimKind = "BASE" | "REVERSAL";
 
@@ -13,7 +13,7 @@ export type PaymentForDerivation = Readonly<{
 }>;
 
 /**
- * 占有（settlement.active_claims）の 1 行。
+ * 占有（settlement.active_claims）の1行。
  * 「どの支払いが、どの精算で済んでいるか」の今の状態。同じ支払いを
  * 二つの精算に入れないための補助状態で、履歴から作り直せる。
  */
@@ -23,13 +23,13 @@ export type ActiveClaim = Readonly<{
   settlementId: string;
 }>;
 
-/** 次回の精算の対象 1 件。 */
+/** 次回の精算の対象1件。 */
 export type SettlementTarget = Readonly<{
   paymentId: string;
   kind: ClaimKind;
-  /** BASE はその支払いの寄与 c、REVERSAL は −c。 */
+  /** BASEはその支払いの寄与c、REVERSALは −c。 */
   contribution: SignedYen;
-  /** REVERSAL のとき、戻す対象の BASE を済ませた精算の ID。BASE なら null。 */
+  /** REVERSALのとき、戻す対象のBASEを済ませた精算のID。BASEならnull。 */
   baseSettlementId: string | null;
 }>;
 
@@ -63,7 +63,7 @@ export class InvalidClaimStateError extends Error {
  * | 取り消し済み | あり | なし | REVERSAL、−c |
  * | 取り消し済み | あり | あり | なし |
  *
- * 返す対象の並びは payments の並びを保つ。
+ * 返す対象の並びはpaymentsの並びを保つ。
  * @throws InvalidClaimStateError
  */
 export function deriveTargets(
@@ -95,7 +95,7 @@ export function deriveTargets(
           "REVERSAL_ON_ACTIVE_PAYMENT",
         );
       }
-      // 取り消し済み・BASE あり・REVERSAL あり → 対象なし
+      // 取り消し済み・BASEあり・REVERSALあり → 対象なし
       continue;
     }
     if (!cancelled && base === undefined) {

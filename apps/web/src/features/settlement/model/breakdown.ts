@@ -8,7 +8,7 @@ import type {
 import { formatYen, yenFromDecimalString } from "@/shared/lib/yen";
 
 /**
- * 内訳・明細の組み立て。金額は常に BigInt の円（`Number()` を通さない）。
+ * 内訳・明細の組み立て。金額は常にBigIntの円（`Number()`を通さない）。
  * REVERSAL（戻し）の明細は負の寄与として、支払った額・負担額の両方から引く。
  */
 
@@ -16,7 +16,7 @@ function yen(value: string): bigint {
   return yenFromDecimalString(value) ?? 0n;
 }
 
-/** 参加者の表示名。見つからない ID は「相手」とする（正本の 2 人以外は来ない）。 */
+/** 参加者の表示名。見つからないIDは「相手」とする（正本の2人以外は来ない）。 */
 export function nameOf(
   participants: Participant[],
   userId: string,
@@ -78,7 +78,7 @@ export function splitLabelOf(
   return `割合（${nameOf(participants, first.userId)} ${first.percent}%・${nameOf(participants, second.userId)} ${second.percent}%）`;
 }
 
-/** 明細 1 件の「{name} X 円 · {name} Y 円」。戻しは負の額で出す。 */
+/** 明細1件の「{name} X円 · {name} Y円」。戻しは負の額で出す。 */
 export function itemShareLabel(
   item: TargetItem,
   participants: Participant[],
@@ -92,7 +92,7 @@ export function itemShareLabel(
     .join(" · ");
 }
 
-/** 参加者番号（0・1）。見つからないときは null。 */
+/** 参加者番号（0・1）。見つからないときはnull。 */
 export function slotOf(
   participants: Participant[],
   userId: string,
@@ -110,8 +110,8 @@ export type TransferDirection = {
 };
 
 /**
- * 一覧行の受け渡し文。向きが分かれば「A から B へ X 円」、
- * 参加者が取れないときは金額だけ、0 円なら「受け渡し不要」。
+ * 一覧行の受け渡し文。向きが分かれば「AからBへX円」、
+ * 参加者が取れないときは金額だけ、0円なら「受け渡し不要」。
  */
 export function transferLabel(
   transfer: Transfer,
@@ -128,8 +128,8 @@ export function transferLabel(
 }
 
 /**
- * 受け渡しの向きと金額。`requiresTransfer` が false（0 円）なら null。
- * 符号付きの残額の向きはサーバーの `fromUserId` / `toUserId` をそのまま使う。
+ * 受け渡しの向きと金額。`requiresTransfer`がfalse（0円）ならnull。
+ * 符号付きの残額の向きはサーバーの`fromUserId` / `toUserId`をそのまま使う。
  */
 export function transferDirectionOf(
   transfer: Transfer,
@@ -149,7 +149,7 @@ export function transferDirectionOf(
   };
 }
 
-/** 完了要求の completionKind。非 0 円は transfer_completed、0 円は no_transfer_required。 */
+/** 完了要求のcompletionKind。非0円はtransfer_completed、0円はno_transfer_required。 */
 export function completionKindOf(
   transfer: Transfer,
 ): SettlementCreateCompletionKind {
@@ -158,7 +158,7 @@ export function completionKindOf(
     : "no_transfer_required";
 }
 
-/** 支払いの表示名。label が無いものは「支払い」とする。 */
+/** 支払いの表示名。labelが無いものは「支払い」とする。 */
 export function paymentNameOf(payment: Payment): string {
   return payment.label ?? "支払い";
 }

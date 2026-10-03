@@ -21,8 +21,8 @@ class PgFinanceGuards implements FinanceGuardWriter {
 }
 
 /**
- * planning の業務単位を 1 トランザクションに束ねる（設計書「UnitOfWork の文脈」）。
- * 文脈には型付きの Repository・照会・receipt の限定集合だけを渡し、
+ * planningの業務単位を1トランザクションに束ねる（設計書「UnitOfWorkの文脈」）。
+ * 文脈には型付きのRepository・照会・receiptの限定集合だけを渡し、
  * 生の接続は渡さない。
  */
 export class PgPlanningUnitOfWork implements UnitOfWork<PlanningWorkContext> {

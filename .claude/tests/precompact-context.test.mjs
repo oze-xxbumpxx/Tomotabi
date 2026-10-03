@@ -1,4 +1,4 @@
-// precompact-context.mjs — feature 名と所要時間の未記録だけを再注入する。
+// precompact-context.mjs — feature名と所要時間の未記録だけを再注入する。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';

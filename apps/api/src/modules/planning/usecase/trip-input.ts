@@ -7,8 +7,8 @@ const MAX_NAME_CODE_POINTS = 100;
 
 /**
  * 名前の値の規則（コードポイントの文字数・前後空白）。生成スキーマは形式だけを
- * 見るため、上限を含めて Domain の値型が検証する（ADR-0004）。
- * @throws 空・100 コードポイント超は 422 VALIDATION_FAILED。
+ * 見るため、上限を含めてDomainの値型が検証する（ADR-0004）。
+ * @throws空・100コードポイント超は422 VALIDATION_FAILED。
  */
 export function parseTripName(value: string): BoundedText {
   try {
@@ -24,7 +24,7 @@ export function parseTripName(value: string): BoundedText {
 
 /**
  * 期間の値の規則（YYYY-MM-DD・実在日・開始 ≦ 終了）。
- * @throws 形式はあるが値が不正なとき 422 VALIDATION_FAILED。
+ * @throws形式はあるが値が不正なとき422 VALIDATION_FAILED。
  */
 export function parseTripPeriod(startsOn: string, endsOn: string): TripPeriod {
   try {

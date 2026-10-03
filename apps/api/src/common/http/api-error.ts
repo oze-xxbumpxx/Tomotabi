@@ -1,5 +1,5 @@
 /**
- * 設計書「エラー応答」の code。M1 で定義した code も変更せずに含める。
+ * 設計書「エラー応答」のcode。M1で定義したcodeも変更せずに含める。
  */
 export type ApiErrorCode =
   | "INVALID_REQUEST"
@@ -33,9 +33,9 @@ export type ApiErrorCode =
   | "TEMPORARILY_UNAVAILABLE";
 
 /**
- * 業務エラー。UseCase・Controller の境界が投げ、ApiErrorFilter が
- * `{ code, message, requestId, retryable }` の応答に変換する。
- * この型自身は Nest に依存しない（UseCase からも投げられるようにするため）。
+ * 業務エラー。UseCase・Controllerの境界が投げ、ApiErrorFilterが
+ * `{ code, message, requestId, retryable }`の応答に変換する。
+ * この型自身はNestに依存しない（UseCaseからも投げられるようにするため）。
  */
 export class ApiError extends Error {
   readonly code: ApiErrorCode;

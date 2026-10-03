@@ -127,12 +127,12 @@ describe("request logging", () => {
     expect(line.path).not.toContain("?");
     expect(line.statusCode).toBe(403);
     expect(line.level).toBe(30);
-    // エラー応答の requestId と同じ UUID（契約は UUID 形式）
+    // エラー応答のrequestIdと同じUUID（契約はUUID形式）
     expect(line.requestId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
     expect(typeof line.responseTime).toBe("number");
-    // Guard の結果コードが無いときは code を出さない
+    // Guardの結果コードが無いときはcodeを出さない
     expect(line.code).toBeUndefined();
   });
 

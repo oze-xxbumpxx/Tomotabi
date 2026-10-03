@@ -16,8 +16,8 @@ export type CancelPlanInput = Readonly<{
 
 export interface CancelPlanInputPort {
   /**
-   * @throws 旅行が無い・参加していないとき 403 TRIP_NOT_ACCESSIBLE、
-   *   予定が無いとき 404 PLAN_NOT_FOUND、取りやめ済みの再取りやめは
+   * @throws旅行が無い・参加していないとき403 TRIP_NOT_ACCESSIBLE、
+   *   予定が無いとき404 PLAN_NOT_FOUND、取りやめ済みの再取りやめは
    *   409 PLAN_CANCELLED。
    */
   execute(input: CancelPlanInput): Promise<PlanWriteResult>;

@@ -34,7 +34,7 @@ const now = new Date("2026-10-13T00:41:00.000Z");
 
 describe("minutesUntilPlan（今日の今以降までの分数）", () => {
   it("今日の今以降の予定は残り分数を返す", () => {
-    // 09:41 → 12:00 は 2 時間 19 分。
+    // 09:41 → 12:00は2時間19分。
     expect(minutesUntilPlan(plan(), now)).toBe(139);
   });
 
@@ -102,16 +102,16 @@ describe("nextPlanOf（次の予定の決め方）", () => {
   });
 
   it("0:00 前後（UTC の 15:00 で日本の日付が変わる）", () => {
-    // UTC 2026-10-12 15:30 = 日本時間 2026-10-13 00:30。
+    // UTC 2026-10-12 15:30 = 日本時間2026-10-13 00:30。
     const justAfterMidnight = new Date("2026-10-12T15:30:00.000Z");
-    // 日本では今日（10/13）の 0:45 → 15 分後。
+    // 日本では今日（10/13）の0:45 → 15分後。
     expect(
       minutesUntilPlan(
         plan({ date: "2026-10-13", time: "00:45" }),
         justAfterMidnight,
       ),
     ).toBe(15);
-    // UTC では同じ 10/12 でも日本では昨日の予定は対象外。
+    // UTCでは同じ10/12でも日本では昨日の予定は対象外。
     expect(
       minutesUntilPlan(
         plan({ date: "2026-10-12", time: "23:59" }),

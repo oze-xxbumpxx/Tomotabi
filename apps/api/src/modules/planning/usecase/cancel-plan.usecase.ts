@@ -12,7 +12,7 @@ import type { WriteLog } from "../adapter/outbound/write-log.port";
 import { executePlanWrite, runPlanUpdate } from "./plan-write-flow";
 
 /**
- * 予定の取りやめ（一度だけ）。復活の API は持たない。
+ * 予定の取りやめ（一度だけ）。復活のAPIは持たない。
  * 部分更新には取りやめ欄が無いため、取りやめ後の編集で解除されることはない。
  */
 export class CancelPlanUseCase implements CancelPlanInputPort {

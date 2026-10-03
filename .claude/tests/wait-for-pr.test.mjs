@@ -1,4 +1,4 @@
-// wait-for-pr.mjs の「Issue に紐づく PR」の判定と引数検査のテスト。gh は呼ばない。
+// wait-for-pr.mjsの「Issueに紐づくPR」の判定と引数検査のテスト。ghは呼ばない。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -17,7 +17,7 @@ test('本文の Closes / Fixes / Resolves #N で見つける', () => {
 
 test('GitHub が認識した紐づけ（closingIssuesReferences）とブランチ名の末尾 -N で見つける', () => {
   assert.equal(findLinkedPr([{ number: 39, body: '', headRefName: 'devin/m1-b4', closingIssuesReferences: [{ number: 37 }] }], 37)?.number, 39);
-  // #33 は本文に Closes が無かったが、ブランチ名の末尾で紐づく
+  // #33は本文にClosesが無かったが、ブランチ名の末尾で紐づく
   assert.equal(findLinkedPr([{ number: 33, body: 'Issue #32（M1-b3）。', headRefName: 'devin/m1b3-me-contract-32' }], 32)?.number, 33);
 });
 
@@ -34,7 +34,7 @@ test('Issue の作成より前に作られた PR は対象外', () => {
   ];
   assert.equal(findLinkedPr(prs, 37, since)?.number, 39);
   assert.equal(findLinkedPr(prs.slice(0, 1), 37, since), null);
-  // 作成日時が取れない PR も、since 指定時は対象外（安全側）
+  // 作成日時が取れないPRも、since指定時は対象外（安全側）
   assert.equal(findLinkedPr([{ number: 41, body: 'Closes #37', headRefName: 'c' }], 37, since), null);
 });
 

@@ -11,7 +11,7 @@ import { PgSettlementReadUnitOfWork } from "../modules/settlement/infrastructure
 import { RecordCompositionModule } from "./record-composition.module";
 
 function useDatabase(): boolean {
-  // planning / record と同じ判定（未設定と空文字はどちらも「DB なし」）。
+  // planning / recordと同じ判定（未設定と空文字はどちらも「DBなし」）。
   return Boolean(process.env.DATABASE_URL);
 }
 
@@ -19,9 +19,9 @@ const missingDatabase = (): Promise<never> =>
   Promise.reject(new Error("DATABASE_URL is not set"));
 
 /**
- * settlement（残額・確認・精算）の UnitOfWork の実装を結ぶ組み立て。
- * 書き込みは財務共通の PgFinanceUnitOfWork（文脈が settlement の
- * ポートを足した形）、読み取りは REPEATABLE READ の別の束ね。
+ * settlement（残額・確認・精算）のUnitOfWorkの実装を結ぶ組み立て。
+ * 書き込みは財務共通のPgFinanceUnitOfWork（文脈がsettlementの
+ * ポートを足した形）、読み取りはREPEATABLE READの別の束ね。
  */
 @Module({
   imports: [RecordCompositionModule],
@@ -41,8 +41,8 @@ const missingDatabase = (): Promise<never> =>
           : { run: missingDatabase },
     },
   ],
-  // RecordCompositionModule を再輸出して、settlement の UseCase が
-  // 時計・書き込みログを record と同じ実装で受け取れるようにする。
+  // RecordCompositionModuleを再輸出して、settlementのUseCaseが
+  // 時計・書き込みログをrecordと同じ実装で受け取れるようにする。
   exports: [
     RecordCompositionModule,
     SETTLEMENT_UNIT_OF_WORK,

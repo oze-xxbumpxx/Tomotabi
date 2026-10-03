@@ -90,7 +90,7 @@ export const verifications = identity.table(
   (table) => [index("verifications_identifier_idx").on(table.identifier)],
 );
 
-// Reference spec: docs/旅行アプリ設計 3/詳細設計/sql/02_auth_allowlist.sql
+// Reference spec: docs/旅行アプリ設計3/詳細設計/sql/02_auth_allowlist.sql
 export const allowedGoogleAccounts = identity.table(
   "allowed_google_accounts",
   {

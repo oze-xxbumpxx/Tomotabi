@@ -6,7 +6,7 @@ import type { PlanKind } from "../../domain/plan-kind";
 import type { TripPeriod } from "../../domain/trip-period";
 
 /**
- * 予定の新規作成データ。id / version / created_at / updated_at は DB が埋める。
+ * 予定の新規作成データ。id / version / created_at / updated_atはDBが埋める。
  */
 export type NewPlan = Readonly<{
   tripId: string;
@@ -25,13 +25,13 @@ export interface PlanRepository {
   /** 期間の外にある予定の日付を返す。旅行行のロック中に呼ぶ（E-18）。 */
   datesOutside(tripId: string, period: TripPeriod): Promise<LocalDate[]>;
   /**
-   * 予定行を FOR NO KEY UPDATE でロックして返す。無ければ null。
-   * ロックは必ず旅行行のあと（旅行 → 予定）。FOR NO KEY UPDATE は
-   * 達成・予約の INSERT と同じ行を取り合うので、種類変更の履歴照会と
-   * 同じロックで M4 の記録操作と調和する（E-19）。
+   * 予定行をFOR NO KEY UPDATEでロックして返す。無ければnull。
+   * ロックは必ず旅行行のあと（旅行 → 予定）。FOR NO KEY UPDATEは
+   * 達成・予約のINSERTと同じ行を取り合うので、種類変更の履歴照会と
+   * 同じロックでM4の記録操作と調和する（E-19）。
    */
   lockForUpdate(tripId: string, planId: string): Promise<Plan | null>;
-  /** 予定を追加して、DB が埋めた値を含めて返す。 */
+  /** 予定を追加して、DBが埋めた値を含めて返す。 */
   insert(plan: NewPlan): Promise<Plan>;
   /** 予定行をまるごと更新する。呼び出し前に行ロックを持っていること。 */
   update(plan: Plan): Promise<void>;

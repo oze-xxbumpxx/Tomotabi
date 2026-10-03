@@ -6,9 +6,9 @@ import type {
 } from "../api/payments-api";
 
 /**
- * 支払いを記録のフォームの検証と、送る割合（参加者番号 0 の人の負担の
- * 割合）の組み立て、二人の負担の画面計算。金額は BigInt の円で持ち、
- * Number・parseInt に通さない。
+ * 支払いを記録のフォームの検証と、送る割合（参加者番号0の人の負担の
+ * 割合）の組み立て、二人の負担の画面計算。金額はBigIntの円で持ち、
+ * Number・parseIntに通さない。
  */
 
 export const PAYMENT_LABEL_MAX_CODEPOINTS = 100;
@@ -24,7 +24,7 @@ export type PaymentFormValues = {
   amount: string;
   payerUserId: string | null;
   mode: PaymentSplitMode;
-  /** 「割合を指定」の自分の負担 % の入力そのまま。 */
+  /** 「割合を指定」の自分の負担 %の入力そのまま。 */
   myPercent: string;
   label: string;
   plan: SelectedPlan | null;
@@ -59,7 +59,7 @@ function digitsOfInput(raw: string): string {
 
 /**
  * 金額欄の入力を円にする。全角数字は半角へ直すが、カンマ・小数・符号・
- * 数字以外が混ざる入力は null を返す（"7,001" はエラーになる）。
+ * 数字以外が混ざる入力はnullを返す（"7,001"はエラーになる）。
  */
 export function paymentAmountFromInput(raw: string): bigint | null {
   const digits = digitsOfInput(raw);
@@ -69,7 +69,7 @@ export function paymentAmountFromInput(raw: string): bigint | null {
   return BigInt(digits);
 }
 
-/** 「自分の負担」% の入力。0〜100 の整数だけを受け、それ以外は null。 */
+/** 「自分の負担」%の入力。0〜100の整数だけを受け、それ以外はnull。 */
 export function percentFromInput(raw: string): number | null {
   const digits = digitsOfInput(raw);
   if (!/^[0-9]+$/.test(digits)) {
@@ -83,10 +83,10 @@ export function percentFromInput(raw: string): number | null {
 }
 
 /**
- * 分け方から送る割合（参加者番号 0 の人の負担の割合。F-03）を作る。
+ * 分け方から送る割合（参加者番号0の人の負担の割合。F-03）を作る。
  * 払った人を切り替えても正しく作る: 割合指定は各人の割合を維持し、
  * 全額モードは新しい支払者を基準に再計算する（07 §6）。
- * `myPercent` は mode が ratio のときだけ意味を持つ（検証済みの値を渡す）。
+ * `myPercent`はmodeがratioのときだけ意味を持つ（検証済みの値を渡す）。
  */
 export function slot0PercentOf(
   mode: PaymentSplitMode,
@@ -161,9 +161,9 @@ export function firstInvalidField(
 }
 
 /**
- * 検証済みのフォーム値から POST /payments の body を組み立てる。
- * allocations は参加者番号 0, 1 の順で、割合の合計は 100。
- * label・planId は契約上 optional で null を受けないため、
+ * 検証済みのフォーム値からPOST /paymentsのbodyを組み立てる。
+ * allocationsは参加者番号0, 1の順で、割合の合計は100。
+ * label・planIdは契約上optionalでnullを受けないため、
  * 無いときはプロパティごと送らない。
  */
 export function paymentCreateOf(
@@ -204,7 +204,7 @@ export function paymentCreateOf(
   };
 }
 
-/** 分け方に添える注記（v3 の shareNote）。 */
+/** 分け方に添える注記（v3のshareNote）。 */
 export function shareNoteOf(mode: PaymentSplitMode): string | null {
   switch (mode) {
     case "half":
@@ -216,7 +216,7 @@ export function shareNoteOf(mode: PaymentSplitMode): string | null {
   }
 }
 
-/** 3 桁区切りの数字だけ（"2,400"。「円」は欄の外に出す）。 */
+/** 3桁区切りの数字だけ（"2,400"。「円」は欄の外に出す）。 */
 export function groupedYenDigits(yen: bigint): string {
   const digits = yen.toString();
   let out = "";
@@ -230,7 +230,7 @@ export function groupedYenDigits(yen: bigint): string {
   return out;
 }
 
-/** 保留中の要求の本文（PaymentCreate の形。record.bodyJson を parse したもの）。 */
+/** 保留中の要求の本文（PaymentCreateの形。record.bodyJsonをparseしたもの）。 */
 export type PendingPaymentBody = {
   amountYen: string;
   payerUserId: string;
@@ -240,8 +240,8 @@ export type PendingPaymentBody = {
 };
 
 /**
- * 保留中の要求の bodyJson を PaymentCreate の形に戻す。
- * 形が確かめられないものは null（その要求は送り直さない）。
+ * 保留中の要求のbodyJsonをPaymentCreateの形に戻す。
+ * 形が確かめられないものはnull（その要求は送り直さない）。
  */
 export function paymentBodyFromJson(
   bodyJson: string,
@@ -278,7 +278,7 @@ export function paymentBodyFromJson(
 /**
  * 保留中の要求の本文から、固定表示するフォーム値を作る。
  * 分け方の選択は本文に残らないため割合から逆算する
- * （50 は折半、全額に一致するときは全額、それ以外は割合を指定）。
+ * （50は折半、全額に一致するときは全額、それ以外は割合を指定）。
  */
 export function valuesOfPendingBody(
   body: PendingPaymentBody,

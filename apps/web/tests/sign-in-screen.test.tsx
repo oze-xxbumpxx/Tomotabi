@@ -86,7 +86,7 @@ describe("SignInScreen", () => {
 
     expect(replaceMock).toHaveBeenCalledWith("/sign-in");
 
-    // router.replace("/sign-in") のあとの再描画（hasError=false）でも文が残る
+    // router.replace("/sign-in")のあとの再描画（hasError=false）でも文が残る
     rerender(<SignInScreen hasError={false} />);
 
     expect(screen.getByRole("alert")).toHaveTextContent(

@@ -19,7 +19,7 @@ const IDENTITY_TABLES = [
 
 const TABLE_PRIVILEGES = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"] as const;
 
-// Exactly what app_runtime may do on each identity table (design "DB 設計").
+// Exactly what app_runtime may do on each identity table (design "DB設計").
 const EXPECTED_RUNTIME_PRIVILEGES: Record<(typeof IDENTITY_TABLES)[number], string[]> = {
   users: ["SELECT"],
   accounts: ["SELECT"],

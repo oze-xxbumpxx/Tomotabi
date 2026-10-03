@@ -3,8 +3,8 @@ import { isLocalDateString } from "@/shared/lib/local-date";
 
 /**
  * 旅行の作成・名前と期間の変更フォームで共通の検証。
- * 名前はコードポイントで 1〜100（API の BoundedText と同じ数え方）。
- * 日付は `YYYY-MM-DD` で実在する日で、開始 ≦ 終了。
+ * 名前はコードポイントで1〜100（APIのBoundedTextと同じ数え方）。
+ * 日付は`YYYY-MM-DD`で実在する日で、開始 ≦ 終了。
  * エラーは欄ごとに持ち、最初のエラーの欄にフォーカスする（W-06）。
  */
 

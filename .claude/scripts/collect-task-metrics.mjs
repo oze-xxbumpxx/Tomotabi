@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// タスク単位の機械メトリクス集計 — 所要時間・トークン・Agent 呼び出し・品質ゲート結果。
+// タスク単位の機械メトリクス集計 — 所要時間・トークン・Agent呼び出し・品質ゲート結果。
 //
 // 使い方:
 //   node .claude/scripts/collect-task-metrics.mjs --feature <name> [options]
@@ -7,33 +7,33 @@
 // オプション:
 //   --feature <name>        必須。ブランチ名の部分一致フィルタの既定値にもなる
 //   --branch <substr>       ブランチフィルタ（部分一致・複数可）。指定時は既定を置き換える
-//   --task-id <TASK-...>    --write 時の出力先 docs/claude-code/improvements/metrics/<task-id>.yml
-//   --out <path>            出力先の明示指定（--task-id より優先）
-//   --since / --until       集計期間 YYYY-MM-DD（HARNESS_TZ（旧 COOKPIT_TZ）の日付・両端含む）
+//   --task-id <TASK-...>    --write時の出力先docs/claude-code/improvements/metrics/<task-id>.yml
+//   --out <path>            出力先の明示指定（--task-idより優先）
+//   --since / --until集計期間YYYY-MM-DD（HARNESS_TZ（旧COOKPIT_TZ）の日付・両端含む）
 //   --exclude-session <id>  誤って紐付いたセッションを除外（複数可）
-//   --write                 YAML の machine: セクションへマージ（無指定なら stdout に表示のみ）
-//   --transcript-dir <dir>  transcript ディレクトリ上書き（既定: ~/.claude/projects/<プロジェクト slug>）
+//   --write                 YAMLのmachine: セクションへマージ（無指定ならstdoutに表示のみ）
+//   --transcript-dir <dir>  transcriptディレクトリ上書き（既定: ~/.claude/projects/<プロジェクトslug>）
 //
 // 入力ソース:
-//   1. セッション transcript（~/.claude/projects/<slug>/*.jsonl と <session-id>/subagents/agent-*.jsonl）
-//      → トークン（usage）・所要時間（タイムスタンプ）・ツール/Agent 呼び出し
-//   2. .claude/state/quality-gates-log.jsonl（run-quality-gates.sh が追記）
-//      → ゲート実行/FAIL 回数（手戻りプロキシ）
+//   1. セッションtranscript（~/.claude/projects/<slug>/*.jsonlと <session-id>/subagents/agent-*.jsonl）
+//      → トークン（usage）・所要時間（タイムスタンプ）・ツール/Agent呼び出し
+//   2. .claude/state/quality-gates-log.jsonl（run-quality-gates.shが追記）
+//      → ゲート実行/FAIL回数（手戻りプロキシ）
 //
 // タスクへの紐付け:
-//   セッションは「いずれかの行の gitBranch がフィルタに部分一致」または
-//   「subagent-log.jsonl の feature が一致」でタスクに帰属させ、セッション丸ごと集計する
-//   （1 セッション ≒ 1 タスク運用が前提。外れたら --exclude-session で除外する）。
+//   セッションは「いずれかの行のgitBranchがフィルタに部分一致」または
+//   「subagent-log.jsonlのfeatureが一致」でタスクに帰属させ、セッション丸ごと集計する
+//   （1セッション ≒ 1タスク運用が前提。外れたら --exclude-sessionで除外する）。
 //
 // 集計の注意:
-//   - usage は同一 message.id の行で重複するため message.id 単位で 1 回だけ数える。
-//   - 所要時間は連続イベント間隔を GAP_CAP_MIN（既定 30 分）で打ち切った「活動時間」。
-//     estimate-session-time.mjs と同じ方式。並行セッションは壁時計時間より大きくなり得る。
-//   - transcript はローカルマシンにしか残らない。セッションを跨ぐ・環境を破棄する前に
-//     --write で YAML へ固定化する（machine.sessions / machine.gate_history は
-//     session_id / ts でマージするため再実行・環境替えをまたいで累積できる）。
-//   - 意味的な手戻り（requirement/design_rework・user_corrections 等）は機械判定しない。
-//     従来どおり reflection-agent / 人間が YAML の該当欄を埋める。
+//   - usageは同一message.idの行で重複するためmessage.id単位で1回だけ数える。
+//   - 所要時間は連続イベント間隔をGAP_CAP_MIN（既定30分）で打ち切った「活動時間」。
+//     estimate-session-time.mjsと同じ方式。並行セッションは壁時計時間より大きくなり得る。
+//   - transcriptはローカルマシンにしか残らない。セッションを跨ぐ・環境を破棄する前に
+//     --writeでYAMLへ固定化する（machine.sessions / machine.gate_historyは
+//     session_id / tsでマージするため再実行・環境替えをまたいで累積できる）。
+//   - 意味的な手戻り（requirement/design_rework・user_corrections等）は機械判定しない。
+//     従来どおりreflection-agent / 人間がYAMLの該当欄を埋める。
 
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -94,7 +94,7 @@ for (const d of [args.since, args.until]) {
 }
 const branchFilters = args.branches.length > 0 ? args.branches : [args.feature];
 
-// Claude Code の projects ディレクトリ slug はプロジェクト絶対パスの英数字以外を '-' にしたもの
+// Claude Codeのprojectsディレクトリslugはプロジェクト絶対パスの英数字以外を'-'にしたもの
 const transcriptDir =
   args.transcriptDir || join(homedir(), '.claude/projects', ROOT.replace(/[^a-zA-Z0-9-]/g, '-'));
 
@@ -128,7 +128,7 @@ function parseJsonl(path) {
 
 // ---- 1. タスクに帰属するセッションの特定 -------------------------------------
 
-// subagent-log の feature 一致でセッションを直接紐付け（current-feature 運用時）
+// subagent-logのfeature一致でセッションを直接紐付け（current-feature運用時）
 const featureSessionIds = new Set();
 for (const rec of parseJsonl(resolveReadablePath('subagent-log.jsonl') ?? '')) {
   if (rec.feature === args.feature && rec.session_id) featureSessionIds.add(rec.session_id);
@@ -166,7 +166,7 @@ for (const file of sessionFiles) {
           const meta = JSON.parse(readFileSync(join(subagentDir, f), 'utf8'));
           if (meta.agentType) agentCalls[meta.agentType] = (agentCalls[meta.agentType] || 0) + 1;
         } catch {
-          // meta が読めなければ transcript 側のフォールバックに任せる
+          // metaが読めなければtranscript側のフォールバックに任せる
         }
       }
     }
@@ -187,7 +187,7 @@ for (const file of sessionFiles) {
     if (o.type === 'assistant' && o.message) {
       const u = o.message.usage;
       const msgId = o.message.id || o.requestId || o.uuid;
-      // 1 応答が content block ごとに複数行へ分割され usage が重複するため message 単位で 1 回だけ数える
+      // 1応答がcontent blockごとに複数行へ分割されusageが重複するためmessage単位で1回だけ数える
       if (u && msgId && !seenMessageIds.has(msgId)) {
         seenMessageIds.add(msgId);
         tokens.input += u.input_tokens || 0;
@@ -256,7 +256,7 @@ for (const rec of parseJsonl(resolveReadablePath('quality-gates-log.jsonl') ?? '
   });
 }
 
-// ---- 3. 既存 YAML の machine: セクションとマージ（--write 用） ----------------
+// ---- 3. 既存YAMLのmachine: セクションとマージ（--write用） ----------------
 
 const outPath =
   args.out ||
@@ -287,7 +287,7 @@ function extractMachineEntries(yamlText) {
       if (obj.id) sessions.push(obj);
       else if (obj.ts) gates.push(obj);
     } catch {
-      // 手で壊された行は捨てる（次回 --write で再集計される）
+      // 手で壊された行は捨てる（次回 --writeで再集計される）
     }
   }
   return { sessions, gates };

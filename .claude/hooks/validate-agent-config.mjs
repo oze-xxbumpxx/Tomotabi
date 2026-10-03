@@ -1,34 +1,34 @@
 #!/usr/bin/env node
-// PostToolUse / ConfigChange Hook — Agent 設定の構文・整合性検証
+// PostToolUse / ConfigChange Hook — Agent設定の構文・整合性検証
 //
 // 方針（docs/claude-code/improvement-cycle.md / memory機能改善 §7）:
-// - 重要な制御は Command Hook で行う。LLM 判断が必要な部分は Agent（reflection / manager）に委ねる。
+// - 重要な制御はCommand Hookで行う。LLM判断が必要な部分はAgent（reflection / manager）に委ねる。
 // - 強制度: 「構文エラーはブロック・方針違反は警告」
 //     BLOCK(exit 2, stderr): 機械的に確実な誤り
-//       - settings.json の JSON が不正
-//       - Agent/Skill の YAML frontmatter が欠落 or 不正
-//       - model 指定が公式形式でもエイリアス（sonnet / opus / inherit 等）でもない
-//       - Agent 名が重複している
+//       - settings.jsonのJSONが不正
+//       - Agent/SkillのYAML frontmatterが欠落or不正
+//       - model指定が公式形式でもエイリアス（sonnet / opus / inherit等）でもない
+//       - Agent名が重複している
 //     WARN(exit 0, additionalContext): 方針・整合性の注意（ロックアウト回避のためブロックしない）
-//       - Agent() ツール権限を許可外 Agent が持つ（過剰権限の疑い）
-//       - 参照先 Agent / Skill / Rule が存在しない
-//       - Agent 名とファイル名の不一致
-// - 構成変更の人間承認はフックでは行わない（PR レビューが担う）。
-// - 監視対象外のファイルでは即 exit 0。
+//       - Agent()ツール権限を許可外Agentが持つ（過剰権限の疑い）
+//       - 参照先Agent / Skill / Ruleが存在しない
+//       - Agent名とファイル名の不一致
+// - 構成変更の人間承認はフックでは行わない（PRレビューが担う）。
+// - 監視対象外のファイルでは即exit 0。
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-// Agent() ツールの保持を許可する Agent（指揮・改善統括。IMP-2026-031 で reviewer から除去）
+// Agent()ツールの保持を許可するAgent（指揮・改善統括。IMP-2026-031でreviewerから除去）
 const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager']);
-// Claude Code 組み込み Agent（.claude/agents/ に定義ファイルが無い。存在チェックから除外）
+// Claude Code組み込みAgent（.claude/agents/ に定義ファイルが無い。存在チェックから除外）
 const BUILTIN_AGENTS = new Set(['Explore']);
-// 公式エイリアスと claude-<family>-... 形式。Cursor の inherit も含む。
+// 公式エイリアスとclaude-<family>-... 形式。Cursorのinheritも含む。
 const MODEL_ALIAS = new Set(['inherit', 'opus', 'sonnet', 'haiku', 'fable']);
 const MODEL_FULL = /^claude-(opus|sonnet|haiku|fable)(-|$)/;
-// 構成変更の承認境界は PR レビュー（フック内の人間承認層は撤去済み）
+// 構成変更の承認境界はPRレビュー（フック内の人間承認層は撤去済み）
 
 function isAllowedModel(model) {
   return MODEL_ALIAS.has(model) || MODEL_FULL.test(model);
@@ -47,7 +47,7 @@ function toRel(filePath) {
   return filePath.startsWith(ROOT) ? filePath.slice(ROOT.length + 1) : filePath;
 }
 
-/** PostToolUse は tool_input.file_path。ConfigChange は file_path / source。 */
+/** PostToolUseはtool_input.file_path。ConfigChangeはfile_path / source。 */
 function resolveTargetRel(input) {
   const event = input.hook_event_name || 'PostToolUse';
   if (event === 'ConfigChange') {
@@ -71,7 +71,7 @@ function isWatched(rel) {
   );
 }
 
-// frontmatter（先頭 --- ... --- ）を素朴に key: value で読む。
+// frontmatter（先頭 --- ... --- ）を素朴にkey: valueで読む。
 function parseFrontmatter(text) {
   if (!text.startsWith('---')) return null;
   const lines = text.split('\n');
@@ -214,7 +214,7 @@ function main() {
     process.exit(0);
   }
 
-  // settings.json: JSON 妥当性 + フック参照先の実在
+  // settings.json: JSON妥当性 + フック参照先の実在
   if (rel === '.claude/settings.json') {
     try {
       const settings = JSON.parse(text);
@@ -226,7 +226,7 @@ function main() {
     }
   }
 
-  // Agent / Skill の frontmatter 検証（スキルは SKILL.md のみ。補助 .md は対象外）
+  // Agent / Skillのfrontmatter検証（スキルはSKILL.mdのみ。補助 .mdは対象外）
   const isAgent = rel.startsWith('.claude/agents/') && rel.endsWith('.md');
   const isSkill = isSkillFile(rel);
 
@@ -239,7 +239,7 @@ function main() {
       if (isSkill && !fm.description) warns.push(`${rel}: Skill に description がありません`);
 
       if (isAgent) {
-        // model 形式（公式エイリアスと claude-<family>-... を許可）
+        // model形式（公式エイリアスとclaude-<family>-... を許可）
         if (fm.model && !isAllowedModel(fm.model)) {
           blocks.push(
             `${rel}: model 指定が不正（inherit / opus / sonnet / haiku / fable または claude-<family>-...）: "${fm.model}"`,
@@ -247,7 +247,7 @@ function main() {
         }
         if (!fm.model) warns.push(`${rel}: model 指定がありません`);
 
-        // name とファイル名の一致
+        // nameとファイル名の一致
         const fileBase = basename(rel).replace(/\.md$/, '');
         if (fm.name && fm.name !== fileBase) {
           warns.push(`${rel}: name "${fm.name}" がファイル名 "${fileBase}" と一致しません`);
@@ -259,7 +259,7 @@ function main() {
           blocks.push(`Agent 名 "${fm.name}" が重複: ${names.get(fm.name).join(', ')}`);
         }
 
-        // tools: Agent() 権限と参照先
+        // tools: Agent()権限と参照先
         if (fm.tools) {
           const refs = referencedAgents(fm.tools);
           if (refs.length > 0 && fm.name && !AGENT_TOOL_ALLOWED.has(fm.name)) {

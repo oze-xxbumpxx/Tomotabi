@@ -108,7 +108,7 @@ function receiptOf(
   };
 }
 
-// FU-10: 財務の書き込みの順序（guard の行ロック → receipt → 対象の読み取り → 保存）
+// FU-10: 財務の書き込みの順序（guardの行ロック → receipt → 対象の読み取り → 保存）
 describe("財務の書き込みの順序（FU-10）", () => {
   it("支払いの記録は roster → guard.lock → receipts.find → plans.existsInTrip → payments.insert → receipts.insert の順", async () => {
     const { ctx, uow, writeLog } = setup();
@@ -168,7 +168,7 @@ describe("財務の書き込みの順序（FU-10）", () => {
     );
 
     expect(result).toEqual({ httpStatus: 201, body: stored });
-    // guard の行ロック → receipt の照会で終わり、対象の読み取り・保存はしない
+    // guardの行ロック → receiptの照会で終わり、対象の読み取り・保存はしない
     expect(ctx.calls).toEqual([
       "roster.find",
       "financeGuard.lock",
@@ -194,7 +194,7 @@ describe("受領の一意違反（別の旅行への同時送信。must 対応�
   it("23505 で負けたら勝った側の受領を読み直して、本文が違えば 409", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedTrip();
-    // 別の旅行への同時送信が先に COMMIT した受領（hash が違う）
+    // 別の旅行への同時送信が先にCOMMITした受領（hashが違う）
     ctx.winningReceiptOnFailure = receiptOf(CREATE_PAYMENT_OPERATION, {
       tripId: "11111111-1111-4111-8111-111111111111",
       requestHash: "hash-of-other-trip",
@@ -207,7 +207,7 @@ describe("受領の一意違反（別の旅行への同時送信。must 対応�
       code: "IDEMPOTENCY_KEY_REUSED",
       status: 409,
     });
-    // 1 回目: 保存まで進んで insert で負ける。2 回目: 受領の照会で 409。
+    // 1回目: 保存まで進んでinsertで負ける。2回目: 受領の照会で409。
     expect(ctx.calls).toEqual([
       "roster.find",
       "financeGuard.lock",
@@ -216,7 +216,7 @@ describe("受領の一意違反（別の旅行への同時送信。must 対応�
       "receipts.insert",
       "receipts.find",
     ]);
-    // 勝った側の受領だけが見える（負けた側の巻き戻しは実 DB の試験で確かめる）
+    // 勝った側の受領だけが見える（負けた側の巻き戻しは実DBの試験で確かめる）
     expect(ctx.receiptRows.size).toBe(1);
   });
 

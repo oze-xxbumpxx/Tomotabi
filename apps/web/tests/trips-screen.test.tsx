@@ -241,7 +241,7 @@ describe("TripsScreen (/trips)", () => {
     expect(
       await screen.findByText(/更新できていません/),
     ).toBeInTheDocument();
-    // 空の表示はそのまま残す（失敗を 0 件と混ぜない）。
+    // 空の表示はそのまま残す（失敗を0件と混ぜない）。
     expect(screen.getByText("旅行はまだありません")).toBeInTheDocument();
   });
 

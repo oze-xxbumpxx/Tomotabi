@@ -13,7 +13,7 @@ test('ブランチができていれば、発言や時間に関係なく branch'
 test('起動直前より発言が増えないまま first-output を過ぎたら no-output（前のセッションの発言は数えない）', () => {
   assert.equal(judgeStall({ ...base, logBytes: 100, elapsedSec: 299 }), 'wait');
   assert.equal(judgeStall({ ...base, logBytes: 100, elapsedSec: 300 }), 'no-output');
-  // 前のセッションの発言でログが 5000 バイトあっても、offset から増えていなければ no-output
+  // 前のセッションの発言でログが5000バイトあっても、offsetから増えていなければno-output
   assert.equal(judgeStall({ ...base, offset: 5000, logBytes: 5000, elapsedSec: 400 }), 'no-output');
 });
 

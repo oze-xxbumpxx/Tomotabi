@@ -193,7 +193,7 @@ describe("useSaveState", () => {
     );
     expect(await screen.findByText("保存しました")).toBeInTheDocument();
 
-    // fetch のモックで、1 回目と 2 回目の要求のキー・本文・If-Match が同じことを確かめる。
+    // fetchのモックで、1回目と2回目の要求のキー・本文・If-Matchが同じことを確かめる。
     const [first, second] = fetchMock.mock.calls as [
       [string, RequestInit],
       [string, RequestInit],

@@ -30,7 +30,7 @@ function plan(overrides: Partial<Plan> = {}): Plan {
   };
 }
 
-// U-09: 部分更新の差分（実質同じ値なら version を増やさない。F-12）
+// U-09: 部分更新の差分（実質同じ値ならversionを増やさない。F-12）
 describe("Plan.update（部分更新）", () => {
   it("すべて同じ値なら同じ Plan を返し version は増えない", () => {
     const before = plan({

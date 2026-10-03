@@ -19,7 +19,7 @@ function recordedBy(event: PlanEvent, meId: string | null, meName: string | null
   if (event.createdBy === meId && meName !== null) {
     return `${meName} が `;
   }
-  // 相手の表示名は公開 API に無いため、記録者は自分のときだけ名前を出す。
+  // 相手の表示名は公開APIに無いため、記録者は自分のときだけ名前を出す。
   return "";
 }
 
@@ -45,7 +45,7 @@ export function PlanDetailBody({
     plan.booking !== null ||
     cancelled ||
     plan.memo !== null;
-  // 今日の今以降の予定なら、時刻の横に「あと N」（v3 09）。
+  // 今日の今以降の予定なら、時刻の横に「あとN」（v3 09）。
   const now = useNow();
   const remaining = now !== null ? minutesUntilPlan(plan, now) : null;
   return (

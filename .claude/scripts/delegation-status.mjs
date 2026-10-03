@@ -1,22 +1,22 @@
 #!/usr/bin/env node
-// 委譲の記録を状態として使い、進行中の委譲ごとの「次の動き」・Issue に紐づかない Devin の PR・未起票の昇格候補を出す。
+// 委譲の記録を状態として使い、進行中の委譲ごとの「次の動き」・Issueに紐づかないDevinのPR・未起票の昇格候補を出す。
 // 設計: docs/designs/devin-delegation-status.md
 //
 // 使い方:
 //   node .claude/scripts/delegation.mjs status [--json] [--no-gh] [--dir <path>] [--mirror-dir <path>]
 //   （このファイルを直接実行しても同じ）
-//     --no-gh は gh を呼ばず、記録だけで分かること（記録上の最後の状態・未起票の昇格候補）を出す。
+//     --no-ghはghを呼ばず、記録だけで分かること（記録上の最後の状態・未起票の昇格候補）を出す。
 //   セッション開始時のフック（.claude/hooks/delegation-status.mjs）も同じ判定を使う。
 //
-// 終了コード: 0（出す行が無くても 0）/ 2 引数の誤り
+// 終了コード: 0（出す行が無くても0）/ 2引数の誤り
 //
 // 方針:
 // - 判定（nextAction・findPromotions・prunableMirrorKeys・buildStatus・formatStatus）は純粋関数にし、テストで固定する。
-//   gh の呼び出しは collectStatus に閉じ込める。
-// - 待機スクリプトはセッションと一緒に止まるため、次のセッションが記録から待機の起動し直し・レビュー・finalize を決める。
-// - gh が失敗しても止めない。記録上の最後の状態を出す（クラウドのセッションなど gh が無い環境）。
-// - 写し（状態ディレクトリ）の完了済みの記録は、完了から 30 日で消す。正は close-session で main に入る。
-// - delegation.mjs からは動的に読み込む（こちらが wait-for-devin-pr.mjs を読み、あちらが delegation.mjs を読むため）。
+//   ghの呼び出しはcollectStatusに閉じ込める。
+// - 待機スクリプトはセッションと一緒に止まるため、次のセッションが記録から待機の起動し直し・レビュー・finalizeを決める。
+// - ghが失敗しても止めない。記録上の最後の状態を出す（クラウドのセッションなどghが無い環境）。
+// - 写し（状態ディレクトリ）の完了済みの記録は、完了から30日で消す。正はclose-sessionでmainに入る。
+// - delegation.mjsからは動的に読み込む（こちらがwait-for-devin-pr.mjsを読み、あちらがdelegation.mjsを読むため）。
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, rmSync } from 'node:fs';
@@ -36,7 +36,7 @@ import { findLinkedPr } from './wait-for-pr.mjs';
 import { filterUnreviewed, findUnlinkedDevinPrs, knownFromRecords, listOpenDevinPrs, prComments } from './wait-for-devin-pr.mjs';
 
 export const CANDIDATES_DIR = join(DEFAULT_DIR, '../candidates');
-/** wait-for-pr.mjs の既定の時間切れ。これを過ぎても PR が無ければ、Devin が PR を作らずに終わった可能性がある。 */
+/** wait-for-pr.mjsの既定の時間切れ。これを過ぎてもPRが無ければ、DevinがPRを作らずに終わった可能性がある。 */
 export const WAIT_PR_LIMIT_HOURS = 8;
 export const MIRROR_KEEP_DAYS = 30;
 const GH_TIMEOUT_MS = 30_000;
@@ -44,7 +44,7 @@ const TITLE_MAX = 80;
 
 export const isDone = (record) => record.outcome === 'merged' || record.outcome === 'closed';
 
-/** 記録の PR 番号。記録の pr・gh.pr、無ければ Issue に紐づく PR を一覧から探す（wait-for-pr と同じ規則）。 */
+/** 記録のPR番号。記録のpr・gh.pr、無ければIssueに紐づくPRを一覧から探す（wait-for-prと同じ規則）。 */
 export function prNumberOf(record, prs) {
   if (Number.isInteger(record.pr)) return record.pr;
   if (Number.isInteger(record.gh?.pr)) return record.gh.pr;
@@ -53,10 +53,10 @@ export function prNumberOf(record, prs) {
 }
 
 /**
- * 完了していない記録の次の動き。完了済みなら null。
- * @param {object} record 委譲の記録
+ * 完了していない記録の次の動き。完了済みならnull。
+ * @param {object} record委譲の記録
  * @param {{prs: Array<{number:number,state:string,headRefOid?:string}>, now: number}} context
- *   prs は gh pr list（--state all）の結果。now はミリ秒。
+ *   prsはgh pr list（--state all）の結果。nowはミリ秒。
  */
 export function nextAction(record, { prs, now }) {
   if (isDone(record)) return null;
@@ -89,7 +89,7 @@ export function nextAction(record, { prs, now }) {
   return { key, pr: number, state: 'await-user', round: last.round, verdict: last.verdict };
 }
 
-/** gh で確かめられないときの、記録上の最後の状態。 */
+/** ghで確かめられないときの、記録上の最後の状態。 */
 export function offlineAction(record) {
   const last = (record.reviews ?? []).at(-1) ?? null;
   const pr = Number.isInteger(record.pr) ? record.pr : (record.gh?.pr ?? null);
@@ -104,7 +104,7 @@ export function findPromotions(summary, candidateFiles) {
     .map((c) => ({ category: c.category, issues: c.issues }));
 }
 
-/** 写しのうち、完了から keepDays 日を過ぎたものの key。完了していない・完了の日時が無いものは消さない。 */
+/** 写しのうち、完了からkeepDays日を過ぎたもののkey。完了していない・完了の日時が無いものは消さない。 */
 export function prunableMirrorKeys(records, now, keepDays = MIRROR_KEEP_DAYS) {
   return records
     .filter((rec) => isDone(rec))
@@ -118,7 +118,7 @@ export function prunableMirrorKeys(records, now, keepDays = MIRROR_KEEP_DAYS) {
 /**
  * @param {{records: object[], prs?: object[], openPrs?: object[], commentsOf?: (pr: number) => object[],
  *   candidateFiles?: string[], now: number, offline?: boolean, ghError?: string|null}} input
- *   offline のときは gh の結果を使わず、記録上の最後の状態だけを出す。
+ *   offlineのときはghの結果を使わず、記録上の最後の状態だけを出す。
  */
 export function buildStatus({ records, prs = [], openPrs = [], commentsOf = () => [], candidateFiles = [], now, offline = false, ghError = null }) {
   const open = records.filter((rec) => !isDone(rec));
@@ -132,7 +132,7 @@ export function buildStatus({ records, prs = [], openPrs = [], commentsOf = () =
   return { actions, unlinked, unchecked, promotions: findPromotions(summarize(records), candidateFiles), offline, ghError };
 }
 
-/** 外部（Devin）の文字列を 1 行にして切る。 */
+/** 外部（Devin）の文字列を1行にして切る。 */
 export function oneLine(text, max = TITLE_MAX) {
   const flat = String(text ?? '').replace(/\s+/g, ' ').trim();
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
@@ -180,7 +180,7 @@ function describe(action) {
 
 const prLine = (pr, note = '') => `- PR #${pr.number}（${oneLine(pr.headRefName, 60)}）${oneLine(pr.title)}${note}`;
 
-/** 人向けの表示。出す行が無ければ空文字（gh が失敗しただけなら何も出さない）。 */
+/** 人向けの表示。出す行が無ければ空文字（ghが失敗しただけなら何も出さない）。 */
 export function formatStatus(status) {
   const out = [];
   if (status.actions.length > 0) {
@@ -215,7 +215,7 @@ function ghJson(args, timeout) {
   return JSON.parse(execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout }));
 }
 
-/** 完了していない記録の PR（作成日時がいちばん古い委譲以降の PR を、閉じたものも含めて）。 */
+/** 完了していない記録のPR（作成日時がいちばん古い委譲以降のPRを、閉じたものも含めて）。 */
 function listRecordPrs(records, timeout) {
   const times = records.filter((rec) => !isDone(rec)).map((rec) => Date.parse(rec.delegated_at)).filter((t) => !Number.isNaN(t));
   if (times.length === 0) return [];
@@ -241,7 +241,7 @@ function pruneMirror(mirrorDir, mirrorRecords, now) {
   }
 }
 
-/** 記録（正 ∪ 写し）と gh から状態を集める。gh が失敗したら記録上の最後の状態にする。 */
+/** 記録（正 ∪ 写し）とghから状態を集める。ghが失敗したら記録上の最後の状態にする。 */
 export function collectStatus({
   dir = DEFAULT_DIR,
   mirrorDir = defaultMirrorDir(),
@@ -253,7 +253,7 @@ export function collectStatus({
   const mirror = mirrorDir === null ? [] : readAllRecords(mirrorDir, { skipInvalid: true });
   const records = mergeRecords(readAllRecords(dir), mirror);
   pruneMirror(mirrorDir, mirror, now);
-  // 対応済みの候補は candidates/archive/ へ移る（memory-policy）。移した後も起票済みとして扱う。
+  // 対応済みの候補はcandidates/archive/ へ移る（memory-policy）。移した後も起票済みとして扱う。
   const listNames = (path) => (existsSync(path) ? readdirSync(path) : []);
   const candidateFiles = [...listNames(candidatesDir), ...listNames(join(candidatesDir, 'archive'))];
   if (!useGh) return buildStatus({ records, candidateFiles, now, offline: true });

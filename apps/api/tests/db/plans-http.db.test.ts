@@ -185,7 +185,7 @@ async function cancelPlan(
     .set("If-Match", ifMatch);
 }
 
-/** ひなたが参加しない旅行を別利用者 2 人で直接作る。 */
+/** ひなたが参加しない旅行を別利用者2人で直接作る。 */
 async function seedForeignTrip(): Promise<string> {
   const suffix = crypto.randomUUID().slice(0, 8);
   const u0 = await insertUser(`foreign-${suffix}-0`, `foreign-${suffix}-0@example.test`);
@@ -202,7 +202,7 @@ async function seedForeignTrip(): Promise<string> {
   return tripId;
 }
 
-/** record の履歴行を直接作る（M4 の記録 API は未実装のため）。 */
+/** recordの履歴行を直接作る（M4の記録APIは未実装のため）。 */
 async function seedRecordEvent(
   tripId: string,
   planId: string,
@@ -231,10 +231,10 @@ async function seedRecordEvent(
 }
 
 /**
- * 予定行のロックで待っている別接続が現れるまで pg_stat_activity を見る
- * （時間待ちにしない。R-3）。FOR NO KEY UPDATE の待ちは tuple ではなく
- * transactionid の待ちイベントとして現れる。app_runtime の
- * statement_timeout は 5s なので、待ちを検出したら速やかに COMMIT する。
+ * 予定行のロックで待っている別接続が現れるまでpg_stat_activityを見る
+ * （時間待ちにしない。R-3）。FOR NO KEY UPDATEの待ちはtupleではなく
+ * transactionidの待ちイベントとして現れる。app_runtimeの
+ * statement_timeoutは5sなので、待ちを検出したら速やかにCOMMITする。
  */
 async function waitForPlanLockWaiter(timeoutMs = 3_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -434,7 +434,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
       expect(response.status).toBe(404);
       expect(response.body.code).toBe("PLAN_NOT_FOUND");
     }
-    // 別の旅行の予定と存在しない予定で本文が同じ（requestId は要求ごとに違う）
+    // 別の旅行の予定と存在しない予定で本文が同じ（requestIdは要求ごとに違う）
     const { requestId: _o, ...otherBody } = otherTrip.body;
     const { requestId: _m, ...missingBody } = missing.body;
     expect(otherBody).toEqual(missingBody);
@@ -463,7 +463,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
       expect(response.body.code).toBe("TRIP_NOT_ACCESSIBLE");
     }
 
-    // 書き込み経路（PATCH・move・cancel）も同じ 403 / 404 に揃える
+    // 書き込み経路（PATCH・move・cancel）も同じ403 / 404に揃える
     const write403 = [
       await patchPlan(hinataCookie, foreignTripId, planA, { name: "x" }),
       await movePlan(hinataCookie, foreignTripId, planA, "2026-10-01", '"1"'),
@@ -496,7 +496,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
       expect(otherTripWrite.status).toBe(404);
       expect(missingWrite.status).toBe(404);
       expect(otherTripWrite.body.code).toBe("PLAN_NOT_FOUND");
-      // 別の旅行の予定と存在しない予定で本文が同じ（requestId は要求ごとに違う）
+      // 別の旅行の予定と存在しない予定で本文が同じ（requestIdは要求ごとに違う）
       const { requestId: _ot, ...otherWriteBody } = otherTripWrite.body;
       const { requestId: _mw, ...missingWriteBody } = missingWrite.body;
       expect(otherWriteBody).toEqual(missingWriteBody);
@@ -581,7 +581,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
     expect(unreal.status).toBe(422);
     expect(unreal.body).toMatchObject({ code: "VALIDATION_FAILED" });
 
-    // Clock を固定したアプリで「省略時は期間内の今日 → 期間外なら初日」を確かめる
+    // Clockを固定したアプリで「省略時は期間内の今日 → 期間外なら初日」を確かめる
     for (const [today, expected] of [
       ["2026-09-11", "2026-09-11"],
       ["2026-09-05", "2026-09-10"],
@@ -627,7 +627,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
       hinata.userId,
       { active: true },
     );
-    // 取り消し済みの予約（active には入れない）→ booking は null のまま
+    // 取り消し済みの予約（activeには入れない）→ bookingはnullのまま
     await seedRecordEvent(tripId, planId, "booking", aoi.userId, {
       cancelledBy: aoi.userId,
     });
@@ -699,7 +699,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
       date: "2026-09-11",
     });
 
-    // 同じ値を送っても 200 だが version は増えない
+    // 同じ値を送っても200だがversionは増えない
     const same = await patchPlan(
       hinataCookie,
       tripId,
@@ -711,7 +711,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
     expect(same.body.version).toBe("2");
     expect(same.headers.etag).toBe('"2"');
 
-    // 空の patch は 400
+    // 空のpatchは400
     const empty = await patchPlan(hinataCookie, tripId, planId, {}, '"2"');
     expect(empty.status).toBe(400);
 
@@ -927,11 +927,11 @@ describe("同時実行（P-13〜P-15）", () => {
       [tripId],
     );
     if (shrink.status === 200) {
-      // 期間が先に縮んだ: 9/3 の予定は作られていない
+      // 期間が先に縮んだ: 9/3の予定は作られていない
       expect(trip.rows[0]!.ends_on).toBe("2026-09-02");
       expect(onTheDay.rows[0]!.c).toBe("0");
     } else {
-      // 予定が先に入った: 期間は 9/3 を含んだまま
+      // 予定が先に入った: 期間は9/3を含んだまま
       expect(trip.rows[0]!.ends_on).toBe("2026-09-03");
       expect(onTheDay.rows[0]!.c).toBe("1");
     }
@@ -945,7 +945,7 @@ describe("同時実行（P-13〜P-15）", () => {
       date: "2026-09-11",
     });
 
-    // 接続 A: 予定行を FOR NO KEY UPDATE で持ったまま履歴を入れる（未 COMMIT）
+    // 接続A: 予定行をFOR NO KEY UPDATEで持ったまま履歴を入れる（未COMMIT）
     const holder = await db.admin.connect();
     let committed = false;
     try {
@@ -963,7 +963,7 @@ describe("同時実行（P-13〜P-15）", () => {
         [tripId, planId, event.rows[0]!.id],
       );
 
-      // 接続 B（API）: 種類の PATCH は予定行のロックで待つ
+      // 接続B（API）: 種類のPATCHは予定行のロックで待つ
       const patchPromise = patchPlan(hinataCookie, tripId, planId, {
         kind: "place",
       });
@@ -981,7 +981,7 @@ describe("同時実行（P-13〜P-15）", () => {
       );
       expect(current.body).toMatchObject({ kind: "food", version: "1" });
     } finally {
-      // COMMIT 前に失敗したときはロールバックしてからプールへ戻す
+      // COMMIT前に失敗したときはロールバックしてからプールへ戻す
       // （開いたトランザクションのまま接続を返さない）
       if (!committed) {
         await holder.query("ROLLBACK").catch(() => {});

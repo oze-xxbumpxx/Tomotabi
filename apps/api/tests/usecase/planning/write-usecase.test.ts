@@ -72,7 +72,7 @@ function renameUsecase(uow: UnitOfWork<PlanningWorkContext>, writeLog: Recording
   return new RenameTripUseCase(uow, fixedClock(), writeLog);
 }
 
-// U-17: receipt が If-Match より先（F-17、N-11）
+// U-17: receiptがIf-Matchより先（F-17、N-11）
 describe("receipt を If-Match より先に見る", () => {
   it("receipt あり・hash 一致で If-Match が古くても保存した結果を返す", async () => {
     const { ctx, uow, writeLog } = setup();
@@ -94,7 +94,7 @@ describe("receipt を If-Match より先に見る", () => {
   });
 });
 
-// U-18: hash が違う同一キー（E-08）
+// U-18: hashが違う同一キー（E-08）
 describe("receipt の hash 不一致", () => {
   it("IDEMPOTENCY_KEY_REUSED で、保存も receipt 記録もしない", async () => {
     const { ctx, uow, writeLog } = setup();
@@ -372,7 +372,7 @@ describe("書き込みの異常系", () => {
       httpStatus: 201,
       responseBody: stored,
     });
-    // 最初の find だけ空を返し、insert の 23505 で同時作成の負け側を再現する
+    // 最初のfindだけ空を返し、insertの23505で同時作成の負け側を再現する
     const find = ctx.receipts.find.bind(ctx.receipts);
     let findCalls = 0;
     ctx.receipts.find = (actorId, operation, key) =>

@@ -7,8 +7,8 @@ import type { CommandReceiptStore } from "../../modules/planning/adapter/outboun
 import { commandReceipts } from "./schema/infra";
 
 /**
- * infra.command_receipts の読み書き。planning の UnitOfWork の文脈に束ねて使う
- * （同じトランザクションで書き込みと一緒に記録するため Pool ではなく tx の db を取る）。
+ * infra.command_receiptsの読み書き。planningのUnitOfWorkの文脈に束ねて使う
+ * （同じトランザクションで書き込みと一緒に記録するためPoolではなくtxのdbを取る）。
  */
 export class PgCommandReceipts implements CommandReceiptStore {
   constructor(private readonly db: NodePgDatabase) {}

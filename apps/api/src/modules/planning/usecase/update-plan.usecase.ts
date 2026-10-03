@@ -19,8 +19,8 @@ import {
 import { executePlanWrite, runPlanUpdate } from "./plan-write-flow";
 
 /**
- * 予定の部分更新。日付は含めない（日の移動は move が担う）。
- * 種類変更は予定行のロックを持ったまま履歴を照会してから Domain に渡す
+ * 予定の部分更新。日付は含めない（日の移動はmoveが担う）。
+ * 種類変更は予定行のロックを持ったまま履歴を照会してからDomainに渡す
  * （照会と変更の間に達成・予約が割り込まないようにするため。E-19）。
  */
 export class UpdatePlanUseCase implements UpdatePlanInputPort {
@@ -43,7 +43,7 @@ export class UpdatePlanUseCase implements UpdatePlanInputPort {
   private async run(
     input: UpdatePlanInput,
   ): ReturnType<typeof runPlanUpdate> {
-    // 書き込み用に Readonly を外した PlanPatch と同じ形。
+    // 書き込み用にReadonlyを外したPlanPatchと同じ形。
     const patch: {
       -readonly [K in "name" | "kind" | "time" | "memo"]?: Plan[K];
     } = {};
@@ -64,7 +64,7 @@ export class UpdatePlanUseCase implements UpdatePlanInputPort {
     return this.unitOfWork.run((ctx) =>
       runPlanUpdate(ctx, toCommand(input), async (plan, _trip, context) => {
         // 履歴の照会は種類が実際に変わるときだけでよい。予定行のロック中に
-        // 呼ぶので、照会後・更新前の INSERT は起きない（E-19）。
+        // 呼ぶので、照会後・更新前のINSERTは起きない（E-19）。
         const hasRecordHistory =
           kind !== undefined && kind !== plan.kind
             ? await context.recordHistory.hasHistory(plan.id)

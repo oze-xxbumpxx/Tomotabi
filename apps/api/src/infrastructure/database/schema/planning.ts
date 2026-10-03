@@ -18,7 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./identity";
 
-// Reference spec: docs/旅行アプリ設計 3/詳細設計/sql/03_planning_records.sql and 04_trip_lifecycle.sql
+// Reference spec: docs/旅行アプリ設計3/詳細設計/sql/03_planning_records.sql and 04_trip_lifecycle.sql
 export const planning = pgSchema("planning");
 
 const withTimezone = { withTimezone: true } as const;

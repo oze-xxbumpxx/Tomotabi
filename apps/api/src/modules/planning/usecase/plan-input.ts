@@ -8,8 +8,8 @@ const MAX_NAME_CODE_POINTS = 100;
 const MAX_MEMO_CODE_POINTS = 2000;
 
 /**
- * 名前の値の規則（1〜100 コードポイント・前後空白の除去）。
- * @throws 空・上限超過は 422 VALIDATION_FAILED。
+ * 名前の値の規則（1〜100コードポイント・前後空白の除去）。
+ * @throws空・上限超過は422 VALIDATION_FAILED。
  */
 export function parsePlanName(value: string): BoundedText {
   try {
@@ -24,8 +24,8 @@ export function parsePlanName(value: string): BoundedText {
 }
 
 /**
- * メモの値の規則（2000 コードポイントまで）。未指定・空白だけは null。
- * @throws 上限超過は 422 VALIDATION_FAILED。
+ * メモの値の規則（2000コードポイントまで）。未指定・空白だけはnull。
+ * @throws上限超過は422 VALIDATION_FAILED。
  */
 export function parsePlanMemo(value: string | null): BoundedText | null {
   try {
@@ -40,9 +40,9 @@ export function parsePlanMemo(value: string | null): BoundedText | null {
 }
 
 /**
- * 種類の値の規則。生成スキーマの enum が先に見るが、値の規則として
+ * 種類の値の規則。生成スキーマのenumが先に見るが、値の規則として
  * ここでも確かめる（ADR-0004）。
- * @throws 5 種類以外は 422 VALIDATION_FAILED。
+ * @throws 5種類以外は422 VALIDATION_FAILED。
  */
 export function parsePlanKind(value: string): PlanKind {
   try {
@@ -58,7 +58,7 @@ export function parsePlanKind(value: string): PlanKind {
 
 /**
  * 日付の値の規則（YYYY-MM-DD・実在日）。
- * @throws 実在しない日付は 422 VALIDATION_FAILED。
+ * @throws実在しない日付は422 VALIDATION_FAILED。
  */
 export function parsePlanDate(value: string): LocalDate {
   try {
@@ -73,8 +73,8 @@ export function parsePlanDate(value: string): LocalDate {
 }
 
 /**
- * 時刻の値の規則（HH:mm・秒なし）。null はそのまま（時刻未定）。
- * @throws `HH:mm` でないとき 422 VALIDATION_FAILED。
+ * 時刻の値の規則（HH:mm・秒なし）。nullはそのまま（時刻未定）。
+ * @throws `HH:mm`でないとき422 VALIDATION_FAILED。
  */
 export function parsePlanTime(value: string | null): LocalTime | null {
   if (value === null) {

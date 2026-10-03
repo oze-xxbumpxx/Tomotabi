@@ -4,14 +4,14 @@ import { resetBusinessTables } from "./db";
 import { AOI_USER_ID, HINATA_USER_ID } from "./env";
 
 type E2eFixtures = {
-  /** ひなたとしてログインした page（context は試験ごとに新規）。 */
+  /** ひなたとしてログインしたpage（contextは試験ごとに新規）。 */
   hinataPage: Page;
-  /** あおいとしてログインした page。二人での試験用（M-02）。 */
+  /** あおいとしてログインしたpage。二人での試験用（M-02）。 */
   aoiPage: Page;
 };
 
 /**
- * 各試験の前に業務の表を空にし、ひなた・あおいのログイン済み context を
+ * 各試験の前に業務の表を空にし、ひなた・あおいのログイン済みcontextを
  * 用意する（ADR-0005 Decision 2・5）。
  */
 export const test = base.extend<

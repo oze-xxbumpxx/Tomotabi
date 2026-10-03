@@ -9,8 +9,8 @@ export type TripInput = {
 };
 
 /**
- * `/trips` の「新しい旅行」シートで旅行を作り、しおりに移ったあと
- * trip id を URL から取って返す。
+ * `/trips`の「新しい旅行」シートで旅行を作り、しおりに移ったあと
+ * trip idをURLから取って返す。
  */
 export async function createTrip(
   page: Page,
@@ -36,7 +36,7 @@ export async function createTrip(
 
 /**
  * しおりの「旅行のメニュー」から「旅行名と期間を変更」のシートを開き、
- * そのシートの Locator を返す。
+ * そのシートのLocatorを返す。
  */
 export async function openTripEditSheet(
   page: Page,

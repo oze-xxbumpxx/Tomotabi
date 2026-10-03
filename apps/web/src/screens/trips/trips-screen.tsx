@@ -16,10 +16,10 @@ import { SessionExpired } from "@/shared/ui/state/session-expired";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 
 /**
- * `/trips` の旅行一覧（15 のページ版。0 件は 19）。
+ * `/trips`の旅行一覧（15のページ版。0件は19）。
  * 行を押すとその旅行のしおりへ。選択値の保存はしおり側で行う。
  * 一覧の初回の失敗は「取得できませんでした」、再取得の失敗は
- * 前回の表示に「更新できていません」を添える（失敗を 0 件にしない）。
+ * 前回の表示に「更新できていません」を添える（失敗を0件にしない）。
  */
 export function TripsScreen() {
   const router = useRouter();
@@ -43,7 +43,7 @@ export function TripsScreen() {
   const failure =
     trips.error instanceof ApiRequestError ? trips.error.failure : null;
 
-  // 取得・再取得の 401 は、表示済みのデータがあっても業務データを隠して C-1。
+  // 取得・再取得の401は、表示済みのデータがあっても業務データを隠してC-1。
   if (
     failure !== null &&
     failure.kind === "http" &&

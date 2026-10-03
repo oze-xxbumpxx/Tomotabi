@@ -1,10 +1,10 @@
 export const WRITE_LOG = Symbol("WRITE_LOG");
 
 /**
- * 業務の書き込み 1 件の記録（設計書「ログと監視」）。
- * 利用者の入力（旅行名・予定名・メモ）・Idempotency-Key・request_hash は含めない。
- * 結果コードの鍵名を errorCode にしているのは、pino の redact "*.code" が
- * code を [Redacted] にするため。
+ * 業務の書き込み1件の記録（設計書「ログと監視」）。
+ * 利用者の入力（旅行名・予定名・メモ）・Idempotency-Key・request_hashは含めない。
+ * 結果コードの鍵名をerrorCodeにしているのは、pinoのredact "*.code"が
+ * codeを[Redacted]にするため。
  */
 export type WriteLogEntry = Readonly<{
   operation: string;

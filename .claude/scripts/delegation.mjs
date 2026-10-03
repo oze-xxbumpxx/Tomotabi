@@ -5,35 +5,35 @@
 // 使い方:
 //   node .claude/scripts/delegation.mjs init <issue> --model <swe-2-medium|swe-2-high|swe-2-max|unknown>
 //     [--runner <local|cloud>] [--level 0-3] [--title <題>] [--delegated-at <ISO 8601>] [--follow-up-of <issue|pr-n>]
-//       --runner は Devin を動かした場所。既定は local（2026-09-26 ユーザー指示: 既定はローカル、出先の指示時だけクラウド）。
-//       記録を作る。--title と --delegated-at を省くと gh から Issue の題と作成日時を取る。
-//       --follow-up-of は、前の委譲の PR の指摘を直す後続の委譲のとき、その前の委譲を指す（複数ならいちばん古いもの）。
+//       --runnerはDevinを動かした場所。既定はlocal（2026-09-26ユーザー指示: 既定はローカル、出先の指示時だけクラウド）。
+//       記録を作る。--titleと --delegated-atを省くとghからIssueの題と作成日時を取る。
+//       --follow-up-ofは、前の委譲のPRの指摘を直す後続の委譲のとき、その前の委譲を指す（複数ならいちばん古いもの）。
 //   node .claude/scripts/delegation.mjs review <issue> --round <n> --sha <sha> --verdict <merge|fix|escalate>
 //     [--posted] [--finding '<must|nit|security|decision>:<category>:<summary>' ...] [--reviewed-at <ISO 8601>]
-//       round の結果を追記する。reviewed_at の既定は今の時刻。
+//       roundの結果を追記する。reviewed_atの既定は今の時刻。
 //   node .claude/scripts/delegation.mjs finalize <issue> [--pr <PR番号>]
-//       gh から PR・時刻・CI 初回（PR 作成時の head）・コミット数・Closes の紐づけを取り、gh: と outcome を埋める。
+//       ghからPR・時刻・CI初回（PR作成時のhead）・コミット数・Closesの紐づけを取り、gh: とoutcomeを埋める。
 //   node .claude/scripts/delegation.mjs summary [--threshold 3] [--security-threshold 2]
-//       記録（正 ∪ 写し）だけを読んで集計する（gh は呼ばない）。
-//   Issue に紐づかない Devin の PR（docs/designs/devin-unlinked-pr-review.md）は、<issue> の代わりに pr-<PR番号> を指定する。
-//     init pr-<n> [--model <m>] [--runner <local|cloud>] … は gh から PR の題・作成日時・作成者を取り、
-//     --model の既定は unknown、--runner の既定は作成者（bot → cloud、それ以外 → local）。記録は pr-<n>.yml。
+//       記録（正 ∪ 写し）だけを読んで集計する（ghは呼ばない）。
+//   Issueに紐づかないDevinのPR（docs/designs/devin-unlinked-pr-review.md）は、<issue> の代わりにpr-<PR番号> を指定する。
+//     init pr-<n> [--model <m>] [--runner <local|cloud>] … はghからPRの題・作成日時・作成者を取り、
+//     --modelの既定はunknown、--runnerの既定は作成者（bot → cloud、それ以外 → local）。記録はpr-<n>.yml。
 //   node .claude/scripts/delegation.mjs status [--json] [--no-gh]
-//       進行中の委譲ごとの次の動き・Issue なし PR・未起票の昇格候補（delegation-status.mjs）。
+//       進行中の委譲ごとの次の動き・IssueなしPR・未起票の昇格候補（delegation-status.mjs）。
 //   すべてのサブコマンドで --dir <path> を指定すると記録の置き場を変えられる（テスト用）。
-//   --mirror-dir <path> は記録の写しの置き場。既定はハーネスの状態ディレクトリの delegations/。
-//   --dir を指定したときは、--mirror-dir を指定しない限り写さない（テストで手元の写しを汚さない）。
+//   --mirror-dir <path> は記録の写しの置き場。既定はハーネスの状態ディレクトリのdelegations/。
+//   --dirを指定したときは、--mirror-dirを指定しない限り写さない（テストで手元の写しを汚さない）。
 //
-// 終了コード: 0 成功 / 2 引数・記録の誤り / 3 gh の失敗・PR が見つからない
+// 終了コード: 0成功 / 2引数・記録の誤り / 3 ghの失敗・PRが見つからない
 //
 // 方針:
-// - 記録は公開リポジトリに入る。security の指摘は summary を「(非公開)」に置き換える。
-// - YAML は依存を増やさないため、この記録の形（スカラー・ネストした map・map の配列）だけを
+// - 記録は公開リポジトリに入る。securityの指摘はsummaryを「(非公開)」に置き換える。
+// - YAMLは依存を増やさないため、この記録の形（スカラー・ネストしたmap・mapの配列）だけを
 //   読み書きする最小の実装にする。その他の形はエラーにする。
-// - 書き込みは一時ファイル → rename。init は既存を上書きしない。
+// - 書き込みは一時ファイル → rename。initは既存を上書きしない。
 // - 記録の写し（docs/designs/devin-delegation-status.md）: 正（リポジトリ）を書いたあと、状態ディレクトリにも書く。
-//   worktree ごとのセッションでも、main に未マージの進行中の記録が見えるようにするため。
-//   読むときは正と写しを key でまとめ、reviews の多い方 → outcome のある方 → 正の順で選ぶ。写しの失敗は警告だけ。
+//   worktreeごとのセッションでも、mainに未マージの進行中の記録が見えるようにするため。
+//   読むときは正と写しをkeyでまとめ、reviewsの多い方 → outcomeのある方 → 正の順で選ぶ。写しの失敗は警告だけ。
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
@@ -46,12 +46,12 @@ export const DEFAULT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../
 const GH_TIMEOUT_MS = 30_000;
 
 export const MODELS = ['swe-2-medium', 'swe-2-high', 'swe-2-max', 'unknown'];
-// 新しい記録で指定できる実行場所。runner の無い古い記録は、集計のときだけ unknown として扱う。
+// 新しい記録で指定できる実行場所。runnerの無い古い記録は、集計のときだけunknownとして扱う。
 export const RUNNERS = ['local', 'cloud'];
 export const SEVERITIES = ['must', 'nit', 'security', 'decision'];
 export const VERDICTS = ['merge', 'fix', 'escalate'];
 export const PRIVATE_SUMMARY = '(非公開)';
-// 委譲の起点。issue = Issue を渡した（既定。項目の無い記録も issue）、self = Devin が自分から出した PR。
+// 委譲の起点。issue = Issueを渡した（既定。項目の無い記録もissue）、self = Devinが自分から出したPR。
 export const ORIGINS = ['issue', 'self'];
 const CATEGORY = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
@@ -178,8 +178,8 @@ export function parseYaml(text) {
 // ---------------------------------------------------------------- 記録の操作（純粋関数）
 
 /**
- * @param {{followUpOf?: number|string|null}} args followUpOf は前の委譲の key（Issue 番号か 'pr-<n>'）。
- *   指定したときだけ follow_up_of を書く（項目の無い古い記録と形を揃える）。
+ * @param {{followUpOf?: number|string|null}} args followUpOfは前の委譲のkey（Issue番号か'pr-<n>'）。
+ *   指定したときだけfollow_up_ofを書く（項目の無い古い記録と形を揃える）。
  */
 export function newRecord({ issue, title, model, runner = 'local', level = null, delegatedAt, followUpOf = null }) {
   if (!Number.isInteger(issue) || issue <= 0) throw new UsageError('Issue 番号が不正です');
@@ -205,25 +205,25 @@ export function newRecord({ issue, title, model, runner = 'local', level = null,
   };
 }
 
-/** Issue に紐づかない Devin の PR の記録。Issue が無いので delegated_at は PR の作成日時。 */
+/** Issueに紐づかないDevinのPRの記録。Issueが無いのでdelegated_atはPRの作成日時。 */
 export function newSelfRecord({ pr, title, model = 'unknown', runner, level = null, createdAt }) {
   if (!Number.isInteger(pr) || pr <= 0) throw new UsageError('PR 番号が不正です');
   const { issue, ...rest } = newRecord({ issue: pr, title, model, runner, level, delegatedAt: createdAt });
   return { issue: null, pr, origin: 'self', ...rest };
 }
 
-/** 記録を指す名前。Issue の記録は番号、PR の記録は pr-<n>（ファイル名と CLI の指定に使う）。 */
+/** 記録を指す名前。Issueの記録は番号、PRの記録はpr-<n>（ファイル名とCLIの指定に使う）。 */
 export const recordKey = (record) => (Number.isInteger(record.issue) ? record.issue : `pr-${record.pr}`);
 
-/** 集計の表示用。Issue は #n、PR は PR#n。 */
+/** 集計の表示用。Issueは #n、PRはPR#n。 */
 const keyLabel = (key) => (typeof key === 'number' ? `#${key}` : `PR#${key.slice(3)}`);
 
-/** 作成者から実行場所を推す。クラウドの Devin は bot のアカウント、ローカルはユーザーのアカウントで PR を作る。 */
+/** 作成者から実行場所を推す。クラウドのDevinはbotのアカウント、ローカルはユーザーのアカウントでPRを作る。 */
 export const runnerFromAuthor = (author) => (author?.is_bot === true || /\[bot\]$|^app\//.test(author?.login ?? '') ? 'cloud' : 'local');
 
 /**
- * '<severity>:<category>:<summary>'。summary には ':' を含めてよい。security の summary は公開しない。
- * @throws UsageError severity と category の片方だけが security のとき
+ * '<severity>:<category>:<summary>'。summaryには':'を含めてよい。securityのsummaryは公開しない。
+ * @throws UsageError severityとcategoryの片方だけがsecurityのとき
  */
 export function parseFinding(text) {
   const first = text.indexOf(':');
@@ -235,15 +235,15 @@ export function parseFinding(text) {
   if (!SEVERITIES.includes(severity)) throw new UsageError(`severity は ${SEVERITIES.join(' | ')} のどれか: ${severity}`);
   if (!CATEGORY.test(category)) throw new UsageError(`category は kebab-case: ${category}`);
   if (summary === '') throw new UsageError('summary が空です');
-  // 集計は security を category で数え、非公開・自動投稿の禁止は severity で決める。片方だけだと再発件数から漏れるか、
-  // 手順が公開の記録・PR に出るため、両方をそろえる（#80 の記録で severity: security / category: auth）。
+  // 集計はsecurityをcategoryで数え、非公開・自動投稿の禁止はseverityで決める。片方だけだと再発件数から漏れるか、
+  // 手順が公開の記録・PRに出るため、両方をそろえる（#80の記録でseverity: security / category: auth）。
   if ((severity === 'security') !== (category === 'security')) {
     throw new UsageError(`security の指摘は severity と category の両方を security にする: ${severity}:${category}`);
   }
   return { severity, category, summary: severity === 'security' ? PRIVATE_SUMMARY : summary.replace(/\s+/g, ' ') };
 }
 
-/** at は review を記録した時刻（修正待ちの wait-for-pr-update の --since に使う）。指定したときだけ reviewed_at を書く。 */
+/** atはreviewを記録した時刻（修正待ちのwait-for-pr-updateの --sinceに使う）。指定したときだけreviewed_atを書く。 */
 export function addReview(record, { round, sha, verdict, posted = false, findings = [], at = null }) {
   if (!Number.isInteger(round) || round < 0) throw new UsageError('--round は 0 以上の整数');
   if (!VERDICTS.includes(verdict)) throw new UsageError(`--verdict は ${VERDICTS.join(' | ')} のどれか`);
@@ -264,8 +264,8 @@ export function addReview(record, { round, sha, verdict, posted = false, finding
 const PASSING = new Set(['success', 'skipped', 'neutral']);
 
 /**
- * CI の「初回」とみなすコミット = PR を作った時点の head（作成時刻以前で最後のコミット）。
- * 複数のコミットをまとめて push すると CI は最後のコミットでしか動かないため、最初のコミットではない（#39・#42）。
+ * CIの「初回」とみなすコミット = PRを作った時点のhead（作成時刻以前で最後のコミット）。
+ * 複数のコミットをまとめてpushするとCIは最後のコミットでしか動かないため、最初のコミットではない（#39・#42）。
  */
 export function firstCiCommit(commits, prCreatedAt) {
   const created = Date.parse(prCreatedAt);
@@ -275,7 +275,7 @@ export function firstCiCommit(commits, prCreatedAt) {
 
 /**
  * @param {object} pr gh pr view --json number,state,createdAt,mergedAt,closedAt,commits,closingIssuesReferences
- * @param {Array<{status:string,conclusion:string|null}> | null} firstCommitRuns firstCiCommit の check-runs
+ * @param {Array<{status:string,conclusion:string|null}> | null} firstCommitRuns firstCiCommitのcheck-runs
  */
 export function buildGhSection(pr, issue, firstCommitRuns) {
   let ciFirstPass = null;
@@ -310,7 +310,7 @@ function median(values) {
 /** 投稿した回数 = 手戻りの回数。 */
 export const roundsOf = (record) => record.reviews.filter((r) => r.posted).length;
 
-/** 他の記録の follow_up_of に指されている key（= 後続の委譲を生んだ委譲）。 */
+/** 他の記録のfollow_up_ofに指されているkey（= 後続の委譲を生んだ委譲）。 */
 export function parentKeys(records) {
   return new Set(records.map((rec) => rec.follow_up_of ?? null).filter((key) => key !== null));
 }
@@ -351,7 +351,7 @@ function groupStats(records, keyOf, parents = new Set()) {
       m.ciKnown += 1;
       if (rec.gh.ci_first_pass) m.ciPass += 1;
     }
-    // 自分から出した PR は delegated_at が PR の作成日時なので、Issue→PR に入れない。
+    // 自分から出したPRはdelegated_atがPRの作成日時なので、Issue→PRに入れない。
     if (rec.origin !== 'self') m.issueToPr.push(minutesBetween(rec.delegated_at, rec.gh?.pr_created_at));
     m.prToMerge.push(minutesBetween(rec.gh?.pr_created_at, rec.gh?.merged_at));
   }
@@ -465,7 +465,7 @@ export function formatSummary(s) {
   return out.join('\n');
 }
 
-// ---------------------------------------------------------------- ファイルと gh
+// ---------------------------------------------------------------- ファイルとgh
 
 const recordPath = (dir, key) => join(dir, `${key}.yml`);
 const RECORD_FILE = /^(\d+|pr-\d+)\.yml$/;
@@ -485,7 +485,7 @@ function writeAtomic(dir, record, mode) {
   return path;
 }
 
-/** 正を書き、mirrorDir があれば写しも書く。写しの失敗は警告だけにして、正の書き込みは成功扱いにする。 */
+/** 正を書き、mirrorDirがあれば写しも書く。写しの失敗は警告だけにして、正の書き込みは成功扱いにする。 */
 export function writeRecord(dir, record, { mirrorDir = null } = {}) {
   const path = writeAtomic(dir, record);
   if (mirrorDir !== null) {
@@ -499,8 +499,8 @@ export function writeRecord(dir, record, { mirrorDir = null } = {}) {
 }
 
 /**
- * @param {{skipInvalid?: boolean}} options skipInvalid は読めないファイルを飛ばす（写しを読むとき。
- *   手元の写しが 1 つ壊れても、セッション開始の表示や待機を止めない）。正は壊れていたらエラーにする。
+ * @param {{skipInvalid?: boolean}} options skipInvalidは読めないファイルを飛ばす（写しを読むとき。
+ *   手元の写しが1つ壊れても、セッション開始の表示や待機を止めない）。正は壊れていたらエラーにする。
  */
 export function readAllRecords(dir, { skipInvalid = false } = {}) {
   if (!existsSync(dir)) return [];
@@ -522,8 +522,8 @@ export function readAllRecords(dir, { skipInvalid = false } = {}) {
 }
 
 /**
- * 記録の写しの既定の置き場（ハーネスの状態ディレクトリの delegations/。worktree をまたいで同じ場所）。
- * 状態ディレクトリを解決できない・リポジトリ内へのフォールバックしか無いときは null（写さない）。
+ * 記録の写しの既定の置き場（ハーネスの状態ディレクトリのdelegations/。worktreeをまたいで同じ場所）。
+ * 状態ディレクトリを解決できない・リポジトリ内へのフォールバックしか無いときはnull（写さない）。
  */
 export function defaultMirrorDir(env = process.env) {
   try {
@@ -534,7 +534,7 @@ export function defaultMirrorDir(env = process.env) {
   }
 }
 
-/** 同じ key の正（primary）と写し（mirror）から使う方を選ぶ。reviews の多い方 → outcome のある方 → 正。 */
+/** 同じkeyの正（primary）と写し（mirror）から使う方を選ぶ。reviewsの多い方 → outcomeのある方 → 正。 */
 export function preferRecord(primary, mirror) {
   if (primary === null) return mirror;
   if (mirror === null) return primary;
@@ -545,7 +545,7 @@ export function preferRecord(primary, mirror) {
   return primary;
 }
 
-/** 正と写しの記録を key でまとめる（key の順）。 */
+/** 正と写しの記録をkeyでまとめる（keyの順）。 */
 export function mergeRecords(primary, mirror) {
   const byKey = new Map(primary.map((rec) => [recordKey(rec), rec]));
   for (const rec of mirror) {
@@ -561,7 +561,7 @@ export function readKnownRecords({ dir = DEFAULT_DIR, mirrorDir = defaultMirrorD
   return mergeRecords(readAllRecords(dir), mirror);
 }
 
-/** 1 件の記録を正と写しから読む（別の worktree で作られ、写しにしか無い記録も続けて扱えるように）。 */
+/** 1件の記録を正と写しから読む（別のworktreeで作られ、写しにしか無い記録も続けて扱えるように）。 */
 export function readRecordMerged(dir, key, mirrorDir) {
   const primary = existsSync(recordPath(dir, key)) ? readRecord(dir, key) : null;
   let mirror = null;
@@ -644,23 +644,23 @@ function issueArg(value) {
   return n;
 }
 
-/** 写しの置き場。--mirror-dir が無く --dir を指定したとき（テスト・別の置き場）は写さない。 */
+/** 写しの置き場。--mirror-dirが無く --dirを指定したとき（テスト・別の置き場）は写さない。 */
 function mirrorOf(opts) {
   if (opts['mirror-dir'] !== undefined) return opts['mirror-dir'];
   return opts.dir === undefined ? defaultMirrorDir() : null;
 }
 
-/** 正か写しに記録があるか（別の worktree で作った記録を init し直さない）。 */
+/** 正か写しに記録があるか（別のworktreeで作った記録をinitし直さない）。 */
 function existingRecordPath(dir, key, mirrorDir) {
   if (existsSync(recordPath(dir, key))) return recordPath(dir, key);
   if (mirrorDir !== null && existsSync(recordPath(mirrorDir, key))) return recordPath(mirrorDir, key);
   return null;
 }
 
-/** 秒までの ISO 8601。 */
+/** 秒までのISO 8601。 */
 const nowIso = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
-/** '<Issue 番号>' → 番号、'pr-<PR 番号>' → そのままの文字列。 */
+/** '<Issue番号>' → 番号、'pr-<PR番号>' → そのままの文字列。 */
 export function targetArg(value) {
   const m = /^pr-(\d+)$/.exec(value ?? '');
   if (m !== null) {
@@ -674,7 +674,7 @@ export function runCli(argv) {
   const [command, ...rest] = argv;
   if (command === 'summary') {
     const opts = parseOptions(rest, { values: ['threshold', 'security-threshold'] });
-    // status と同じく正 ∪ 写しを数える（別の worktree で進行中の委譲の指摘も、昇格の判定に入れる）
+    // statusと同じく正 ∪ 写しを数える（別のworktreeで進行中の委譲の指摘も、昇格の判定に入れる）
     const summary = summarize(readKnownRecords({ dir: opts.dir ?? DEFAULT_DIR, mirrorDir: mirrorOf(opts) }), {
       threshold: opts.threshold === undefined ? 3 : toInt(opts.threshold, '--threshold'),
       securityThreshold: opts['security-threshold'] === undefined ? 2 : toInt(opts['security-threshold'], '--security-threshold'),
@@ -765,9 +765,9 @@ function exitWith(error) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv[2] === 'status') {
-    // status は wait-for-devin-pr.mjs を使い、あちらがこのファイルを読むため、静的に読み込むと循環する。
-    // ここで await すると、このファイルの評価が終わらないまま相手の読み込みを待ち、止まってしまう。
-    // 評価を終えてから then で実行する。
+    // statusはwait-for-devin-pr.mjsを使い、あちらがこのファイルを読むため、静的に読み込むと循環する。
+    // ここでawaitすると、このファイルの評価が終わらないまま相手の読み込みを待ち、止まってしまう。
+    // 評価を終えてからthenで実行する。
     import('./delegation-status.mjs')
       .then(({ runStatusCli }) => runStatusCli(process.argv.slice(3)))
       .catch(exitWith);

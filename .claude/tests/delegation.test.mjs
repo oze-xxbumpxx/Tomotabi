@@ -1,5 +1,5 @@
-// delegation.mjs（委譲の記録と集計）のテスト。gh は呼ばない。
-// 観点 ID は docs/tests/devin-delegation-loop.md（S- で始まるものは docs/tests/devin-delegation-status.md）。
+// delegation.mjs（委譲の記録と集計）のテスト。ghは呼ばない。
+// 観点IDはdocs/tests/devin-delegation-loop.md（S- で始まるものはdocs/tests/devin-delegation-status.md）。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -220,7 +220,7 @@ test('D-07: CI の初回は PR 作成時の head（まとめて push したと�
     { oid: 'c', committedDate: '2026-09-26T03:00:00Z' },
   ];
   assert.equal(firstCiCommit(commits, '2026-09-26T00:20:00Z'), 'b');
-  // 作成時刻より前のコミットが無い（rebase で時刻が変わった等）ときは最初のコミット
+  // 作成時刻より前のコミットが無い（rebaseで時刻が変わった等）ときは最初のコミット
   assert.equal(firstCiCommit(commits, '2026-09-25T00:00:00Z'), 'a');
   assert.equal(firstCiCommit([], '2026-09-26T00:00:00Z'), null);
 });
@@ -343,7 +343,7 @@ test('D-12: runner（実行場所）は既定 local、cloud を選べ、それ�
   assert.match(formatSummary(s), /実行場所別: .*\n {2}cloud: 1 \//);
 });
 
-// ---- Issue に紐づかない Devin の PR（docs/designs/devin-unlinked-pr-review.md。観点 ID は docs/tests/devin-unlinked-pr-review.md）
+// ---- Issueに紐づかないDevinのPR（docs/designs/devin-unlinked-pr-review.md。観点IDはdocs/tests/devin-unlinked-pr-review.md）
 
 const self = (pr, extra = {}) =>
   newSelfRecord({ pr, title: `PR ${pr}`, runner: 'cloud', createdAt: '2026-09-26T09:20:00Z', ...extra });
@@ -360,7 +360,7 @@ test('U-11: Issue なし PR の記録は issue: null・pr・origin: self。model
   assert.deepEqual(Object.keys(rec).slice(0, 3), ['issue', 'pr', 'origin']);
   assert.deepEqual(parseYaml(toYaml(rec)), rec);
   assert.throws(() => self(0), /PR 番号/);
-  // closes_linked は Issue が無いので null
+  // closes_linkedはIssueが無いのでnull
   assert.equal(buildGhSection({ number: 53, state: 'MERGED', createdAt: 'x', commits: [], closingIssuesReferences: [{ number: 51 }] }, null, null).gh.closes_linked, null);
 });
 
@@ -417,11 +417,11 @@ test('U-14: 集計は Issue と PR の記録を混ぜて読み、分類は委譲
   const text = formatSummary(s);
   assert.match(text, /harness-conflict: 3\/3（#1 PR#53 PR#54）  ← 昇格候補/);
   assert.match(text, /起点別.*\n {2}issue: 1 \/[^\n]*\n {2}self: 2 \//);
-  // Issue の記録だけのときは起点別の行を出さない（今までの出力を変えない）
+  // Issueの記録だけのときは起点別の行を出さない（今までの出力を変えない）
   assert.doesNotMatch(formatSummary(summarize([base(1)])), /起点別/);
 });
 
-// ---- 記録を状態として使う（docs/designs/devin-delegation-status.md。観点 ID は docs/tests/devin-delegation-status.md）
+// ---- 記録を状態として使う（docs/designs/devin-delegation-status.md。観点IDはdocs/tests/devin-delegation-status.md）
 
 test('S-01: follow_up_of は任意。Issue 番号と pr-<n> を受け付け、不正な値・自分自身はエラー。YAML で往復できる', () => {
   assert.equal('follow_up_of' in base(43), false);
@@ -473,14 +473,14 @@ test('S-03: 写し。writeRecord は写しにも書き、写しの失敗は警�
     assert.equal(existsSync(join(mirror, '72.yml')), false);
     assert.equal(cli(['init', '73', ...common, '--dir', primary, '--mirror-dir', mirror]).status, 0);
     assert.equal(existsSync(join(mirror, '73.yml')), true);
-    // 写しにだけある記録（別の worktree で init したもの）は init し直せず、review できる
+    // 写しにだけある記録（別のworktreeでinitしたもの）はinitし直せず、reviewできる
     assert.equal(cli(['init', '70', ...common, '--dir', join(dir, 'other'), '--mirror-dir', mirror]).status, 2);
     const review = cli(['review', '70', '--round', '0', '--sha', 'abc1234', '--verdict', 'merge', '--dir', join(dir, 'other'), '--mirror-dir', mirror]);
     assert.equal(review.status, 0, review.stderr);
     assert.equal(parseYaml(readFileSync(join(dir, 'other', '70.yml'), 'utf8')).reviews.length, 1);
     assert.equal(parseYaml(readFileSync(join(mirror, '70.yml'), 'utf8')).reviews.length, 1);
   });
-  // 状態ディレクトリを明示すると、その delegations/ が既定の写し先になる
+  // 状態ディレクトリを明示すると、そのdelegations/ が既定の写し先になる
   assert.equal(defaultMirrorDir({ HARNESS_STATE_DIR: '/tmp/tomotabi-state-test', CLAUDE_PROJECT_DIR: '/home/user/x' }), '/tmp/tomotabi-state-test/delegations');
 });
 

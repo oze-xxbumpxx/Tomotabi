@@ -19,7 +19,7 @@ type SegmentedProps = {
   locked?: boolean;
   error?: string | null;
   columns?: 1 | 2;
-  /** エラー欄へフォーカスを戻すための fieldset 参照。 */
+  /** エラー欄へフォーカスを戻すためのfieldset参照。 */
   ref?: Ref<HTMLFieldSetElement>;
 };
 

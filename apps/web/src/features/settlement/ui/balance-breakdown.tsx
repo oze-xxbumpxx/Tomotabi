@@ -7,7 +7,7 @@ import { nameOf, personTotalsOf, slotOf } from "../model/breakdown";
 import { PersonAvatar } from "./person-avatar";
 
 /**
- * 内訳のカード（v3 の 14b）。二人それぞれに「支払った額・負担額・差」を
+ * 内訳のカード（v3の14b）。二人それぞれに「支払った額・負担額・差」を
  * 並べ、差が正なら「受け取る」、負なら「渡す」のバッジを付ける。
  * 戻し（REVERSAL）の明細は額を引く側として数える。
  */

@@ -15,8 +15,8 @@ import { parsePlanDate } from "./plan-input";
 import { executePlanWrite, runPlanUpdate } from "./plan-write-flow";
 
 /**
- * 予定の日の移動。移動先が期間内かは、FOR SHARE で読んだ確定済みの期間で
- * 確かめる（期間の変更は FOR UPDATE を取るので、こちらがロックを持つ間は
+ * 予定の日の移動。移動先が期間内かは、FOR SHAREで読んだ確定済みの期間で
+ * 確かめる（期間の変更はFOR UPDATEを取るので、こちらがロックを持つ間は
  * 期間は変わらない。E-18）。
  */
 export class MovePlanUseCase implements MovePlanInputPort {

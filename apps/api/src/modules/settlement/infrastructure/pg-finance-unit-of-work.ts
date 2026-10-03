@@ -23,9 +23,9 @@ import { DrizzleSettlementRepository } from "./drizzle-settlement.repository";
 import { PgPaymentsRead } from "./pg-payments-read";
 
 /**
- * 旅行の参加者の照会。認可は SQL の条件で行う: actor が旅行の参加者
- * でなければ roster を返さない（EXISTS 副問い合わせ。設計書「認可は
- * SQL の条件」）。
+ * 旅行の参加者の照会。認可はSQLの条件で行う: actorが旅行の参加者
+ * でなければrosterを返さない（EXISTS副問い合わせ。設計書「認可は
+ * SQLの条件」）。
  */
 export class PgTripRosterQuery implements TripRosterPort {
   constructor(private readonly db: NodePgDatabase) {}
@@ -67,10 +67,10 @@ export class PgTripRosterQuery implements TripRosterPort {
 }
 
 /**
- * infra.trip_finance_guards の行ロック。旅行作成時に guard の行は作られて
+ * infra.trip_finance_guardsの行ロック。旅行作成時にguardの行は作られて
  * いるので、参加者の確認を通った旅行で行が無いのはデータの不整合。
- * FOR UPDATE の行ロックには UPDATE 権限が要るため、app_runtime には
- * next_settlement_sequence の列だけ UPDATE を付けてある（migration 0007）。
+ * FOR UPDATEの行ロックにはUPDATE権限が要るため、app_runtimeには
+ * next_settlement_sequenceの列だけUPDATEを付けてある（migration 0007）。
  */
 class PgFinanceGuardLock implements FinanceGuardLocker {
   constructor(private readonly db: NodePgDatabase) {}
@@ -119,10 +119,10 @@ class PgTripPlansQuery implements TripPlansPort {
 }
 
 /**
- * お金の書き込みを 1 トランザクションに束ねる（設計書「UnitOfWork の文脈」）。
- * トランザクションの始めに lock_timeout を 3 秒にする（E-14: 待ちきれない・
- * デッドロックは巻き戻して 503。UseCase では再試行しない）。
- * 文脈には型付きの Repository・照会・receipt の限定集合だけを渡し、
+ * お金の書き込みを1トランザクションに束ねる（設計書「UnitOfWorkの文脈」）。
+ * トランザクションの始めにlock_timeoutを3秒にする（E-14: 待ちきれない・
+ * デッドロックは巻き戻して503。UseCaseでは再試行しない）。
+ * 文脈には型付きのRepository・照会・receiptの限定集合だけを渡し、
  * 生の接続は渡さない。
  */
 export class PgFinanceUnitOfWork
@@ -154,7 +154,7 @@ export class PgFinanceUnitOfWork
       try {
         await client.query("ROLLBACK");
       } catch (rollbackError) {
-        // ROLLBACK 自体が失敗した接続（切断など）は壊れているため、
+        // ROLLBACK自体が失敗した接続（切断など）は壊れているため、
         // プールに戻さず捨てる。
         client.release(
           rollbackError instanceof Error

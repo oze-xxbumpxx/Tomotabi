@@ -89,7 +89,7 @@ function notFound(): Response {
 }
 
 /**
- * /api/me と /api/trips/* を URL・メソッドで振り分ける fake。
+ * /api/meと /api/trips/* をURL・メソッドで振り分けるfake。
  * ハンドラは呼ばれるたびに評価する（成功→失敗の切り替えが書ける）。
  */
 function stubApi(handlers: {
@@ -371,7 +371,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     const [putUrl, putInit] = writes[1];
     expect(putUrl).toBe(`/api/trips/${tripId}/period`);
     expect(putInit?.method).toBe("PUT");
-    // 期間の If-Match は名前の保存が返した新しい ETag。
+    // 期間のIf-Matchは名前の保存が返した新しいETag。
     expect(new Headers(putInit?.headers).get("if-match")).toBe('"2"');
     expect(JSON.parse(String(putInit?.body))).toEqual({
       startsOn: "2026-10-20",
@@ -606,7 +606,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(
       await screen.findByText("画面を更新してからやり直してください"),
     ).toBeInTheDocument();
-    // 古い ETag のままの再送ボタンは出さない。
+    // 古いETagのままの再送ボタンは出さない。
     expect(
       screen.queryByRole("button", { name: "やり直す" }),
     ).not.toBeInTheDocument();
@@ -674,7 +674,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
       ([url]) => url === `/api/trips/${tripId}/period`,
     );
     expect(puts).toHaveLength(2);
-    // 2 回目の PUT は、名前の保存が返した ETag（しおりの再取得を待たない）。
+    // 2回目のPUTは、名前の保存が返したETag（しおりの再取得を待たない）。
     expect(new Headers(puts[1][1]?.headers).get("if-match")).toBe('"2"');
   });
 });

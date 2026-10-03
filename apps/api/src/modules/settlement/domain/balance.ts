@@ -4,35 +4,35 @@ import type { SettlementTarget } from "./settlement-target";
 
 /**
  * 残額。誰から誰へいくら、と次回の対象の件数。
- * 対象 0 件と、対象があるが合計 0 円は targetCount で区別する（F-12）。
+ * 対象0件と、対象があるが合計0円はtargetCountで区別する（F-12）。
  */
 export type Balance = Readonly<{
-  /** 対象の寄与の合計。参加者番号 1 の人から 0 の人へ渡す向きを正とする。 */
+  /** 対象の寄与の合計。参加者番号1の人から0の人へ渡す向きを正とする。 */
   signedTotal: SignedYen;
   /** |signedTotal|。受け渡す金額。 */
   amount: SignedYen;
-  /** 払う側の参加者番号。合計 0 円なら null。 */
+  /** 払う側の参加者番号。合計0円ならnull。 */
   fromSlot: ParticipantSlot | null;
-  /** 受け取る側の参加者番号。合計 0 円なら null。 */
+  /** 受け取る側の参加者番号。合計0円ならnull。 */
   toSlot: ParticipantSlot | null;
   targetCount: number;
 }>;
 
 /** 受け渡しの向きと金額。残額と確認の応答で共通の導出。 */
 export type TransferDirection = Readonly<{
-  /** 対象の寄与の合計。参加者番号 1 の人から 0 の人へ渡す向きを正とする。 */
+  /** 対象の寄与の合計。参加者番号1の人から0の人へ渡す向きを正とする。 */
   signedTotal: SignedYen;
   /** |signedTotal|。受け渡す金額。 */
   amount: SignedYen;
-  /** 払う側の参加者番号。合計 0 円なら null。 */
+  /** 払う側の参加者番号。合計0円ならnull。 */
   fromSlot: ParticipantSlot | null;
-  /** 受け取る側の参加者番号。合計 0 円なら null。 */
+  /** 受け取る側の参加者番号。合計0円ならnull。 */
   toSlot: ParticipantSlot | null;
 }>;
 
 /**
  * 寄与の合計から受け渡しの向き・金額を決める。
- * 合計が正なら参加者番号 1 の人が 0 の人へ払う（寄与の正の向き）。
+ * 合計が正なら参加者番号1の人が0の人へ払う（寄与の正の向き）。
  */
 export function transferOf(signedTotal: SignedYen): TransferDirection {
   const amount = SignedYen.fromBigInt(

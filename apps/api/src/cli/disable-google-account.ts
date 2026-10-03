@@ -1,5 +1,5 @@
-// 利用停止 CLI（管理者端末専用）。allowlist.enabled = false と全セッション削除を 1 トランザクションで行う。
-// 使い方: MIGRATION_DATABASE_URL を設定し、npm run cli:disable -w @tomotabi/api -- --slot 0
+// 利用停止CLI（管理者端末専用）。allowlist.enabled = falseと全セッション削除を1トランザクションで行う。
+// 使い方: MIGRATION_DATABASE_URLを設定し、npm run cli:disable -w @tomotabi/api -- --slot 0
 import { disableGoogleAccount } from "./disable/disable-google-account";
 import { ConsoleIo } from "./shared/console-io";
 import { runCli } from "./shared/run-cli";

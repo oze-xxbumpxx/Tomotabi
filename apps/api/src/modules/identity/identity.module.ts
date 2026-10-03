@@ -23,7 +23,7 @@ import { PgIdentityReader } from "./infrastructure/pg-identity-reader";
 import { GetMeUseCase } from "./usecase/get-me.usecase";
 
 function runtimePool(): Pool | null {
-  // DATABASE_URL が無い起動では auth も作られず、経路は Guard が 503 にする。
+  // DATABASE_URLが無い起動ではauthも作られず、経路はGuardが503にする。
   return process.env.DATABASE_URL ? getPool() : null;
 }
 
@@ -45,7 +45,7 @@ function runtimePool(): Pool | null {
       provide: IDENTITY_READER,
       useFactory: (): IdentityReader => {
         const pool = runtimePool();
-        // DB なし起動では Guard が先に 503 を返すため、この reader は呼ばれない。
+        // DBなし起動ではGuardが先に503を返すため、このreaderは呼ばれない。
         return pool === null
           ? { findDisplayName: async () => null }
           : new PgIdentityReader(pool);
@@ -58,7 +58,7 @@ function runtimePool(): Pool | null {
       inject: [IDENTITY_READER],
     },
   ],
-  // APP_GUARD で登録される SessionGuard（AppModule 側）が注入するため export が要る。
+  // APP_GUARDで登録されるSessionGuard（AppModule側）が注入するためexportが要る。
   exports: [SESSION_VERIFIER],
 })
 export class IdentityModule {}

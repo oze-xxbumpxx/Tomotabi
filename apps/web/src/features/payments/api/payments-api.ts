@@ -17,8 +17,8 @@ import type {
 } from "@/shared/api/mutation-request";
 
 /**
- * 支払い・残額 API の薄い入口。呼び出しは callApi / sendMutationRequest
- * を通し、応答は契約の Zod で検証してから返す。生成クライアントと zod
+ * 支払い・残額APIの薄い入口。呼び出しはcallApi / sendMutationRequest
+ * を通し、応答は契約のZodで検証してから返す。生成クライアントとzod
  * への参照はこの層だけに閉じる。
  */
 
@@ -30,7 +30,7 @@ import type {
   PaymentCreate,
 } from "@/shared/api/generated/finance";
 
-// 契約の型はここから再輸出する（model・ui は generated を参照しない）。
+// 契約の型はここから再輸出する（model・uiはgeneratedを参照しない）。
 export type {
   AllocationInput,
   Balance,
@@ -57,7 +57,7 @@ export function getBalance(
 
 // ---- 変更要求の組み立て（MutationDraft） ----
 
-/** POST /api/trips/{tripId}/payments。If-Match は付けない。 */
+/** POST /api/trips/{tripId}/payments。If-Matchは付けない。 */
 export function createPaymentDraft(
   tripId: string,
   body: PaymentCreate,

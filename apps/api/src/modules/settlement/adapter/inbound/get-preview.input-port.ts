@@ -10,8 +10,8 @@ export type GetPreviewInput = Readonly<{
 }>;
 
 /**
- * 確認を 1 件返す。元の明細と、取得時点の検証結果（validation）を含む。
- * 無い・別の旅行の確認は同じ 404（存在を漏らさない）。
+ * 確認を1件返す。元の明細と、取得時点の検証結果（validation）を含む。
+ * 無い・別の旅行の確認は同じ404（存在を漏らさない）。
  */
 export interface GetPreviewInputPort {
   execute(input: GetPreviewInput): Promise<Preview>;

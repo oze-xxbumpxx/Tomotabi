@@ -16,7 +16,7 @@ import { tripNotAccessible } from "./trip-write-flow";
 
 /**
  * 日別しおりの取得。指定日の予定（取りやめ済みを含む）を、有効な
- * 達成・予約と履歴の有無と一緒に 1 回の読み取りで返す。
+ * 達成・予約と履歴の有無と一緒に1回の読み取りで返す。
  */
 export class GetItineraryUseCase implements GetItineraryInputPort {
   constructor(
@@ -44,8 +44,8 @@ export class GetItineraryUseCase implements GetItineraryInputPort {
 
   /**
    * 省略時は「日本時間の今日」が期間内なら今日、外なら初日。
-   * Clock が Asia/Tokyo の今日を返すので、UTC 15:00 の境界はそこに集約済み。
-   * 明示した日付は期間外を 422 で拒否する（画面は期間外を編集できない）。
+   * ClockがAsia/Tokyoの今日を返すので、UTC 15:00の境界はそこに集約済み。
+   * 明示した日付は期間外を422で拒否する（画面は期間外を編集できない）。
    */
   private resolveDate(trip: Trip, requested: string | null): LocalDate {
     if (requested !== null) {

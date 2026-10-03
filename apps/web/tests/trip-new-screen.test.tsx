@@ -154,7 +154,7 @@ describe("TripNewScreen (/trips/new)", () => {
     expect(
       screen.getByText("終了日は開始日以降の日付にしてください"),
     ).toBeInTheDocument();
-    // エラーのある送信は API に届かない（一覧の読み取りだけが飛ぶ）。
+    // エラーのある送信はAPIに届かない（一覧の読み取りだけが飛ぶ）。
     expect(writeCalls(fetchMock)).toHaveLength(0);
   });
 
@@ -291,7 +291,7 @@ describe("TripNewScreen (/trips/new)", () => {
       ),
     );
     expect(posts).toHaveLength(2);
-    // 2 回目は 1 回目と同じキー・本文（別の要求を作らない）。
+    // 2回目は1回目と同じキー・本文（別の要求を作らない）。
     const [first, second] = posts;
     expect(new Headers(second?.headers).get("idempotency-key")).toBe(
       new Headers(first?.headers).get("idempotency-key"),

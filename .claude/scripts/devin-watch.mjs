@@ -1,29 +1,29 @@
 #!/usr/bin/env node
-// ローカルの Devin の実装状況を 1 画面にまとめて定期表示する（見張り画面）。
+// ローカルのDevinの実装状況を1画面にまとめて定期表示する（見張り画面）。
 //
 // 使い方:
-//   node .claude/scripts/devin-watch.mjs <Issue番号> [--interval 秒] [--once] [--clone <path>]
+//   node .claude/scripts/devin-watch.mjs <Issue番号> [--interval秒] [--once] [--clone <path>]
 //   node .claude/scripts/devin-watch.mjs --log-path <Issue番号>
-//     Devin の出力を tee するログのパスを出す。置き場（0700）とファイル（0600）が無ければ作る。
-//     起動は review-devin-pr の「委譲」2 のとおり、pipefail を付けて tee する。
+//     Devinの出力をteeするログのパスを出す。置き場（0700）とファイル（0600）が無ければ作る。
+//     起動はreview-devin-prの「委譲」2のとおり、pipefailを付けてteeする。
 //   node .claude/scripts/devin-watch.mjs --install
-//     状態ディレクトリの bin/devin-watch にこのスクリプトへのリンクを張る。
-//     Claude Code のターミナル（run_in_terminal）は ASCII のコマンドしか受け付けず、
-//     リポジトリのパス（`個人開発` を含む）から直接呼べないため、リンク経由で起動する:
+//     状態ディレクトリのbin/devin-watchにこのスクリプトへのリンクを張る。
+//     Claude Codeのターミナル（run_in_terminal）はASCIIのコマンドしか受け付けず、
+//     リポジトリのパス（`個人開発`を含む）から直接呼べないため、リンク経由で起動する:
 //     `~/.local/state/tomotabi-harness/bin/devin-watch <Issue番号>`
 //
 // なぜ要るか:
-// - `devin -p` の出力は発言をつなげた文字列だけで、実行中のコマンドや変更中のファイルが見えない（2026-09-27）。
-//   Devin が実行したコマンドは `devin acp` の子プロセスとして現れるので、それと作業用コピーの git の状態、
-//   ログ（review-devin-pr の起動手順で tee した `devin-logs/issue-<n>.log`）を組み合わせて見せる。
+// - `devin -p`の出力は発言をつなげた文字列だけで、実行中のコマンドや変更中のファイルが見えない（2026-09-27）。
+//   Devinが実行したコマンドは`devin acp`の子プロセスとして現れるので、それと作業用コピーのgitの状態、
+//   ログ（review-devin-prの起動手順でteeした`devin-logs/issue-<n>.log`）を組み合わせて見せる。
 //
 // 方針:
-// - 表示の組み立て（render）と、ps・git・gh の出力の解釈は純粋関数にして、テストで固定する。
-// - 作業用コピーでは Devin を同時に 1 つしか動かさない（review-devin-pr）。そのため本体は
-//   「作業ディレクトリが作業用コピーで、`-p` 付きで動いている devin」を探す。対話で開いた devin
-//   （`-p` なし）と、別の場所で動く devin は対象にしない。Issue 番号で探さないのは、直しを頼む
-//   セッションのプロンプトには Issue 番号ではなく PR 番号が入るため。
-// - gh は 30 秒に 1 回だけ呼ぶ。失敗しても画面は止めない。
+// - 表示の組み立て（render）と、ps・git・ghの出力の解釈は純粋関数にして、テストで固定する。
+// - 作業用コピーではDevinを同時に1つしか動かさない（review-devin-pr）。そのため本体は
+//   「作業ディレクトリが作業用コピーで、`-p`付きで動いているdevin」を探す。対話で開いたdevin
+//   （`-p`なし）と、別の場所で動くdevinは対象にしない。Issue番号で探さないのは、直しを頼む
+//   セッションのプロンプトにはIssue番号ではなくPR番号が入るため。
+// - ghは30秒に1回だけ呼ぶ。失敗しても画面は止めない。
 
 import { execFileSync } from 'node:child_process';
 import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, statSync, symlinkSync, unlinkSync } from 'node:fs';
@@ -57,7 +57,7 @@ export function parseArgs(argv) {
   return opts;
 }
 
-// 端末では全角文字が 2 桁を使う。幅で切らないと日本語の行が折り返して画面が崩れる。
+// 端末では全角文字が2桁を使う。幅で切らないと日本語の行が折り返して画面が崩れる。
 const WIDE = /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u;
 
 export function displayWidth(text) {
@@ -66,7 +66,7 @@ export function displayWidth(text) {
   return width;
 }
 
-/** 表示幅 max に収まるよう文字単位で切る（UTF-8 のバイトや UTF-16 の途中で切らない）。 */
+/** 表示幅maxに収まるよう文字単位で切る（UTF-8のバイトやUTF-16の途中で切らない）。 */
 export function truncate(text, max) {
   if (displayWidth(text) <= max) return text;
   let out = '';
@@ -80,7 +80,7 @@ export function truncate(text, max) {
   return `${out}…`;
 }
 
-/** ログの末尾を文に分ける。Devin の -p 出力は文と文のあいだに改行も空白も無いことがある。 */
+/** ログの末尾を文に分ける。Devinの -p出力は文と文のあいだに改行も空白も無いことがある。 */
 export function splitSentences(text) {
   return text
     .replace(/\s+/g, ' ')
@@ -90,7 +90,7 @@ export function splitSentences(text) {
     .filter((line) => line !== '');
 }
 
-/** `ps -ax -o pid=,ppid=,etime=,command=` の出力を行に分ける。 */
+/** `ps -ax -o pid=,ppid=,etime=,command=`の出力を行に分ける。 */
 export function parsePs(text) {
   return text
     .split('\n')
@@ -99,7 +99,7 @@ export function parsePs(text) {
     .map(([, pid, ppid, etime, command]) => ({ pid: Number(pid), ppid: Number(ppid), etime, command }));
 }
 
-/** lsof はパスの UTF-8 のバイトを `\xe5` の形で出す。元の文字列に戻す。 */
+/** lsofはパスのUTF-8のバイトを`\xe5`の形で出す。元の文字列に戻す。 */
 export function decodeLsofPath(text) {
   const bytes = [];
   for (let i = 0; i < text.length; i += 1) {
@@ -115,8 +115,8 @@ export function decodeLsofPath(text) {
 }
 
 /**
- * 見張る Devin の本体と、その下の `devin acp` を探す。
- * @param {(pid:number) => string|null} cwdOf プロセスの作業ディレクトリ（分からなければ null）
+ * 見張るDevinの本体と、その下の`devin acp`を探す。
+ * @param {(pid:number) => string|null} cwdOfプロセスの作業ディレクトリ（分からなければnull）
  */
 export function findDevin(rows, { clone, cwdOf }) {
   const root = rows.find(
@@ -128,8 +128,8 @@ export function findDevin(rows, { clone, cwdOf }) {
 }
 
 /**
- * Devin が直接実行しているコマンド（`devin acp` の子）と、その下で動くプロセスの数。
- * vitest のワーカーなどは数だけにしないと、画面がプロセスの一覧で埋まる。
+ * Devinが直接実行しているコマンド（`devin acp`の子）と、その下で動くプロセスの数。
+ * vitestのワーカーなどは数だけにしないと、画面がプロセスの一覧で埋まる。
  */
 export function directCommands(rows, acpPid) {
   const parent = new Map(rows.map((r) => [r.pid, r.ppid]));
@@ -148,8 +148,8 @@ export function directCommands(rows, acpPid) {
 }
 
 /**
- * コマンドの表示を短くする。作業用コピーのパス（ps は日本語を `M-` の形で出す）を `<clone>` にし、
- * Devin の定型の `bash -c cd <clone> && ` を落とす。
+ * コマンドの表示を短くする。作業用コピーのパス（psは日本語を`M-`の形で出す）を`<clone>`にし、
+ * Devinの定型の`bash -c cd <clone> && `を落とす。
  */
 export function shortenCommand(command, clone = DEFAULT_CLONE) {
   const tail = clone.split('/').slice(-2).join('/');
@@ -160,7 +160,7 @@ export function shortenCommand(command, clone = DEFAULT_CLONE) {
     .replace(/ 2>&1$/, '');
 }
 
-/** `git status --short --untracked-files=all` の行を数える。 */
+/** `git status --short --untracked-files=all`の行を数える。 */
 export function summarizeStatus(lines) {
   const files = lines
     .filter((line) => line.length > 3)
@@ -180,7 +180,7 @@ export function formatAge(ms) {
   return `${Math.floor(ms / 3_600_000)} 時間 ${Math.round((ms % 3_600_000) / 60_000)} 分前`;
 }
 
-/** gh pr list の 1 件を表示用にまとめる。 */
+/** gh pr listの1件を表示用にまとめる。 */
 export function summarizePr(pr, nowMs) {
   if (pr === null || pr === undefined) return null;
   const rollup = pr.statusCheckRollup ?? [];
@@ -202,7 +202,7 @@ export function summarizePr(pr, nowMs) {
 const CI_LABEL = { success: '成功', failure: '失敗あり', pending: '実行中', none: 'まだ無い' };
 
 /**
- * 画面の文字列を作る。snapshot は main が集めた値（テストでは手で作る）。
+ * 画面の文字列を作る。snapshotはmainが集めた値（テストでは手で作る）。
  * @param {object} s
  * @param {{width:number}} opts
  */
@@ -262,7 +262,7 @@ function run(cmd, args, cwd) {
 }
 
 function harnessEnv(repo) {
-  // ターミナルから直接起動すると settings の env（HARNESS_NAMESPACE）が無い。状態ディレクトリを揃えるため読む。
+  // ターミナルから直接起動するとsettingsのenv（HARNESS_NAMESPACE）が無い。状態ディレクトリを揃えるため読む。
   if (process.env.HARNESS_NAMESPACE) return process.env;
   try {
     const settings = JSON.parse(readFileSync(join(repo, '.claude/settings.json'), 'utf8'));
@@ -279,7 +279,7 @@ function cwdOf(pid) {
   return line === undefined ? null : decodeLsofPath(line.slice(1));
 }
 
-/** ログの置き場（0700）とファイル（0600）を用意してパスを返す。Devin の発言を他の利用者に読ませない。 */
+/** ログの置き場（0700）とファイル（0600）を用意してパスを返す。Devinの発言を他の利用者に読ませない。 */
 function ensureLog(stateDirPath, issue) {
   const dir = join(stateDirPath, 'devin-logs');
   mkdirSync(dir, { recursive: true, mode: 0o700 });

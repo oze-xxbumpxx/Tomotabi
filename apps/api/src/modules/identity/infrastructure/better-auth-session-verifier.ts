@@ -10,8 +10,8 @@ import type {
 import { isAllowedGoogleAccount } from "./allowlist-query";
 
 /**
- * `auth.api.getSession` だけに依存する最小の見え方。
- * テストは auth を立てずにこの形だけ差し替えられる。
+ * `auth.api.getSession`だけに依存する最小の見え方。
+ * テストはauthを立てずにこの形だけ差し替えられる。
  */
 export interface SessionLookup {
   getSession(input: {
@@ -20,9 +20,9 @@ export interface SessionLookup {
 }
 
 /**
- * Better Auth のセッション Cookie を検証し、毎要求ごとに許可リストを再確認する。
- * DB 未到達・ライブラリ内部の例外は投げず `unavailable` に畳み込む（ログは
- * res.locals.code の AUTH_UNAVAILABLE で追える）。
+ * Better AuthのセッションCookieを検証し、毎要求ごとに許可リストを再確認する。
+ * DB未到達・ライブラリ内部の例外は投げず`unavailable`に畳み込む（ログは
+ * res.locals.codeのAUTH_UNAVAILABLEで追える）。
  */
 export class BetterAuthSessionVerifier implements SessionVerifier {
   constructor(

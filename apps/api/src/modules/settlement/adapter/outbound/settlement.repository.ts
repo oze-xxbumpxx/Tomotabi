@@ -9,7 +9,7 @@ export type PreviewRecord = Readonly<{
   tripId: string;
   createdBy: UserId;
   createdAt: Date;
-  /** 明細の寄与の合計（参加者番号 1 の人から 0 の人への向きを正）。 */
+  /** 明細の寄与の合計（参加者番号1の人から0の人への向きを正）。 */
   signedTotal: SignedYen;
 }>;
 
@@ -17,9 +17,9 @@ export type PreviewRecord = Readonly<{
 export type PreviewItemRecord = Readonly<{
   paymentId: string;
   kind: ClaimKind;
-  /** BASE はその支払いの寄与 c、REVERSAL は −c。 */
+  /** BASEはその支払いの寄与c、REVERSALは −c。 */
   contribution: SignedYen;
-  /** REVERSAL の戻す対象の BASE を済ませた精算。BASE なら null。 */
+  /** REVERSALの戻す対象のBASEを済ませた精算。BASEならnull。 */
   baseSettlementId: string | null;
   /** 確認を作った時点の、その支払いの精算・占有・取り消し履歴の指紋。 */
   expectedFingerprint: string;
@@ -27,7 +27,7 @@ export type PreviewItemRecord = Readonly<{
   expectedCancelled: boolean;
 }>;
 
-/** 確認に紐づく精算の存在と取り消し状態（UNIQUE preview_id で高々 1 件）。 */
+/** 確認に紐づく精算の存在と取り消し状態（UNIQUE preview_idで高々1件）。 */
 export type ExistingSettlement = Readonly<{
   id: string;
   cancelled: boolean;
@@ -131,9 +131,9 @@ export type NewPreviewItem = Readonly<{
 }>;
 
 /**
- * 一覧のページの起点。(created_at, id) のタプル比較に使うので、
- * created_at はミリ秒に丸めない DB 側の文字列表現のまま持つ
- * （trip-cursor / findTripAnchor と同じ仕組み）。
+ * 一覧のページの起点。(created_at, id)のタプル比較に使うので、
+ * created_atはミリ秒に丸めないDB側の文字列表現のまま持つ
+ * （trip-cursor / findTripAnchorと同じ仕組み）。
  */
 export type PreviewAnchor = Readonly<{
   createdAt: string;
@@ -142,14 +142,14 @@ export type PreviewAnchor = Readonly<{
 
 export type PreviewPage = Readonly<{
   items: readonly PreviewRecord[];
-  /** 次のページの起点になる確認。無ければ null。 */
+  /** 次のページの起点になる確認。無ければnull。 */
   nextCursorId: string | null;
 }>;
 
 /**
- * settlement スキーマの Repository（確認・精算・取り消し・占有）。
- * 更新はしない（追記のみの履歴表＋占有の消去）。UoW のトランザクション内の
- * db ハンドルを受けて使う。
+ * settlementスキーマのRepository（確認・精算・取り消し・占有）。
+ * 更新はしない（追記のみの履歴表＋占有の消去）。UoWのトランザクション内の
+ * dbハンドルを受けて使う。
  */
 export interface SettlementRepository {
   insertPreview(preview: NewPreview): Promise<PreviewRecord>;
@@ -160,29 +160,29 @@ export interface SettlementRepository {
     items: readonly NewPreviewItem[],
   ): Promise<void>;
 
-  /** 旅行の中の確認。無い・別の旅行の確認は null（どちらも同じ扱い）。 */
+  /** 旅行の中の確認。無い・別の旅行の確認はnull（どちらも同じ扱い）。 */
   findPreviewInTrip(
     tripId: string,
     previewId: string,
   ): Promise<PreviewRecord | null>;
 
   /**
-   * 確認の明細を支払いの記録順（payments.created_at, id の昇順）で返す。
-   * 複数の確認の明細は 1 回の問い合わせでまとめて取り、確認 id ごとに
-   * まとめて返す（一覧で確認ごとに 1 回ずつ問い合わせないため）。
+   * 確認の明細を支払いの記録順（payments.created_at, idの昇順）で返す。
+   * 複数の確認の明細は1回の問い合わせでまとめて取り、確認idごとに
+   * まとめて返す（一覧で確認ごとに1回ずつ問い合わせないため）。
    */
   listPreviewItems(
     tripId: string,
     previewIds: readonly string[],
   ): Promise<ReadonlyMap<string, readonly PreviewItemRecord[]>>;
 
-  /** その確認に紐づく精算（あれば 1 件）。取り消しの有無を含む。 */
+  /** その確認に紐づく精算（あれば1件）。取り消しの有無を含む。 */
   findSettlementForPreview(
     tripId: string,
     previewId: string,
   ): Promise<ExistingSettlement | null>;
 
-  /** 一覧カーソルの起点になる自分の確認。無ければ null。 */
+  /** 一覧カーソルの起点になる自分の確認。無ければnull。 */
   findPreviewAnchor(
     tripId: string,
     createdBy: UserId,
@@ -191,7 +191,7 @@ export interface SettlementRepository {
 
   /**
    * 自分が作った未完了の確認（精算がまだ無いもの）を新しい順に返す。
-   * after は排他の下限（その行より古い分だけ）。limit + 1 件読んで次の
+   * afterは排他の下限（その行より古い分だけ）。limit + 1件読んで次の
    * ページの有無を決める。
    */
   listPendingPreviews(

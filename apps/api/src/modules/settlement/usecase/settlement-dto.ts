@@ -32,7 +32,7 @@ function userOf(
 ): string {
   const entry = roster.find((candidate) => candidate.slot === slot);
   if (entry === undefined) {
-    // 財務の旅行の参加者は必ず 2 人（FK と作成時の規則）。ここに来るのは
+    // 財務の旅行の参加者は必ず2人（FKと作成時の規則）。ここに来るのは
     // データの不整合。
     throw new Error(`Trip roster is missing participant slot ${slot}`);
   }
@@ -40,7 +40,7 @@ function userOf(
 }
 
 /**
- * roster を参加者番号順の二人組にする。roster.find は参加者番号順に
+ * rosterを参加者番号順の二人組にする。roster.findは参加者番号順に
  * 返す約束。二人組でないのはデータの不整合。
  */
 export function toParticipantsDto(
@@ -66,8 +66,8 @@ export function toParticipantsDto(
 }
 
 /**
- * 寄与の合計（参加者番号 1 の人から 0 の人への向きを正）から
- * 受け渡しの向き・金額を組み立てる。0 円なら from/to は null。
+ * 寄与の合計（参加者番号1の人から0の人への向きを正）から
+ * 受け渡しの向き・金額を組み立てる。0円ならfrom/toはnull。
  */
 export function toTransferDto(
   signedTotal: SignedYen,
@@ -140,7 +140,7 @@ export function toPreviewSummaryDto(
   };
 }
 
-/** 対象の導出・明細の行に共通の、DTO 化に必要な最小の形。 */
+/** 対象の導出・明細の行に共通の、DTO化に必要な最小の形。 */
 export type ItemCore = Readonly<{
   paymentId: string;
   kind: ClaimKind;
@@ -157,7 +157,7 @@ export function joinPreviewItems(
   return items.map((item) => {
     const payment = paymentsById.get(item.paymentId);
     if (payment === undefined) {
-      // preview_items は payments への FK があり支払いは消えない。
+      // preview_itemsはpaymentsへのFKがあり支払いは消えない。
       throw new Error("preview item references a missing payment");
     }
     return {

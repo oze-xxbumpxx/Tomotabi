@@ -7,9 +7,9 @@ import { PgPaymentsRead } from "./pg-payments-read";
 import { PgTripRosterQuery } from "./pg-finance-unit-of-work";
 
 /**
- * 残額・確認の読み取りを REPEATABLE READ の短い読み取りトランザクションに
- * 束ねる（設計書「読み取り」）。支払い・取り消し・占有・精算を 1 つの
- * スナップショットから読む。READ ONLY で書き込みをないことにする。
+ * 残額・確認の読み取りをREPEATABLE READの短い読み取りトランザクションに
+ * 束ねる（設計書「読み取り」）。支払い・取り消し・占有・精算を1つの
+ * スナップショットから読む。READ ONLYで書き込みをないことにする。
  */
 export class PgSettlementReadUnitOfWork
   implements UnitOfWork<SettlementReadContext>
@@ -37,7 +37,7 @@ export class PgSettlementReadUnitOfWork
       try {
         await client.query("ROLLBACK");
       } catch (rollbackError) {
-        // ROLLBACK 自体が失敗した接続（切断など）は壊れているため、
+        // ROLLBACK自体が失敗した接続（切断など）は壊れているため、
         // プールに戻さず捨てる。
         client.release(
           rollbackError instanceof Error

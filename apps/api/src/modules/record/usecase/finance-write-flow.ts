@@ -15,8 +15,8 @@ import type {
 } from "../adapter/outbound/finance-work-context";
 
 /**
- * 財務の書き込みの結果。WriteOutcome に加えて、書き込みログが使う
- * 対象行の id（receipt の再送では保存した receipt の resourceId）を持つ。
+ * 財務の書き込みの結果。WriteOutcomeに加えて、書き込みログが使う
+ * 対象行のid（receiptの再送では保存したreceiptのresourceId）を持つ。
  */
 export type FinanceWriteOutcome<T> = WriteOutcome<T> &
   Readonly<{ resourceId: string }>;
@@ -30,8 +30,8 @@ export type FinanceWriteCommand = Readonly<{
 }>;
 
 /**
- * work が保存した結果。receipt の記録は runFinanceWrite が行う。
- * resourceType・resourceId は receipt の行に入る対象の種類と id。
+ * workが保存した結果。receiptの記録はrunFinanceWriteが行う。
+ * resourceType・resourceIdはreceiptの行に入る対象の種類とid。
  */
 export type FinanceWritePersist<T> = Readonly<{
   body: T;
@@ -71,18 +71,18 @@ async function storedFinanceReceipt<T>(
 /**
  * お金の書き込みの共通の流れ（設計書「書き込みの共通の流れ（財務）」、F-41）:
  *   1. 旅行の参加者か（無い・参加していない → 403 TRIP_NOT_ACCESSIBLE）
- *   2. trip_finance_guards の行を FOR UPDATE（同じ旅行の書き込みを一列に並べる）
- *   3. receipt を (userId, operation, key) で探す
- *      （あり・hash 一致 → 保存した結果、あり・不一致 → 409 IDEMPOTENCY_KEY_REUSED）
- *   4. ロックの後で対象を読み、業務規則で検証する（work の側）
- *   5. 履歴と receipt を同じトランザクションで保存する
+ *   2. trip_finance_guardsの行をFOR UPDATE（同じ旅行の書き込みを一列に並べる）
+ *   3. receiptを(userId, operation, key)で探す
+ *      （あり・hash一致 → 保存した結果、あり・不一致 → 409 IDEMPOTENCY_KEY_REUSED）
+ *   4. ロックの後で対象を読み、業務規則で検証する（workの側）
+ *   5. 履歴とreceiptを同じトランザクションで保存する
  *
- * 同じ旅行の同一キーは guard の行ロックで直列化される（先着の receipt を後着が
- * 読む）。ただし receipt の主キーは旅行を含まないため、別の旅行への同時送信は
- * runFinanceWriteTransaction の一意違反の扱いが要る。
+ * 同じ旅行の同一キーはguardの行ロックで直列化される（先着のreceiptを後着が
+ * 読む）。ただしreceiptの主キーは旅行を含まないため、別の旅行への同時送信は
+ * runFinanceWriteTransactionの一意違反の扱いが要る。
  *
- * 文脈は FinanceWorkContext を広げたものでも渡せる（C）。settlement の
- * 書き込みは支払いの読み取り口と settlement の Repository を足した文脈で
+ * 文脈はFinanceWorkContextを広げたものでも渡せる（C）。settlementの
+ * 書き込みは支払いの読み取り口とsettlementのRepositoryを足した文脈で
  * 同じ流れを通る。
  */
 export async function runFinanceWrite<
@@ -126,15 +126,15 @@ export async function runFinanceWrite<
 }
 
 /**
- * runFinanceWrite を 1 トランザクションで走らせる。財務の UseCase は
- * 直接 unitOfWork.run せずここを通る。
+ * runFinanceWriteを1トランザクションで走らせる。財務のUseCaseは
+ * 直接unitOfWork.runせずここを通る。
  *
- * 受領の主キーは (actor_id, operation, idempotency_key) で旅行を含まない。
+ * 受領の主キーは(actor_id, operation, idempotency_key)で旅行を含まない。
  * 札のロックは旅行ごとなので、同じ利用者・同じ操作・同じキーを別の旅行へ
  * 同時に送ると、両方が受領を見つけられずに進み、後からコミットした側が
  * 一意違反（23505）で負ける。その時点でこちらはロールバック済みなので、
- * 勝った側が COMMIT した受領を新しいトランザクションで読み直す（hash が
- * 一致すれば保存した結果、違えば 409）。旅行・予定の作成と同じ仕組み。
+ * 勝った側がCOMMITした受領を新しいトランザクションで読み直す（hashが
+ * 一致すれば保存した結果、違えば409）。旅行・予定の作成と同じ仕組み。
  */
 export async function runFinanceWriteTransaction<
   T,
@@ -167,8 +167,8 @@ export async function runFinanceWriteTransaction<
 }
 
 /**
- * 財務の書き込み 1 件のログ（設計書「ログと監視」）。旅行・予定の書き込み
- * と同じく結果は created / replayed / rejected(code) の 3 値で、
+ * 財務の書き込み1件のログ（設計書「ログと監視」）。旅行・予定の書き込み
+ * と同じく結果はcreated / replayed / rejected(code)の3値で、
  * 金額・用途など利用者の入力は含めない。
  */
 export async function executeFinanceWrite<T>(

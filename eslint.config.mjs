@@ -45,8 +45,8 @@ const generatedClientPattern = {
   message: "生成クライアントは未検証の応答を返す。features/<name>/api で callApi を通して使う。",
 };
 
-// createAuth に渡す better-auth プラグイン（testUtils など）はテスト専用。
-// no-restricted-imports は後勝ちで置き換わるため、層別 paths と src 全体ブロックの両方に含める。
+// createAuthに渡すbetter-authプラグイン（testUtilsなど）はテスト専用。
+// no-restricted-importsは後勝ちで置き換わるため、層別pathsとsrc全体ブロックの両方に含める。
 const betterAuthPluginsForbidden = {
   name: "better-auth/plugins",
   message:
@@ -121,7 +121,7 @@ export default defineConfig(
     },
   },
   {
-    // e2e のスクリプト・設定は Node で動く（Playwright は実行時にページ側を別処理）。
+    // e2eのスクリプト・設定はNodeで動く（Playwrightは実行時にページ側を別処理）。
     files: ["e2e/**/*.{js,mjs,cjs,ts}"],
     languageOptions: {
       globals: globals.node,
@@ -147,7 +147,7 @@ export default defineConfig(
       ...webPatterns,
       generatedClientPattern,
       {
-        // shared 内からは "./generated" のような相対指定になり、shared/api を含まないため別途塞ぐ。
+        // shared内からは"./generated"のような相対指定になり、shared/apiを含まないため別途塞ぐ。
         group: ["./generated", "./generated/**", "**/api/generated", "**/api/generated/**"],
         message: generatedClientPattern.message,
       },

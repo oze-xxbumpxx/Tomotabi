@@ -38,7 +38,7 @@ function failureOf(error: unknown) {
   return error instanceof ApiRequestError ? error.failure : null;
 }
 
-/** 作成した時点の対象と金額で固定した向き・金額のカード（14c のロック付き）。 */
+/** 作成した時点の対象と金額で固定した向き・金額のカード（14cのロック付き）。 */
 function FixedTransferCard({ preview }: { preview: Preview }) {
   const direction = transferDirectionOf(
     preview.transfer,
@@ -110,12 +110,12 @@ const CANNOT_RECORD_STATUSES: readonly PreviewValidationStatus[] = [
 ];
 
 /**
- * `/trips/{tripId}/settlement/previews/{previewId}` の受け渡しの確認
- * （v3 の 14c・14d・14h）。非 0 円は「表示の全額を受け渡しました」に
- * チェックするまで完了を押せない。0 円はチェックなし。
- * 検証結果が `cancelled_items_ack_required`・`target_changed` のときは
+ * `/trips/{tripId}/settlement/previews/{previewId}`の受け渡しの確認
+ * （v3の14c・14d・14h）。非0円は「表示の全額を受け渡しました」に
+ * チェックするまで完了を押せない。0円はチェックなし。
+ * 検証結果が`cancelled_items_ack_required`・`target_changed`のときは
  * 「この確認では記録できません」と精算の画面への導線だけ。
- * `already_completed`・`completed_then_cancelled` は既存の精算への導線。
+ * `already_completed`・`completed_then_cancelled`は既存の精算への導線。
  */
 export function SettlementPreviewScreen({
   tripId,

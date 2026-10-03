@@ -1,12 +1,12 @@
 import type { RequestHandler } from "express";
 
 type PublicAuthRoute = {
-  /** POST は公開アプリのオリジンとの完全一致を要求する（CSRF 対策）。 */
+  /** POSTは公開アプリのオリジンとの完全一致を要求する（CSRF対策）。 */
   requiresOrigin: boolean;
 };
 
-// 「METHOD path」をキーにした許可リスト。メソッド違いはキーが無いので 404 になる。
-// path は /api/auth への mount 後の相対パス（express の req.path）で判定する。
+// 「METHOD path」をキーにした許可リスト。メソッド違いはキーが無いので404になる。
+// pathは /api/authへのmount後の相対パス（expressのreq.path）で判定する。
 const PUBLIC_ROUTES: Readonly<Record<string, PublicAuthRoute>> = {
   "POST /sign-in/social": { requiresOrigin: true },
   "GET /callback/google": { requiresOrigin: false },
@@ -24,9 +24,9 @@ function sendJson(
 }
 
 /**
- * 公開 3 経路以外の /api/auth/* を 404 にする経路制限ミドルウェア。
- * sign-in / sign-out の POST は Origin が公開オリジンと完全一致しなければ 403。
- * auth が生成されていない（DATABASE_URL なし）ときは公開経路を 503 にする。
+ * 公開3経路以外の /api/auth/* を404にする経路制限ミドルウェア。
+ * sign-in / sign-outのPOSTはOriginが公開オリジンと完全一致しなければ403。
+ * authが生成されていない（DATABASE_URLなし）ときは公開経路を503にする。
  */
 export function authRouteAllowlist(
   publicOrigin: string,

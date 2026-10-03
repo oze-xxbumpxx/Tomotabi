@@ -28,8 +28,8 @@ function receiptKey(actorId: UserId, operation: string, key: IdempotencyKey): st
 }
 
 /**
- * 財務 UseCase 試験用のインメモリ文脈。メソッドの呼び出し順を calls に記録し、
- * FU-10（guard の行ロック → receipt → 対象の読み取り → 保存の順序）が
+ * 財務UseCase試験用のインメモリ文脈。メソッドの呼び出し順をcallsに記録し、
+ * FU-10（guardの行ロック → receipt → 対象の読み取り → 保存の順序）が
  * 検査できるようにする。
  */
 export class InMemoryFinanceContext implements FinanceWorkContext {
@@ -40,10 +40,10 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
   readonly cancellationRows = new Map<string, PaymentCancellation>();
   readonly planRows = new Map<string, string>();
   private nextId = 0;
-  /** receipts.insert で 23505 を投げさせる回数（一意違反の試験用） */
+  /** receipts.insertで23505を投げさせる回数（一意違反の試験用） */
   failReceiptInsertTimes = 0;
   /**
-   * 失敗させたときに勝った側が COMMIT したと見なす受領。null なら受領は
+   * 失敗させたときに勝った側がCOMMITしたと見なす受領。nullなら受領は
    * まだ無い（読み直しで元のエラーを投げ直す経路の確認用）。
    */
   winningReceiptOnFailure: CommandReceipt | null = null;
@@ -86,7 +86,7 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
       if (this.failReceiptInsertTimes > 0) {
         this.failReceiptInsertTimes -= 1;
         if (this.winningReceiptOnFailure !== null) {
-          // 同時に走った勝った側の書き込みが COMMIT した受領が見える状態にする
+          // 同時に走った勝った側の書き込みがCOMMITした受領が見える状態にする
           const winner = this.winningReceiptOnFailure;
           this.receiptRows.set(
             receiptKey(
@@ -97,7 +97,7 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
             winner,
           );
         }
-        // pg の一意違反と同じ code を持つエラー（drizzle は cause に包む）
+        // pgの一意違反と同じcodeを持つエラー（drizzleはcauseに包む）
         const inner = Object.assign(new Error("duplicate key"), {
           code: "23505",
         });
@@ -160,7 +160,7 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
     },
   };
 
-  /** 二人の参加者がいる旅行を登録する（既定は ACTOR slot0・PARTNER slot1）。 */
+  /** 二人の参加者がいる旅行を登録する（既定はACTOR slot0・PARTNER slot1）。 */
   seedTrip(tripId = TRIP_ID, members?: { slot0: UserId; slot1: UserId }): void {
     const slot0 = members?.slot0 ?? ACTOR;
     const slot1 = members?.slot1 ?? PARTNER;

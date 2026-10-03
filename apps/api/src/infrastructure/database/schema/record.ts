@@ -15,7 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { plans, tripParticipants, trips } from "./planning";
 
-// Reference spec: docs/旅行アプリ設計 3/詳細設計/sql/03_planning_records.sql and 01_finance.sql
+// Reference spec: docs/旅行アプリ設計3/詳細設計/sql/03_planning_records.sql and 01_finance.sql
 // plan_events, plan_event_cancellations, payments and payment_cancellations are append-only;
 // the BEFORE UPDATE OR DELETE triggers live in custom migrations
 // (see drizzle/0003_history_triggers.sql and 0006_finance_triggers.sql).

@@ -1,5 +1,5 @@
-// 初期登録 CLI（管理者端末専用）。Nest の AppModule と HTTP ルートには登録しない。
-// 使い方: MIGRATION_DATABASE_URL / ENROLL_GOOGLE_CLIENT_ID / ENROLL_GOOGLE_CLIENT_SECRET を設定し、
+// 初期登録CLI（管理者端末専用）。NestのAppModuleとHTTPルートには登録しない。
+// 使い方: MIGRATION_DATABASE_URL / ENROLL_GOOGLE_CLIENT_ID / ENROLL_GOOGLE_CLIENT_SECRETを設定し、
 //         npm run cli:enroll -w @tomotabi/api -- --slot 0
 import { enrollGoogleAccount } from "./enroll/enroll-google-account";
 import { GoogleAuthLibraryClient } from "./enroll/google-auth-library-client";

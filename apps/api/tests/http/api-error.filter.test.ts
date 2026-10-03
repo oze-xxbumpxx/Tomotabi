@@ -56,7 +56,7 @@ class ErrorTestController {
   @PublicRoute()
   @Get("db-unavailable-wrapped")
   dbUnavailableWrapped(): never {
-    // drizzle は pg のエラーを DrizzleQueryError の cause に包んで投げる
+    // drizzleはpgのエラーをDrizzleQueryErrorのcauseに包んで投げる
     const wrapped = new Error(`Failed query: select ... ${DB_URL}`);
     (wrapped as { cause?: unknown }).cause = Object.assign(
       new Error("connect failed"),
@@ -68,7 +68,7 @@ class ErrorTestController {
   @PublicRoute()
   @Get("db-lock-timeout")
   dbLockTimeout(): never {
-    // guard の行ロックの lock_timeout 打ち切り（55P03 lock_not_available）
+    // guardの行ロックのlock_timeout打ち切り（55P03 lock_not_available）
     const wrapped = new Error("Failed query: select ... for update");
     (wrapped as { cause?: unknown }).cause = Object.assign(
       new Error("canceling statement due to lock timeout"),
@@ -80,7 +80,7 @@ class ErrorTestController {
   @PublicRoute()
   @Get("cyclic-cause")
   cyclicCause(): never {
-    // 循環する cause: フィルターの cause 走査が終わることを確かめる
+    // 循環するcause: フィルターのcause走査が終わることを確かめる
     const cyclic = new Error("cycle");
     (cyclic as { cause?: unknown }).cause = cyclic;
     throw cyclic;

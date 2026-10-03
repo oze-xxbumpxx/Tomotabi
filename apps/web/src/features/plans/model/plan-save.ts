@@ -11,7 +11,7 @@ import {
 } from "../api/plans-api";
 
 /**
- * useSaveState を予定の書き込みに束ねた形。状態の表示は呼び出し側の部品で行う。
+ * useSaveStateを予定の書き込みに束ねた形。状態の表示は呼び出し側の部品で行う。
  */
 export type PlanSave = ReturnType<typeof useSaveState<Plan, Plan>>;
 export type PlanSaveState = SaveState<Plan, Plan>;
@@ -21,8 +21,8 @@ export type PlanSend = (
 
 /**
  * 07 §11: 予定の追加・編集・移動・取りやめが成功したら、その予定と
- * しおりを再取得する。しおりの日付キーは `["itinerary", tripId, date]` で、
- * 旧日・新日・既定（date 省略）のどれでも `["itinerary", tripId]` の
+ * しおりを再取得する。しおりの日付キーは`["itinerary", tripId, date]`で、
+ * 旧日・新日・既定（date省略）のどれでも`["itinerary", tripId]`の
  * 前方一致でまとめて無効になる（開いていないキーは古い印だけ残る）。
  */
 export function invalidatePlanViews(
@@ -40,7 +40,7 @@ export function invalidatePlanViews(
 
 type OnPlanSaved = (result: ApiSuccess<Plan>) => void;
 
-/** 予定の追加（POST /trips/{tripId}/plans）。If-Match は付けない。 */
+/** 予定の追加（POST /trips/{tripId}/plans）。If-Matchは付けない。 */
 export function useCreatePlan(options: {
   tripId: string;
   onSucceeded?: OnPlanSaved;
@@ -56,9 +56,9 @@ export function useCreatePlan(options: {
 }
 
 /**
- * 予定への書き込み（編集・日の移動・取りやめ）。操作ごとに違うのは send だけ。
- * conflict では最新の予定を取り直し、ETag が無い応答でも version から
- * If-Match を組み立て直す。
+ * 予定への書き込み（編集・日の移動・取りやめ）。操作ごとに違うのはsendだけ。
+ * conflictでは最新の予定を取り直し、ETagが無い応答でもversionから
+ * If-Matchを組み立て直す。
  */
 export function usePlanMutation(options: {
   tripId: string;

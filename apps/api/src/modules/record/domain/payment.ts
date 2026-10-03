@@ -5,7 +5,7 @@ import type { PaymentYen } from "../../../common/domain/yen";
 import { SignedYen } from "../../../common/domain/yen";
 
 /**
- * 支払い 1 件（record.payments）。
+ * 支払い1件（record.payments）。
  * 負担額と寄与は保存時に確定する（F-04・F-05）。取り消しは別の記録
  * （record.payment_cancellations）で、支払いの行自体は変わらない。
  */
@@ -15,12 +15,12 @@ export type Payment = Readonly<{
   planId: string | null;
   amount: PaymentYen;
   payerSlot: ParticipantSlot;
-  /** 参加者番号 0 の人の負担の割合（0〜100 の整数）。もう一人は 100 から引いた値。 */
+  /** 参加者番号0の人の負担の割合（0〜100の整数）。もう一人は100から引いた値。 */
   slot0Percent: number;
-  /** 0 以上。slot0Burden + slot1Burden = amount。 */
+  /** 0以上。slot0Burden + slot1Burden = amount。 */
   slot0Burden: SignedYen;
   slot1Burden: SignedYen;
-  /** 参加者番号 1 の人から 0 の人へ渡す向きを正とする、貸し借りへの寄与。 */
+  /** 参加者番号1の人から0の人へ渡す向きを正とする、貸し借りへの寄与。 */
   contribution: SignedYen;
   label: BoundedText | null;
   createdBy: UserId;
@@ -30,8 +30,8 @@ export type Payment = Readonly<{
 export type NewPayment = Omit<Payment, "id" | "createdAt">;
 
 /**
- * 支払いの取り消し記録（record.payment_cancellations）。1 支払い 1 記録
- * （payment_id が PK）。元の支払いの行は残る。
+ * 支払いの取り消し記録（record.payment_cancellations）。1支払い1記録
+ * （payment_idがPK）。元の支払いの行は残る。
  */
 export type PaymentCancellation = Readonly<{
   paymentId: string;
@@ -47,8 +47,8 @@ export const Payment = {
    * 負担額と寄与を計算して支払いを組み立てる。
    * - 払った人でない人の負担 = floor(金額 × その人の割合 ÷ 100)（端数は切り捨て）
    * - 払った人の負担 = 金額 − もう一人の負担（端数は払った人が引き受ける）
-   * - 寄与 = 払った人が 0 なら 1 の人の負担、1 なら 0 の人の負担の負値
-   * @throws slot0Percent が 0〜100 の整数でないとき Error を投げる。
+   * - 寄与 = 払った人が0なら1の人の負担、1なら0の人の負担の負値
+   * @throws slot0Percentが0〜100の整数でないときErrorを投げる。
    */
   create(input: {
     tripId: string;
@@ -71,7 +71,7 @@ export const Payment = {
     let slot1Burden: SignedYen;
     let contribution: SignedYen;
     if (payerSlot === 0) {
-      // 払った人でないのは 1 の人。その割合は 100 - slot0Percent
+      // 払った人でないのは1の人。その割合は100 - slot0Percent
       slot1Burden = SignedYen.fromBigInt(
         (amount * BigInt(100 - slot0Percent)) / 100n,
       );

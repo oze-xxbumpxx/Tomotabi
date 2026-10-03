@@ -15,7 +15,7 @@ import {
 import { users } from "./identity";
 import { trips, tripParticipants } from "./planning";
 
-// Reference spec: docs/旅行アプリ設計 3/詳細設計/sql/01_finance.sql and 03_planning_records.sql
+// Reference spec: docs/旅行アプリ設計3/詳細設計/sql/01_finance.sql and 03_planning_records.sql
 export const infra = pgSchema("infra");
 
 const withTimezone = { withTimezone: true } as const;

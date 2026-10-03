@@ -14,8 +14,8 @@ const SAFE_METHODS = new Set(["GET", "HEAD"]);
 const JSON_MEDIA_TYPE = "application/json";
 
 /**
- * GET / HEAD はそのまま通す。それ以外の要求は Origin の完全一致を先に確かめ、
- * 一致したら Content-Type: application/json を確かめる。
+ * GET / HEADはそのまま通す。それ以外の要求はOriginの完全一致を先に確かめ、
+ * 一致したらContent-Type: application/jsonを確かめる。
  */
 @Injectable()
 export class OriginGuard implements CanActivate {
@@ -56,7 +56,7 @@ export class OriginGuard implements CanActivate {
   }
 }
 
-/** M1-b2 の取り決め: 拒否の結果コードを res.locals.code に書き、1 要求 1 行のログに出す。 */
+/** M1-b2の取り決め: 拒否の結果コードをres.locals.codeに書き、1要求1行のログに出す。 */
 function reject(context: ExecutionContext, code: string): void {
   const response = context.switchToHttp().getResponse<Response>();
   (response.locals ??= {}).code = code;

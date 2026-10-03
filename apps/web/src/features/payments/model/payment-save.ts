@@ -9,14 +9,14 @@ import {
 } from "./payment-queries";
 
 /**
- * useSaveState を支払いの記録に束ねた形。状態の表示は呼び出し側の部品で行う。
+ * useSaveStateを支払いの記録に束ねた形。状態の表示は呼び出し側の部品で行う。
  */
 export type PaymentSave = ReturnType<typeof useSaveState<Payment, Payment>>;
 export type PaymentSaveState = SaveState<Payment, Payment>;
 
 /**
  * 設計書「クエリと再取得」: 支払いを記録・取り消したら、残額・確認の
- * 一覧・その旅行の確認の詳細を取り直す。確認の詳細は previewId を
+ * 一覧・その旅行の確認の詳細を取り直す。確認の詳細はpreviewIdを
  * 問わずその旅行のものをまとめて無効化する。
  */
 export function invalidatePaymentViews(
@@ -27,7 +27,7 @@ export function invalidatePaymentViews(
   void queryClient.invalidateQueries({
     queryKey: settlementPreviewsQueryKey(tripId),
   });
-  // その旅行の確認の詳細は previewId を問わず前方一致でまとめて無効化する。
+  // その旅行の確認の詳細はpreviewIdを問わず前方一致でまとめて無効化する。
   void queryClient.invalidateQueries({
     queryKey: ["settlement-preview", tripId],
   });
@@ -35,9 +35,9 @@ export function invalidatePaymentViews(
 
 /**
  * 支払いの記録（POST /trips/{tripId}/payments）。
- * 保留中の要求（ADR-0006）を通す: 送る直前に IndexedDB に保存し、
- * 保存できなければ送らない。`check` が「ある・確認中・確認できない」
- * あいだは新しい Idempotency-Key で保存しない（submit が内側で止める）。
+ * 保留中の要求（ADR-0006）を通す: 送る直前にIndexedDBに保存し、
+ * 保存できなければ送らない。`check`が「ある・確認中・確認できない」
+ * あいだは新しいIdempotency-Keyで保存しない（submitが内側で止める）。
  */
 export function useCreatePayment(options: {
   tripId: string;

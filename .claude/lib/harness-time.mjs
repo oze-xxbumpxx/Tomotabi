@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// ハーネスの「今日」と git の日付窓。UTC の toISOString().slice(0, 10) や
-// `date +%F`（TZ 未指定）と混ぜると、JST 0〜9 時に日付が 1 日ずれる。
+// ハーネスの「今日」とgitの日付窓。UTCのtoISOString().slice(0, 10)や
+// `date +%F`（TZ未指定）と混ぜると、JST 0〜9時に日付が1日ずれる。
 //
-// 既定タイムゾーンは Asia/Tokyo。HARNESS_TZ（旧 COOKPIT_TZ）で上書きする。
-// harness-paths.mjs には置かない（状態ディレクトリ解決と日付は別責務）。
+// 既定タイムゾーンはAsia/Tokyo。HARNESS_TZ（旧COOKPIT_TZ）で上書きする。
+// harness-paths.mjsには置かない（状態ディレクトリ解決と日付は別責務）。
 
 /**
  * @param {NodeJS.ProcessEnv} [env]
@@ -14,7 +14,7 @@ export function harnessTz(env = process.env) {
 }
 
 /**
- * `date` が `tz` で何日か（YYYY-MM-DD）。en-CA は ISO 日付を返す。
+ * `date`が`tz`で何日か（YYYY-MM-DD）。en-CAはISO日付を返す。
  * @param {Date} [date]
  * @param {string} [tz]
  * @returns {string}
@@ -23,13 +23,13 @@ export function dayInTz(date = new Date(), tz = harnessTz()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(date);
 }
 
-/** dayInTz の別名（「今日」を取る意図が読み手に分かるとき用）。 */
+/** dayInTzの別名（「今日」を取る意図が読み手に分かるとき用）。 */
 export function todayInTz(date = new Date(), tz = harnessTz()) {
   return dayInTz(date, tz);
 }
 
 /**
- * IANA タイムゾーンの UTC オフセットを ISO 8601（±HH:MM）で返す。
+ * IANAタイムゾーンのUTCオフセットをISO 8601（±HH:MM）で返す。
  * @param {Date} date
  * @param {string} tz
  * @returns {string}
@@ -48,7 +48,7 @@ export function tzOffsetIso(date, tz) {
 }
 
 /**
- * YYYY-MM-DD の翌日（グレゴリオ暦の日付加算。TZ 非依存）。
+ * YYYY-MM-DDの翌日（グレゴリオ暦の日付加算。TZ非依存）。
  * @param {string} day
  * @returns {string}
  */
@@ -58,9 +58,9 @@ export function nextCalendarDay(day) {
 }
 
 /**
- * git log の --since / --until に渡す、その暦日の境界。
- * since はその日の 00:00:00（その TZ）、until は翌日 00:00:00。
- * git の --until はその時刻を含むことがあるので、呼び出し側で dayInTz による再フィルタを残す。
+ * git logの --since / --untilに渡す、その暦日の境界。
+ * sinceはその日の00:00:00（そのTZ）、untilは翌日00:00:00。
+ * gitの --untilはその時刻を含むことがあるので、呼び出し側でdayInTzによる再フィルタを残す。
  *
  * @param {string} day YYYY-MM-DD
  * @param {string} [tz]

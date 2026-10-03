@@ -16,9 +16,9 @@ function validationFailed(message: string): ApiError {
 }
 
 /**
- * 金額の値の規則（1〜9,999,999 円）。形式は生成スキーマのパターンが
- * 先に見て 400 にする。ここでは値の規則として確かめる（ADR-0004）。
- * @throws 範囲外は 422 VALIDATION_FAILED。
+ * 金額の値の規則（1〜9,999,999円）。形式は生成スキーマのパターンが
+ * 先に見て400にする。ここでは値の規則として確かめる（ADR-0004）。
+ * @throws範囲外は422 VALIDATION_FAILED。
  */
 export function parseAmountYen(value: string): PaymentYen {
   try {
@@ -29,9 +29,9 @@ export function parseAmountYen(value: string): PaymentYen {
 }
 
 /**
- * 用途の値の規則（1〜100 コードポイント・前後空白の除去。BoundedText と同じ）。
- * 空白だけの用途は拒否（契約の記述どおり）。未指定は null。
- * @throws 空白だけ・上限超過は 422 VALIDATION_FAILED。
+ * 用途の値の規則（1〜100コードポイント・前後空白の除去。BoundedTextと同じ）。
+ * 空白だけの用途は拒否（契約の記述どおり）。未指定はnull。
+ * @throws空白だけ・上限超過は422 VALIDATION_FAILED。
  */
 export function parsePaymentLabel(value: string | null): BoundedText | null {
   if (value === null) {
@@ -45,8 +45,8 @@ export function parsePaymentLabel(value: string | null): BoundedText | null {
 }
 
 /**
- * 払った人の参加者番号を roster から解決する。
- * @throws 旅行の参加者でなければ 422 VALIDATION_FAILED。
+ * 払った人の参加者番号をrosterから解決する。
+ * @throws旅行の参加者でなければ422 VALIDATION_FAILED。
  */
 export function payerSlotOf(
   roster: readonly TripRosterEntry[],
@@ -60,10 +60,10 @@ export function payerSlotOf(
 }
 
 /**
- * 分け方の値の規則（契約どおり）: 参加者二人を各 1 回指定し、
- * percent は 0〜100 の整数で合計 100。参加者番号 0 の人の割合を返す
- * （保存は slot0_percent だけ。もう一人は 100 から引いた値）。
- * @throws 範囲外・合計違い・参加者以外・重複・欠員は 422 VALIDATION_FAILED。
+ * 分け方の値の規則（契約どおり）: 参加者二人を各1回指定し、
+ * percentは0〜100の整数で合計100。参加者番号0の人の割合を返す
+ * （保存はslot0_percentだけ。もう一人は100から引いた値）。
+ * @throws範囲外・合計違い・参加者以外・重複・欠員は422 VALIDATION_FAILED。
  */
 export function slot0PercentOf(
   roster: readonly TripRosterEntry[],
@@ -97,7 +97,7 @@ export function slot0PercentOf(
   }
   const slot0 = roster.find((entry) => entry.slot === 0);
   if (slot0 === undefined) {
-    // 参加者番号 0 のいない旅行は作れない。通常は到達しない。
+    // 参加者番号0のいない旅行は作れない。通常は到達しない。
     throw validationFailed("trip has no slot-0 participant");
   }
   return byUser.get(slot0.userId) ?? 0;

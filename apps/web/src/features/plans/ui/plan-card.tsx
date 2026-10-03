@@ -8,9 +8,9 @@ import type { Plan } from "@tomotabi/contracts";
 import { PLAN_KIND_LABEL, PlanKindIcon } from "./plan-kind-icon";
 
 /**
- * しおりの予定カード（08 のタイムラインの行）。時刻・時刻未定・
+ * しおりの予定カード（08のタイムラインの行）。時刻・時刻未定・
  * 取りやめ・達成・予約を文字とアイコンで出す（色だけに頼らない）。
- * 押すと予定の詳細へ。`from` は見ている日（詳細の「← しおり」の戻り先）。
+ * 押すと予定の詳細へ。`from`は見ている日（詳細の「← しおり」の戻り先）。
  */
 export function PlanCard({
   tripId,
@@ -30,7 +30,7 @@ export function PlanCard({
   meName: string | null;
   /** 最後の行は繋ぎ線を出さない。 */
   last?: boolean;
-  /** 次の予定（今日の今以降のいちばん早い予定）。v3 の強調カードにする。 */
+  /** 次の予定（今日の今以降のいちばん早い予定）。v3の強調カードにする。 */
   next?: boolean;
 }) {
   const cancelled = plan.cancelledAt !== null;

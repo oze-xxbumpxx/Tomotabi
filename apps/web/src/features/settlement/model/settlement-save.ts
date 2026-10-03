@@ -12,7 +12,7 @@ import {
 } from "../api/settlement-api";
 
 /**
- * useSaveState を精算の書き込みに束ねた形。状態の表示は呼び出し側の部品で行う。
+ * useSaveStateを精算の書き込みに束ねた形。状態の表示は呼び出し側の部品で行う。
  * 確認の作成・精算の完了は保留中の要求を通す（ADR-0006。
  * 送る直前に保存・保存できなければ送らない・成功と確定した拒否で消す・
  * 結果不明では残す）。
@@ -69,7 +69,7 @@ export function invalidateSettlementViews(
 
 /**
  * 確認の作成（POST /trips/{tripId}/settlement-previews）。
- * `check` に `usePendingRequestCheck`（operation: "createSettlementPreview"）
+ * `check`に`usePendingRequestCheck`（operation: "createSettlementPreview"）
  * の結果を渡し、保留がある・確認中・確認できないあいだは新しいキーで送らない。
  */
 export function useCreateSettlementPreview(options: {
@@ -95,7 +95,7 @@ export function useCreateSettlementPreview(options: {
 
 /**
  * 精算の完了（POST /trips/{tripId}/settlements）。
- * `check` に `usePendingRequestCheck`（operation: "completeSettlement"）の
+ * `check`に`usePendingRequestCheck`（operation: "completeSettlement"）の
  * 結果を渡す。
  */
 export function useCompleteSettlement(options: {

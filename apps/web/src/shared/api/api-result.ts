@@ -10,8 +10,8 @@ function toApiFailure(cause: unknown): ApiFailure {
 }
 
 /**
- * 生成関数の Promise を Result に取り込み、応答本文を Zod で検証する。
- * 検証を通った値だけが Ok になる。例外は外へ投げない。
+ * 生成関数のPromiseをResultに取り込み、応答本文をZodで検証する。
+ * 検証を通った値だけがOkになる。例外は外へ投げない。
  */
 export function callApi<T>(
   request: Promise<{ data: unknown }>,
@@ -28,13 +28,13 @@ export function callApi<T>(
 export type ApiSuccess<T> = {
   data: T;
   status: number;
-  /** 成功応答の ETag ヘッダー。無ければ null。 */
+  /** 成功応答のETagヘッダー。無ければnull。 */
   etag: string | null;
 };
 
 /**
- * callApi と同じ検証をし、検証済みの data に加えて status と ETag を返す。
- * 書き込みの成功応答（ETag を次の If-Match に使う）に使う。
+ * callApiと同じ検証をし、検証済みのdataに加えてstatusとETagを返す。
+ * 書き込みの成功応答（ETagを次のIf-Matchに使う）に使う。
  */
 export function callApiWithMeta<T>(
   request: Promise<{ data: unknown; status: number; headers: Headers }>,

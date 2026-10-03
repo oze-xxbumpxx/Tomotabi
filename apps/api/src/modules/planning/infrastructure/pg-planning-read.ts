@@ -29,7 +29,7 @@ import { toTripDomain } from "./drizzle-trip.repository";
 type PlanEventRow = typeof planEvents.$inferSelect;
 
 /**
- * LEFT JOIN で取れなかった側は各列が null で返る。id が null なら行なし。
+ * LEFT JOINで取れなかった側は各列がnullで返る。idがnullなら行なし。
  */
 type JoinedEventRow = {
   [K in keyof PlanEventRow]: PlanEventRow[K] | null;
@@ -52,7 +52,7 @@ function toActivePlanEvent(row: JoinedEventRow): ActivePlanEvent | null {
 
 /**
  * 一覧・取得の読み取り。トランザクション・行ロックは使わず、
- * プールの接続から直接読む（書き込みの整合は UoW 側が持つ）。
+ * プールの接続から直接読む（書き込みの整合はUoW側が持つ）。
  */
 export class PgPlanningRead implements PlanningReadPort {
   private readonly db: NodePgDatabase;
@@ -76,7 +76,7 @@ export class PgPlanningRead implements PlanningReadPort {
     tripId: string,
     userId: UserId,
   ): Promise<TripListAnchor | null> {
-    // created_at を text で取る。Date（ミリ秒）に変換すると同じミリ秒内の
+    // created_atをtextで取る。Date（ミリ秒）に変換すると同じミリ秒内の
     // 違う行を区別できず、ページの境目で旅行が抜け落ちる。
     const rows = await this.db
       .select({ createdAt: sql<string>`${trips.createdAt}::text` })
@@ -95,8 +95,8 @@ export class PgPlanningRead implements PlanningReadPort {
       conditions.push(eq(trips.status, query.status));
     }
     if (query.after !== null) {
-      // (created_at, id) の複合キーで「より古い側」のページを取る。
-      // createdAt は findTripAnchor が ::text で取った DB の値なので
+      // (created_at, id)の複合キーで「より古い側」のページを取る。
+      // createdAtはfindTripAnchorが ::textで取ったDBの値なので
       // マイクロ秒の精度が保たれる。
       conditions.push(
         sql`(${trips.createdAt}, ${trips.id}) < (${query.after.createdAt}::timestamptz, ${query.after.id}::uuid)`,
@@ -139,7 +139,7 @@ export class PgPlanningRead implements PlanningReadPort {
   ): Promise<PlanView[]> {
     return this.planViews(
       and(eq(plans.tripId, tripId), eq(plans.plannedDate, date)),
-      // 時刻の早い順・未定（NULL）は末尾（ASC の既定）・登録日時・id。
+      // 時刻の早い順・未定（NULL）は末尾（ASCの既定）・登録日時・id。
       asc(plans.plannedTime),
       asc(plans.createdAt),
       asc(plans.id),
@@ -147,9 +147,9 @@ export class PgPlanningRead implements PlanningReadPort {
   }
 
   /**
-   * 予定と、有効な達成・予約（active_plan_events 経由）・履歴の有無を
-   * 1 回の読み取りで取る。取り消し済みは active に行が無いので null に
-   * なるが、hasRecordHistory は plan_events の存在で別に立てる。
+   * 予定と、有効な達成・予約（active_plan_events経由）・履歴の有無を
+   * 1回の読み取りで取る。取り消し済みはactiveに行が無いのでnullに
+   * なるが、hasRecordHistoryはplan_eventsの存在で別に立てる。
    */
   private async planViews(
     where: SQL | undefined,

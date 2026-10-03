@@ -32,7 +32,7 @@ export type PlanWriteCommand = Readonly<{
 
 /**
  * 参加している旅行の中で、予定が無い・別の旅行の予定はどちらも
- * 同じ 404（どちらも同じ応答で、存在を漏らさない）。
+ * 同じ404（どちらも同じ応答で、存在を漏らさない）。
  */
 export function planNotFound(): ApiError {
   return new ApiError({
@@ -44,15 +44,15 @@ export function planNotFound(): ApiError {
 
 /**
  * 予定の書き込みの共通の流れ（設計書「書き込みの共通の流れ」）:
- * 旅行行 FOR SHARE → receipt → 予定行 FOR NO KEY UPDATE → If-Match →
- * Domain → 更新と receipt を同じトランザクションで保存。
+ * 旅行行FOR SHARE → receipt → 予定行FOR NO KEY UPDATE → If-Match →
+ * Domain → 更新とreceiptを同じトランザクションで保存。
  *
- * 旅行は FOR SHARE にする。期間の変更は FOR UPDATE を取るため、こちらが
- * 先に取れば期間の変更が待ち、後なら確定した期間を見て Domain が検証する
+ * 旅行はFOR SHAREにする。期間の変更はFOR UPDATEを取るため、こちらが
+ * 先に取れば期間の変更が待ち、後なら確定した期間を見てDomainが検証する
  * （期間外の予定が残らない・E-18）。ロックは常に旅行 → 予定の順。
  *
- * 予定は FOR NO KEY UPDATE にする。キー無し列だけの更新で十分で、
- * M4 の達成・予約 INSERT が親行参照で取るロックと衝突しにくい。
+ * 予定はFOR NO KEY UPDATEにする。キー無し列だけの更新で十分で、
+ * M4の達成・予約INSERTが親行参照で取るロックと衝突しにくい。
  * 種類変更の履歴照会（E-19）もこのロックを持ったまま行う。
  */
 export async function runPlanUpdate(
@@ -128,8 +128,8 @@ export async function runPlanUpdate(
 }
 
 /**
- * 予定の書き込み 1 件のログ。旅行版と同じく結果は
- * created / replayed / rejected(code) の 3 値。resourceId は予定 id。
+ * 予定の書き込み1件のログ。旅行版と同じく結果は
+ * created / replayed / rejected(code)の3値。resourceIdは予定id。
  */
 export async function executePlanWrite(
   writeLog: WriteLog,

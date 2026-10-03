@@ -26,8 +26,8 @@ const KIND_OPTIONS: SegmentedOption[] = PLAN_KINDS.map((kind) => ({
 }));
 
 /**
- * 予定の追加・編集フォームの入力欄。名前・種類（2 列のアイコン付き選択）・
- * 日付（追加のみ、11c の 3 等分選択）・時刻（「時刻未定」の切り替え +
+ * 予定の追加・編集フォームの入力欄。名前・種類（2列のアイコン付き選択）・
+ * 日付（追加のみ、11cの3等分選択）・時刻（「時刻未定」の切り替え +
  * `<input type="time">`）・メモ。種類を変えられないときは選択を固定して
  * 理由の文を出す（W-19）。
  */
@@ -52,7 +52,7 @@ export function PlanFormFields({
   fieldRefs: Partial<
     Record<PlanFormField, RefObject<HTMLInputElement | null>>
   >;
-  /** 種類のエラー時にフォーカスを戻す fieldset 参照。 */
+  /** 種類のエラー時にフォーカスを戻すfieldset参照。 */
   kindRef?: RefObject<HTMLFieldSetElement | null>;
   onChange: (change: PlanFormChange) => void;
 }) {

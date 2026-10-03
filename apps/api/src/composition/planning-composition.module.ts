@@ -33,9 +33,9 @@ import { PgPlanningUnitOfWork } from "../modules/planning/infrastructure/pg-plan
 import { PgRecordHistoryQuery } from "../modules/record/infrastructure/pg-record-history.query";
 
 function useDatabase(): boolean {
-  // 未設定と空文字はどちらも「DB なし」。foundation・identity と同じ判定に
-  // そろえる（.env.example の `DATABASE_URL=` は空文字。差分 4）。
-  // DB なし起動では Guard が先に 503/401 を返すため、これらの実装は呼ばれない。
+  // 未設定と空文字はどちらも「DBなし」。foundation・identityと同じ判定に
+  // そろえる（.env.exampleの`DATABASE_URL=`は空文字。差分4）。
+  // DBなし起動ではGuardが先に503/401を返すため、これらの実装は呼ばれない。
   return Boolean(process.env.DATABASE_URL);
 }
 
@@ -43,8 +43,8 @@ const missingDatabase = (): Promise<never> =>
   Promise.reject(new Error("DATABASE_URL is not set"));
 
 /**
- * planning の port と、identity（許可リストの照会）・record（履歴の照会）・
- * infrastructure（時計・receipt・財務 guard）の実装を結ぶ組み立て。
+ * planningのportと、identity（許可リストの照会）・record（履歴の照会）・
+ * infrastructure（時計・receipt・財務guard）の実装を結ぶ組み立て。
  */
 @Module({
   providers: [

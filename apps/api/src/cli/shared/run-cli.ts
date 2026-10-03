@@ -10,12 +10,12 @@ const isPgError = (error: unknown): error is PgError =>
 
 /**
  * 標準出力に出して安全な説明だけを返す。
- * message をそのまま出せるのは、秘密情報を含まないことが保証されたエラークラスだけ
- * （google-auth-library など外部ライブラリの例外は message にトークンや入力値が入りうる）。
- * pg のエラーは detail に行の値（sub など）を含むため、SQLSTATE と制約名だけにする。
+ * messageをそのまま出せるのは、秘密情報を含まないことが保証されたエラークラスだけ
+ * （google-auth-libraryなど外部ライブラリの例外はmessageにトークンや入力値が入りうる）。
+ * pgのエラーはdetailに行の値（subなど）を含むため、SQLSTATEと制約名だけにする。
  */
 export function describeFailure(error: unknown): string {
-  // EnrollmentError にも code があるので、先に既知クラスを判定する
+  // EnrollmentErrorにもcodeがあるので、先に既知クラスを判定する
   if (
     error instanceof EnrollmentError ||
     error instanceof CliUsageError ||
@@ -37,7 +37,7 @@ export function describeFailure(error: unknown): string {
 }
 
 /**
- * CLI 共通の入口。MIGRATION_DATABASE_URL で Pool を作り、終了コードを返す（成功 0、使い方 2、失敗 1）。
+ * CLI共通の入口。MIGRATION_DATABASE_URLでPoolを作り、終了コードを返す（成功0、使い方2、失敗1）。
  */
 export async function runCli(main: (pool: Pool) => Promise<void>): Promise<number> {
   let pool: Pool | null = null;

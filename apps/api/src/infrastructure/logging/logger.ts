@@ -6,8 +6,8 @@ import { pinoHttp, type HttpLogger, type Options } from "pino-http";
 
 const INTERNAL_ERROR_CODE = "INTERNAL_ERROR";
 
-// 設計書で許可された Guard の結果コードと、認証経路の経路制限が返す NOT_FOUND。
-// それ以外の値は code に出さない。
+// 設計書で許可されたGuardの結果コードと、認証経路の経路制限が返すNOT_FOUND。
+// それ以外の値はcodeに出さない。
 const KNOWN_LOG_CODES: ReadonlySet<string> = new Set([
   "UNAUTHENTICATED",
   "FORBIDDEN_NOT_ALLOWED",
@@ -17,7 +17,7 @@ const KNOWN_LOG_CODES: ReadonlySet<string> = new Set([
   "NOT_FOUND",
 ]);
 
-// redact は防御の二重化。主の対策は、出力項目を絞る customProps / customObject 側にある。
+// redactは防御の二重化。主の対策は、出力項目を絞るcustomProps / customObject側にある。
 const REDACT_PATHS = [
   "req.headers.cookie",
   "req.headers.authorization",
@@ -30,15 +30,15 @@ const REDACT_PATHS = [
   "*.sub",
 ];
 
-// Guard・経路制限が結果コードを渡すための取り決め（res.locals.code に書く）。
-// pino-http はエラー時に res.err を参照する。
+// Guard・経路制限が結果コードを渡すための取り決め（res.locals.codeに書く）。
+// pino-httpはエラー時にres.errを参照する。
 type ResponseWithInternals = ServerResponse & {
   err?: unknown;
   locals?: { code?: unknown };
 };
 
-// express は mount 先（app.use("/api/auth", ...)）の中で req.url を相対パスに書き換える。
-// その中で応答が終わると req.url が相対のままなので、元の URL を持つ originalUrl を優先する。
+// expressはmount先（app.use("/api/auth", ...)）の中でreq.urlを相対パスに書き換える。
+// その中で応答が終わるとreq.urlが相対のままなので、元のURLを持つoriginalUrlを優先する。
 type RequestWithOriginalUrl = IncomingMessage & { originalUrl?: unknown };
 
 function requestUrl(req: IncomingMessage): string | undefined {
@@ -106,9 +106,9 @@ function requestLogFields(req: IncomingMessage, res: ServerResponse): Record<str
   return fields;
 }
 
-// pino-http の message provider が undefined を返すと msg 自体を出さない。
-// 例外時も customErrorObject で err を除くため、err.message が msg に回り込まない。
-// 型は string 固定なので、実行時の契約に合わせて undefined を返す。
+// pino-httpのmessage providerがundefinedを返すとmsg自体を出さない。
+// 例外時もcustomErrorObjectでerrを除くため、err.messageがmsgに回り込まない。
+// 型はstring固定なので、実行時の契約に合わせてundefinedを返す。
 function omitMessage(): string {
   return undefined as unknown as string;
 }
@@ -118,11 +118,11 @@ function hasError(res: ServerResponse, err: Error | undefined): boolean {
   return err !== undefined || state.err !== undefined || res.statusCode >= 500;
 }
 
-// Nest の ExceptionsHandler は例外を Nest logger（= この pino）の err に入れて
-// 直接出すため、pino-http の出力制御だけでは message / stack が漏れる。
-// pino-http は err serializer を std serializer の結果
-// （{ type, message, stack, raw }）を入力に呼ぶので、raw があれば元の Error で code を判定する。
-// 鍵名を errorCode にしているのは、redact の "*.code" が err.code を [Redacted] にするため。
+// NestのExceptionsHandlerは例外をNest logger（= このpino）のerrに入れて
+// 直接出すため、pino-httpの出力制御だけではmessage / stackが漏れる。
+// pino-httpはerr serializerをstd serializerの結果
+// （{ type, message, stack, raw }）を入力に呼ぶので、rawがあれば元のErrorでcodeを判定する。
+// 鍵名をerrorCodeにしているのは、redactの"*.code"がerr.codeを[Redacted]にするため。
 function serializeLoggedError(value: unknown): { type: string; errorCode: string } {
   const raw =
     typeof value === "object" && value !== null && "raw" in value ? value.raw : value;
@@ -130,8 +130,8 @@ function serializeLoggedError(value: unknown): { type: string; errorCode: string
   return { type, errorCode: codeFromError(raw) };
 }
 
-// pino は msg を渡さず err / Error をログに出すと msg に err.message を自動転記する。
-// 静的な msg を補って転記を止める（ExceptionsHandler 経路がまさにこの形）。
+// pinoはmsgを渡さずerr / Errorをログに出すとmsgにerr.messageを自動転記する。
+// 静的なmsgを補って転記を止める（ExceptionsHandler経路がまさにこの形）。
 function isErrorLike(value: unknown): boolean {
   return (
     value instanceof Error ||
@@ -161,14 +161,14 @@ function suppressErrorMessageAutofill(
 }
 
 /**
- * 1 要求 1 行の pino-http 設定。
- * 出力は requestId / method / path（クエリを除く）/ statusCode / responseTime /
- * code（Guard の結果コード。無いときは出さない）に限る。
- * err はオブジェクトごと取り除き、既知の code だけを出す。
+ * 1要求1行のpino-http設定。
+ * 出力はrequestId / method / path（クエリを除く）/ statusCode / responseTime /
+ * code（Guardの結果コード。無いときは出さない）に限る。
+ * errはオブジェクトごと取り除き、既知のcodeだけを出す。
  *
- * serializers.err と hooks.logMethod はこの logger を共有する Nest logger
- * （ExceptionsHandler など）経由の例外にも効かせるためのもので、
- * err を { type, errorCode } に変換し、msg への message 自動転記を止める。
+ * serializers.errとhooks.logMethodはこのloggerを共有するNest logger
+ * （ExceptionsHandlerなど）経由の例外にも効かせるためのもので、
+ * errを { type, errorCode } に変換し、msgへのmessage自動転記を止める。
  */
 export function createPinoHttpOptions(): Options {
   return {
@@ -176,7 +176,7 @@ export function createPinoHttpOptions(): Options {
     base: null,
     quietReqLogger: true,
     quietResLogger: true,
-    // エラー応答の requestId と同じ値。契約は UUID 形式なので UUID を振る
+    // エラー応答のrequestIdと同じ値。契約はUUID形式なのでUUIDを振る
     // （既定の整数連番ではなく、クライアントのヘッダーも使わない）。
     genReqId: () => randomUUID(),
     customAttributeKeys: { reqId: "requestId" },
@@ -206,10 +206,10 @@ export function createPinoHttpOptions(): Options {
 }
 
 /**
- * 1 要求 1 行を書く pino-http ミドルウェア。configureApp が express の先頭に載せ、
- * 認証経路（/api/auth/*。Nest に入る前に allowlist / Better Auth が応答する）も
- * 同じ 1 行ログに乗せる。Nest 側は nestjs-pino の useExisting で req.log を共有する。
- * stream はテストが出力を捕まえるために渡す。
+ * 1要求1行を書くpino-httpミドルウェア。configureAppがexpressの先頭に載せ、
+ * 認証経路（/api/auth/*。Nestに入る前にallowlist / Better Authが応答する）も
+ * 同じ1行ログに乗せる。Nest側はnestjs-pinoのuseExistingでreq.logを共有する。
+ * streamはテストが出力を捕まえるために渡す。
  */
 export function createRequestLogger(stream?: DestinationStream): HttpLogger {
   return stream === undefined

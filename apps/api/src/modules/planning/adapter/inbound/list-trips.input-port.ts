@@ -6,7 +6,7 @@ export const LIST_TRIPS_INPUT_PORT = Symbol("LIST_TRIPS_INPUT_PORT");
 export type ListTripsInput = Readonly<{
   userId: UserId;
   status: TripStatus | null;
-  /** 改ざん・形式違反のカーソルは渡さない（UseCase が 400 にする） */
+  /** 改ざん・形式違反のカーソルは渡さない（UseCaseが400にする） */
   cursor: string | null;
   limit: number;
 }>;

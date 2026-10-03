@@ -17,16 +17,16 @@ export type EnrollDependencies = {
 
 export type EnrollResult = { userId: string; slot: Slot };
 
-/** 表示は末尾 4 文字だけ。sub 全体を標準出力に出さない。 */
+/** 表示は末尾4文字だけ。sub全体を標準出力に出さない。 */
 export function maskSub(sub: string): string {
   return `****${sub.slice(-4)}`;
 }
 
 /**
- * 設計書「CLI（ADR-0002）」の 1〜5。callback は 1 回で閉じ、確認で `yes` 以外なら何も登録しない。
- * トークン・code・sub の全体は io に渡さない。
- * @throws EnrollmentError 中止理由（state / nonce 不一致、タイムアウト、確認拒否など）
- * @throws Error Google の検証失敗や DB の制約違反はそのまま投げる
+ * 設計書「CLI（ADR-0002）」の1〜5。callbackは1回で閉じ、確認で`yes`以外なら何も登録しない。
+ * トークン・code・subの全体はioに渡さない。
+ * @throws EnrollmentError中止理由（state / nonce不一致、タイムアウト、確認拒否など）
+ * @throws Error Googleの検証失敗やDBの制約違反はそのまま投げる
  */
 export async function enrollGoogleAccount(deps: EnrollDependencies, slot: Slot): Promise<EnrollResult> {
   const { io } = deps;

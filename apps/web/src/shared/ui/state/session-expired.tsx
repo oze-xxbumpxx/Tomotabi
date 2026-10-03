@@ -1,9 +1,9 @@
 import { LockKey, SignIn } from "@phosphor-icons/react";
 
 /**
- * C-1 ログイン切れ。業務データを隠して全面表示する。
+ * C-1ログイン切れ。業務データを隠して全面表示する。
  * `unconfirmedTarget`（「旅行」「予定」など）があるときは、結果不明の要求のあとに
- * 401 を受けた場合で、「保存されたか確認できていません」の文を出す。
+ * 401を受けた場合で、「保存されたか確認できていません」の文を出す。
  */
 export function SessionExpired({
   unconfirmedTarget = null,

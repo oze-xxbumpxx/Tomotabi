@@ -19,8 +19,8 @@ function toPlanEventDto(event: ActivePlanEvent | null): PlanEvent | null {
 }
 
 /**
- * Domain の予定を公開契約の形にする。version は 10 進の文字列（ETag の中身）。
- * canChangeKind / kindChangeReason は画面の目安で、書き込み時に再度確かめる。
+ * Domainの予定を公開契約の形にする。versionは10進の文字列（ETagの中身）。
+ * canChangeKind / kindChangeReasonは画面の目安で、書き込み時に再度確かめる。
  */
 export function toPlanDto(
   plan: Plan,

@@ -14,7 +14,7 @@ import type { PlanSave, PlanSaveState } from "../model/plan-save";
 
 type RejectedState = Extract<PlanSaveState, { status: "rejected" }>;
 
-/** 403 / 404 の拒否は C-2 に切り替える対象（欄のエラーや再送は出さない）。 */
+/** 403 / 404の拒否はC-2に切り替える対象（欄のエラーや再送は出さない）。 */
 function isNotAvailableState(state: PlanSaveState): state is RejectedState {
   return (
     state.status === "rejected" &&
@@ -23,7 +23,7 @@ function isNotAvailableState(state: PlanSaveState): state is RejectedState {
 }
 
 /**
- * 取りやめの確認（17 の形、決定ボタンは危険色）。
+ * 取りやめの確認（17の形、決定ボタンは危険色）。
  * 名前と日付を見せ、記録が残ることを伝える。結果不明・競合・拒否は
  * ダイアログの中で状態を出し、同じ要求で確かめる。
  */
@@ -40,13 +40,13 @@ export function CancelPlanDialog({
   cancel: PlanSave;
   onClose: () => void;
   onSessionExpired: (unconfirmed: boolean) => void;
-  /** 書き込みが 403 / 404 で拒否（C-2）。呼び出し側が全面を差し替える。 */
+  /** 書き込みが403 / 404で拒否（C-2）。呼び出し側が全面を差し替える。 */
   onNotAvailable: (target: "trip" | "item") => void;
 }) {
   const online = useOnlineStatus();
   const state = cancel.state;
 
-  // C-1 / C-2 は呼び出し側の全面表示に切り替える。
+  // C-1 / C-2は呼び出し側の全面表示に切り替える。
   useEffect(() => {
     if (state.status === "session-expired") {
       onSessionExpired(state.unconfirmed);
@@ -139,8 +139,8 @@ export function CancelPlanDialog({
               type="button"
               className="btn-danger"
               onClick={submit}
-              // 拒否のあとに同じ古い ETag で再送するボタンは出さない。
-              // 閉じて開き直すと最新の ETag で送れる。
+              // 拒否のあとに同じ古いETagで再送するボタンは出さない。
+              // 閉じて開き直すと最新のETagで送れる。
               disabled={
                 state.status === "saving" ||
                 !online ||

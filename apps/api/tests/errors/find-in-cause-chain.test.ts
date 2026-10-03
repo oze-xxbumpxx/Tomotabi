@@ -37,7 +37,7 @@ describe("someInCauseChain", () => {
     expect(someInCauseChain(new Error("other"), hasCode("23505"))).toBe(false);
     expect(someInCauseChain(null, hasCode("23505"))).toBe(false);
     expect(someInCauseChain("just a string", hasCode("23505"))).toBe(false);
-    // cause がオブジェクトでなければそこで打ち切る
+    // causeがオブジェクトでなければそこで打ち切る
     const broken = withCause(new Error("top"), 42);
     expect(someInCauseChain(broken, hasCode("x"))).toBe(false);
   });
@@ -63,7 +63,7 @@ describe("someInCauseChain", () => {
   });
 
   it("深さの上限（8 個）まで辿り、それより深いノードは見ない", () => {
-    // 先頭を数えて 8 個目に一致がある: true
+    // 先頭を数えて8個目に一致がある: true
     const depth8 = chainOf(8);
     let tail: unknown = depth8;
     while ((tail as { cause?: unknown }).cause !== null) {
@@ -72,7 +72,7 @@ describe("someInCauseChain", () => {
     (tail as { code?: unknown }).code = "hit";
     expect(someInCauseChain(depth8, hasCode("hit"))).toBe(true);
 
-    // 9 個目に一致がある: 上限を超えるため false
+    // 9個目に一致がある: 上限を超えるためfalse
     const depth9 = withCause(new Error("deeper"), depth8);
     expect(someInCauseChain(depth9, hasCode("hit"))).toBe(false);
   });

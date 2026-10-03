@@ -1,5 +1,5 @@
 // validate-agent-config.mjs（PostToolUse Hook）の安全境界テスト。
-// 実際にフックをサブプロセスとして起動し、終了コードで allow(0) / deny(2) を検証する。
+// 実際にフックをサブプロセスとして起動し、終了コードでallow(0) / deny(2)を検証する。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';

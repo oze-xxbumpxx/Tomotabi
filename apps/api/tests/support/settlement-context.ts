@@ -42,9 +42,9 @@ export function previewItemOf(
 }
 
 /**
- * 確認・精算まわりの UseCase 試験用のインメモリ文脈。支払いの文脈に
- * paymentsRead と settlements のポートを足したもの（本番の
- * PgFinanceUnitOfWork と同じ広さ）。
+ * 確認・精算まわりのUseCase試験用のインメモリ文脈。支払いの文脈に
+ * paymentsReadとsettlementsのポートを足したもの（本番の
+ * PgFinanceUnitOfWorkと同じ広さ）。
  */
 export class InMemorySettlementContext
   extends InMemoryFinanceContext
@@ -317,7 +317,7 @@ export class InMemorySettlementContext
     },
   };
 
-  /** 支払いに占有を置く（kind で識別。戻しの試験用）。 */
+  /** 支払いに占有を置く（kindで識別。戻しの試験用）。 */
   seedClaim(paymentId: string, kind: ClaimKind, settlementId: string): void {
     this.activeClaimRows.set(`${paymentId}|${kind}`, {
       paymentId,

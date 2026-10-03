@@ -10,8 +10,8 @@ import type { TripRepository } from "./trip.repository";
 export const PLANNING_UNIT_OF_WORK = Symbol("PLANNING_UNIT_OF_WORK");
 
 /**
- * receipt の読み書き。(actorId, operation, idempotencyKey) が主キー。
- * insert は同じキーの既存行を更新しない（同時実行は PK 違反で検出する）。
+ * receiptの読み書き。(actorId, operation, idempotencyKey)が主キー。
+ * insertは同じキーの既存行を更新しない（同時実行はPK違反で検出する）。
  */
 export interface CommandReceiptStore {
   find(
@@ -27,9 +27,9 @@ export interface FinanceGuardWriter {
 }
 
 /**
- * planning の UseCase に渡す文脈。型付きの Repository・照会・receipt の
- * 限定集合で、生の tx や SQL 実行口は渡さない（設計書「UnitOfWork の文脈」）。
- * recordHistory は予定行のロックを持ったまま履歴を照会する（E-19）ためここに入れる。
+ * planningのUseCaseに渡す文脈。型付きのRepository・照会・receiptの
+ * 限定集合で、生のtxやSQL実行口は渡さない（設計書「UnitOfWorkの文脈」）。
+ * recordHistoryは予定行のロックを持ったまま履歴を照会する（E-19）ためここに入れる。
  */
 export interface PlanningWorkContext {
   trips: TripRepository;

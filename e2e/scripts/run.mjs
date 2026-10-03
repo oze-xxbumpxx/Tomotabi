@@ -1,12 +1,12 @@
-// E2E の起動スクリプト（ADR-0005 Decision 4、設計書「データフロー」）。
-// 1. Testcontainers の PostgreSQL を起動し、apps/api/tests/support/database.ts
-//    と同じ手順でロールを作って migration を当てる
-//    （database.ts は CJS の __dirname に依存するため .mjs から import できず、
-//    同じ手順をここに JS で再掲する）
-// 2. ひなた・あおいの users / accounts / allowlist を 1 回だけ入れる
-// 3. 接続先・固定ポート・実行ごとの BETTER_AUTH_SECRET を環境変数に入れて
-//    playwright test を子プロセスで起動する
-// 4. 終わったら（失敗・中断でも finally で）コンテナを止め、Playwright の
+// E2Eの起動スクリプト（ADR-0005 Decision 4、設計書「データフロー」）。
+// 1. TestcontainersのPostgreSQLを起動し、apps/api/tests/support/database.ts
+//    と同じ手順でロールを作ってmigrationを当てる
+//    （database.tsはCJSの __dirnameに依存するため .mjsからimportできず、
+//    同じ手順をここにJSで再掲する）
+// 2. ひなた・あおいのusers / accounts / allowlistを1回だけ入れる
+// 3. 接続先・固定ポート・実行ごとのBETTER_AUTH_SECRETを環境変数に入れて
+//    playwright testを子プロセスで起動する
+// 4. 終わったら（失敗・中断でもfinallyで）コンテナを止め、Playwrightの
 //    終了コードを返す
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -23,19 +23,19 @@ const REPO_ROOT = join(E2E_DIR, "..");
 const API_ROOT = join(REPO_ROOT, "apps/api");
 const MIGRATIONS_FOLDER = join(API_ROOT, "drizzle");
 
-// apps/api/tests/support/database.ts の ROLE_PASSWORDS と同じ値。
+// apps/api/tests/support/database.tsのROLE_PASSWORDSと同じ値。
 const ROLE_PASSWORDS = {
   migrator: "test-migrator",
   app_runtime: "test-app-runtime",
 };
 
-// support/env.ts・playwright.config.ts と同じ固定値（web の build に
-// API_ORIGIN が焼き込まれるため、実行ごとに変えられない）。
+// support/env.ts・playwright.config.tsと同じ固定値（webのbuildに
+// API_ORIGINが焼き込まれるため、実行ごとに変えられない）。
 const WEB_PORT = 3100;
 const API_PORT = 3101;
 
-// support/db.ts の TRUNCATE と同じ文。起動時に 1 度通して、追記のみ保証
-// （migration 0003 の行トリガー）との相性を起動のたびに確かめる。
+// support/db.tsのTRUNCATEと同じ文。起動時に1度通して、追記のみ保証
+// （migration 0003の行トリガー）との相性を起動のたびに確かめる。
 const TRUNCATE_BUSINESS_TABLES = `TRUNCATE
   planning.plans, planning.trip_participants, planning.trips,
   record.active_plan_events, record.plan_event_cancellations, record.plan_events,
@@ -94,9 +94,9 @@ async function main() {
     const { hinataUserId, aoiUserId } = await seedUsers(admin);
 
     if (process.env.E2E_SKIP_BUILD === "1") {
-      // CI 用（設計書「データフロー」）。apps/web/.next は API_ORIGIN を
-      // build 時に焼き込むため、手元の `npm run build`（API_ORIGIN なし、
-      // 3001 向き）の成果物を拾うと /api が API に届かずログインに失敗する。
+      // CI用（設計書「データフロー」）。apps/web/.nextはAPI_ORIGINを
+      // build時に焼き込むため、手元の`npm run build`（API_ORIGINなし、
+      // 3001向き）の成果物を拾うと /apiがAPIに届かずログインに失敗する。
       // 起動してから落ちると原因が分かりにくいので、転送先を先に確かめる。
       let destination;
       try {
@@ -122,8 +122,8 @@ async function main() {
         return;
       }
     } else {
-      // contracts の dist は api / web 両方の build の前提。webServer が
-      // 並行して走る前に、ここで 1 回だけビルドする。
+      // contractsのdistはapi / web両方のbuildの前提。webServerが
+      // 並行して走る前に、ここで1回だけビルドする。
       const contracts = run("npm", ["run", "build", "-w", "@tomotabi/contracts"], {
         cwd: REPO_ROOT,
       });

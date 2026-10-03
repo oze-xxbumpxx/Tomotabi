@@ -11,7 +11,7 @@ import type { SelectedPlan } from "@/features/payments";
 
 /**
  * 関連する予定の選択シート（v3 11c）。期間の日を選ぶとその日の予定
- * （選んだ日の getItinerary）が並び、先頭の「選択しない」か予定を
+ * （選んだ日のgetItinerary）が並び、先頭の「選択しない」か予定を
  * 選んで「この予定にする」で確定する。しおりの表示日と違う日の予定も選べる。
  */
 export function PlanPickSheet({
@@ -23,7 +23,7 @@ export function PlanPickSheet({
 }: {
   tripId: string;
   period: { startsOn: string; endsOn: string };
-  /** いま選ばれている予定（いなければ null）。 */
+  /** いま選ばれている予定（いなければnull）。 */
   current: SelectedPlan | null;
   onPick: (plan: SelectedPlan | null) => void;
   onClose: () => void;

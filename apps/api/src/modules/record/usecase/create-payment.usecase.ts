@@ -26,7 +26,7 @@ import { toPaymentDto } from "./payment-dto";
 /**
  * 支払いの記録。負担額・寄与はサーバーが計算して確定する
  * （クライアントの申告で確定しない）。払った人・分け方の検証は
- * guard の行のロックのあとで行う（同じ旅行の書き込みを一列に並べる）。
+ * guardの行のロックのあとで行う（同じ旅行の書き込みを一列に並べる）。
  */
 export class CreatePaymentUseCase implements CreatePaymentInputPort {
   constructor(

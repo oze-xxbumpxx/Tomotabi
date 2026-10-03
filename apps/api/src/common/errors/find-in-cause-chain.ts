@@ -1,13 +1,13 @@
 /**
- * cause チェーンを辿る深さの上限（循環する cause でも打ち切る）。
+ * causeチェーンを辿る深さの上限（循環するcauseでも打ち切る）。
  */
 const MAX_CAUSE_DEPTH = 8;
 
 /**
- * `error` とその `cause` を最大 `MAX_CAUSE_DEPTH` 個まで辿り、`predicate` が
- * 真を返すノードがあれば true。drizzle は pg のエラーを DrizzleQueryError の
- * cause に包んで投げるため、SQLSTATE・errno はチェーンの中にある。
- * 循環する cause でも上限で打ち切る。オブジェクトでない値が途中に現れたら
+ * `error`とその`cause`を最大`MAX_CAUSE_DEPTH`個まで辿り、`predicate`が
+ * 真を返すノードがあればtrue。drizzleはpgのエラーをDrizzleQueryErrorの
+ * causeに包んで投げるため、SQLSTATE・errnoはチェーンの中にある。
+ * 循環するcauseでも上限で打ち切る。オブジェクトでない値が途中に現れたら
  * そこで打ち切る。
  */
 export function someInCauseChain(

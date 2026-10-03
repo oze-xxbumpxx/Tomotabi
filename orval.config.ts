@@ -2,8 +2,8 @@ import { defineConfig } from "orval";
 import type { OpenApiDocument } from "@orval/core";
 
 const foundationInput = { target: "./packages/contracts/openapi/foundation.json" };
-// 認証経路は Better Auth クライアントが呼ぶため、生成対象は /api/me だけに絞る
-// （設計書「API 設計」）。契約ファイル自体は 5 操作すべてを定義したままにする。
+// 認証経路はBetter Authクライアントが呼ぶため、生成対象は /api/meだけに絞る
+// （設計書「API設計」）。契約ファイル自体は5操作すべてを定義したままにする。
 const authInput = {
   target: "./packages/contracts/openapi/auth.json",
   override: {
@@ -30,18 +30,18 @@ function isStringSchema(schema: JsonSchema): boolean {
   );
 }
 
-// 入力側の format: "date" を外す代わりに付ける形だけの検証。
-// YYYY-MM-DD の形でない入力は Pipe で 400（設計の「パターン違反は 400」）、
-// 形を満たすが実在しない日付は Domain（LocalDate）が 422 にする。
+// 入力側のformat: "date"を外す代わりに付ける形だけの検証。
+// YYYY-MM-DDの形でない入力はPipeで400（設計の「パターン違反は400」）、
+// 形を満たすが実在しない日付はDomain（LocalDate）が422にする。
 const DATE_SHAPE_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
 
 /**
  * 入力検証用の生成にだけ適用する契約の調整（ADR-0004）。
- * Zod の .max() は UTF-16 の長さで数えるため、入力 body の文字列の maxLength を外し、
- * 文字数はコードポイントで数える Domain の値型に任せる（応答側・クエリには残す）。
- * zod.iso.date() は実在日まで検証するため、入力側の format: "date" は
- * 形だけの pattern に置き換え、実在日を含む日付の規則を Domain（LocalDate → 422）に任せる。
- * stripDateFormat=false の応答スキーマでは maxLength だけを外す（format は残す）。
+ * Zodの .max()はUTF-16の長さで数えるため、入力bodyの文字列のmaxLengthを外し、
+ * 文字数はコードポイントで数えるDomainの値型に任せる（応答側・クエリには残す）。
+ * zod.iso.date()は実在日まで検証するため、入力側のformat: "date"は
+ * 形だけのpatternに置き換え、実在日を含む日付の規則をDomain（LocalDate → 422）に任せる。
+ * stripDateFormat=falseの応答スキーマではmaxLengthだけを外す（formatは残す）。
  */
 function stripInputConstraints(
   schema: JsonSchema,
@@ -171,10 +171,10 @@ const stripRequestInputConstraints = (
 };
 
 /**
- * web の検証用 zod 生成にだけ追加で適用する調整。
- * 応答側の文字列 maxLength も外す。Zod の .max() は UTF-16 で数えるため、
+ * webの検証用zod生成にだけ追加で適用する調整。
+ * 応答側の文字列maxLengthも外す。Zodの .max()はUTF-16で数えるため、
  * 契約（コードポイント）に従った有効な応答（絵文字を含む名前など）を
- * callApi の検証が誤って弾いてしまう。契約の maxLength 自体は残す。
+ * callApiの検証が誤って弾いてしまう。契約のmaxLength自体は残す。
  */
 const stripResponseStringMaxLength = (
   spec: OpenApiDocument,
@@ -216,7 +216,7 @@ const stripResponseStringMaxLength = (
 const stripWebValidationConstraints = (spec: OpenApiDocument): OpenApiDocument =>
   stripResponseStringMaxLength(stripRequestInputConstraints(spec));
 
-// 入力検証用の Zod（web 側のフォーム検証と API の Pipe で共用する生成設定）
+// 入力検証用のZod（web側のフォーム検証とAPIのPipeで共用する生成設定）
 const validationZod = {
   strict: { body: true, query: true },
   coerce: { query: true },

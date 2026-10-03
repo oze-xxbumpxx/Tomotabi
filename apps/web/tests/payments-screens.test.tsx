@@ -58,7 +58,7 @@ const tripId = "8a6e0804-2bd0-4672-b79d-d97027f9071a";
 const planId = "6d6a86a1-6d0b-4c0f-9bb9-9a1d3a9e9c01";
 const paymentId = "9a0b1c2d-3e4f-4a5b-9c6d-7e8f9a0b1c2d";
 
-/** 参加者番号 0 はあおい、1 はひなた（自分）。送る割合はあおいの負担の割合。 */
+/** 参加者番号0はあおい、1はひなた（自分）。送る割合はあおいの負担の割合。 */
 const meParticipant: Participant = {
   userId,
   slot: 1,
@@ -180,7 +180,7 @@ function notFound(): Response {
   return json({ code: "NOT_FOUND" }, 404);
 }
 
-/** /api/me と /api/trips/* を URL・メソッドで振り分ける fake。 */
+/** /api/meと /api/trips/* をURL・メソッドで振り分けるfake。 */
 function stubApi(handlers: {
   me?: Handler;
   itinerary?: Handler;
@@ -264,12 +264,12 @@ async function resetDb(): Promise<void> {
 /** フォームが開くまで待つ（me・旅行・残額・保留の確認が全部済む）。 */
 async function waitForForm() {
   const amountInput = await screen.findByLabelText("金額");
-  // 払った人の選択肢は金額の欄より遅れて出ることがある（CI で落ちた）。
+  // 払った人の選択肢は金額の欄より遅れて出ることがある（CIで落ちた）。
   await screen.findByRole("radio", { name: "ひなた（自分）" });
   return amountInput;
 }
 
-/** 保留中の要求を 1 件保存する。 */
+/** 保留中の要求を1件保存する。 */
 async function seedPending(body: unknown) {
   const request = createMutationRequest({
     operation: CREATE_PAYMENT_OPERATION,
@@ -300,19 +300,19 @@ describe("送る割合の組み立て（FW-01）", () => {
   const flipped: readonly Participant[] = [meAsSlot0, otherAsSlot1];
 
   it("分け方と払った人の全組み合わせで参加者番号 0 の割合が正しい", () => {
-    // 折半は常に 50。
+    // 折半は常に50。
     expect(slot0PercentOf("half", meParticipant, meParticipant, 30)).toBe(50);
     expect(slot0PercentOf("half", otherParticipant, meParticipant, 30)).toBe(
       50,
     );
-    // 払った人が全額: 払った人が 0 番なら 100、1 番なら 0。
+    // 払った人が全額: 払った人が0番なら100、1番なら0。
     expect(
       slot0PercentOf("payer-all", otherParticipant, meParticipant, 0),
     ).toBe(100);
     expect(slot0PercentOf("payer-all", meParticipant, meParticipant, 0)).toBe(
       0,
     );
-    // もう一人が全額: 払った人が 0 番なら 0、1 番なら 100。
+    // もう一人が全額: 払った人が0番なら0、1番なら100。
     expect(
       slot0PercentOf("other-all", otherParticipant, meParticipant, 0),
     ).toBe(0);
@@ -320,7 +320,7 @@ describe("送る割合の組み立て（FW-01）", () => {
       100,
     );
     // 割合を指定: 自分の割合をそのまま受け、払った人を切り替えても維持する。
-    // （自分が 0 番 → 自分の値。自分が 1 番 → 100 − 自分の値。）
+    // （自分が0番 → 自分の値。自分が1番 → 100 − 自分の値。）
     expect(slot0PercentOf("ratio", meParticipant, meParticipant, 30)).toBe(70);
     expect(slot0PercentOf("ratio", otherParticipant, meParticipant, 30)).toBe(
       70,
@@ -374,12 +374,12 @@ describe("送る割合の組み立て（FW-01）", () => {
 
 describe("二人の負担と金額の検証（FW-02・FW-03）", () => {
   it("7,001 円・折半は払った人が 3,501 円・もう一人が 3,500 円", () => {
-    // 払った人が 1 番（自分）: 0 番のあおいが 3,500。
+    // 払った人が1番（自分）: 0番のあおいが3,500。
     expect(burdensOf(7001n, 50, meParticipant)).toEqual({
       slot0: 3500n,
       slot1: 3501n,
     });
-    // 払った人が 0 番（あおい）: あおいが 3,501。
+    // 払った人が0番（あおい）: あおいが3,501。
     expect(burdensOf(7001n, 50, otherParticipant)).toEqual({
       slot0: 3501n,
       slot1: 3500n,
@@ -436,7 +436,7 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     expect(screen.getByRole("radio", { name: "折半" })).toBeChecked();
 
     await userEvent.type(amountInput, "7001");
-    // 払った人（自分・1 番）が 3,501、あおい（0 番）が 3,500。
+    // 払った人（自分・1番）が3,501、あおい（0番）が3,500。
     const rows = screen.getAllByText(/3,50[01] 円/);
     expect(rows).toHaveLength(2);
     expect(screen.getByText("3,500 円")).toBeInTheDocument();
@@ -511,7 +511,7 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     );
 
     // FW-12: 残額・確認の一覧・確認の詳細を取り直す。
-    // 残額は画面が保持しているので無効化→再取得（2 回目の GET）で確かめる。
+    // 残額は画面が保持しているので無効化→再取得（2回目のGET）で確かめる。
     expect(
       client.getQueryState(["settlement-previews", tripId])?.isInvalidated,
     ).toBe(true);
@@ -545,7 +545,7 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
 
     await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
     const [, init] = writeCalls(fetchMock)[0];
-    // 自分（1 番）の 30% → あおい（0 番）は 70。払った人はあおい。
+    // 自分（1番）の30% → あおい（0番）は70。払った人はあおい。
     expect(JSON.parse(String(init?.body))).toEqual({
       amountYen: "1000",
       payerUserId: otherUserId,
@@ -601,7 +601,7 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "関連する予定",
     });
-    // 日を 10/13 に変えるとその日の予定が並ぶ。
+    // 日を10/13に変えるとその日の予定が並ぶ。
     await user.click(
       within(dialog).getByRole("radio", { name: "10/13 火" }),
     );
@@ -612,7 +612,7 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
       within(dialog).getByRole("button", { name: "この予定にする" }),
     );
     expect(await screen.findByText(/錦市場で昼食/)).toBeInTheDocument();
-    // 予定の日の getItinerary が投げられている。
+    // 予定の日のgetItineraryが投げられている。
     expect(
       fetchMock.mock.calls.some(([callUrl]) =>
         String(callUrl).includes(`itinerary?date=2026-10-13`),

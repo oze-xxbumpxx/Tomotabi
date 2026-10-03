@@ -21,7 +21,7 @@ describe("balanceOf", () => {
     expect(none.fromSlot).toBeNull();
     expect(none.toSlot).toBeNull();
 
-    // 互いに同額を立て替えた形。対象はあるが合計は 0 円
+    // 互いに同額を立て替えた形。対象はあるが合計は0円
     const zero = balanceOf([target("a", 500n), target("b", -500n)]);
     expect(zero.targetCount).toBe(2);
     expect(zero.signedTotal).toBe(0n);

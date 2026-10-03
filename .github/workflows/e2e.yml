@@ -39,8 +39,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      # web の build には E2E 用の API_ORIGIN が要る（rewrites の転送先は
-      # build 時に決まる。e2e/support/env.ts の固定ポートと同じ値）。
+      # webのbuildにはE2E用のAPI_ORIGINが要る（rewritesの転送先は
+      # build時に決まる。e2e/support/env.tsの固定ポートと同じ値）。
       - run: npm run build -w @tomotabi/contracts
       - run: npm run build -w @tomotabi/api
       - run: npm run build -w @tomotabi/web

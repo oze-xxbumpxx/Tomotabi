@@ -1,82 +1,82 @@
-# Devin の導入
+# Devinの導入
 
-2026-09-24 に Devin を契約した。Tomotabi では、Claude Code・Codex・Cursor と同じルール（`AGENTS.md`）に従う、非同期で PR を出す担当として使う。
+2026-09-24にDevinを契約した。Tomotabiでは、Claude Code・Codex・Cursorと同じルール（`AGENTS.md`）に従う、非同期でPRを出す担当として使う。
 
 ## 役割
 
 | 担当        | 任せる作業                                                                                          |
 | ----------- | --------------------------------------------------------------------------------------------------- |
-| Devin       | Issue / Linear 起点の L0 / L1（テスト追加、lint 修正、文言修正、依存の小さな更新）と、PR のレビュー |
-| Claude Code | L2 / L3 の設計・実装計画・実装、ハーネス（`.claude/`）の変更                                        |
+| Devin       | Issue / Linear起点のL0 / L1（テスト追加、lint修正、文言修正、依存の小さな更新）と、PRのレビュー |
+| Claude Code | L2 / L3の設計・実装計画・実装、ハーネス（`.claude/`）の変更                                        |
 
-- L2 / L3 を Devin に任せるのは、`docs/designs/` の設計書をユーザーが承認したあとだけにする。
-- 同じブランチを他のツールと同時に編集しない。Devin には専用のブランチ（`devin/<内容>`）を使わせる。
-- マージはユーザーが行う。Devin の PR も CI（`quality` / `build` / `harness` / `api-db`）が通ってからマージする。
+- L2 / L3をDevinに任せるのは、`docs/designs/`の設計書をユーザーが承認したあとだけにする。
+- 同じブランチを他のツールと同時に編集しない。Devinには専用のブランチ（`devin/<内容>`）を使わせる。
+- マージはユーザーが行う。DevinのPRもCI（`quality` / `build` / `harness` / `api-db`）が通ってからマージする。
 
-## Devin にルールを届ける方法
+## Devinにルールを届ける方法
 
-Devin の Knowledge は Skills に移行し、画面から Knowledge を登録する入口は無くなった（2026-09 時点）。Tomotabi では画面に登録せず、リポジトリのファイルで届ける。レビューでき、`AGENTS.md` と食い違えば差分で気づけるため。
+DevinのKnowledgeはSkillsに移行し、画面からKnowledgeを登録する入口は無くなった（2026-09時点）。Tomotabiでは画面に登録せず、リポジトリのファイルで届ける。レビューでき、`AGENTS.md`と食い違えば差分で気づけるため。
 
-| Devin が自動で読むもの                   | 内容                                                                     |
+| Devinが自動で読むもの                   | 内容                                                                     |
 | ---------------------------------------- | ------------------------------------------------------------------------ |
 | `AGENTS.md` / `CLAUDE.md`                | 全ツール共通のルール                                                     |
-| `.agents/skills/*/SKILL.md`              | Codex と共有する日常のスキル（`.claude/skills/` へのシンボリックリンク） |
-| `.agents/skills/devin-workflow/SKILL.md` | Devin だけの手順（ブランチ名、品質確認、やってはいけないこと、作業ログ） |
+| `.agents/skills/*/SKILL.md`              | Codexと共有する日常のスキル（`.claude/skills/`へのシンボリックリンク） |
+| `.agents/skills/devin-workflow/SKILL.md` | Devinだけの手順（ブランチ名、品質確認、やってはいけないこと、作業ログ） |
 
-`devin-workflow` は Devin 専用のため `.claude/skills/` には置かず、`.agents/skills/` に実体を置く。Codex にも見えるが、説明に「Devin のセッションでだけ使う」と書いて区別する。
+`devin-workflow`はDevin専用のため`.claude/skills/`には置かず、`.agents/skills/`に実体を置く。Codexにも見えるが、説明に「Devinのセッションでだけ使う」と書いて区別する。
 
-## Devin に無い仕組み
+## Devinに無い仕組み
 
-Claude Code のフック（危険操作の遮断・成果物チェック）は Devin では動かない。Codex と同じく、`devin-workflow` スキルの「やってはいけないこと」で指示して代わりにする。守られたかどうかは PR のレビューで確かめる。
+Claude Codeのフック（危険操作の遮断・成果物チェック）はDevinでは動かない。Codexと同じく、`devin-workflow`スキルの「やってはいけないこと」で指示して代わりにする。守られたかどうかはPRのレビューで確かめる。
 
-Devin は `.mdc` のルールも読むため、Cursor 用の `.cursor/rules/pstack-default.mdc` も取り込まれることがある。Devin には pstack が無いので、スキルでは従わないよう書いている。画面の Rules 一覧に pstack が出ていたら無効にする。
+Devinは`.mdc`のルールも読むため、Cursor用の`.cursor/rules/pstack-default.mdc`も取り込まれることがある。Devinにはpstackが無いので、スキルでは従わないよう書いている。画面のRules一覧にpstackが出ていたら無効にする。
 
 ## 作業環境（blueprint）
 
-Devin の作業環境は `.devin/blueprint.yaml` で定める（画面で設定する旧方式は 2026-07 に廃止）。リポジトリで管理するので、変えるときも PR でレビューする。
+Devinの作業環境は`.devin/blueprint.yaml`で定める（画面で設定する旧方式は2026-07に廃止）。リポジトリで管理するので、変えるときもPRでレビューする。
 
-| 節            | Tomotabi での内容                                                                                        | いつ動くか                                         |
+| 節            | Tomotabiでの内容                                                                                        | いつ動くか                                         |
 | ------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `initialize`  | Node 22 が無ければ nodejs.org の公式配布物をチェックサムで確かめて入れる。最後に 22 でなければ失敗させる | 環境を一から作るとき。結果はスナップショットに残る |
-| `maintenance` | Node 22 であることを確かめてから `npm ci`（CI と同じ）                                                   | スナップショットを作り直すたび                     |
-| `knowledge`   | lint / type-check / test / build / api:check・db:check / dev の各コマンドと注意                          | 実行されない。Devin への参照情報                   |
+| `initialize`  | Node 22が無ければnodejs.orgの公式配布物をチェックサムで確かめて入れる。最後に22でなければ失敗させる | 環境を一から作るとき。結果はスナップショットに残る |
+| `maintenance` | Node 22であることを確かめてから`npm ci`（CIと同じ）                                                   | スナップショットを作り直すたび                     |
+| `knowledge`   | lint / type-check / test / build / api:check・db:check / devの各コマンドと注意                          | 実行されない。Devinへの参照情報                   |
 
-- `DATABASE_URL` は空のままでよい（API は in-memory で動く）。`.env` に本番の値を入れない。
-- `npm run test:api-db` は Docker（Testcontainers）が必要。使えない場合は CI の `api-db` ジョブで確かめる。
-- 規約や作業手順は blueprint に書かず、`AGENTS.md` と `devin-workflow` スキルに置く。blueprint の `knowledge` は環境に結びついた短いコマンドの参照だけにする。
+- `DATABASE_URL`は空のままでよい（APIはin-memoryで動く）。`.env`に本番の値を入れない。
+- `npm run test:api-db`はDocker（Testcontainers）が必要。使えない場合はCIの`api-db`ジョブで確かめる。
+- 規約や作業手順はblueprintに書かず、`AGENTS.md`と`devin-workflow`スキルに置く。blueprintの`knowledge`は環境に結びついた短いコマンドの参照だけにする。
 
 ## 実行場所（2026-09-26）
 
-Devin は、**既定でローカル**（手元の Mac の Devin CLI）で動かす。ユーザーが出先から指示したときだけクラウドを使う。起動と修正の手順は `.claude/skills/review-devin-pr/SKILL.md`。
+Devinは、**既定でローカル**（手元のMacのDevin CLI）で動かす。ユーザーが出先から指示したときだけクラウドを使う。起動と修正の手順は`.claude/skills/review-devin-pr/SKILL.md`。
 
 | | ローカル（既定） | クラウド（指示時のみ） |
 | --- | --- | --- |
-| 起動 | 専用クローン `/Users/siro/個人開発/devin-work/tomotabi` で `devin --model swe-2-<effort> --permission-mode dangerous -p …` | `devin --cloud -p …` |
-| モデル | `--model` で依頼ごとに SWE-2 の effort を選べる | `--model` は無視される。Devin Web の「セッションエージェント」の既定（SWE-2 High） |
-| PR の監視 | する。プロンプトで `devin-workflow` §4.5 を指示すると、PR を出したあともコメントと CI を 5 分ごとに見て直す。セッションが終わっていたら、直しは新しいローカルセッションで頼む（`devin -c` は起動しなかった） | PR のコメントと CI の失敗に自動で対応する |
-| 進み具合の見方 | 出力を状態ディレクトリの `devin-logs/issue-<n>.log` に tee し、見張り画面（`.claude/scripts/devin-watch.mjs`。`--install` で `~/.local/state/tomotabi-harness/bin/devin-watch` にリンク）をターミナルで開く。実行中のコマンド・変更中のファイル・PR と CI・最近の発言を 5 秒ごとに出す | Devin Web のセッション画面 |
-| 注意 | 同じクローンで 2 つ同時に動かさない。`--sandbox` を付けると途中で止まる。書き込みは強制ではなくプロンプトでクローン内に限る | Mac を閉じても進む |
+| 起動 | 専用クローン`/Users/siro/個人開発/devin-work/tomotabi`で`devin --model swe-2-<effort> --permission-mode dangerous -p …` | `devin --cloud -p …` |
+| モデル | `--model`で依頼ごとにSWE-2のeffortを選べる | `--model`は無視される。Devin Webの「セッションエージェント」の既定（SWE-2 High） |
+| PRの監視 | する。プロンプトで`devin-workflow` §4.5を指示すると、PRを出したあともコメントとCIを5分ごとに見て直す。セッションが終わっていたら、直しは新しいローカルセッションで頼む（`devin -c`は起動しなかった） | PRのコメントとCIの失敗に自動で対応する |
+| 進み具合の見方 | 出力を状態ディレクトリの`devin-logs/issue-<n>.log`にteeし、見張り画面（`.claude/scripts/devin-watch.mjs`。`--install`で`~/.local/state/tomotabi-harness/bin/devin-watch`にリンク）をターミナルで開く。実行中のコマンド・変更中のファイル・PRとCI・最近の発言を5秒ごとに出す | Devin Webのセッション画面 |
+| 注意 | 同じクローンで2つ同時に動かさない。`--sandbox`を付けると途中で止まる。書き込みは強制ではなくプロンプトでクローン内に限る | Macを閉じても進む |
 
-- 専用クローンにしたのは、Devin のフォルダ信頼（初回だけ `devin` を対話で起動して許可）を 1 回で済ませるため。worktree は `.git` が元のリポジトリ側にあるため使わない。
-- クラウドで作業したセッションは、学んだことをスキルや blueprint に残す PR を自分から出すことがある（#53・#54）。Issue に紐づかないが、Claude Code が自動でレビューする（委譲中のセッションは `wait-for-devin-pr.mjs`、それ以外はセッション開始時のフック `delegation-status.mjs` で見つける）。手順は `review-devin-pr` の「Issue なし PR」。
+- 専用クローンにしたのは、Devinのフォルダ信頼（初回だけ`devin`を対話で起動して許可）を1回で済ませるため。worktreeは`.git`が元のリポジトリ側にあるため使わない。
+- クラウドで作業したセッションは、学んだことをスキルやblueprintに残すPRを自分から出すことがある（#53・#54）。Issueに紐づかないが、Claude Codeが自動でレビューする（委譲中のセッションは`wait-for-devin-pr.mjs`、それ以外はセッション開始時のフック`delegation-status.mjs`で見つける）。手順は`review-devin-pr`の「IssueなしPR」。
 
 ## 確認済みのこと（2026-09-25）
 
-Devin のセッションで「使えるスキルの一覧」を尋ねて確かめた。
+Devinのセッションで「使えるスキルの一覧」を尋ねて確かめた。
 
-- `.agents/skills/` のシンボリックリンク先（`.claude/skills/`）も読めている。共有スキルと `devin-workflow` が一覧に出た。
-- Devin には、組み込みのスキル（`managing-playbooks`・`managing-automations`・`managing-child-sessions` など）もある。
-- Devin に接続した他のリポジトリ（Cookpit）のスキルも一覧に出る。その中には Tomotabi に無いスキル（`create-codex-brief`・`review-codex-implementation`・`manual-browser-verify`）がある。Tomotabi の作業で使わないよう、`devin-workflow` の「やってはいけないこと」に書いた。Devin の Settings → Environment のリポジトリ欄で cookpit も Included になっているため。
+- `.agents/skills/`のシンボリックリンク先（`.claude/skills/`）も読めている。共有スキルと`devin-workflow`が一覧に出た。
+- Devinには、組み込みのスキル（`managing-playbooks`・`managing-automations`・`managing-child-sessions`など）もある。
+- Devinに接続した他のリポジトリ（Cookpit）のスキルも一覧に出る。その中にはTomotabiに無いスキル（`create-codex-brief`・`review-codex-implementation`・`manual-browser-verify`）がある。Tomotabiの作業で使わないよう、`devin-workflow`の「やってはいけないこと」に書いた。DevinのSettings → Environmentのリポジトリ欄でcookpitもIncludedになっているため。
 
-Devin の画面（Settings → Environment → Snapshots）のビルドログで確かめた。
+Devinの画面（Settings → Environment → Snapshots）のビルドログで確かめた。
 
-- blueprint が読み込まれ（`1 blueprint changed`）、`maintenance` の Node 22 の確認を通って `npm ci` が成功した（853 パッケージ）。Health Check も成功した。
-- `npm ci` は `16 vulnerabilities (13 moderate, 3 high)` を報告した。既存の依存によるもので、未対応。
+- blueprintが読み込まれ（`1 blueprint changed`）、`maintenance`のNode 22の確認を通って`npm ci`が成功した（853パッケージ）。Health Checkも成功した。
+- `npm ci`は`16 vulnerabilities (13 moderate, 3 high)`を報告した。既存の依存によるもので、未対応。
 
-GitHub 側の設定。
+GitHub側の設定。
 
-- main に Ruleset（`protect-main`）を設定した。PR 必須（承認 0）、CI の `quality`・`build`・`api-db` の成功が必須、force push と削除を禁止。バイパスは無し。Devin を含め、どのツールも main へ直接 push できない。
+- mainにRuleset（`protect-main`）を設定した。PR必須（承認0）、CIの`quality`・`build`・`api-db`の成功が必須、force pushと削除を禁止。バイパスは無し。Devinを含め、どのツールもmainへ直接pushできない。
 
 ## 未確認のこと
 
-- Devin の VM で Docker（`npm run test:api-db`）が動くか。
+- DevinのVMでDocker（`npm run test:api-db`）が動くか。

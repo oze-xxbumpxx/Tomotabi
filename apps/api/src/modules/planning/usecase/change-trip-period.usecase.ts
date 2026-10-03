@@ -42,7 +42,7 @@ export class ChangeTripPeriodUseCase implements ChangeTripPeriodInputPort {
         this.unitOfWork.run((ctx) =>
           runTripUpdate(ctx, command, async (trip, context) => {
             // 取りやめ済みを含む全予定が新しい期間に収まるかを見る
-            // （M2-b の予定 API はこの同じ規則を使う）。
+            // （M2-bの予定APIはこの同じ規則を使う）。
             const outside = await context.plans.datesOutside(trip.id, period);
             if (outside.length > 0) {
               throw new ApiError({

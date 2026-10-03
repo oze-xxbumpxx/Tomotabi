@@ -1,8 +1,8 @@
 // guard-dangerous.mjs（PreToolUse Hook）の安全境界テスト。
-// 実際にフックをサブプロセスとして起動し、終了コードで allow(0) / deny(2) を検証する。
+// 実際にフックをサブプロセスとして起動し、終了コードでallow(0) / deny(2)を検証する。
 //
-// 保護ファイルの人間承認層は撤去済み（承認境界は PR レビュー）。
-// 本フックは破壊的操作・秘密情報・Hook 回避のみを決定論的に拒否する。
+// 保護ファイルの人間承認層は撤去済み（承認境界はPRレビュー）。
+// 本フックは破壊的操作・秘密情報・Hook回避のみを決定論的に拒否する。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -29,7 +29,7 @@ function sandbox() {
   };
 }
 
-/** フックを起動して終了コードを返す。rawInput を渡すと JSON 化せずそのまま送る。 */
+/** フックを起動して終了コードを返す。rawInputを渡すとJSON化せずそのまま送る。 */
 function runHook(sb, payload, { rawInput = null, env: extraEnv = {} } = {}) {
   const env = {
     ...process.env,

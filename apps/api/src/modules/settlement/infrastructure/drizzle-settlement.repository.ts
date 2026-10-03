@@ -104,8 +104,8 @@ function toSettlementCancellationRecord(
 }
 
 /**
- * settlement スキーマの Repository。確認・精算・取り消しは追記のみ、
- * 占有（active_claims）は補助状態。UoW のトランザクション内の db
+ * settlementスキーマのRepository。確認・精算・取り消しは追記のみ、
+ * 占有（active_claims）は補助状態。UoWのトランザクション内のdb
  * ハンドルを受けて使う。
  */
 export class DrizzleSettlementRepository implements SettlementRepository {
@@ -162,7 +162,7 @@ export class DrizzleSettlementRepository implements SettlementRepository {
       return new Map();
     }
     // 明細は支払いの記録順で返す（確認を作った時点の対象の並びを
-    // そのまま再現する。preview_items 自体に順序の列は持たない）。
+    // そのまま再現する。preview_items自体に順序の列は持たない）。
     const rows = await this.db
       .select({ previewId: previewItems.previewId, item: previewItems })
       .from(previewItems)
@@ -221,8 +221,8 @@ export class DrizzleSettlementRepository implements SettlementRepository {
     createdBy: UserId,
     previewId: string,
   ): Promise<PreviewAnchor | null> {
-    // created_at を text で取る。Date（ミリ秒）に変換すると同じミリ秒内の
-    // 違う行を区別できず、ページの境目で確認が抜け落ちる（trip の一覧と同じ）。
+    // created_atをtextで取る。Date（ミリ秒）に変換すると同じミリ秒内の
+    // 違う行を区別できず、ページの境目で確認が抜け落ちる（tripの一覧と同じ）。
     const rows = await this.db
       .select({ createdAt: sql<string>`${previews.createdAt}::text` })
       .from(previews)
@@ -264,7 +264,7 @@ export class DrizzleSettlementRepository implements SettlementRepository {
       unsettled,
     ];
     if (after !== null) {
-      // (created_at, id) の複合キーで「より古い側」のページを取る。
+      // (created_at, id)の複合キーで「より古い側」のページを取る。
       conditions.push(
         sql`(${previews.createdAt}, ${previews.id}) < (${after.createdAt}::timestamptz, ${after.id}::uuid)`,
       );
@@ -335,8 +335,8 @@ export class DrizzleSettlementRepository implements SettlementRepository {
             inArray(settlementItems.paymentId, [...paymentIds]),
           ),
         ),
-      // 精算の取り消しは明細行経由で支払いに辿る（cancellations 自体は
-      // payment_id を持たない）。
+      // 精算の取り消しは明細行経由で支払いに辿る（cancellations自体は
+      // payment_idを持たない）。
       this.db
         .select({
           paymentId: settlementItems.paymentId,

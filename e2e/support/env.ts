@@ -1,5 +1,5 @@
 /**
- * run.mjs が子プロセスに渡す環境変数を読む。直接 `playwright test` を
+ * run.mjsが子プロセスに渡す環境変数を読む。直接`playwright test`を
  * 実行した場合（環境変数が無い）はここで失敗させる。
  */
 const required = (name: string): string => {
@@ -12,7 +12,7 @@ const required = (name: string): string => {
   return value;
 };
 
-// ポートは固定値（web の build に API_ORIGIN が焼き込まれるため、
+// ポートは固定値（webのbuildにAPI_ORIGINが焼き込まれるため、
 // 実行ごとに変えられない。ADR-0005 / 設計書「データフロー」）。
 export const WEB_PORT = 3100;
 export const API_PORT = 3101;
@@ -25,5 +25,5 @@ export const AUTH_SECRET = required("E2E_AUTH_SECRET");
 export const HINATA_USER_ID = required("E2E_HINATA_USER_ID");
 export const AOI_USER_ID = required("E2E_AOI_USER_ID");
 
-/** CI では build を事前ステップで済ませ、webServer は起動だけにする。 */
+/** CIではbuildを事前ステップで済ませ、webServerは起動だけにする。 */
 export const SKIP_BUILD = process.env.E2E_SKIP_BUILD === "1";

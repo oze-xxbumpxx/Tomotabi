@@ -10,7 +10,7 @@ import type {
 
 /**
  * 旅行の作成・変更フォームの入力欄（旅行名・開始日・終了日）。
- * 日付は `<input type="date">`（端末標準のピッカー）。
+ * 日付は`<input type="date">`（端末標準のピッカー）。
  */
 export function TripFormFields({
   values,

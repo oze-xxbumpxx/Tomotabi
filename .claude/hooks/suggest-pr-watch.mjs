@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// PostToolUse(Bash) Hook — `gh issue create` の直後に、PR の待機と自動レビューを促す（非ブロッキング）。
+// PostToolUse(Bash) Hook — `gh issue create`の直後に、PRの待機と自動レビューを促す（非ブロッキング）。
 //
 // 方針:
-// - Issue を他のエージェント（Devin など）に渡したら、PR ができた時点で Claude Code がレビューする運用
-//   （2026-09-26 ユーザー依頼）を、セッションをまたいで忘れないようにする。
-// - Hook は Claude のバックグラウンド処理を起動できないため、additionalContext で
-//   wait-for-pr.mjs の起動と review-devin-pr スキルの使用を促すだけにする。
-// - Issue に紐づかない Devin の PR（docs/designs/devin-unlinked-pr-review.md）を待つ wait-for-devin-pr.mjs の起動も促す。
-// - Issue の URL が出力に無いとき（作成失敗・--web 等）は何もしない。失敗しても常に exit 0。
+// - Issueを他のエージェント（Devinなど）に渡したら、PRができた時点でClaude Codeがレビューする運用
+//   （2026-09-26ユーザー依頼）を、セッションをまたいで忘れないようにする。
+// - HookはClaudeのバックグラウンド処理を起動できないため、additionalContextで
+//   wait-for-pr.mjsの起動とreview-devin-prスキルの使用を促すだけにする。
+// - Issueに紐づかないDevinのPR（docs/designs/devin-unlinked-pr-review.md）を待つwait-for-devin-pr.mjsの起動も促す。
+// - IssueのURLが出力に無いとき（作成失敗・--web等）は何もしない。失敗しても常にexit 0。
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -33,7 +33,7 @@ function responseText(response) {
 }
 
 /**
- * @returns {number[]} 作成された Issue 番号（重複なし・出現順）。対象外なら空配列。
+ * @returns {number[]} 作成されたIssue番号（重複なし・出現順）。対象外なら空配列。
  */
 export function createdIssues(input) {
   const command = input?.tool_input?.command;
@@ -42,7 +42,7 @@ export function createdIssues(input) {
   return [...new Set(numbers)];
 }
 
-/** 秒までの ISO 8601（gh の search の created:>= に渡す）。 */
+/** 秒までのISO 8601（ghのsearchのcreated:>= に渡す）。 */
 const isoSeconds = (date) => date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 export function buildContext(issues, now = new Date()) {

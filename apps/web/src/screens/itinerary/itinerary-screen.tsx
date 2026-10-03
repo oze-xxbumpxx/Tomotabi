@@ -58,9 +58,9 @@ import { Toast } from "@/shared/ui/toast";
 type Layer = "menu" | "edit" | "finish";
 
 /**
- * `/trips/{tripId}/itinerary` のしおり（08）。旅行ヘッダー・日付バー
- * （期間の日を並べ、選択は URL の `date` で再現）と予定の一覧。
- * `date` を省略するとサーバーの既定、期間外なら「旅行期間外です」。
+ * `/trips/{tripId}/itinerary`のしおり（08）。旅行ヘッダー・日付バー
+ * （期間の日を並べ、選択はURLの`date`で再現）と予定の一覧。
+ * `date`を省略するとサーバーの既定、期間外なら「旅行期間外です」。
  * 下部のタブは「しおり」と「精算」。開けた旅行はその人の「前回の旅行」
  * として保存する（F-23）。
  */
@@ -69,7 +69,7 @@ export function ItineraryScreen({
   date = null,
 }: {
   tripId: string;
-  /** URL の `date`（`YYYY-MM-DD`）。省略時は null（サーバー既定）。 */
+  /** URLの`date`（`YYYY-MM-DD`）。省略時はnull（サーバー既定）。 */
   date?: string | null;
 }) {
   const router = useRouter();
@@ -126,7 +126,7 @@ export function ItineraryScreen({
     }
   }, [meState.status, router]);
 
-  // 別画面での保存成功を遷移先で 1 回だけ知らせる（追加・編集・移動・取りやめ）。
+  // 別画面での保存成功を遷移先で1回だけ知らせる（追加・編集・移動・取りやめ）。
   useEffect(() => {
     const pending = takePendingToast();
     if (pending !== null) {
@@ -147,8 +147,8 @@ export function ItineraryScreen({
         }
       : null;
 
-  // 期間外の日は 422（PLAN_OUTSIDE_TRIP_PERIOD）→「旅行期間外です」。
-  // 開いていたときは再取得も同じ 422 で失敗するため、どちらも同じ表示にする。
+  // 期間外の日は422（PLAN_OUTSIDE_TRIP_PERIOD）→「旅行期間外です」。
+  // 開いていたときは再取得も同じ422で失敗するため、どちらも同じ表示にする。
   const outsidePeriod =
     failure !== null &&
     failure.kind === "http" &&
@@ -196,7 +196,7 @@ export function ItineraryScreen({
     );
   }
 
-  // 書き込みが 403 / 404 で拒否されたら C-2。新しいキーで回避しない（07 §10）。
+  // 書き込みが403 / 404で拒否されたらC-2。新しいキーで回避しない（07 §10）。
   const writeNotAvailable = [start.state, finish.state].find(
     (state): state is Extract<TripSaveState, { status: "rejected" }> =>
       state.status === "rejected" &&
@@ -221,7 +221,7 @@ export function ItineraryScreen({
     );
   }
 
-  // 取得・再取得の 401 は、表示済みのデータがあっても業務データを隠して C-1。
+  // 取得・再取得の401は、表示済みのデータがあっても業務データを隠してC-1。
   if (
     failure !== null &&
     failure.kind === "http" &&
@@ -235,7 +235,7 @@ export function ItineraryScreen({
   }
 
   // 期間外の日（422 PLAN_OUTSIDE_TRIP_PERIOD）は読み取りの失敗ではなく
-  // 画面の状態なので、FetchFailed より先に切り替える。期間の取得に使う
+  // 画面の状態なので、FetchFailedより先に切り替える。期間の取得に使う
   // 旅行の読み取りにも同じ出し分け（401 → C-1、403 / 404 → C-2）を適用する。
   if (outsidePeriod) {
     if (tripQuery.isPending) {
@@ -435,7 +435,7 @@ export function ItineraryScreen({
           signOutPending={signOutPending}
           signOutFailed={signOutFailed}
           onClose={() => {
-            // 拒否のあとに開き直すときは、取り直した最新の ETag で送る。
+            // 拒否のあとに開き直すときは、取り直した最新のETagで送る。
             if (start.state.status === "rejected") {
               void itinerary.refetch();
             }

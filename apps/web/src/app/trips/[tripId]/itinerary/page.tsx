@@ -15,8 +15,8 @@ export default async function Page({
     notFound();
   }
   const { date: raw } = await searchParams;
-  // `date` は実在する `YYYY-MM-DD` のときだけ渡す。省略・空文字・
-  // 形式が違う値は null（サーバー既定の日）。複数指定は先頭だけ見る。
+  // `date`は実在する`YYYY-MM-DD`のときだけ渡す。省略・空文字・
+  // 形式が違う値はnull（サーバー既定の日）。複数指定は先頭だけ見る。
   const candidate =
     typeof raw === "string" && raw !== "" ? raw : Array.isArray(raw) && typeof raw[0] === "string" && raw[0] !== "" ? raw[0] : null;
   const date =

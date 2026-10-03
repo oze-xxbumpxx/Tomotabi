@@ -115,7 +115,7 @@ function transferOf(overrides: Partial<{
   requiresTransfer: boolean;
 }> = {}) {
   return {
-    // ひなた（slot 0）→ あおい（slot 1）へ 1,285 円（正の向きは slot1→slot0）。
+    // ひなた（slot 0）→ あおい（slot 1）へ1,285円（正の向きはslot1→slot0）。
     signedTotalYen: "-1285",
     amountYen: "1285",
     fromUserId: userId,
@@ -133,7 +133,7 @@ const zeroTransfer = {
   requiresTransfer: false,
 };
 
-/** 非 0 円の残額: あおいが 2,570 円払い、二人が 1,285 円ずつ負担 → ひなた→あおい 1,285 円。 */
+/** 非0円の残額: あおいが2,570円払い、二人が1,285円ずつ負担 → ひなた→あおい1,285円。 */
 function balanceBody(overrides: Record<string, unknown> = {}) {
   return {
     tripId,
@@ -257,7 +257,7 @@ function notFound(): Response {
   return json({ code: "NOT_FOUND" }, 404);
 }
 
-/** /api/me と精算まわりの経路を URL・メソッドで振り分ける fake。 */
+/** /api/meと精算まわりの経路をURL・メソッドで振り分けるfake。 */
 function stubApi(handlers: {
   me?: Handler;
   balance?: Handler;
@@ -431,7 +431,7 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     expect(
       screen.getByText("支払いを記録すると、ここに受け渡しの額が出ます。"),
     ).toBeInTheDocument();
-    // 対象 0 件では確認の作成を出さない。
+    // 対象0件では確認の作成を出さない。
     expect(
       screen.queryByRole("button", { name: /確認する/ }),
     ).not.toBeInTheDocument();
@@ -486,7 +486,7 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     await waitFor(() => expect(createButton).toBeEnabled());
     await user.click(createButton);
 
-    // POST /settlement-previews（body なし・Idempotency-Key つき）→ その確認へ進む。
+    // POST /settlement-previews（bodyなし・Idempotency-Keyつき）→ その確認へ進む。
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(
         `/trips/${tripId}/settlement/previews/${previewId}`,
@@ -785,7 +785,7 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
       expect(pushMock).toHaveBeenCalledWith(`/trips/${tripId}/settlement`),
     );
 
-    // 精算の完了は previewId と completionKind を送る。
+    // 精算の完了はpreviewIdとcompletionKindを送る。
     expect(completeCalls).toHaveLength(1);
     const body = JSON.parse(String(completeCalls[0]?.body));
     expect(body).toEqual({
@@ -834,7 +834,7 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
     renderPreview();
 
     expect(await screen.findByText("受け渡しは不要です")).toBeInTheDocument();
-    // 0 円はチェックなし。
+    // 0円はチェックなし。
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
 
     const record = await screen.findByRole("button", {
@@ -995,7 +995,7 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(`/trips/${tripId}/settlement`),
     );
-    // 同じ要求を 1 回だけ送る。
+    // 同じ要求を1回だけ送る。
     expect(completeCalls).toHaveLength(1);
     const body = JSON.parse(String(completeCalls[0]?.body));
     expect(body.previewId).toBe(previewId);

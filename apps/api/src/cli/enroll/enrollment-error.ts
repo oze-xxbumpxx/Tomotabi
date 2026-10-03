@@ -9,7 +9,7 @@ export type EnrollmentErrorCode =
   | "CANCELLED";
 
 /**
- * 初期登録の中止理由。message には code・トークン・sub を含めない（そのまま標準出力に出すため）。
+ * 初期登録の中止理由。messageにはcode・トークン・subを含めない（そのまま標準出力に出すため）。
  */
 export class EnrollmentError extends Error {
   constructor(

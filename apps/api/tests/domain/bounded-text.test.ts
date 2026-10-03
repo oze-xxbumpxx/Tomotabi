@@ -14,7 +14,7 @@ describe("BoundedText", () => {
   it("U-03: 上限はコードポイントで数える", () => {
     expect(BoundedText.parse("あ".repeat(100), 100)).toBe("あ".repeat(100));
     expect(() => BoundedText.parse("あ".repeat(101), 100)).toThrow();
-    // 絵文字 100 個は UTF-16 では 200 だが、コードポイントでは 100 なので通る
+    // 絵文字100個はUTF-16では200だが、コードポイントでは100なので通る
     const emoji = "🍣".repeat(100);
     expect(emoji.length).toBe(200);
     expect(BoundedText.parse(emoji, 100)).toBe(emoji);

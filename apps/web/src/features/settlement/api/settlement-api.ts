@@ -33,7 +33,7 @@ import type {
   MutationRequest,
 } from "@/shared/api/mutation-request";
 
-// 生成型は api 層でだけ直接 import できる。model / ui / screens はここから受け取る。
+// 生成型はapi層でだけ直接importできる。model / ui / screensはここから受け取る。
 export type {
   Balance,
   Participant,
@@ -52,9 +52,9 @@ export type {
 } from "@/shared/api/generated/finance";
 
 /**
- * 精算 API の薄い入口。呼び出しは callApi / sendMutationRequest を通し、
- * 応答は契約の Zod で検証してから返す。生成クライアントと zod への参照は
- * この層だけに閉じる（features/plans と同じ形）。
+ * 精算APIの薄い入口。呼び出しはcallApi / sendMutationRequestを通し、
+ * 応答は契約のZodで検証してから返す。生成クライアントとzodへの参照は
+ * この層だけに閉じる（features/plansと同じ形）。
  */
 
 // ---- 読み取り ----
@@ -68,7 +68,7 @@ export function getBalance(
 
 /**
  * 自分の未完了の確認の一覧（GET /api/trips/{tripId}/settlement-previews?status=pending）。
- * `cursor` は前のページの `nextCursor`。
+ * `cursor`は前のページの`nextCursor`。
  */
 export function listPendingPreviewsPage(
   tripId: string,
@@ -83,7 +83,7 @@ export function listPendingPreviewsPage(
   );
 }
 
-/** 受け渡しの確認 1 件（元の明細と現在の検証結果）。 */
+/** 受け渡しの確認1件（元の明細と現在の検証結果）。 */
 export function getSettlementPreview(
   tripId: string,
   previewId: string,
@@ -94,7 +94,7 @@ export function getSettlementPreview(
   );
 }
 
-/** 精算の履歴（新しい順）。`cursor` は前のページの `nextCursor`。 */
+/** 精算の履歴（新しい順）。`cursor`は前のページの`nextCursor`。 */
 export function listSettlementsPage(
   tripId: string,
   cursor: string | null,
@@ -107,7 +107,7 @@ export function listSettlementsPage(
 
 // ---- 変更要求の組み立て（MutationDraft） ----
 
-/** 確認の作成（POST /trips/{tripId}/settlement-previews。body・If-Match なし）。 */
+/** 確認の作成（POST /trips/{tripId}/settlement-previews。body・If-Matchなし）。 */
 export function createSettlementPreviewDraft(tripId: string): MutationDraft {
   return {
     operation: "createSettlementPreview",
@@ -119,7 +119,7 @@ export function createSettlementPreviewDraft(tripId: string): MutationDraft {
 
 /**
  * 精算の完了（POST /trips/{tripId}/settlements）。
- * 非 0 円は `transfer_completed`、0 円は `no_transfer_required`。
+ * 非0円は`transfer_completed`、0円は`no_transfer_required`。
  * 取り消された対象の了承は次の段階の画面で扱うため、ここでは常に空配列。
  */
 export function completeSettlementDraft(

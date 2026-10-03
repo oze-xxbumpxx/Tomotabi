@@ -17,8 +17,8 @@ export type MovePlanInput = Readonly<{
 
 export interface MovePlanInputPort {
   /**
-   * @throws 旅行が無い・参加していないとき 403 TRIP_NOT_ACCESSIBLE、
-   *   予定が無いとき 404 PLAN_NOT_FOUND、移動先が期間外のとき
+   * @throws旅行が無い・参加していないとき403 TRIP_NOT_ACCESSIBLE、
+   *   予定が無いとき404 PLAN_NOT_FOUND、移動先が期間外のとき
    *   422 PLAN_OUTSIDE_TRIP_PERIOD。
    */
   execute(input: MovePlanInput): Promise<PlanWriteResult>;

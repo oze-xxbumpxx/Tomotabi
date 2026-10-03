@@ -8,9 +8,9 @@ import type {
 } from "../../planning/adapter/outbound/participants.port";
 
 /**
- * planning 側の ParticipantsPort を identity の許可リストで実装した公開照会。
- * UnitOfWork の文脈（同一トランザクションの db）で生成して使う。
- * 行ロックは取らない（UPDATE 権限が無くロックできない。差分 1）。
+ * planning側のParticipantsPortをidentityの許可リストで実装した公開照会。
+ * UnitOfWorkの文脈（同一トランザクションのdb）で生成して使う。
+ * 行ロックは取らない（UPDATE権限が無くロックできない。差分1）。
  */
 export class PgParticipantsQuery implements ParticipantsPort {
   constructor(private readonly db: NodePgDatabase) {}

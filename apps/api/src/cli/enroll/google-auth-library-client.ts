@@ -13,7 +13,7 @@ export class GoogleAuthLibraryClient implements GoogleEnrollmentClient {
   }
 
   async exchangeCode(input: ExchangeCodeInput): Promise<string> {
-    // ライブラリの例外 message には渡した値が含まれるため、原因は出さず EnrollmentError に包み直す。
+    // ライブラリの例外messageには渡した値が含まれるため、原因は出さずEnrollmentErrorに包み直す。
     let tokens;
     try {
       ({ tokens } = await this.client.getToken({
@@ -31,8 +31,8 @@ export class GoogleAuthLibraryClient implements GoogleEnrollmentClient {
   }
 
   async verifyIdToken(idToken: string): Promise<IdTokenClaims> {
-    // 署名・iss（accounts.google.com）・aud・exp はライブラリが検証する。
-    // 失敗時の例外 message にトークン本体（sub・email・nonce を含む）が入るため、必ず EnrollmentError に包み直す。
+    // 署名・iss（accounts.google.com）・aud・expはライブラリが検証する。
+    // 失敗時の例外messageにトークン本体（sub・email・nonceを含む）が入るため、必ずEnrollmentErrorに包み直す。
     let payload;
     try {
       payload = (

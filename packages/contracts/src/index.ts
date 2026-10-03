@@ -1,5 +1,16 @@
 export type { ApiErrorBody } from "./error";
-export type { Payment, PaymentAllocation } from "./finance";
+export type {
+  Balance,
+  Participant,
+  Payment,
+  PaymentAllocation,
+  Preview,
+  PreviewPage,
+  PreviewSummary,
+  PreviewValidation,
+  TargetItem,
+  Transfer,
+} from "./finance";
 export type { HealthView } from "./health";
 export type { Me } from "./me";
 export type {

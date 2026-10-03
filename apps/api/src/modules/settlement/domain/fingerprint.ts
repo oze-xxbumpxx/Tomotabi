@@ -22,6 +22,13 @@ export type ClaimHistory = Readonly<{
   cancelledSettlementIds: readonly string[];
 }>;
 
+/** 精算の履歴がまだ無い支払いの履歴（指紋の材料が空）。 */
+export const EMPTY_CLAIM_HISTORY: ClaimHistory = {
+  activeClaims: {},
+  items: [],
+  cancelledSettlementIds: [],
+};
+
 /**
  * その支払いの精算と取り消しの履歴をまとめた指紋（sha256 の 16 進 64 桁）。
  * 有効な BASE・REVERSAL の精算 ID と、明細・精算取り消しの履歴 ID を

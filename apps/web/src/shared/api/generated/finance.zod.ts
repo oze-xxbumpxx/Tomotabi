@@ -415,10 +415,14 @@ export const CompleteSettlementHeader = zod.object({
   "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。')
 })
 
+export const completeSettlementBodyAcknowledgedCancellationPaymentIdsMax = 100;
+
+
+
 export const CompleteSettlementBody = zod.strictObject({
   "previewId": zod.uuid(),
   "completionKind": zod.enum(['transfer_completed', 'no_transfer_required']),
-  "acknowledgedCancellationPaymentIds": zod.array(zod.uuid()).describe('重複を含む場合は形式違反として400（生成スキーマでは検査できず、完了処理が検査する）。')
+  "acknowledgedCancellationPaymentIds": zod.array(zod.uuid()).max(completeSettlementBodyAcknowledgedCancellationPaymentIdsMax).describe('重複を含む場合は形式違反として400（生成スキーマでは検査できず、完了処理が検査する）。上限はAPIの一覧limitの上限（100）にそろえる。')
 }).describe('非0円はtransfer_completed（元の全額を受け渡した申告）、0円はno_transfer_requiredのみ。取消了承IDは現在の取消済みBASEの集合と完全一致必須。通常は空配列。')
 
 export const completeSettlementResponseSequenceRegExp = new RegExp('^[1-9][0-9]*$');

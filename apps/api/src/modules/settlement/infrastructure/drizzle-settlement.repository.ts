@@ -23,17 +23,31 @@ import type { ClaimHistory } from "../domain/fingerprint";
 import type { ActiveClaim, ClaimKind } from "../domain/settlement-target";
 import type {
   ExistingSettlement,
+  LatestActiveSettlement,
   NewPreview,
   NewPreviewItem,
+  NewSettlement,
+  NewSettlementCancellation,
+  NewSettlementItem,
   PreviewAnchor,
   PreviewItemRecord,
   PreviewPage,
   PreviewRecord,
+  SettlementAnchor,
+  SettlementCancellationRecord,
+  SettlementCompletionKind,
+  SettlementItemRecord,
+  SettlementListRow,
+  SettlementPage,
+  SettlementRecord,
   SettlementRepository,
 } from "../adapter/outbound/settlement.repository";
 
 type PreviewRow = typeof previews.$inferSelect;
 type PreviewItemRow = typeof previewItems.$inferSelect;
+type SettlementRow = typeof settlements.$inferSelect;
+type SettlementItemRow = typeof settlementItems.$inferSelect;
+type SettlementCancellationRow = typeof settlementCancellations.$inferSelect;
 
 function toPreviewRecord(row: PreviewRow): PreviewRecord {
   return {
@@ -53,6 +67,39 @@ function toPreviewItemRecord(row: PreviewItemRow): PreviewItemRecord {
     baseSettlementId: row.baseSettlementId,
     expectedFingerprint: row.expectedClaimFingerprint,
     expectedCancelled: row.expectedCancelled,
+  };
+}
+
+function toSettlementRecord(row: SettlementRow): SettlementRecord {
+  return {
+    id: row.id,
+    tripId: row.tripId,
+    previewId: row.previewId,
+    sequence: row.sequence,
+    createdBy: row.createdBy as UserId,
+    createdAt: row.createdAt,
+    signedTotal: row.signedTotalYen as SignedYen,
+    completionKind: row.completionKind as SettlementCompletionKind,
+  };
+}
+
+function toSettlementItemRecord(row: SettlementItemRow): SettlementItemRecord {
+  return {
+    paymentId: row.paymentId,
+    kind: row.kind as ClaimKind,
+    contribution: row.contributionYen as SignedYen,
+    baseSettlementId: row.baseSettlementId,
+  };
+}
+
+function toSettlementCancellationRecord(
+  row: SettlementCancellationRow,
+): SettlementCancellationRecord {
+  return {
+    settlementId: row.settlementId,
+    tripId: row.tripId,
+    cancelledBy: row.cancelledBy as UserId,
+    createdAt: row.createdAt,
   };
 }
 
@@ -353,5 +400,227 @@ export class DrizzleSettlementRepository implements SettlementRepository {
       }
     }
     return histories;
+  }
+
+  async findSettlementInTrip(
+    tripId: string,
+    settlementId: string,
+  ): Promise<SettlementRecord | null> {
+    const rows = await this.db
+      .select()
+      .from(settlements)
+      .where(
+        and(eq(settlements.tripId, tripId), eq(settlements.id, settlementId)),
+      );
+    const row = rows[0];
+    return row === undefined ? null : toSettlementRecord(row);
+  }
+
+  async findSettlementCancellation(
+    tripId: string,
+    settlementId: string,
+  ): Promise<SettlementCancellationRecord | null> {
+    const rows = await this.db
+      .select()
+      .from(settlementCancellations)
+      .where(
+        and(
+          eq(settlementCancellations.tripId, tripId),
+          eq(settlementCancellations.settlementId, settlementId),
+        ),
+      );
+    const row = rows[0];
+    return row === undefined ? null : toSettlementCancellationRecord(row);
+  }
+
+  async findSettlementAnchor(
+    tripId: string,
+    settlementId: string,
+  ): Promise<SettlementAnchor | null> {
+    const rows = await this.db
+      .select({ sequence: settlements.sequence })
+      .from(settlements)
+      .where(
+        and(eq(settlements.tripId, tripId), eq(settlements.id, settlementId)),
+      );
+    const row = rows[0];
+    return row === undefined ? null : { sequence: row.sequence };
+  }
+
+  async listSettlements(
+    tripId: string,
+    after: SettlementAnchor | null,
+    limit: number,
+  ): Promise<SettlementPage> {
+    const conditions = [eq(settlements.tripId, tripId)];
+    if (after !== null) {
+      conditions.push(sql`${settlements.sequence} < ${after.sequence}`);
+    }
+    const rows = await this.db
+      .select({ settlement: settlements, cancellation: settlementCancellations })
+      .from(settlements)
+      .leftJoin(
+        settlementCancellations,
+        and(
+          eq(settlementCancellations.tripId, settlements.tripId),
+          eq(settlementCancellations.settlementId, settlements.id),
+        ),
+      )
+      .where(and(...conditions))
+      .orderBy(desc(settlements.sequence))
+      .limit(limit + 1);
+    const items: SettlementListRow[] = rows.slice(0, limit).map((row) => ({
+      ...toSettlementRecord(row.settlement),
+      cancellation:
+        row.cancellation === null
+          ? null
+          : toSettlementCancellationRecord(row.cancellation),
+    }));
+    const last = items.at(-1);
+    return {
+      items,
+      nextCursorId:
+        rows.length > limit && last !== undefined ? last.id : null,
+    };
+  }
+
+  async listSettlementItems(
+    tripId: string,
+    settlementIds: readonly string[],
+  ): Promise<ReadonlyMap<string, readonly SettlementItemRecord[]>> {
+    if (settlementIds.length === 0) {
+      return new Map();
+    }
+    // 明細は支払いの記録順で返す（listPreviewItemsと同じ仕組み）。
+    const rows = await this.db
+      .select({
+        settlementId: settlementItems.settlementId,
+        item: settlementItems,
+      })
+      .from(settlementItems)
+      .innerJoin(
+        payments,
+        and(
+          eq(payments.tripId, settlementItems.tripId),
+          eq(payments.id, settlementItems.paymentId),
+        ),
+      )
+      .where(
+        and(
+          eq(settlementItems.tripId, tripId),
+          inArray(settlementItems.settlementId, [...settlementIds]),
+        ),
+      )
+      .orderBy(asc(payments.createdAt), asc(payments.id));
+    const grouped = new Map<string, SettlementItemRecord[]>();
+    for (const row of rows) {
+      const list = grouped.get(row.settlementId) ?? [];
+      list.push(toSettlementItemRecord(row.item));
+      grouped.set(row.settlementId, list);
+    }
+    return grouped;
+  }
+
+  async findLatestActiveSettlement(
+    tripId: string,
+  ): Promise<LatestActiveSettlement | null> {
+    const notCancelled = notExists(
+      this.db
+        .select({ _: sql`1` })
+        .from(settlementCancellations)
+        .where(
+          and(
+            eq(settlementCancellations.tripId, settlements.tripId),
+            eq(settlementCancellations.settlementId, settlements.id),
+          ),
+        ),
+    );
+    const rows = await this.db
+      .select({ id: settlements.id, sequence: settlements.sequence })
+      .from(settlements)
+      .where(and(eq(settlements.tripId, tripId), notCancelled))
+      .orderBy(desc(settlements.sequence))
+      .limit(1);
+    const row = rows[0];
+    return row === undefined ? null : { id: row.id, sequence: row.sequence };
+  }
+
+  async insertSettlement(
+    settlement: NewSettlement,
+  ): Promise<SettlementRecord> {
+    const rows = await this.db
+      .insert(settlements)
+      .values({
+        tripId: settlement.tripId,
+        previewId: settlement.previewId,
+        sequence: settlement.sequence,
+        signedTotalYen: settlement.signedTotal,
+        completionKind: settlement.completionKind,
+        createdBy: settlement.createdBy,
+      })
+      .returning();
+    return toSettlementRecord(rows[0]!);
+  }
+
+  async insertSettlementItems(
+    settlementId: string,
+    tripId: string,
+    previewId: string,
+    items: readonly NewSettlementItem[],
+  ): Promise<void> {
+    await this.db.insert(settlementItems).values(
+      items.map((item) => ({
+        settlementId,
+        tripId,
+        previewId,
+        paymentId: item.paymentId,
+        kind: item.kind,
+        contributionYen: item.contribution,
+        baseSettlementId: item.baseSettlementId,
+      })),
+    );
+  }
+
+  async insertActiveClaims(
+    tripId: string,
+    settlementId: string,
+    items: readonly NewSettlementItem[],
+  ): Promise<void> {
+    await this.db.insert(activeClaims).values(
+      items.map((item) => ({
+        tripId,
+        paymentId: item.paymentId,
+        kind: item.kind,
+        settlementId,
+      })),
+    );
+  }
+
+  async insertSettlementCancellation(
+    cancellation: NewSettlementCancellation,
+  ): Promise<SettlementCancellationRecord> {
+    const rows = await this.db
+      .insert(settlementCancellations)
+      .values({
+        settlementId: cancellation.settlementId,
+        tripId: cancellation.tripId,
+        cancelledBy: cancellation.cancelledBy,
+      })
+      .returning();
+    return toSettlementCancellationRecord(rows[0]!);
+  }
+
+  async deleteActiveClaimsForSettlement(
+    tripId: string,
+    settlementId: string,
+  ): Promise<void> {
+    await this.db
+      .delete(activeClaims)
+      .where(
+        and(
+          eq(activeClaims.tripId, tripId),
+          eq(activeClaims.settlementId, settlementId),
+        ),
+      );
   }
 }

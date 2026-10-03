@@ -1,6 +1,7 @@
 export type { ApiErrorBody } from "./error";
 export type {
   Balance,
+  CannotCancelReason,
   Participant,
   Payment,
   PaymentAllocation,
@@ -8,6 +9,8 @@ export type {
   PreviewPage,
   PreviewSummary,
   PreviewValidation,
+  Settlement,
+  SettlementPage,
   TargetItem,
   Transfer,
 } from "./finance";

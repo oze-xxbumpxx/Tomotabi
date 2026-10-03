@@ -85,6 +85,23 @@ class PgFinanceGuardLock implements FinanceGuardLocker {
       throw new Error("trip_finance_guards row is missing for a joined trip");
     }
   }
+
+  async issueNextSettlementSequence(tripId: string): Promise<number> {
+    // 行はlock()でFOR UPDATE済み。「次の連番」を1進めて、
+    // 進める前の値を払い出す（RETURNINGは更新後の値を返すので1戻す）。
+    const rows = await this.db
+      .update(tripFinanceGuards)
+      .set({
+        nextSettlementSequence: sql`${tripFinanceGuards.nextSettlementSequence} + 1`,
+      })
+      .where(eq(tripFinanceGuards.tripId, tripId))
+      .returning({ next: tripFinanceGuards.nextSettlementSequence });
+    const row = rows[0];
+    if (row === undefined) {
+      throw new Error("trip_finance_guards row is missing for a joined trip");
+    }
+    return row.next - 1;
+  }
 }
 
 /** 同じ旅行の予定かの照会（関連する予定の所属の検証）。 */

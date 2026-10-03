@@ -58,10 +58,19 @@ export class InMemoryFinanceContext implements FinanceWorkContext {
     },
   };
 
+  /** 旅行ごとの次の精算連番（guardの行が持つ値と同じ役割）。 */
+  private readonly nextSettlementSequence = new Map<string, number>();
+
   readonly financeGuard: FinanceGuardLocker = {
     lock: () => {
       this.calls.push("financeGuard.lock");
       return Promise.resolve();
+    },
+    issueNextSettlementSequence: (tripId) => {
+      this.calls.push("financeGuard.issueNextSettlementSequence");
+      const next = this.nextSettlementSequence.get(tripId) ?? 1;
+      this.nextSettlementSequence.set(tripId, next + 1);
+      return Promise.resolve(next);
     },
   };
 

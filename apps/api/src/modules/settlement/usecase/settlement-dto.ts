@@ -1,8 +1,11 @@
 import type {
+  CannotCancelReason,
+  Cancellation,
   Participant,
   Preview as PreviewContract,
   PreviewSummary,
   PreviewValidation,
+  Settlement,
   TargetItem,
   Transfer,
 } from "@tomotabi/contracts";
@@ -16,7 +19,12 @@ import type {
 } from "../../record/domain/payment";
 import { toPaymentDto } from "../../record/usecase/payment-dto";
 import type { ClaimKind } from "../domain/settlement-target";
-import type { PreviewRecord } from "../adapter/outbound/settlement.repository";
+import type {
+  LatestActiveSettlement,
+  PreviewRecord,
+  SettlementCancellationRecord,
+  SettlementRecord,
+} from "../adapter/outbound/settlement.repository";
 
 function userOf(
   roster: readonly TripRosterEntry[],
@@ -160,4 +168,62 @@ export function joinPreviewItems(
       baseSettlementId: item.baseSettlementId,
     };
   });
+}
+
+export function toSettlementCancellationDto(
+  cancellation: SettlementCancellationRecord,
+): Cancellation {
+  return {
+    targetId: cancellation.settlementId,
+    cancelledBy: cancellation.cancelledBy,
+    createdAt: cancellation.createdAt.toISOString(),
+  };
+}
+
+/**
+ * 取り消せるかと取り消せない理由（設計書「取り消せるかの判定」）。
+ * 取り消せるのは最新の有効な精算だけ。取り消し済み・最新でないは
+ * それぞれの理由を返す。
+ */
+export function cancellabilityOf(
+  settlement: SettlementRecord,
+  cancellation: SettlementCancellationRecord | null,
+  latestActive: LatestActiveSettlement | null,
+): Readonly<{ canCancel: boolean; reason: CannotCancelReason }> {
+  if (cancellation !== null) {
+    return { canCancel: false, reason: "already_cancelled" };
+  }
+  if (latestActive !== null && latestActive.id === settlement.id) {
+    return { canCancel: true, reason: null };
+  }
+  return { canCancel: false, reason: "not_latest" };
+}
+
+export function toSettlementDto(
+  settlement: SettlementRecord,
+  items: readonly TargetItemJoined[],
+  cancellation: SettlementCancellationRecord | null,
+  latestActive: LatestActiveSettlement | null,
+  roster: readonly TripRosterEntry[],
+): Settlement {
+  const { canCancel, reason } = cancellabilityOf(
+    settlement,
+    cancellation,
+    latestActive,
+  );
+  return {
+    id: settlement.id,
+    tripId: settlement.tripId,
+    previewId: settlement.previewId,
+    sequence: String(settlement.sequence),
+    createdBy: settlement.createdBy,
+    createdAt: settlement.createdAt.toISOString(),
+    completionKind: settlement.completionKind,
+    transfer: toTransferDto(settlement.signedTotal, roster),
+    items: items.map((item) => toTargetItemDto(item, roster)),
+    cancellation:
+      cancellation === null ? null : toSettlementCancellationDto(cancellation),
+    canCancel,
+    cannotCancelReason: reason,
+  };
 }

@@ -33,6 +33,88 @@ export type ExistingSettlement = Readonly<{
   cancelled: boolean;
 }>;
 
+/**
+ * 完了の記録の種類（settlement.settlements.completion_kind）。
+ * 非0円は受け渡しを完了した、0円は受け渡し不要（DBのCHECKと同じ対応）。
+ */
+export type SettlementCompletionKind =
+  | "transfer_completed"
+  | "no_transfer_required";
+
+/** 精算の行（settlement.settlements）。 */
+export type SettlementRecord = Readonly<{
+  id: string;
+  tripId: string;
+  previewId: string;
+  /** 旅行の中の連番（guardの行から1から払い出す）。 */
+  sequence: number;
+  createdBy: UserId;
+  createdAt: Date;
+  signedTotal: SignedYen;
+  completionKind: SettlementCompletionKind;
+}>;
+
+/** 精算の明細の行（settlement.items）。 */
+export type SettlementItemRecord = Readonly<{
+  paymentId: string;
+  kind: ClaimKind;
+  /** BASEはその支払いの寄与c、REVERSALは −c。 */
+  contribution: SignedYen;
+  /** REVERSALの戻す対象のBASEを済ませた精算。BASEならnull。 */
+  baseSettlementId: string | null;
+}>;
+
+/** 精算の取り消しの行（settlement.cancellations）。 */
+export type SettlementCancellationRecord = Readonly<{
+  settlementId: string;
+  tripId: string;
+  cancelledBy: UserId;
+  createdAt: Date;
+}>;
+
+/** 精算の一覧の1行（取り消しの記録を左結合で持つ）。 */
+export type SettlementListRow = SettlementRecord &
+  Readonly<{ cancellation: SettlementCancellationRecord | null }>;
+
+export type NewSettlement = Readonly<{
+  tripId: string;
+  previewId: string;
+  sequence: number;
+  createdBy: UserId;
+  signedTotal: SignedYen;
+  completionKind: SettlementCompletionKind;
+}>;
+
+export type NewSettlementItem = Readonly<{
+  paymentId: string;
+  kind: ClaimKind;
+  contribution: SignedYen;
+  baseSettlementId: string | null;
+}>;
+
+export type NewSettlementCancellation = Readonly<{
+  settlementId: string;
+  tripId: string;
+  cancelledBy: UserId;
+}>;
+
+/** 精算の一覧のページの起点（連番の降順の続き）。 */
+export type SettlementAnchor = Readonly<{
+  sequence: number;
+}>;
+
+export type SettlementPage = Readonly<{
+  items: readonly SettlementListRow[];
+  /** 次のページの起点になる精算。無ければnull。 */
+  nextCursorId: string | null;
+}>;
+
+/** 取り消せるかの判定に使う、最新の有効な精算（あれば1件）。 */
+export type LatestActiveSettlement = Readonly<{
+  id: string;
+  sequence: number;
+}>;
+
 export type NewPreview = Readonly<{
   tripId: string;
   createdBy: UserId;
@@ -127,4 +209,77 @@ export interface SettlementRepository {
     tripId: string,
     paymentIds: readonly string[],
   ): Promise<ReadonlyMap<string, ClaimHistory>>;
+
+  /** 旅行の中の精算。無い・別の旅行の精算はnull（どちらも同じ扱い）。 */
+  findSettlementInTrip(
+    tripId: string,
+    settlementId: string,
+  ): Promise<SettlementRecord | null>;
+
+  /** 精算の取り消し記録（あれば1件。PK settlement_id）。 */
+  findSettlementCancellation(
+    tripId: string,
+    settlementId: string,
+  ): Promise<SettlementCancellationRecord | null>;
+
+  /** 一覧カーソルの起点になる精算の連番。無ければnull。 */
+  findSettlementAnchor(
+    tripId: string,
+    settlementId: string,
+  ): Promise<SettlementAnchor | null>;
+
+  /**
+   * 旅行の精算を連番の降順（新しい順）で返す。取り消しの記録を左結合で
+   * 持つ。afterは排他の上限（その連番より小さい分だけ）。limit + 1件
+   * 読んで次のページの有無を決める。
+   */
+  listSettlements(
+    tripId: string,
+    after: SettlementAnchor | null,
+    limit: number,
+  ): Promise<SettlementPage>;
+
+  /**
+   * 精算の明細を支払いの記録順（payments.created_at, idの昇順）で返す。
+   * 複数の精算の明細は1回の問い合わせでまとめて取り、精算idごとに
+   * まとめて返す（listPreviewItemsと同じ仕組み）。
+   */
+  listSettlementItems(
+    tripId: string,
+    settlementIds: readonly string[],
+  ): Promise<ReadonlyMap<string, readonly SettlementItemRecord[]>>;
+
+  /** 旅行の最新の有効な精算（取り消されていないものの最大連番）。 */
+  findLatestActiveSettlement(
+    tripId: string,
+  ): Promise<LatestActiveSettlement | null>;
+
+  insertSettlement(settlement: NewSettlement): Promise<SettlementRecord>;
+
+  insertSettlementItems(
+    settlementId: string,
+    tripId: string,
+    previewId: string,
+    items: readonly NewSettlementItem[],
+  ): Promise<void>;
+
+  /** 精算の対象ごとの占有（明細と同じ(payment_id, kind)の行）。 */
+  insertActiveClaims(
+    tripId: string,
+    settlementId: string,
+    items: readonly NewSettlementItem[],
+  ): Promise<void>;
+
+  insertSettlementCancellation(
+    cancellation: NewSettlementCancellation,
+  ): Promise<SettlementCancellationRecord>;
+
+  /**
+   * その精算の占有を消す（取り消しと同じトランザクションで呼ぶ。
+   * 占有を先に消して別のトランザクションで取り消しを書く構成は禁止）。
+   */
+  deleteActiveClaimsForSettlement(
+    tripId: string,
+    settlementId: string,
+  ): Promise<void>;
 }

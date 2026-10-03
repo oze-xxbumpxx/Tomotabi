@@ -1550,7 +1550,8 @@
               "format": "uuid"
             },
             "uniqueItems": true,
-            "description": "重複を含む場合は形式違反として400（生成スキーマでは検査できず、完了処理が検査する）。"
+            "maxItems": 100,
+            "description": "重複を含む場合は形式違反として400（生成スキーマでは検査できず、完了処理が検査する）。上限はAPIの一覧limitの上限（100）にそろえる。"
           }
         },
         "required": [

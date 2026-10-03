@@ -78,6 +78,23 @@ class ErrorTestController {
   }
 
   @PublicRoute()
+  @Get("api-error-details")
+  apiErrorDetails(): never {
+    throw new ApiError({
+      code: "TARGET_ALREADY_SETTLED",
+      status: 409,
+      message: "The same targets were already settled",
+      details: {
+        existingSettlementId: "11111111-2222-4333-8444-555555555555",
+        changedPaymentIds: [
+          "66666666-7777-4888-8999-000000000000",
+          "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        ],
+      },
+    });
+  }
+
+  @PublicRoute()
   @Get("cyclic-cause")
   cyclicCause(): never {
     // 循環するcause: フィルターのcause走査が終わることを確かめる
@@ -122,6 +139,24 @@ describe("ApiErrorFilter（U-15。configure-app で組んだアプリ）", () =>
       message: "Trip is not accessible",
       requestId: expect.stringMatching(UUID_PATTERN),
       retryable: false,
+    });
+  });
+
+  it("ApiError の details は応答の本文に出る", async () => {
+    const response = await request(app.getHttpServer()).get(
+      "/api/error-test/api-error-details",
+    );
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      code: "TARGET_ALREADY_SETTLED",
+      message: "The same targets were already settled",
+      requestId: expect.stringMatching(UUID_PATTERN),
+      retryable: false,
+      existingSettlementId: "11111111-2222-4333-8444-555555555555",
+      changedPaymentIds: [
+        "66666666-7777-4888-8999-000000000000",
+        "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      ],
     });
   });
 

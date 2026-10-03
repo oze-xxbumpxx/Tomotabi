@@ -446,6 +446,41 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     ).toBeInTheDocument();
   });
 
+  it("二人の負担は払った人の名前の下に小さく「払った人」を出し、名前横の札は出さない", async () => {
+    stubApi({});
+    renderForm();
+    const amountInput = await waitForForm();
+    const user = userEvent.setup();
+    await user.type(amountInput, "7001");
+
+    const shareRowOf = (name: string) =>
+      screen
+        .getByText(name, { selector: ".pay-share-name" })
+        .closest(".pay-share-row");
+
+    // 既定は自分が払った人 → 自分の行の名前の下に「払った人」。
+    const myRow = shareRowOf("ひなた");
+    expect(
+      myRow?.querySelector(".pay-share-sub")?.textContent,
+    ).toBe("払った人");
+    // 払っていない相手の行には下の小さな文字を出さない。
+    expect(
+      shareRowOf("あおい")?.querySelector(".pay-share-sub"),
+    ).toBeNull();
+
+    // 払った人をあおいに変える → あおいが「払った人」、自分は「自分」。
+    await user.click(screen.getByRole("radio", { name: "あおい" }));
+    expect(
+      shareRowOf("あおい")?.querySelector(".pay-share-sub")?.textContent,
+    ).toBe("払った人");
+    expect(
+      shareRowOf("ひなた")?.querySelector(".pay-share-sub")?.textContent,
+    ).toBe("自分");
+
+    // 名前の横の札（pill）は出さない。
+    expect(document.querySelector(".pay-share-tag")).toBeNull();
+  });
+
   it("FW-03: カンマ付き・0・10,000,000 は欄のエラーになり送らない", async () => {
     const fetchMock = stubApi({});
     renderForm();

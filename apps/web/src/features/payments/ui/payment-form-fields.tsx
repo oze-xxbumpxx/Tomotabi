@@ -186,18 +186,18 @@ export function PaymentFormFields({
                   ? burdens.slot0
                   : burdens.slot1;
             const editablePercent = values.mode === "ratio" && isMe;
+            const tag = isPayer ? "払った人" : isMe ? "自分" : "";
             return (
               <div className="pay-share-row" key={participant.userId}>
                 <Avatar name={participant.displayName} mine={isMe} />
-                <span className="pay-share-name">
-                  {participant.displayName}
-                </span>
-                {isMe && <span className="pay-share-tag">自分</span>}
-                {isPayer && (
-                  <span className="pay-share-tag pay-share-tag-payer">
-                    払った人
+                <span className="pay-share-person">
+                  <span className="pay-share-name">
+                    {participant.displayName}
                   </span>
-                )}
+                  {tag !== "" && (
+                    <span className="pay-share-sub">{tag}</span>
+                  )}
+                </span>
                 {editablePercent && !locked ? (
                   <span className="pay-share-percent-edit">
                     <input

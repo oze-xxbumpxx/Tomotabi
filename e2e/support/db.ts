@@ -23,3 +23,19 @@ const migratorPool = (): Pool => {
 export async function resetBusinessTables(): Promise<void> {
   await migratorPool().query(TRUNCATE_BUSINESS_TABLES);
 }
+
+/**
+ * その旅行の支払いの行数を実DBで数える（FE-04の「支払いは1件だけ」を
+ * 再送で二重に作られていないことの裏付けに使う）。
+ */
+export async function countPayments(tripId: string): Promise<number> {
+  const result = await migratorPool().query<{ count: string }>(
+    "SELECT count(*)::text AS count FROM record.payments WHERE trip_id = $1",
+    [tripId],
+  );
+  const row = result.rows[0];
+  if (row === undefined) {
+    throw new Error("countPayments returned no row");
+  }
+  return Number(row.count);
+}

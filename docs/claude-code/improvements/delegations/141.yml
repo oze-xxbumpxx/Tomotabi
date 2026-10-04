@@ -1,0 +1,17 @@
+issue: 141
+title: 'feat(api): 達成・予約の表の書き込みの権限と、達成・予約・記録の一覧・ホームの契約'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-04T22:48:45Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-04T23:10:32Z'
+    reviewed_sha: 'd9112075309f96ed10b156fedb8bfbd7e6036bde'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: null
+gh: null

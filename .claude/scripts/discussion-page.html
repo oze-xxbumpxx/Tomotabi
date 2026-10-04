@@ -256,7 +256,16 @@ button:disabled{opacity:.5;cursor:default}
     S.provisional.forEach(function (p) {
       var item = el("div", { class: "fold-item" });
       item.appendChild(el("b", null, p.title));
-      item.appendChild(el("span", { class: "small muted" }, "仮の答え: " + p.recommendedText));
+      // 記号だけでは何に決めたか分からないので、選んだ案の中身と、選ばなかった案を並べる
+      var picked = p.options.filter(function (o) { return o.key === p.recommended; })[0];
+      var why = p.recommendedText.replace(/^[A-Z]\s*/, "").replace(/^（(.*)）$/, "$1");
+      var ans = el("div");
+      ans.appendChild(el("b", null, "仮に決めたこと: "));
+      ans.appendChild(document.createTextNode(picked ? picked.key + ") " + picked.label : p.recommendedText));
+      item.appendChild(ans);
+      if (why) item.appendChild(el("span", { class: "small muted" }, "理由: " + why));
+      var others = p.options.filter(function (o) { return o.key !== p.recommended; });
+      if (others.length) item.appendChild(el("span", { class: "small muted" }, "選ばなかった案: " + others.map(function (o) { return o.key + ") " + o.label; }).join(" / ")));
       item.appendChild(textField(p.id, "objection", "異議（違うと思うときだけ）"));
       $("provisional").appendChild(item);
     });

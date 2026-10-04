@@ -90,14 +90,14 @@ export function TripTabBar({
                   className="tabbar-item tabbar-item-current"
                   aria-current="page"
                 >
-                  <Icon size={18} weight="fill" aria-hidden="true" />
+                  <Icon size={24} weight="fill" aria-hidden="true" />
                   {tab.label}
                 </span>
               );
             }
             return (
               <Link key={tab.key} className="tabbar-item" href={tab.href(tripId)}>
-                <Icon size={18} weight="bold" aria-hidden="true" />
+                <Icon size={24} weight="regular" aria-hidden="true" />
                 {tab.label}
               </Link>
             );

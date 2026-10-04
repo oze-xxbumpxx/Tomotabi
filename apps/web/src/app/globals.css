@@ -1691,7 +1691,16 @@ dialog.dialog[open] {
 
 .tabbar-inner {
   pointer-events: auto;
-  display: flex;
+  display: grid;
+  /* v3: 4つのタブを等分に並べる（横に並べると狭い画面で項目が縦に伸びて
+     主ボタンに重なる） */
+  grid-template-columns: repeat(4, 1fr);
+  width: min(
+    calc(100vw - var(--space-4) * 2),
+    calc(40rem - var(--space-4) * 2)
+  );
+  height: 64px;
+  box-sizing: border-box;
   background: color-mix(
     in srgb,
     var(--color-surface) 88%,
@@ -1703,29 +1712,42 @@ dialog.dialog[open] {
   padding: 6px;
 }
 
+/* v3: アイコンの下に小さな名札。今いるタブは濃い文字と下の点で出す */
 .tabbar-item {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 22px;
-  border-radius: var(--radius-pill);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-text);
+  justify-content: center;
+  gap: 1px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
   text-decoration: none;
 }
 
 .tabbar-item-current {
-  background: var(--color-surface-inverse);
-  color: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 700;
 }
 
-/* 下部の主ボタン「支払いを記録」（v3 11。タブの上に浮くオレンジの pill） */
+.tabbar-item-current::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* 下部の主ボタン「支払いを記録」（v3 11。タブの上に浮くオレンジの pill。
+   タブの高さ 64px と下の余白 16px の上に 10px あけて置く） */
 .main-action {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   z-index: 20;
   width: min(
     calc(100vw - var(--space-4) * 2),

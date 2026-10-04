@@ -3,7 +3,7 @@
   "info": {
     "title": "Tomotabi planning boundary",
     "version": "0.0.0",
-    "description": "予定・しおり・旅行期間の公開 API 契約。docs/旅行アプリ設計 3/詳細設計/openapi.planning.json から M2 の操作を移植。getTrip は trips.json にだけ置く。"
+    "description": "予定・しおり・旅行期間・達成・予約・記録一覧の公開 API 契約。docs/旅行アプリ設計 3/詳細設計/openapi.planning.json から移植。getTrip は trips.json にだけ置く。"
   },
   "security": [
     {
@@ -780,6 +780,520 @@
           }
         }
       }
+    },
+    "/api/trips/{tripId}/achievements": {
+      "post": {
+        "operationId": "createAchievement",
+        "description": "達成を付ける。Idempotency-Key 必須。付けられるのは場所・食べ処・買い物の取りやめていない予定。同じ予定に有効な達成があれば 409 RECORD_ALREADY_ACTIVE（既存の記録IDを返す）。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "記録した。同じキーの成功の再送も元の 201 と同じ本文を返す",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "旅行の中に予定が無い（PLAN_NOT_FOUND）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（PLAN_CANCELLED・PLAN_KIND_NOT_SUPPORTED・RECORD_ALREADY_ACTIVE・IDEMPOTENCY_KEY_REUSED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/achievements/{recordId}/cancel": {
+      "post": {
+        "operationId": "cancelAchievement",
+        "description": "達成を取り消す。Idempotency-Key 必須。取り消しは別の記録を足す形（元の記録は残る）。URLの種類と記録の種類が違う・別の旅行の記録は 404。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/recordId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "取り消した。同じキーの成功の再送も元の本文を返す",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancellation"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既に取り消し済み。既存の取り消しを返す",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancellation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "記録が無い・URLの種類と記録の種類が違う・別の旅行の記録（RECORD_NOT_FOUND）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（IDEMPOTENCY_KEY_REUSED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/bookings": {
+      "post": {
+        "operationId": "createBooking",
+        "description": "予約を付ける。Idempotency-Key 必須。付けられるのは食べ処・宿・移動の予定（取りやめ済みにも付けられる）。同じ予定に有効な予約があれば 409 RECORD_ALREADY_ACTIVE（既存の記録IDを返す）。外部の予約サービスは操作しない。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "記録した。同じキーの成功の再送も元の 201 と同じ本文を返す",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "旅行の中に予定が無い（PLAN_NOT_FOUND）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（PLAN_KIND_NOT_SUPPORTED・RECORD_ALREADY_ACTIVE・IDEMPOTENCY_KEY_REUSED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/bookings/{recordId}/cancel": {
+      "post": {
+        "operationId": "cancelBooking",
+        "description": "予約を取り消す。Idempotency-Key 必須。取り消しは別の記録を足す形（元の記録は残る）。URLの種類と記録の種類が違う・別の旅行の記録は 404。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "$ref": "#/components/parameters/recordId"
+          },
+          {
+            "$ref": "#/components/parameters/Origin"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "取り消した。同じキーの成功の再送も元の本文を返す",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancellation"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既に取り消し済み。既存の取り消しを返す",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cancellation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "記録が無い・URLの種類と記録の種類が違う・別の旅行の記録（RECORD_NOT_FOUND）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（IDEMPOTENCY_KEY_REUSED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{tripId}/records": {
+      "get": {
+        "operationId": "listRecords",
+        "description": "達成・予約・支払いとその取り消しを記録した日時の降順（同じ日時は種類・ID順）で返す。type・planIdで絞り込める。recordId指定時は元の記録とその取り消しの最大2件を返す（type必須、cursor・limit併用不可、該当なしは空配列）。`Cache-Control: private, no-store`。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tripId"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "achievement",
+                "booking",
+                "payment"
+              ]
+            },
+            "description": "指定種別の元記録とその取り消しを含む"
+          },
+          {
+            "name": "planId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "description": "サーバー発行の不透明カーソル。対象旅行・フィルターを検証する。"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "recordId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "元の記録ID。指定時は type 必須・cursor と limit は併用不可。元の記録とその取り消しの最大2件、planIdはAND条件、該当なしは 200 の空配列（nextCursor=null）。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Records"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "旅行が無い・参加していない（TRIP_NOT_ACCESSIBLE）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -803,6 +1317,15 @@
       },
       "planId": {
         "name": "planId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "recordId": {
+        "name": "recordId",
         "in": "path",
         "required": true,
         "schema": {
@@ -1265,6 +1788,208 @@
           "fetchedAt"
         ]
       },
+      "EventCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "planId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "planId"
+        ]
+      },
+      "TimelineItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "achievement",
+              "booking",
+              "payment",
+              "achievement_cancellation",
+              "booking_cancellation",
+              "payment_cancellation"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "detail": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Event"
+              },
+              {
+                "$ref": "#/components/schemas/Cancellation"
+              },
+              {
+                "$ref": "#/components/schemas/Payment"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "createdAt",
+          "actorId",
+          "planId",
+          "targetId",
+          "detail"
+        ]
+      },
+      "Records": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimelineItem"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "Allocation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "burdenYen": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "maxLength": 19,
+            "description": "円単位の非負整数。BigIntから10進文字列へ変換。"
+          }
+        },
+        "required": [
+          "userId",
+          "percent",
+          "burdenYen"
+        ]
+      },
+      "Payment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tripId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amountYen": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "maxLength": 19,
+            "description": "円単位の非負整数。BigIntから10進文字列へ変換。"
+          },
+          "payerUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Allocation"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancellation": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cancellation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "tripId",
+          "planId",
+          "label",
+          "amountYen",
+          "payerUserId",
+          "allocations",
+          "createdBy",
+          "createdAt",
+          "cancellation"
+        ]
+      },
       "Error": {
         "type": "object",
         "additionalProperties": false,
@@ -1276,6 +2001,10 @@
             "type": "string"
           },
           "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "existingRecordId": {
             "type": "string",
             "format": "uuid"
           },

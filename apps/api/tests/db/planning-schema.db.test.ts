@@ -378,6 +378,10 @@ describe("planning / record / infra schema migrations and runtime privileges", (
 
     it("D-09 cannot run anything the design does not grant", async () => {
       for (const table of ALL_TABLES) {
+        // record.active_plan_events grants DELETE: occupancy rows are removed on cancel (0008).
+        if (table === "record.active_plan_events") {
+          continue;
+        }
         await expectPermissionDenied(runtime, `DELETE FROM ${table}`);
       }
       await expectPermissionDenied(
@@ -396,13 +400,6 @@ describe("planning / record / infra schema migrations and runtime privileges", (
         "UPDATE infra.command_receipts SET http_status = 200 WHERE trip_id = $1",
         [tripId],
       );
-      for (const table of ["plan_events", "plan_event_cancellations", "active_plan_events"]) {
-        await expectPermissionDenied(
-          runtime,
-          `INSERT INTO record.${table} (trip_id) VALUES ($1)`,
-          [tripId],
-        );
-      }
       await expectPermissionDenied(
         runtime,
         "UPDATE planning.trips SET created_by = $1 WHERE id = $2",
@@ -413,6 +410,64 @@ describe("planning / record / infra schema migrations and runtime privileges", (
         "UPDATE planning.plans SET trip_id = $1 WHERE id = $2",
         [tripId, planId],
       );
+    });
+
+    it("RD-01 can write records but not rewrite history", async () => {
+      // The operations a record write needs (design "DB 設計 > GRANT"): insert the
+      // history row and its occupancy, cancel, and remove the occupancy.
+      const event = await runtime.query<{ id: string }>(
+        "INSERT INTO record.plan_events (trip_id, plan_id, event_kind, created_by) VALUES ($1, $2, 'achievement', $3) RETURNING id",
+        [tripId, planId, slot0],
+      );
+      const eventId = event.rows[0]!.id;
+      await runtime.query(
+        "INSERT INTO record.active_plan_events (trip_id, plan_id, event_kind, event_id) VALUES ($1, $2, 'achievement', $3)",
+        [tripId, planId, eventId],
+      );
+      await runtime.query(
+        "INSERT INTO record.plan_event_cancellations (event_id, trip_id, cancelled_by) VALUES ($1, $2, $3)",
+        [eventId, tripId, slot0],
+      );
+      const deleted = await runtime.query(
+        "DELETE FROM record.active_plan_events WHERE event_id = $1",
+        [eventId],
+      );
+      expect(deleted.rowCount).toBe(1);
+
+      // History stays append-only for the runtime role: UPDATE and DELETE are denied
+      // (the reject_mutation triggers would block them even where a role has them).
+      await expectPermissionDenied(
+        runtime,
+        "UPDATE record.plan_events SET event_kind = 'booking' WHERE id = $1",
+        [eventId],
+      );
+      await expectPermissionDenied(runtime, "DELETE FROM record.plan_events WHERE id = $1", [eventId]);
+      await expectPermissionDenied(
+        runtime,
+        "UPDATE record.plan_event_cancellations SET cancelled_by = $1 WHERE event_id = $2",
+        [slot1, eventId],
+      );
+      await expectPermissionDenied(
+        runtime,
+        "DELETE FROM record.plan_event_cancellations WHERE event_id = $1",
+        [eventId],
+      );
+      // The occupancy table is INSERT/DELETE only — no UPDATE.
+      await expectPermissionDenied(
+        runtime,
+        "UPDATE record.active_plan_events SET event_kind = 'booking' WHERE event_id = $1",
+        [eventId],
+      );
+    });
+
+    it("RD-01 cannot TRUNCATE the record tables", async () => {
+      for (const table of [
+        "record.plan_events",
+        "record.plan_event_cancellations",
+        "record.active_plan_events",
+      ]) {
+        await expectPermissionDenied(runtime, `TRUNCATE ${table}`);
+      }
     });
 
     it.each([

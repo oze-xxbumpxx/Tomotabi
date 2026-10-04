@@ -7,6 +7,8 @@ import { join } from 'node:path';
 import {
   STAGES,
   UsageError,
+  KINDS,
+  buildNow,
   buildPageState,
   buildStatusLines,
   checkRecord,
@@ -21,7 +23,9 @@ import {
   newRecordMarkdown,
   parseRecord,
   renderPage,
+  screenNumbers,
   setStage,
+  setV3Version,
 } from '../scripts/discussion.mjs';
 
 const NOW = '2026-10-04T05:00:00.000Z';
@@ -48,6 +52,7 @@ const RECORD = `# 論点の記録: 見本の機能
 <!-- id: reconfirm -->
 
 - 工程: 設計
+- 種類: アプリの決まり
 - 優先度: 高
 - 状態: 回答待ち
 - なぜ今: ボタンが変わる。
@@ -66,6 +71,7 @@ const RECORD = `# 論点の記録: 見本の機能
 <!-- id: zero-yen -->
 
 - 工程: 要件
+- 種類: 画面
 - 優先度: 高
 - 状態: 回答待ち
 - 選択肢:
@@ -349,4 +355,147 @@ test('D-14 status: 記録の置き場が無くても何も出さずに終わる'
   const out = [];
   assert.equal(main(['status', '--hook'], { dir: join(tmpdir(), 'no-such-discussions-dir'), out: (s) => out.push(s) }), 0);
   assert.deepEqual(out, []);
+});
+
+// ── 種類・画面・図・いまの確認（観点IDはdocs/tests/discussion-page-v2.md） ──
+
+const FENCE = '```';
+const VISUAL = RECORD.replace(
+  '- 推奨: A（区切りが残る）\n',
+  `- 推奨: A（区切りが残る）
+- 画面: v3 14h, v3 14f、v3 14h
+
+${FENCE}mermaid
+flowchart LR
+  - a[ここは項目ではない] --> b
+
+  b --> c
+${FENCE}
+`,
+);
+
+test('D-20 記録の読み解き: 種類・画面・図を読み、図の中の「- 」の行を項目にしない', () => {
+  const r = parseRecord(VISUAL);
+  assert.deepEqual(r.problems, []);
+  const p = r.points.find((x) => x.id === 'zero-yen');
+  assert.equal(p.fields['種類'], '画面');
+  assert.equal(p.fields['画面'], 'v3 14h, v3 14f、v3 14h');
+  assert.deepEqual(p.figures, ['flowchart LR\n  - a[ここは項目ではない] --> b\n\n  b --> c']);
+  assert.deepEqual(r.points[0].figures, []);
+  assert.deepEqual(screenNumbers(r), ['14h', '14f']);
+  assert.deepEqual(checkRecord(r, 'sample'), []);
+  const unclosed = parseRecord(VISUAL.replace('  b --> c\n```\n', '  b --> c\n'));
+  assert.ok(unclosed.problems.some((x) => /閉じていない/.test(x)));
+});
+
+test('D-21 形の確認: 回答待ちには種類が要る。仮決定・後の工程へ・決定は種類が無くても通す', () => {
+  const noKind = RECORD.replace('- 種類: アプリの決まり\n', '');
+  const problems = checkRecord(parseRecord(noKind), 'sample');
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /回答待ちに変えるときは、種類（画面・アプリの決まり・API・設計）を書き足す/);
+  // 見本の仮決定・後の工程へ・決定には種類が無いが、誤りにしない
+  assert.deepEqual(checkRecord(parseRecord(RECORD), 'sample'), []);
+  assert.ok(checkRecord(parseRecord(RECORD.replace('- 種類: 画面', '- 種類: 見た目')), 'sample').some((x) => /種類は画面・アプリの決まり・API・設計/.test(x)));
+  assert.equal(KINDS.length, 4);
+});
+
+test('D-22 形の確認: 画面は「v3 <番号>」をカンマで並べる', () => {
+  for (const bad of ['- 画面: 09', '- 画面: v3 9', '- 画面: v3 09 記録一覧', '- 画面: v4 10']) {
+    const md = VISUAL.replace('- 画面: v3 14h, v3 14f、v3 14h', bad);
+    assert.ok(checkRecord(parseRecord(md), 'sample').some((x) => /画面は「v3 09, v3 14e」の形/.test(x)), bad);
+  }
+  assert.ok(checkRecord(parseRecord(VISUAL.replace('- 画面: v3 14h, v3 14f、v3 14h', '- 画面: ')), 'sample').some((x) => /画面に番号が無い/.test(x)));
+});
+
+test('D-23 いまの確認: 工程と状態ごとに、決めることと答えたあとを出す', () => {
+  const l3 = newProgress({ feature: 'sample', title: '見本', level: 'L3', now: NOW });
+  const open = [{ kind: '画面' }, { kind: '画面' }, { kind: 'API' }, { kind: '' }];
+  const req = buildNow(setStage(l3, 'requirements', 'waiting', { now: NOW }), open);
+  assert.equal(req.stageLabel, '要件');
+  assert.equal(req.decide, '何を作るか');
+  assert.equal(req.after, '答えを記録に写し、要件定義書を書いて承認をお願いする');
+  assert.deepEqual(req.kinds, [{ kind: '画面', count: 2 }, { kind: 'API', count: 1 }, { kind: '種類なし', count: 1 }]);
+  assert.equal(req.count, 4);
+  assert.equal(buildNow(setStage(l3, 'requirements', 'approval', { now: NOW }), []).after, 'PRのマージで承認。次は設計');
+  let p = setStage(l3, 'requirements', 'done', { pr: 1, now: NOW });
+  assert.equal(buildNow(setStage(p, 'design', 'waiting', { now: NOW }), []).after, '答えを記録に写し、設計書を書いて承認をお願いする');
+  assert.equal(buildNow(setStage(p, 'design', 'approval', { now: NOW }), []).after, 'PRのマージで承認。次は実装計画と試験観点');
+  p = setStage(p, 'design', 'done', { pr: 2, now: NOW });
+  const plan = buildNow(setStage(p, 'plan', 'waiting', { now: NOW }), []);
+  assert.equal(plan.decide, 'どの順で作り、何を試すか');
+  assert.equal(plan.after, '答えを記録に写し、計画を直す');
+  p = setStage(setStage(p, 'plan', 'done', { now: NOW }), 'implement', 'waiting', { now: NOW });
+  assert.deepEqual([buildNow(p, []).decide, buildNow(p, []).after], ['作りながら出た問い', '答えを記録に写し、作業を続ける']);
+  for (const s of STAGES) p = setStage(p, s.id, 'done', { pr: 3, now: NOW });
+  assert.equal(buildNow(p, []).stage, null);
+});
+
+test('D-24 ページの中身: カードに種類・工程・画面・図が入る。撮っていない画面は名前と画像を空にする', () => {
+  const progress = newProgress({ feature: 'sample', title: '見本', level: 'L2', now: NOW });
+  const screens = new Map([['14h', { name: '受け渡しの確認 · 0 円', src: 'data:image/jpeg;base64,AAAA' }]]);
+  const s = buildPageState(parseRecord(VISUAL), progress, { now: NOW, screens });
+  const q = s.open.find((x) => x.id === 'zero-yen');
+  assert.equal(q.kind, '画面');
+  assert.equal(q.phase, '要件');
+  assert.deepEqual(q.screens, [
+    { no: '14h', name: '受け渡しの確認 · 0 円', src: 'data:image/jpeg;base64,AAAA' },
+    { no: '14f', name: '', src: null },
+  ]);
+  assert.equal(q.figures.length, 1);
+  assert.equal(s.open[0].kind, 'アプリの決まり');
+  assert.deepEqual(s.provisional[0].screens, []);
+  assert.equal(s.provisional[0].kind, '');
+  assert.equal(s.now.stage, 'design');
+  assert.equal(s.now.count, 2);
+  // 実際のひな形に入れても、図の文字は<を置き換えたまま埋まる
+  const html = renderPage(readFileSync(new URL('../scripts/discussion-page.html', import.meta.url), 'utf8'), s);
+  assert.ok(!html.includes('<pre class="mermaid">flowchart'));
+  assert.match(html, /"kind":"画面"/);
+});
+
+test('D-25 v3の版: 記録の頭に無ければ進み具合の次に足し、あれば置き換える', () => {
+  const added = setV3Version(RECORD, '9db5634a');
+  assert.match(added, /- 進み具合: docs\/discussions\/sample\.progress\.json\n- v3の版: 9db5634a\n/);
+  assert.equal(parseRecord(added).header['v3の版'], '9db5634a');
+  const replaced = setV3Version(added, 'abcdef12');
+  assert.equal((replaced.match(/v3の版/g) ?? []).length, 1);
+  assert.match(replaced, /- v3の版: abcdef12/);
+  assert.deepEqual(checkRecord(parseRecord(replaced), 'sample'), []);
+});
+
+test('D-26 コマンド: 画面のある記録も --no-screens なら撮らずに番号だけでページを作る', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'discussion-'));
+  const out = [];
+  const run = (...args) => main(args, { dir, out: (s) => out.push(s), err: () => {} });
+  try {
+    run('init', 'sample', '--level', 'L2', '--title', '見本');
+    writeFileSync(join(dir, 'sample.md'), VISUAL);
+    const pagePath = join(dir, 'page.html');
+    assert.equal(await run('page', 'sample', '--out', pagePath, '--no-screens'), 0);
+    const html = readFileSync(pagePath, 'utf8');
+    assert.match(html, /"screens":\[\{"no":"14h","name":"","src":null\}/);
+    assert.ok(out.some((s) => /--no-screens/.test(s)));
+    assert.ok(!/v3の版/.test(readFileSync(join(dir, 'sample.md'), 'utf8')), '撮らないときは版を書き込まない');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('D-27 コマンド: 撮れずにページを作れなかったときは、記録のv3の版を書き換えない', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'discussion-'));
+  const err = [];
+  const run = (...args) => main(args, { dir, out: () => {}, err: (s) => err.push(s) });
+  try {
+    run('init', 'sample', '--level', 'L2', '--title', '見本');
+    // v3に無い番号なので、今の版で撮ろうとして止まる（ブラウザを開く前に止まる）
+    const md = setV3Version(VISUAL.replace('- 画面: v3 14h, v3 14f、v3 14h', '- 画面: v3 99'), '0000000a');
+    writeFileSync(join(dir, 'sample.md'), md);
+    const pagePath = join(dir, 'page.html');
+    assert.equal(await run('page', 'sample', '--out', pagePath, '--v3-latest'), 1);
+    assert.match(readFileSync(join(dir, 'sample.md'), 'utf8'), /- v3の版: 0000000a/);
+    assert.throws(() => readFileSync(pagePath));
+    assert.ok(err.some((s) => /v3に画面 99 が無い|コミットしていない変更/.test(s)), err.join(' / '));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -5,7 +5,11 @@ import type {
   TargetItem,
   Transfer,
 } from "../api/settlement-api";
-import { formatYen, yenFromDecimalString } from "@/shared/lib/yen";
+import {
+  formatYen,
+  formatYenDigits,
+  yenFromDecimalString,
+} from "@/shared/lib/yen";
 
 /**
  * 内訳・明細の組み立て。金額は常にBigIntの円（`Number()`を通さない）。
@@ -90,6 +94,21 @@ export function itemShareLabel(
         `${nameOf(participants, allocation.userId)} ${formatYen(sign * yen(allocation.burdenYen))}`,
     )
     .join(" · ");
+}
+
+/** 確認の明細1件の「負担 {name} X · {name} Y 円」（v3の14c・14h）。戻しは負の額。 */
+export function itemBurdenLabel(
+  item: TargetItem,
+  participants: Participant[],
+): string {
+  const sign = item.kind === "REVERSAL" ? -1n : 1n;
+  const shares = item.payment.allocations
+    .map(
+      (allocation) =>
+        `${nameOf(participants, allocation.userId)} ${formatYenDigits(sign * yen(allocation.burdenYen))}`,
+    )
+    .join(" · ");
+  return `負担 ${shares} 円`;
 }
 
 /** 参加者番号（0・1）。見つからないときはnull。 */

@@ -120,17 +120,21 @@ export function createSettlementPreviewDraft(tripId: string): MutationDraft {
 /**
  * 精算の完了（POST /trips/{tripId}/settlements）。
  * 非0円は`transfer_completed`、0円は`no_transfer_required`。
- * 取り消された対象の了承は次の段階の画面で扱うため、ここでは常に空配列。
+ * `acknowledgedCancellationPaymentIds`は、画面で取り消された明細を
+ * 確かめたときだけ、その全paymentId。通常は空配列（E-06・E-09）。
  */
 export function completeSettlementDraft(
   tripId: string,
   previewId: string,
   completionKind: SettlementCreateCompletionKind,
+  acknowledgedCancellationPaymentIds: readonly string[] = [],
 ): MutationDraft {
   const body: SettlementCreate = {
     previewId,
     completionKind,
-    acknowledgedCancellationPaymentIds: [],
+    acknowledgedCancellationPaymentIds: [
+      ...acknowledgedCancellationPaymentIds,
+    ],
   };
   return {
     operation: "completeSettlement",

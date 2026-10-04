@@ -33,6 +33,7 @@ export function CompleteSettlementDialog({
   complete,
   onClose,
   onSessionExpired,
+  acknowledgedIds = [],
 }: {
   tripId: string;
   preview: Preview;
@@ -40,6 +41,11 @@ export function CompleteSettlementDialog({
   complete: SettlementSave;
   onClose: () => void;
   onSessionExpired: (unconfirmed: boolean) => void;
+  /**
+   * 取り消された対象の了承（F-61）。画面で明細ごとに確かめたときだけ
+   * 現在の`cancelledPaymentIds`の全部を渡す。通常は空。
+   */
+  acknowledgedIds?: string[];
 }) {
   const online = useOnlineStatus();
   const state = complete.state;
@@ -59,6 +65,7 @@ export function CompleteSettlementDialog({
         tripId,
         preview.id,
         completionKindOf(preview.transfer),
+        acknowledgedIds,
       ),
     );
   };
@@ -73,9 +80,13 @@ export function CompleteSettlementDialog({
   const title = requiresTransfer
     ? "受け渡し完了を記録しますか？"
     : "精算を記録しますか？";
+  const ackNote =
+    acknowledgedIds.length > 0
+      ? `取り消された支払い ${acknowledgedIds.length} 件を了承したこともあわせて記録します。`
+      : "";
   const body =
     requiresTransfer && direction !== null
-      ? `${direction.fromName} から ${direction.toName} へ ${formatYen(direction.amount)}を受け渡したことを記録します。このアプリは送金を行いません。`
+      ? `${direction.fromName} から ${direction.toName} へ ${formatYen(direction.amount)}を受け渡したことを記録します。このアプリは送金を行いません。${ackNote}`
       : "対象の支払いを、受け渡し不要として精算したことを記録します。このアプリは送金を行いません。";
 
   return (

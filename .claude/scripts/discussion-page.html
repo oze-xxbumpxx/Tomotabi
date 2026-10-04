@@ -337,7 +337,17 @@ button:disabled{opacity:.5;cursor:default}
   function refreshChat() { $("chatText").textContent = chatText(); }
 
   // ── 保存 ──
-  function track(p) { pending.add(p); p.then(done, done); function done() { pending.delete(p); } return p; }
+  function track(p) {
+    pending.add(p);
+    p.then(done, function (e) { done(); setStatus("書きかけを保存できませんでした。" + errorText(e) + "。答えは送れます", "err"); });
+    function done() { pending.delete(p); }
+    return p;
+  }
+  function readOnly(reason) {
+    canWrite = false;
+    $("sendBtn").hidden = true;
+    $("sendNote").textContent = "このページでは答えを保存できません（" + reason + "）。答えをコピーしてチャットに貼ってください。";
+  }
   function changed(id) {
     touched[id] = true;
     refreshChat();
@@ -365,6 +375,19 @@ button:disabled{opacity:.5;cursor:default}
     pending.forEach(function (p) { jobs.push(p); });
     return Promise.all(jobs);
   }
+  // 保存の失敗を日本語で伝える（コードは英語なので、そのまま出さない）
+  var ERRORS = {
+    not_granted: "このページに保存の許可が出ていません",
+    invalid_argument: "保存する権限がないか、保存する中身が正しくありません",
+    unavailable: "一時的に保存できません。少し待ってもう一度押してください",
+    revoked: "保存の許可が取り消されました。ページを開き直してください",
+    capability_disabled: "この画面では保存の機能が止められています",
+    capability_removed: "この画面では保存の機能が使えません",
+    resource_exhausted: "短い間に保存しすぎました。少し待ってもう一度押してください",
+    quota_exceeded: "保存できる量の上限に達しました",
+    transform_error: "保存する中身を送れる形にできませんでした"
+  };
+  function errorText(e) { return ERRORS[e && e.code] || "原因の分からない失敗です"; }
   function setStatus(text, kind) { var s = $("status"); s.textContent = text; s.className = "status" + (kind ? " " + kind : ""); }
 
   $("sendBtn").addEventListener("click", function () {
@@ -388,7 +411,8 @@ button:disabled{opacity:.5;cursor:default}
       setStatus("送りました。チャットで「答えた」と伝えてください", "ok");
       btn.disabled = false; btn.textContent = "答えを送り直す";
     }, function (e) {
-      setStatus("送れませんでした（" + ((e && e.code) || "不明なエラー") + "）。もう一度押すか、答えをコピーしてチャットに貼ってください", "err");
+      setStatus("送れませんでした。" + errorText(e) + "。もう一度押すか、答えをコピーしてチャットに貼ってください", "err");
+      if (e && (e.code === "invalid_argument" || e.code === "not_granted" || e.code === "revoked")) readOnly(errorText(e));
       btn.disabled = false;
     });
   });
@@ -437,16 +461,18 @@ button:disabled{opacity:.5;cursor:default}
   }, 800);
 
   var use = window.claude && window.claude.use ? window.claude.use.bind(window.claude) : null;
-  if (!use) return;
+  if (!use) { readOnly("claude.aiの外でページを開いています"); return; }
+  $("sendNote").textContent = "保存の準備をしています…";
   Promise.all([use("db"), use("user")]).then(function (r) {
     db = r[0];
     var user = r[1];
-    if (!db) return;
-    return Promise.resolve(user ? user.isOwner() : false).then(function (owner) {
-    canWrite = owner === true;
-    if (!canWrite) { $("sendNote").textContent = "このページの答えを保存できるのは持ち主だけです。答えをコピーしてチャットに貼ってください。"; return; }
+    if (!db) { readOnly("この画面ではページのデータベースが使えません"); return; }
+    // 持ち主かどうか（isOwner）では決めない。書けるかを聞き、分からない（null）ときは書いてみて、断られたら読むだけにする
+    return Promise.resolve(user && user.can ? user.can("data.write") : null).then(function (cw) { return cw; }, function () { return null; }).then(function (cw) {
+    if (cw === false) { readOnly("このページの答えを書き込む権限がありません"); return; }
+    canWrite = true;
     $("sendNote").textContent = "書きかけを読み込んでいます…";
-    return Promise.resolve(user.id()).then(function (id) { me = id; }, function () {}).then(function () {
+    return Promise.resolve(user ? user.id() : null).then(function (id) { me = id; }, function () {}).then(function () {
       var ids = S.open.map(function (q) { return q.id; }).concat(S.provisional.map(function (p) { return p.id; }));
       return Promise.all(ids.map(function (id) {
         return db.doc("drafts/" + id).get().then(function (snap) {
@@ -463,6 +489,6 @@ button:disabled{opacity:.5;cursor:default}
       $("sendNote").textContent = "書きかけは自動で残ります。「答えを送る」を押した時点の答えだけを、Claudeが記録に写します。";
     });
     });
-  });
+  }).catch(function () { readOnly("保存の準備に失敗しました"); });
 })();
 </script>

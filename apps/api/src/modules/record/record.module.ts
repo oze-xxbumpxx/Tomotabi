@@ -14,14 +14,24 @@ import {
   type GetPaymentInputPort,
 } from "./adapter/inbound/get-payment.input-port";
 import {
+  LIST_RECORDS_INPUT_PORT,
+  type ListRecordsInputPort,
+} from "./adapter/inbound/list-records.input-port";
+import {
   FINANCE_UNIT_OF_WORK,
   type FinanceWorkContext,
 } from "./adapter/outbound/finance-work-context";
+import {
+  RECORDS_READ_UNIT_OF_WORK,
+  type RecordsReadUnitOfWork,
+} from "./adapter/outbound/records-read.port";
 import { WRITE_LOG, type WriteLog } from "../planning/adapter/outbound/write-log.port";
 import { PaymentsController } from "./controller/payments.controller";
+import { RecordsController } from "./controller/records.controller";
 import { CancelPaymentUseCase } from "./usecase/cancel-payment.usecase";
 import { CreatePaymentUseCase } from "./usecase/create-payment.usecase";
 import { GetPaymentUseCase } from "./usecase/get-payment.usecase";
+import { ListRecordsUseCase } from "./usecase/list-records.usecase";
 
 type WriteDeps = [
   uow: UnitOfWork<FinanceWorkContext>,
@@ -31,7 +41,7 @@ const WRITE_INJECT = [FINANCE_UNIT_OF_WORK, WRITE_LOG];
 
 @Module({
   imports: [RecordCompositionModule],
-  controllers: [PaymentsController],
+  controllers: [PaymentsController, RecordsController],
   providers: [
     {
       provide: CREATE_PAYMENT_INPUT_PORT,
@@ -51,6 +61,13 @@ const WRITE_INJECT = [FINANCE_UNIT_OF_WORK, WRITE_LOG];
       useFactory: (...deps: WriteDeps): CancelPaymentInputPort =>
         new CancelPaymentUseCase(...deps),
       inject: WRITE_INJECT,
+    },
+    {
+      provide: LIST_RECORDS_INPUT_PORT,
+      useFactory: (
+        uow: RecordsReadUnitOfWork,
+      ): ListRecordsInputPort => new ListRecordsUseCase(uow),
+      inject: [RECORDS_READ_UNIT_OF_WORK],
     },
   ],
 })

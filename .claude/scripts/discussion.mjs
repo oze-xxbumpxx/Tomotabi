@@ -5,7 +5,7 @@
 // 使い方（リポジトリのルートで）:
 //   node .claude/scripts/discussion.mjs init <機能名> --level L2|L3 --title <名前>
 //   node .claude/scripts/discussion.mjs check [<機能名>]
-//   node .claude/scripts/discussion.mjs page <機能名> --out <path> [--review <断片のpath>] [--next-round]
+//   node .claude/scripts/discussion.mjs page <機能名> --out <path> [--review <断片のpath>] [--next-round] [--no-screens] [--v3-latest]
 //   node .claude/scripts/discussion.mjs set-page <機能名> <URL>
 //   node .claude/scripts/discussion.mjs answers <JSONのpath> <機能名> [--json]
 //   node .claude/scripts/discussion.mjs stage <機能名> <工程> <状態> [--reason <理由>] [--pr <番号>] [--doc <path>]
@@ -22,11 +22,13 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dayInTz, harnessTz } from '../lib/harness-time.mjs';
+import { V3Error, captureScreens, currentV3Version, parseScreenList, v3HasChanges, versionExists } from '../lib/v3-screens.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.CLAUDE_PROJECT_DIR || resolve(here, '../..');
 export const DEFAULT_DIR = join(ROOT, 'docs/discussions');
 export const TEMPLATE_PATH = join(here, 'discussion-page.html');
+const SHOTS_DIR = join(ROOT, '.claude/state/discussion-shots');
 
 export class UsageError extends Error {}
 
@@ -54,8 +56,12 @@ const APPROVAL_STAGES = new Set(['requirements', 'design']);
 export const POINT_STATES = ['回答待ち', '仮決定', '後の工程へ', '決定', '取り下げ'];
 const PHASES = ['要件', '設計', '実装', '運用'];
 const PRIORITIES = ['高', '中', '低'];
+/** 相談の種類。画面は見た目と流れ、アプリの決まりは何ができるか、APIは返す形・エラー・再送、設計はDB・内部の作り・範囲と進め方。 */
+export const KINDS = ['画面', 'アプリの決まり', 'API', '設計'];
 const KNOWN_FIELDS = new Set([
   '工程',
+  '種類',
+  '画面',
   '優先度',
   '状態',
   'なぜ今',
@@ -92,11 +98,20 @@ export function parseRecord(md) {
   let section = null;
   let point = null;
   let option = null;
+  let figure = null; // 読んでいる途中のmermaidの図の行
   const background = [];
 
   lines.forEach((raw, index) => {
     const line = raw.trimEnd();
     const at = `${index + 1}行目`;
+    // 図の中の行は項目として読まない（「- 」で始まっていても）
+    if (figure) {
+      if (line.trim() === '```') {
+        point.figures.push(figure.join('\n'));
+        figure = null;
+      } else figure.push(raw);
+      return;
+    }
     if (line.startsWith('# ')) {
       record.title = line.slice(2).replace(/^論点の記録:\s*/, '').trim();
       return;
@@ -127,13 +142,18 @@ export function parseRecord(md) {
     if (section !== '論点') return;
 
     if (line.startsWith('### ')) {
-      point = { title: line.slice(4).trim(), id: '', fields: {}, options: [], line: index + 1 };
+      point = { title: line.slice(4).trim(), id: '', fields: {}, options: [], figures: [], line: index + 1 };
       option = null;
       record.points.push(point);
       return;
     }
     if (!point) {
       record.problems.push(`論点: ${at}が、どの論点の見出し（### ）の下にもない`);
+      return;
+    }
+    if (line.trim() === '```mermaid') {
+      figure = [];
+      option = null;
       return;
     }
     const id = line.match(/^<!--\s*id:\s*(\S+)\s*-->$/);
@@ -162,6 +182,7 @@ export function parseRecord(md) {
     }
     record.problems.push(`「${point.title}」: ${at}を読めない（「- 項目: 値」か選択肢の形にする）`);
   });
+  if (figure) record.problems.push(`「${point.title}」: mermaidの図が \`\`\` で閉じていない`);
   record.background = background.join('\n');
   return record;
 }
@@ -193,6 +214,16 @@ export function checkRecord(record, feature) {
     seen.add(p.id);
     if (!PHASES.includes(f['工程'])) problems.push(`${name}: 工程は${PHASES.join('・')}のどれか`);
     if (!PRIORITIES.includes(f['優先度'])) problems.push(`${name}: 優先度は${PRIORITIES.join('・')}のどれか`);
+    if (f['種類'] !== undefined && !KINDS.includes(f['種類'])) problems.push(`${name}: 種類は${KINDS.join('・')}のどれか`);
+    else if (f['種類'] === undefined && f['状態'] === '回答待ち') {
+      // 今までの記録（仮決定・後の工程へ・決定）は種類が無くても通す。回答待ちに変えるときに書き足す
+      problems.push(`${name}: 回答待ちに変えるときは、種類（${KINDS.join('・')}）を書き足す`);
+    }
+    if (f['画面'] !== undefined) {
+      const { numbers, bad } = parseScreenList(f['画面']);
+      if (bad.length > 0) problems.push(`${name}: 画面は「v3 09, v3 14e」の形で書く（読めない: ${bad.join('、')}）`);
+      else if (numbers.length === 0) problems.push(`${name}: 画面に番号が無い`);
+    }
     if (!POINT_STATES.includes(f['状態'])) {
       problems.push(`${name}: 状態は${POINT_STATES.join('・')}のどれか`);
       continue;
@@ -295,15 +326,75 @@ export function currentStage(progress) {
 
 // ── 確認のページ ───────────────────────────────────────────
 
+/** 工程ごとの「決めること」と「答えたあと」。実装・レビュー・マージ・振り返りは同じ文。 */
+const NOW_TEXT = {
+  requirements: { decide: '何を作るか', waiting: '答えを記録に写し、要件定義書を書いて承認をお願いする', approval: 'PRのマージで承認。次は設計' },
+  design: { decide: 'どう作るか', waiting: '答えを記録に写し、設計書を書いて承認をお願いする', approval: 'PRのマージで承認。次は実装計画と試験観点' },
+  plan: { decide: 'どの順で作り、何を試すか', waiting: '答えを記録に写し、計画を直す', approval: '今どおり進める' },
+  work: { decide: '作りながら出た問い', waiting: '答えを記録に写し、作業を続ける', approval: '今どおり進める' },
+};
+
+/**
+ * ページの上の「いまの確認」。いまの工程（完了・省略していない最初の工程）と状態から作る。
+ * @param {object} progress
+ * @param {Array<{kind: string}>} open 回答待ちの問い
+ */
+export function buildNow(progress, open) {
+  const cur = currentStage(progress);
+  if (!cur) return { stage: null, stageLabel: '', state: '', stateLabel: '', decide: '', after: '全部の工程が済んでいる', count: open.length, kinds: [] };
+  const text = NOW_TEXT[cur.id] ?? NOW_TEXT.work;
+  const kinds = KINDS.map((k) => ({ kind: k, count: open.filter((q) => q.kind === k).length })).filter((k) => k.count > 0);
+  const unknown = open.filter((q) => !KINDS.includes(q.kind)).length;
+  if (unknown > 0) kinds.push({ kind: '種類なし', count: unknown });
+  return {
+    stage: cur.id,
+    stageLabel: cur.label,
+    state: cur.state,
+    stateLabel: STAGE_STATES[cur.state] ?? cur.state,
+    decide: text.decide,
+    after: cur.state === 'approval' ? text.approval : text.waiting,
+    count: open.length,
+    kinds,
+  };
+}
+
+/** 記録に書いた画面の番号を、上から重ならないように集める。 */
+export function screenNumbers(record) {
+  const all = [];
+  for (const p of record.points) {
+    if (p.fields['画面'] === undefined) continue;
+    for (const no of parseScreenList(p.fields['画面']).numbers) if (!all.includes(no)) all.push(no);
+  }
+  return all;
+}
+
 /**
  * ページに埋め込む中身。番号は回答待ちの論点に上から1, 2, 3と振る（チャットの「1A 2B」と同じ番号）。
  * @param {ReturnType<typeof parseRecord>} record
  * @param {object} progress
- * @param {{now: string}} opts
+ * @param {{now: string, screens?: Map<string, {name: string, src: string | null}>}} opts
+ *   screensは撮った画面（番号→名前と画像）。無い番号は名前と画像を空にして出す
  */
-export function buildPageState(record, progress, { now }) {
+export function buildPageState(record, progress, { now, screens = new Map() }) {
   const byState = (s) => record.points.filter((p) => p.fields['状態'] === s);
   const option = (o) => ({ key: o.key, label: o.label, pros: o.pros, cons: o.cons });
+  const extras = (p) => ({
+    kind: p.fields['種類'] ?? '',
+    phase: p.fields['工程'] ?? '',
+    screens: parseScreenList(p.fields['画面']).numbers.map((no) => ({ no, name: screens.get(no)?.name ?? '', src: screens.get(no)?.src ?? null })),
+    figures: p.figures ?? [],
+  });
+  const open = byState('回答待ち').map((p, i) => ({
+    n: i + 1,
+    id: p.id,
+    title: p.title,
+    ...extras(p),
+    why: p.fields['なぜ今'] ?? '',
+    basis: p.fields['根拠'] ?? '',
+    options: p.options.map(option),
+    recommended: choiceKey(p.fields['推奨']),
+    recommendedText: p.fields['推奨'] ?? '',
+  }));
   return {
     feature: progress.feature,
     title: record.title || progress.title,
@@ -314,28 +405,39 @@ export function buildPageState(record, progress, { now }) {
       const st = progress.stages?.[s.id] ?? { state: 'pending' };
       return { id: s.id, label: s.label, state: st.state, stateLabel: STAGE_STATES[st.state] ?? st.state, reason: st.reason ?? '' };
     }),
+    now: buildNow(progress, open),
     background: record.background,
     premises: record.premises,
     decided: byState('決定').map((p) => ({ id: p.id, title: p.title, decision: p.fields['決定'] ?? '' })),
-    open: byState('回答待ち').map((p, i) => ({
-      n: i + 1,
-      id: p.id,
-      title: p.title,
-      why: p.fields['なぜ今'] ?? '',
-      basis: p.fields['根拠'] ?? '',
-      options: p.options.map(option),
-      recommended: choiceKey(p.fields['推奨']),
-      recommendedText: p.fields['推奨'] ?? '',
-    })),
+    open,
     provisional: byState('仮決定').map((p) => ({
       id: p.id,
       title: p.title,
+      ...extras(p),
       recommended: choiceKey(p.fields['推奨']),
       recommendedText: p.fields['推奨'] ?? '',
       options: p.options.map(option),
     })),
     later: byState('後の工程へ').map((p) => ({ id: p.id, title: p.title, phase: p.fields['工程'] ?? '', priority: p.fields['優先度'] ?? '' })),
   };
+}
+
+/**
+ * 記録の頭の「- v3の版: 」を書く。あれば置き換え、無ければ「- 進み具合: 」の次（無ければ見出しの下の項目の最後）に足す。
+ * @param {string} md
+ * @param {string} version
+ */
+export function setV3Version(md, version) {
+  const line = `- v3の版: ${version}`;
+  if (/^- v3の版:.*$/m.test(md)) return md.replace(/^- v3の版:.*$/m, line);
+  const lines = md.split('\n');
+  const firstSection = lines.findIndex((l) => l.startsWith('## '));
+  const head = firstSection === -1 ? lines : lines.slice(0, firstSection);
+  let at = head.findIndex((l) => l.startsWith('- 進み具合:'));
+  if (at === -1) at = head.findLastIndex((l) => /^- [^:]+:/.test(l));
+  if (at === -1) at = head.findIndex((l) => l.startsWith('# '));
+  lines.splice(at + 1, 0, line);
+  return lines.join('\n');
 }
 
 /** JSONを<script>に埋め込める形にする（`</script>`で途切れないように）。 */
@@ -521,7 +623,7 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a.startsWith('--')) {
       const key = a.slice(2);
-      if (['next-round', 'json', 'hook'].includes(key)) opts[key] = true;
+      if (['next-round', 'json', 'hook', 'no-screens', 'v3-latest'].includes(key)) opts[key] = true;
       else {
         if (i + 1 >= argv.length) throw new UsageError(`${a} に値が無い`);
         opts[key] = opts[key] && key === 'doc' ? [...[].concat(opts[key]), argv[++i]] : argv[++i];
@@ -529,6 +631,32 @@ function parseArgs(argv) {
     } else positional.push(a);
   }
   return { positional, opts };
+}
+
+/**
+ * 記録に書いた画面を撮る。記録にv3の版が無ければ今の版を書き込む（--v3-latestなら書き換える）。
+ * @returns {Promise<{screens: Map<string, {name: string, src: string | null}>, note: string} | null>} 止めるときはnull
+ */
+async function prepareScreens({ dir, feature, record, opts, err, root = ROOT, cacheDir = SHOTS_DIR }) {
+  const numbers = screenNumbers(record);
+  if (numbers.length === 0) return { screens: new Map(), note: '' };
+  if (opts['no-screens']) return { screens: new Map(), note: '画面は撮らずに番号だけ出した（--no-screens）' };
+  let version = record.header['v3の版'];
+  if (!version || opts['v3-latest']) {
+    // どの版を見たかを残せないので、コミットしていない変更があれば撮らない
+    if (v3HasChanges(root)) {
+      err('v3にコミットしていない変更がある。v3の変更をコミットしてから');
+      return null;
+    }
+    version = currentV3Version(root);
+    const rp = recordPath(dir, feature);
+    writeFileSync(rp, setV3Version(readFileSync(rp, 'utf8'), version));
+  } else if (!versionExists(root, version)) {
+    err(`v3の版 ${version} が無い。--v3-latest で今の版にする`);
+    return null;
+  }
+  const { screens, offline } = await captureScreens({ root, version, numbers, cacheDir });
+  return { screens, note: offline ? '画面を撮れなかった（v3の部品を取れない）。番号だけ出した' : `v3の版 ${version} から${screens.size}画面を撮った` };
 }
 
 export function main(argv, { dir = process.env.DISCUSSION_DIR || DEFAULT_DIR, out = console.log, err = console.error } = {}) {
@@ -571,7 +699,7 @@ export function main(argv, { dir = process.env.DISCUSSION_DIR || DEFAULT_DIR, ou
       return failed ? 1 : 0;
     }
     case 'page': {
-      need(1, 'page <機能名> --out <path> [--review <断片のpath>] [--next-round]');
+      need(1, 'page <機能名> --out <path> [--review <断片のpath>] [--next-round] [--no-screens] [--v3-latest]');
       if (!opts.out) throw new UsageError('--out が要る');
       const feature = positional[0];
       let { record, progress } = loadFeature(dir, feature);
@@ -581,15 +709,28 @@ export function main(argv, { dir = process.env.DISCUSSION_DIR || DEFAULT_DIR, ou
         for (const p of problems) err(`  - ${p}`);
         return 1;
       }
-      // 回は、ページを書き出せたあとで進める（途中で失敗すると、公開中のページの答えを別の回として読めなくなるため）
-      if (opts['next-round']) progress = { ...progress, round: (progress.round ?? 1) + 1, updated_at: nowIso() };
       const review = opts.review ? readFileSync(opts.review, 'utf8') : '';
-      const state = buildPageState(record, progress, { now: nowIso() });
-      mkdirSync(dirname(resolve(opts.out)), { recursive: true });
-      writeFileSync(opts.out, renderPage(readFileSync(TEMPLATE_PATH, 'utf8'), state, review));
-      if (opts['next-round']) writeJson(progressPath(dir, feature), progress);
-      out(`ページを作った: ${opts.out}（${state.round}回目、回答待ち ${state.open.length}問）`);
-      return 0;
+      const write = ({ screens, note }) => {
+        // 回は、ページを書き出せたあとで進める（途中で失敗すると、公開中のページの答えを別の回として読めなくなるため）
+        if (opts['next-round']) progress = { ...progress, round: (progress.round ?? 1) + 1, updated_at: nowIso() };
+        const state = buildPageState(record, progress, { now: nowIso(), screens });
+        mkdirSync(dirname(resolve(opts.out)), { recursive: true });
+        writeFileSync(opts.out, renderPage(readFileSync(TEMPLATE_PATH, 'utf8'), state, review));
+        if (opts['next-round']) writeJson(progressPath(dir, feature), progress);
+        out(`ページを作った: ${opts.out}（${state.round}回目、回答待ち ${state.open.length}問）`);
+        if (note) out(note);
+        return 0;
+      };
+      // 画面の無い記録はChromiumもGitも使わず、今までどおりその場で作る
+      if (screenNumbers(record).length === 0) return write({ screens: new Map(), note: '' });
+      return prepareScreens({ dir, feature, record, opts, err }).then(
+        (prepared) => (prepared ? write(prepared) : 1),
+        (e) => {
+          if (!(e instanceof V3Error)) throw e;
+          err(e.message);
+          return 1;
+        },
+      );
     }
     case 'set-page': {
       need(2, 'set-page <機能名> <URL>');
@@ -649,7 +790,16 @@ export function main(argv, { dir = process.env.DISCUSSION_DIR || DEFAULT_DIR, ou
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    process.exitCode = main(process.argv.slice(2));
+    // pageは画面を撮るときだけ非同期になる
+    Promise.resolve(main(process.argv.slice(2))).then(
+      (code) => {
+        process.exitCode = code;
+      },
+      (e) => {
+        console.error(e instanceof UsageError ? e.message : e);
+        process.exitCode = e instanceof UsageError ? 2 : 1;
+      },
+    );
   } catch (e) {
     if (e instanceof UsageError) {
       console.error(e.message);

@@ -20,13 +20,14 @@
       }
     },
     "plan": {
-      "state": "pending"
+      "state": "skipped",
+      "reason": "L2で変更が小さく、設計書の対象範囲・テスト方針をそのまま計画として使った"
     },
     "implement": {
-      "state": "pending"
+      "state": "done"
     },
     "review": {
-      "state": "pending"
+      "state": "active"
     },
     "merge": {
       "state": "pending"
@@ -35,5 +36,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-04T10:17:13.818Z"
+  "updated_at": "2026-10-04T10:26:06.563Z"
 }

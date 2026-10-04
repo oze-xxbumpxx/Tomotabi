@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Zen+Kaku+Gothic+New:wght@700;900&family=JetBrains+Mono:wght@400&display=swap">
 <style>
-/* 確認のページ（discussion.mjs page が作る）。1カラム。上に工程の帯、答える問いだけをカードにし、補足は折りたたむ */
+/* 確認のページ（discussion.mjs page が作る）。1カラム。上にいまの確認と工程の帯、答える問いだけをカードにし、補足は折りたたむ */
 :root{
   --bg:#f5f6f8; --surface:#ffffff; --fg:#1c2430; --muted:#5b6574; --line:#d9dee6;
   --accent:#1f5f8b; --accent-soft:#e3eef6; --on-accent:#ffffff;
@@ -47,10 +47,29 @@ ul.plain{margin:0;padding-left:1.2em;display:grid;gap:4px}
 .stage[data-state="approval"]{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:700}
 .stage[data-state="skipped"]{background:var(--skip-soft);color:var(--skip);border-color:transparent;text-decoration:line-through}
 
+.now{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 16px;display:grid;gap:6px}
+.now .lead{font-family:var(--font-display);font-weight:700;font-size:16px}
+.now dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px}
+.now dt{color:var(--muted);white-space:nowrap}
+.now dd{margin:0;min-width:0}
+
 .review{display:grid;gap:28px}
-.review .fig{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;overflow-x:auto;margin:0}
-.review pre.mermaid{margin:0;background:transparent;text-align:center}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;overflow-x:auto;margin:0}
+.card .fig{background:var(--bg)}
+pre.mermaid{margin:0;background:transparent;text-align:center;font-family:var(--font-mono);font-size:12px;white-space:pre-wrap}
 .review img{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:transparent}
+.tag[data-kind="画面"]{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.tag[data-kind="アプリの決まり"]{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.tag[data-kind="API"]{background:var(--wait-soft);color:var(--wait);border-color:transparent}
+.tag[data-kind="設計"]{background:var(--skip-soft);color:var(--fg);border-color:transparent}
+.shots{display:flex;flex-wrap:wrap;gap:12px;margin:0}
+.shot{margin:0;display:grid;gap:4px;width:200px;max-width:calc(50% - 6px)}
+.shot img{width:100%;height:auto;border-radius:14px;border:1px solid var(--line);background:var(--bg)}
+.shot .noimg{aspect-ratio:375/812;border:1px dashed var(--line);border-radius:14px;display:grid;place-items:center;padding:8px;text-align:center;font-size:12px;color:var(--muted)}
+.shot figcaption{font-size:12px;color:var(--muted);line-height:1.5}
 
 .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.65}
@@ -102,6 +121,7 @@ button:disabled{opacity:.5;cursor:default}
   <header style="display:grid;gap:12px">
     <div class="eyebrow" id="eyebrow"></div>
     <h1 id="title"></h1>
+    <div class="now" id="now" aria-label="いまの確認"></div>
     <ol class="stages" id="stages" aria-label="工程"></ol>
   </header>
 
@@ -189,6 +209,18 @@ button:disabled{opacity:.5;cursor:default}
   document.title = S.title;
   $("eyebrow").textContent = "確認のページ・" + S.level + "・" + ROUND + "回目";
   $("title").textContent = S.title;
+  (function renderNow(n) {
+    var box = $("now");
+    if (!n || !n.stage) { box.appendChild(el("div", { class: "lead" }, n && n.after ? n.after : "")); return; }
+    var verb = n.state === "approval" ? "の承認" : "の確認";
+    box.appendChild(el("div", { class: "lead" }, n.stageLabel + verb + ": " + n.decide + "を決める（" + ROUND + "回目）"));
+    var dl = el("dl");
+    function row(k, v) { dl.appendChild(el("dt", null, k)); dl.appendChild(el("dd", null, v)); }
+    row("いまの工程", n.stageLabel + "（" + n.stateLabel + "）");
+    row("答えてほしい問い", n.count ? n.count + "つ（" + n.kinds.map(function (k) { return k.kind + k.count; }).join("・") + "）" : "なし");
+    row("答えたあと", n.after);
+    box.appendChild(dl);
+  })(S.now);
   S.stages.forEach(function (s) {
     var li = el("li", { class: "stage", "data-state": s.state }, s.label + (s.state === "pending" || s.state === "done" || s.state === "skipped" ? "" : "（" + s.stateLabel + "）"));
     if (s.reason) li.title = s.reason;
@@ -214,9 +246,39 @@ button:disabled{opacity:.5;cursor:default}
     ? "答えてほしい問いは" + S.open.length + "つ。推奨どおりなら、選ばずに送っても推奨で答えたことになります"
     : "今の回に答えてほしい問いはありません";
 
+  // 種類と工程の印・画面・図。カードと仮に決めたことの項目で同じものを出す
+  function tags(q) {
+    var t = el("div", { class: "tags" });
+    if (q.kind) t.appendChild(el("span", { class: "tag", "data-kind": q.kind }, q.kind + "の相談"));
+    if (q.phase) t.appendChild(el("span", { class: "tag" }, q.phase));
+    return t;
+  }
+  function visuals(q, box) {
+    if (q.screens && q.screens.length) {
+      var shots = el("div", { class: "shots" });
+      q.screens.forEach(function (s) {
+        var f = el("figure", { class: "shot" });
+        var cap = "v3 " + s.no + (s.name ? " " + s.name : "");
+        // 画像は撮ったJPEGのdata URIだけを入れる
+        if (s.src && /^data:image\/jpeg;base64,/.test(s.src)) f.appendChild(el("img", { src: s.src, alt: cap, loading: "lazy" }));
+        else f.appendChild(el("div", { class: "noimg" }, "画面を撮れなかった"));
+        f.appendChild(el("figcaption", null, cap));
+        shots.appendChild(f);
+      });
+      box.appendChild(shots);
+    }
+    (q.figures || []).forEach(function (src) {
+      var fig = el("div", { class: "fig" });
+      fig.appendChild(el("pre", { class: "mermaid" }, src));
+      box.appendChild(fig);
+    });
+  }
+
   S.open.forEach(function (q) {
     var card = el("article", { class: "card", id: "q-" + q.id });
+    card.appendChild(tags(q));
     card.appendChild(el("h3", null, q.n + ". " + q.title));
+    visuals(q, card);
     var meta = el("div", { class: "meta" });
     if (q.why) { var w = el("div"); w.appendChild(el("b", null, "なぜ今: ")); w.appendChild(document.createTextNode(q.why)); meta.appendChild(w); }
     if (q.basis) { var b = el("div"); b.appendChild(el("b", null, "根拠: ")); b.appendChild(document.createTextNode(q.basis)); meta.appendChild(b); }
@@ -255,7 +317,9 @@ button:disabled{opacity:.5;cursor:default}
     $("provSummary").textContent = "AIが仮に決めたこと（" + S.provisional.length + "件）";
     S.provisional.forEach(function (p) {
       var item = el("div", { class: "fold-item" });
+      item.appendChild(tags(p));
       item.appendChild(el("b", null, p.title));
+      visuals(p, item);
       // 記号だけでは何に決めたか分からないので、選んだ案の中身と、選ばなかった案を並べる
       var picked = p.options.filter(function (o) { return o.key === p.recommended; })[0];
       var why = p.recommendedText.replace(/^[A-Z]\s*/, "").replace(/^（(.*)）$/, "$1");
@@ -441,10 +505,10 @@ button:disabled{opacity:.5;cursor:default}
   $("sendNote").textContent = "このページで送れないときは、答えをコピーしてチャットに貼ってください。";
   refreshChat();
 
-  // 設計の説明の図（<pre class="mermaid">）。claude.aiが自分で描いたときは何もしない。
+  // 設計の説明と問いの図（<pre class="mermaid">）。claude.aiが自分で描いたときは何もしない。
   // 描かれずに文字のまま残っていたら（手元で開いたときなど）、cdnjsのmermaidで描く
   setTimeout(function () {
-    var left = Array.prototype.filter.call(document.querySelectorAll("#review pre.mermaid"), function (p) {
+    var left = Array.prototype.filter.call(document.querySelectorAll("pre.mermaid"), function (p) {
       return !p.querySelector("svg") && !p.getAttribute("data-processed");
     });
     if (!left.length) return;

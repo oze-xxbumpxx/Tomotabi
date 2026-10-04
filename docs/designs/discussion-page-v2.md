@@ -1,6 +1,6 @@
 # 設計書: discussion-page-v2（確認のページを、画面と図で相談できるようにする）
 
-- ステータス: draft
+- ステータス: approved（PR #137）
 - レベル: L2
 - 関連: 論点の記録 `docs/discussions/discussion-page-v2.md`、元の設計 `docs/designs/discussion-workflow.md`
 

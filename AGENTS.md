@@ -54,6 +54,11 @@ Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは
 6. 終了時は変更・検証・未完了事項を`logs/YYYY-MM-DD.md`に記録する。他方のツールが残した変更を上書きせず、同じファイルを同時編集しない。Devinは`logs/`を編集せずPRの説明に書く（並行PRの衝突を避けるため。Devinの作業はClaude Codeが委譲の記録からログに書く）。
 7. `main`へ直接コミットしない。変更は作業ブランチ → PR。ハーネス構成（`.claude/` / `AGENTS.md`）の変更はPRで重点レビューする。
 
+## Code Review Rules
+
+- コードレビューの指摘タイトル・本文・レビュー要約は日本語で書く。
+- コード、識別子、ファイルパス、API名、優先度表記（`[P1]`など）は原文のまま保つ。
+
 ## ツールごとの入口
 
 - Claude Code: `CLAUDE.md`、`.claude/skills/`、`.claude/agents/`、`.claude/settings.json`のフックを使う。

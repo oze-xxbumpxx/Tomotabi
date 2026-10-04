@@ -9,6 +9,8 @@ import type {
  * （この2つの状態では確認のあとに精算が1つも済んでいないので、
  * 残額の対象のうち確認の明細に無い支払いがそのまま追加分になる）。
  * ほかの状態では追加分と区別できないためnull。
+ * REVERSAL（精算済みの支払いがあとで取り消されたときの戻し）は
+ * 追加ではないので数えない。
  */
 export function addedAfterPreviewCount(
   status: PreviewValidationStatus,
@@ -22,5 +24,7 @@ export function addedAfterPreviewCount(
     return null;
   }
   const itemIds = new Set(previewItems.map((item) => item.payment.id));
-  return balanceItems.filter((item) => !itemIds.has(item.payment.id)).length;
+  return balanceItems.filter(
+    (item) => item.kind === "BASE" && !itemIds.has(item.payment.id),
+  ).length;
 }

@@ -63,6 +63,13 @@ describe("addedAfterPreviewCount（RU-08）", () => {
     ).toBe(2);
   });
 
+  it("確認の明細に無いREVERSALは数えない（取り消し済みの戻しは追加ではない）", () => {
+    const previewItems = [itemOf("p1")];
+    // 精算済みの支払いが確認のあとに取り消されると、残額にその戻しが出る。
+    const balanceItems = [itemOf("p1"), itemOf("p9", "REVERSAL")];
+    expect(addedAfterPreviewCount("ready", previewItems, balanceItems)).toBe(0);
+  });
+
   it("ほかの状態では数えない（追加分があってもnull）", () => {
     const previewItems = [itemOf("p1")];
     const balanceItems = [itemOf("p1"), itemOf("p9")];

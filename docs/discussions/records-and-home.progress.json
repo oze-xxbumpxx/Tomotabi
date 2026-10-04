@@ -1,0 +1,34 @@
+{
+  "feature": "records-and-home",
+  "title": "記録と4画面の完成",
+  "level": "L3",
+  "page": "https://claude.ai/artifact/NiFNawTJgXsPcD4yZrV18k",
+  "round": 2,
+  "stages": {
+    "requirements": {
+      "state": "approval",
+      "docs": [
+        "docs/requirements/records-and-home.md"
+      ]
+    },
+    "design": {
+      "state": "pending"
+    },
+    "plan": {
+      "state": "pending"
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-10-04T06:27:38.341Z"
+}

@@ -21,7 +21,7 @@
 | 記録の一覧のAPI            | 記録の一覧、並びとカーソル、1件に絞る表示                                                                              | 8〜9   | RU-04、RD-10〜RD-14        | high                                       | APIで記録を新しい順に読める                        |
 | ホームのAPI                | ホーム、スナップショットとセーブポイント、最近の記録と精算の欄のポート                                                 | 10〜12 | RU-05〜RU-06、RD-15〜RD-19 | max                                        | APIでホームを読める                                |
 | webの共通部品              | 共通の下のタブ、端末に残す仕組みの経路の追加と旅行の作成、旅行・予定の画面の送り直しの確認                             | 13〜15 | RU-07、RW-01〜RW-04        | high                                       | 全画面に4つのタブ。旅行・予定の保存も送り直せる    |
-| 記録の画面                 | 記録の一覧、達成・予約の小さな詳細、取り消しの確認、支払いの詳細と訂正、予定の詳細の達成・予約のボタンと関連する支払い | 16〜18 | RW-05〜RW-11               | high                                       | 画面から達成・予約を付けて取り消し、記録を見返せる |
+| 記録の画面                 | 記録の一覧、達成・予約の小さな詳細、取り消しの確認、支払いの詳細と訂正、予定の詳細の達成・予約のボタンと関連する支払い | 16〜18 | RW-05〜RW-11・RW-19・RW-20 | high                                       | 画面から達成・予約を付けて取り消し、記録を見返せる |
 | ホームの画面               | ホームの4つの表示の種類と欄ごとの失敗、ログインのあとの行き先                                                          | 19〜20 | RW-12〜RW-15               | high                                       | ログインするとホームが開く                         |
 | 受け渡しの確認の追加と了承 | 追加の案内、取り消しの了承と作り直し                                                                                   | 21     | RU-08、RW-16〜RW-18        | high                                       | 確認のあとに支払いが変わっても記録できる           |
 | E2Eと手動確認              | E2Eの4つ、手動確認                                                                                                     | 22     | RE-01〜RE-04、RM-01〜RM-02 | high（E2E）・Claude Codeとユーザー（手動） | 記録と4画面の完成                                  |
@@ -42,19 +42,22 @@
 
 ## 変更対象ファイル
 
-| path                                                                                           | なぜ変えるか                                                                             |
-| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `packages/contracts/openapi/planning.json`・`trips.json`                                       | 達成・予約・記録の一覧・ホームの契約。`Error.existingRecordId`と`Schedule.achievedCount` |
-| `orval.config.ts`と生成物                                                                      | 契約を足したので作り直す                                                                 |
-| `apps/api/src/common/http/api-error.ts`                                                        | `RECORD_ALREADY_ACTIVE`・`RECORD_NOT_FOUND`と`existingRecordId`                          |
-| `apps/api/src/modules/record/record.module.ts`・`planning/planning.module.ts`・`composition/*` | 新しいコントローラーとポートの配線                                                       |
-| `apps/web/src/screens/itinerary/itinerary-screen.tsx`・`settlement/settlement-screen.tsx`      | 画面ごとの`<nav>`を共通の下のタブに置き換える                                            |
-| `apps/web/src/screens/plan-detail/plan-detail-screen.tsx`                                      | 達成・予約のボタンと関連する支払い                                                       |
-| `apps/web/src/screens/settlement-preview/settlement-preview-screen.tsx`                        | 追加の案内と取り消しの了承                                                               |
-| `apps/web/src/screens/payment-form/payment-form-screen.tsx`                                    | 訂正のときに取り消した内容を入れておく                                                   |
-| `apps/web/src/screens/entry/entry-screen.tsx`                                                  | ログインのあとにホームを開く                                                             |
-| `apps/web/src/shared/browser/pending-requests.ts`                                              | 送り直してよい経路と、旅行の作成（`new-trip`）                                           |
-| 旅行・予定の書き込みの画面と`features/trips`・`features/plans`のmodel                          | 送る直前に端末に残し、送り直しの確認を出す                                               |
+| path                                                                                           | なぜ変えるか                                                                                                  |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `packages/contracts/openapi/planning.json`・`trips.json`                                       | 達成・予約・記録の一覧・ホームの契約。`Error.existingRecordId`と`Schedule.achievedCount`                      |
+| `orval.config.ts`と生成物                                                                      | 契約を足したので作り直す                                                                                      |
+| `apps/api/src/common/http/api-error.ts`                                                        | `RECORD_ALREADY_ACTIVE`・`RECORD_NOT_FOUND`と`existingRecordId`                                               |
+| `apps/api/src/common/http/api-error.filter.ts`                                                 | 詳細の`existingRecordId`を応答の本文に写す（今は`existingSettlementId`と`changedPaymentIds`だけを写している） |
+| `packages/contracts/src/error.ts`                                                              | フィルターが使う手書きのエラーの型に`existingRecordId`を足す                                                  |
+| `apps/api/src/modules/record/record.module.ts`・`planning/planning.module.ts`・`composition/*` | 新しいコントローラーとポートの配線                                                                            |
+| `apps/web/src/screens/itinerary/itinerary-screen.tsx`・`settlement/settlement-screen.tsx`      | 画面ごとの`<nav>`を共通の下のタブに置き換える                                                                 |
+| `apps/web/src/screens/plan-detail/plan-detail-screen.tsx`                                      | 達成・予約のボタンと関連する支払い                                                                            |
+| `apps/web/src/screens/settlement-preview/settlement-preview-screen.tsx`                        | 追加の案内と取り消しの了承                                                                                    |
+| `apps/web/src/screens/payment-form/payment-form-screen.tsx`                                    | 訂正のときに取り消した内容を入れておく                                                                        |
+| `apps/web/src/screens/entry/entry-screen.tsx`                                                  | ログインのあとにホームを開く                                                                                  |
+| `apps/web/src/shared/browser/pending-requests.ts`                                              | 送り直してよい経路と、旅行の作成（`new-trip`）                                                                |
+| 旅行・予定の書き込みの画面と`features/trips`・`features/plans`のmodel                          | 送る直前に端末に残し、送り直しの確認を出す                                                                    |
+| 予定の詳細・記録の一覧・小さな詳細の達成・予約の操作（`features/records`のmodel）              | 達成・予約の付ける・取り消すも、送る直前に端末に残し、送り直しの確認を出す                                    |
 
 ## 新規作成ファイル
 
@@ -73,6 +76,7 @@
 4. `modules/record/domain/plan-event.ts`（種類ごとに付けられる予定の種類と、取りやめた予定への可否）。完了条件: RU-01。
 5. `PlanEligibilityPort`とその実装（予定の行をFOR NO KEY UPDATEで取り、種類・取りやめ・所属を返す）、`PlanEventRepository`とDrizzleの実装。完了条件: 旅行 → 予定の順でロックする。
 6. 付ける・取り消すのUseCase（達成と予約で共有）とコントローラー4つ。受領・Idempotency-Key・`ApiError`は支払いと同じ流れ。完了条件: RD-02〜RD-07。
+   `RECORD_ALREADY_ACTIVE`の今ある記録のIDは、`api-error.ts`の詳細から`api-error.filter.ts`で本文の`existingRecordId`に写し、`packages/contracts/src/error.ts`の型にも足す。完了条件: RD-04で409の本文に`existingRecordId`が入る。
 7. 同時実行の試験（種類の変更と達成、取りやめと達成を2つの接続で）。完了条件: RD-08・RD-09を10回続けて通す。
 
 ### 記録の一覧のAPI
@@ -96,7 +100,9 @@
 
 16. `features/records`（api・model）と`/trips/{tripId}/records`。行・取り消しの行・絞り込み（横にずらす）・読み足しと再試行・0件。完了条件: RW-05〜RW-07。
 17. 達成・予約の小さな詳細（`shared/ui/sheet.tsx`）、取り消しの確認、`/trips/{tripId}/payments/{paymentId}`の支払いの詳細と訂正。完了条件: RW-08〜RW-10。
+    達成・予約の取り消しは、送る直前に端末に残し、小さな詳細と記録の一覧に送り直しの確認を出す（手順15と同じ仕組み）。完了条件: RW-19。
 18. 予定の詳細の達成・予約のボタン、有効な記録の行のリンク、関連する支払い（最大3件と「記録で見る」）。409を受けたら予定を取り直す。完了条件: RW-11。
+    達成・予約を付けるときは、送る直前に端末に残し、予定の詳細に送り直しの確認を出す。予約のボタンと小さな詳細に「このアプリの中の記録です。お店の予約は変わりません」を出す（F-08）。完了条件: RW-11・RW-19・RW-20。
 
 ### ホームの画面
 

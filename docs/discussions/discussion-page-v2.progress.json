@@ -10,10 +10,14 @@
       "reason": "L2なので要件定義書は作らない"
     },
     "design": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/designs/discussion-page-v2.md"
-      ]
+      ],
+      "approved": {
+        "pr": 137,
+        "at": "2026-10-04"
+      }
     },
     "plan": {
       "state": "pending"
@@ -31,5 +35,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-04T06:36:10.949Z"
+  "updated_at": "2026-10-04T10:17:13.818Z"
 }

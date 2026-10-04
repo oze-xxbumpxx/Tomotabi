@@ -6,10 +6,14 @@
   "round": 2,
   "stages": {
     "requirements": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/requirements/records-and-home.md"
-      ]
+      ],
+      "approved": {
+        "pr": 136,
+        "at": "2026-10-04"
+      }
     },
     "design": {
       "state": "pending"
@@ -30,5 +34,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-04T06:27:38.341Z"
+  "updated_at": "2026-10-04T10:17:13.864Z"
 }

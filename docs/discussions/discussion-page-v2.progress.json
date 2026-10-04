@@ -1,0 +1,35 @@
+{
+  "feature": "discussion-page-v2",
+  "title": "確認のページを、画面と図で相談できるようにする",
+  "level": "L2",
+  "page": "https://claude.ai/artifact/WRnguaxDNswAHCX3CR4PqF",
+  "round": 2,
+  "stages": {
+    "requirements": {
+      "state": "skipped",
+      "reason": "L2なので要件定義書は作らない"
+    },
+    "design": {
+      "state": "approval",
+      "docs": [
+        "docs/designs/discussion-page-v2.md"
+      ]
+    },
+    "plan": {
+      "state": "pending"
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-10-04T06:36:10.949Z"
+}

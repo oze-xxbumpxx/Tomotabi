@@ -26,7 +26,11 @@
       }
     },
     "plan": {
-      "state": "waiting"
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/records-and-home.md",
+        "docs/tests/records-and-home.md"
+      ]
     },
     "implement": {
       "state": "pending"
@@ -41,5 +45,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-04T12:23:46.080Z"
+  "updated_at": "2026-10-04T13:34:38.378Z"
 }

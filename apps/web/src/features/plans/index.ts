@@ -1,13 +1,17 @@
 export {
+  CANCEL_PLAN_OPERATION,
   cancelPlanDraft,
+  CREATE_PLAN_OPERATION,
   createPlanDraft,
   getPlan,
   getPlanWithMeta,
+  MOVE_PLAN_OPERATION,
   movePlanDraft,
   sendCancelPlan,
   sendCreatePlan,
   sendMovePlan,
   sendUpdatePlan,
+  UPDATE_PLAN_OPERATION,
   updatePlanDraft,
 } from "./api/plans-api";
 export { planQueryKey, usePlan } from "./model/plan-queries";
@@ -29,6 +33,7 @@ export {
   PLAN_MEMO_MAX_CODEPOINTS,
   PLAN_NAME_MAX_CODEPOINTS,
   planCreateOf,
+  planFormValuesFromJson,
   planPatchOf,
   validatePlanForm,
   valuesOfPlan,

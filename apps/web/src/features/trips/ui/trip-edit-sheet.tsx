@@ -7,7 +7,9 @@ import { formatTripPeriod } from "@/shared/lib/local-date";
 import { Sheet } from "@/shared/ui/sheet";
 import { ConflictNotice } from "@/shared/ui/state/conflict";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
+import { StorageUnavailable } from "@/shared/ui/state/storage-unavailable";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
+import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { StatusText } from "@/shared/ui/status-text";
 import {
   firstInvalidField,
@@ -16,9 +18,11 @@ import {
   type TripFormField,
 } from "../model/trip-form";
 import {
+  RENAME_TRIP_OPERATION,
   renameTripDraft,
   sendRenameTrip,
   sendUpdateTripPeriod,
+  UPDATE_TRIP_PERIOD_OPERATION,
   updateTripPeriodDraft,
 } from "../api/trips-api";
 import {
@@ -77,10 +81,14 @@ function sessionExpiredOf(
  * 名前と期間は別のAPIなので、変わった方だけを送る。両方変わったら
  * 名前（PATCH）→ 期間（PUT）の順に送り、途中で失敗したらその時点の
  * 結果を表示する（期間が失敗しても、保存済みの名前は「保存済み」のまま）。
+ * 両方の書き込みは送る直前に端末に残し（ADR-0006）、同じ利用者・旅行・
+ * 操作の保留があれば「保存されたか確認できません」と送り直しのボタンを出す
+ * （F-70〜F-73）。
  */
 export function TripEditSheet({
   trip,
   etag,
+  userId,
   onClose,
   onSaved,
   onSessionExpired,
@@ -88,6 +96,8 @@ export function TripEditSheet({
 }: {
   trip: Trip;
   etag: string;
+  /** 保留の照合に使う利用者のID（呼び出し側の`useMe`）。 */
+  userId: string | null;
   onClose: () => void;
   /** 必要な送信がすべて成功したとき。呼び出し側はシートを閉じてトーストを出す。 */
   onSaved: () => void;
@@ -126,9 +136,22 @@ export function TripEditSheet({
   const periodDraft = (ifMatch: string | null) =>
     updateTripPeriodDraft(trip.id, { startsOn, endsOn }, ifMatch);
 
+  const renameCheck = usePendingRequestCheck({
+    userId,
+    tripId: trip.id,
+    operation: RENAME_TRIP_OPERATION,
+  });
+  const periodCheck = usePendingRequestCheck({
+    userId,
+    tripId: trip.id,
+    operation: UPDATE_TRIP_PERIOD_OPERATION,
+  });
+
   const period = useTripMutation({
     tripId: trip.id,
     send: sendUpdateTripPeriod,
+    userId,
+    check: periodCheck.check,
     onSucceeded: (result) => {
       etagRef.current = etagOf(result);
       savedRef.current = {
@@ -143,6 +166,8 @@ export function TripEditSheet({
   const rename = useTripMutation({
     tripId: trip.id,
     send: sendRenameTrip,
+    userId,
+    check: renameCheck.check,
     onSucceeded: (result) => {
       etagRef.current = etagOf(result);
       savedRef.current = { ...savedRef.current, name: result.data.name };
@@ -211,6 +236,21 @@ export function TripEditSheet({
   const conflictSave = [rename, period].find(
     (save) => save.state.status === "conflict",
   );
+  const storageUnavailableSave = [rename, period].find(
+    (save) => save.state.status === "storage-unavailable",
+  );
+  // 前の書き込みが残っているあいだは、状態遷移の確認より先に
+  // 「保存されたか確認できません」を出す（結果不明・競合はそちらが出す）。
+  const pendingFound =
+    unknownSave === undefined && conflictSave === undefined
+      ? ([
+          { pending: renameCheck, save: rename },
+          { pending: periodCheck, save: period },
+        ].find((entry) => entry.pending.check.status === "found") ?? null)
+      : null;
+  const pendingUnavailable =
+    renameCheck.check.status === "unavailable" ||
+    periodCheck.check.status === "unavailable";
   const saving =
     rename.state.status === "saving" || period.state.status === "saving";
 
@@ -261,7 +301,9 @@ export function TripEditSheet({
       title="旅行名と期間を変更"
       onClose={tryClose}
       footer={
-        unknownSave !== undefined || conflictSave !== undefined ? null : (
+        unknownSave !== undefined ||
+        conflictSave !== undefined ||
+        pendingFound !== null ? null : (
           <>
             <button
               type="button"
@@ -275,7 +317,12 @@ export function TripEditSheet({
               type="button"
               className="btn-primary"
               onClick={save}
-              disabled={saving || !online}
+              disabled={
+                saving ||
+                !online ||
+                renameCheck.check.status !== "none" ||
+                periodCheck.check.status !== "none"
+              }
             >
               {saving ? "保存中" : "保存"}
             </button>
@@ -291,6 +338,21 @@ export function TripEditSheet({
           onConfirm={() => void unknownSave.confirmWithSameRequest()}
         />
       )}
+      {pendingFound !== null && pendingFound.pending.check.status === "found" && (
+        <SaveUnknown
+          onConfirm={() => {
+            if (pendingFound.pending.check.status !== "found") {
+              return;
+            }
+            void pendingFound.save
+              .confirmRequest(pendingFound.pending.check.record)
+              .then(pendingFound.pending.reload);
+          }}
+          confirming={pendingFound.save.state.status === "saving"}
+        />
+      )}
+      {storageUnavailableSave !== undefined && <StorageUnavailable />}
+      {pendingUnavailable && <StorageUnavailable />}
       {conflictSave !== undefined &&
         (conflictSave.state.status === "conflict" &&
           (conflictSave.state.latest === null ? (
@@ -338,7 +400,7 @@ export function TripEditSheet({
           <TripFormFields
             values={{ name, startsOn, endsOn }}
             errors={displayErrors}
-            locked={saving || unknownSave !== undefined}
+            locked={saving || unknownSave !== undefined || pendingFound !== null}
             fieldRefs={fieldRefs}
             onChange={onChange}
           />

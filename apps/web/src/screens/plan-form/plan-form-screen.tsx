@@ -9,13 +9,16 @@ import {
 } from "react";
 import { useMe } from "@/features/auth";
 import {
+  CREATE_PLAN_OPERATION,
   createPlanDraft,
   firstInvalidField,
   planCreateOf,
+  planFormValuesFromJson,
   planPatchOf,
   PlanFormFields,
   PLAN_KIND_LABEL,
   sendUpdatePlan,
+  UPDATE_PLAN_OPERATION,
   updatePlanDraft,
   useCreatePlan,
   usePlan,
@@ -32,6 +35,7 @@ import { useTrip } from "@/features/trips";
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
 import { PlanDetailScreen } from "@/screens/plan-detail/plan-detail-screen";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { setPendingToast } from "@/shared/lib/pending-toast";
 import { isLocalDateString } from "@/shared/lib/local-date";
 import { ConflictNotice } from "@/shared/ui/state/conflict";
@@ -42,6 +46,7 @@ import { OfflineBanner } from "@/shared/ui/state/offline-banner";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
 import { Sheet } from "@/shared/ui/sheet";
+import { StorageUnavailable } from "@/shared/ui/state/storage-unavailable";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 import { StatusText } from "@/shared/ui/status-text";
 
@@ -84,6 +89,9 @@ const EMPTY_VALUES = (date: string): PlanFormValues => ({
  *   何も変えずに閉じれば送らない。
  * - 達成・予約の記録がある予定は種類を固定し、理由の文を出す（W-19）。
  * - 保存成功で「追加しました」/「変更しました」を遷移先のトーストに渡す。
+ * - 追加・編集の書き込みは送る直前に端末に残し（ADR-0006）、同じ利用者・
+ *   旅行・操作の保留があれば「保存されたか確認できません」と送り直しの
+ *   ボタンを出す（F-70〜F-73）。
  */
 export function PlanFormScreen({
   mode,
@@ -99,8 +107,9 @@ export function PlanFormScreen({
   date?: string | null;
 }) {
   const router = useRouter();
-  const { state: meState } = useMe();
+  const { state: meState, reload: reloadMe } = useMe();
   const online = useOnlineStatus();
+  const userId = meState.status === "ready" ? meState.me.user.id : null;
   const [values, setValues] = useState<PlanFormValues>(() =>
     EMPTY_VALUES(
       date !== null && date !== undefined && isLocalDateString(date)
@@ -172,8 +181,19 @@ export function PlanFormScreen({
     }
   }, [mode, tripQuery.data, values.date]);
 
+  // 保留は同じ利用者・旅行・操作で探す。追加は`create-plan`、
+  // 編集は`update-plan`だけを照合する（関係ない操作は止めない）。
+  const pendingCheck = usePendingRequestCheck({
+    userId,
+    tripId,
+    operation:
+      mode === "new" ? CREATE_PLAN_OPERATION : UPDATE_PLAN_OPERATION,
+  });
+
   const create = useCreatePlan({
     tripId,
+    userId: mode === "new" ? userId : null,
+    check: mode === "new" ? pendingCheck.check : undefined,
     onSucceeded: (result) => {
       setPendingToast("追加しました");
       router.replace(
@@ -185,6 +205,8 @@ export function PlanFormScreen({
     tripId,
     planId: planId ?? "",
     send: sendUpdatePlan,
+    userId: mode === "edit" ? userId : null,
+    check: mode === "edit" ? pendingCheck.check : undefined,
     onSucceeded: () => {
       setPendingToast("変更しました");
       router.replace(`/trips/${tripId}/plans/${planId}`);
@@ -192,6 +214,18 @@ export function PlanFormScreen({
   });
   const save = mode === "new" ? create : update;
   const state = save.state;
+
+  const pendingRecord =
+    pendingCheck.check.status === "found" ? pendingCheck.check.record : null;
+  const pendingLocked = pendingRecord !== null;
+  // 追加の保留は本文から欄を戻す（編集の本文はdiffなので、値は開いた
+  // ときの欄のまま固定する）。形が確かめられないものは欄を出さない。
+  const pendingValues =
+    mode === "new" &&
+    pendingRecord !== null &&
+    pendingRecord.bodyJson !== null
+      ? planFormValuesFromJson(pendingRecord.bodyJson)
+      : null;
 
   // conflictの最新値で欄を埋め直すときの基準になるETag。
   const etagNow =
@@ -246,7 +280,11 @@ export function PlanFormScreen({
   };
 
   const submit = () => {
-    if (state.status === "saving" || state.status === "unknown") {
+    if (
+      state.status === "saving" ||
+      state.status === "unknown" ||
+      pendingLocked
+    ) {
       return;
     }
     const nextErrors = validatePlanForm(values, period);
@@ -365,13 +403,27 @@ export function PlanFormScreen({
     );
   }
 
+  // 利用者の情報が取れないと保留の照合が作れない。
+  if (meState.status === "error" || meState.status === "unavailable") {
+    return (
+      <main>
+        <FetchFailed
+          message="利用者の情報を取得できませんでした"
+          onRetry={() => void reloadMe()}
+        />
+      </main>
+    );
+  }
+
   // 編集はデータが届いたあと欄のhydrateを待つが、取得が失敗した
-  // （データが無い）ときは失敗の画面に進ませる。
+  // （データが無い）ときは失敗の画面に進ませる。保留の照合中も
+  // 固定表示が要るか分かるまで待つ。
   const loading =
-    mode === "new"
+    pendingCheck.check.status === "checking" ||
+    (mode === "new"
       ? tripQuery.isPending
       : planQuery.isPending ||
-        (planQuery.data !== undefined && savedRef.current === null);
+        (planQuery.data !== undefined && savedRef.current === null));
   // 追加・編集のシートは元の画面（追加はしおり、編集は詳細）の上に重ねる。
   const sheetTitle = mode === "new" ? "予定を追加" : "予定を編集";
   const underlying =
@@ -408,6 +460,10 @@ export function PlanFormScreen({
   }
 
   const locked = state.status === "saving" || state.status === "unknown";
+  const fieldsLocked = locked || pendingLocked;
+  const shownValues =
+    pendingLocked && pendingValues !== null ? pendingValues : values;
+  const hideFields = pendingLocked && mode === "new" && pendingValues === null;
 
   // 「期間外」の拒否は上部の文ではなく日付欄のエラーにする（追加だけ。
   // 編集は日付欄が無いので上部の文のまま）。
@@ -438,9 +494,17 @@ export function PlanFormScreen({
       <Sheet
         title={sheetTitle}
         onClose={tryClose}
-        initialFocus={nameRef}
+        initialFocus={pendingLocked ? undefined : nameRef}
         footer={
-          state.status === "conflict" ? null : (
+          state.status === "conflict" ? null : pendingLocked ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={tryClose}
+            >
+              やめる
+            </button>
+          ) : (
             <>
               <button
                 type="button"
@@ -457,6 +521,7 @@ export function PlanFormScreen({
                 disabled={
                   locked ||
                   !online ||
+                  pendingCheck.check.status !== "none" ||
                   // 428（ETagが古い）のときだけ止める。ほかの拒否は欄を
                   // 直せば編集に戻り、新しいキーで送り直せる。
                   (state.status === "rejected" && state.httpStatus === 428)
@@ -557,6 +622,24 @@ export function PlanFormScreen({
               onConfirm={() => void save.confirmWithSameRequest()}
             />
           )}
+          {/* 保留があるあいだは「保存されたか確認できません」と
+              「同じ内容で確認する」だけを出す（F-71・E-11）。 */}
+          {pendingLocked &&
+            state.status !== "unknown" &&
+            pendingRecord !== null && (
+              <SaveUnknown
+                onConfirm={() =>
+                  void save
+                    .confirmRequest(pendingRecord)
+                    .then(pendingCheck.reload)
+                }
+                confirming={state.status === "saving"}
+              />
+            )}
+          {state.status === "storage-unavailable" && <StorageUnavailable />}
+          {pendingCheck.check.status === "unavailable" && !pendingLocked && (
+            <StorageUnavailable />
+          )}
           {state.status === "rejected" && topMessage !== null && (
             <StatusText tone="error">{topMessage}</StatusText>
           )}
@@ -569,16 +652,18 @@ export function PlanFormScreen({
               最新を取り直す
             </button>
           )}
-          <PlanFormFields
-            values={values}
-            errors={displayErrors}
-            locked={locked}
-            period={period}
-            kindLockedReason={kindLockedReason}
-            fieldRefs={fieldRefs}
-            kindRef={kindRef}
-            onChange={applyChange}
-          />
+          {!hideFields && (
+            <PlanFormFields
+              values={shownValues}
+              errors={pendingLocked ? {} : displayErrors}
+              locked={fieldsLocked}
+              period={period}
+              kindLockedReason={kindLockedReason}
+              fieldRefs={fieldRefs}
+              kindRef={kindRef}
+              onChange={applyChange}
+            />
+          )}
         </>
       )}
       </Sheet>

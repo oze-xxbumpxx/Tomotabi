@@ -21,6 +21,7 @@ import { useSaveState } from "@/shared/api/save-state";
 import {
   findPendingRequest,
   listPendingRequestsForUser,
+  NEW_TRIP_ID,
   pendingRequestToMutation,
   savePendingRequest,
   toPendingRequestRecord,
@@ -459,6 +460,35 @@ describe("読み出した保留の検証", () => {
       name: "JSON として読めない bodyJson",
       record: () => makeRecord({ bodyJson: "{not json" }),
     },
+    // RU-07: 新しく足した経路と、`new-trip` の特例の外れの確認。
+    {
+      name: "tripId が旅行なのに `/api/trips` ちょうどの url",
+      record: () => makeRecord({ url: "/api/trips" }),
+    },
+    {
+      name: "UUID でない予定のレコードを向く url",
+      record: () =>
+        makeRecord({ url: `/api/trips/${TRIP_ID}/plans/not-a-uuid` }),
+    },
+    {
+      name: "UUID でない達成のレコードを向く url",
+      record: () =>
+        makeRecord({
+          url: `/api/trips/${TRIP_ID}/achievements/not-a-uuid/cancel`,
+        }),
+    },
+    {
+      name: "許可済み経路の後ろに余計な段がある url",
+      record: () =>
+        makeRecord({
+          url: `/api/trips/${TRIP_ID}/plans/${crypto.randomUUID()}/move/extra`,
+        }),
+    },
+    {
+      name: "tripId の文字列が途中で終わる url",
+      record: () =>
+        makeRecord({ url: `/api/trips/${TRIP_ID}evil/payments` }),
+    },
   ];
 
   for (const { name, record } of tamperedCases) {
@@ -505,6 +535,45 @@ describe("読み出した保留の検証", () => {
         operation: "cancel-settlement",
         url: `/api/trips/${TRIP_ID}/settlements/${crypto.randomUUID()}/cancel`,
       },
+      // 旅行の書き込み（Issue #142）。
+      { operation: "rename-trip", url: `/api/trips/${TRIP_ID}` },
+      {
+        operation: "update-trip-period",
+        url: `/api/trips/${TRIP_ID}/period`,
+      },
+      { operation: "start-trip", url: `/api/trips/${TRIP_ID}/start` },
+      { operation: "finish-trip", url: `/api/trips/${TRIP_ID}/finish` },
+      // 予定の書き込み（Issue #142）。
+      { operation: "create-plan", url: `/api/trips/${TRIP_ID}/plans` },
+      {
+        operation: "update-plan",
+        url: `/api/trips/${TRIP_ID}/plans/${crypto.randomUUID()}`,
+      },
+      {
+        operation: "move-plan",
+        url: `/api/trips/${TRIP_ID}/plans/${crypto.randomUUID()}/move`,
+      },
+      {
+        operation: "cancel-plan",
+        url: `/api/trips/${TRIP_ID}/plans/${crypto.randomUUID()}/cancel`,
+      },
+      // 達成・予約の書き込み（Issue #142）。
+      {
+        operation: "record-achievement",
+        url: `/api/trips/${TRIP_ID}/achievements`,
+      },
+      {
+        operation: "cancel-achievement",
+        url: `/api/trips/${TRIP_ID}/achievements/${crypto.randomUUID()}/cancel`,
+      },
+      {
+        operation: "record-booking",
+        url: `/api/trips/${TRIP_ID}/bookings`,
+      },
+      {
+        operation: "cancel-booking",
+        url: `/api/trips/${TRIP_ID}/bookings/${crypto.randomUUID()}/cancel`,
+      },
       // 許可済みの経路であれば操作名は許可リストに依らない。
       { operation: OPERATION, url: TEST_URL },
     ];
@@ -525,6 +594,90 @@ describe("読み出した保留の検証", () => {
       expect(mutation?.url).toBe(url);
       expect(mutation?.idempotencyKey).toBe(record.idempotencyKey);
     }
+  });
+
+  it("旅行の新規作成の保留は `new-trip` の tripId で `/api/trips` ちょうどだけを許す", () => {
+    // 新規作成は `/api/trips` ちょうどへのPOST。
+    const create = pendingRequestToMutation(
+      toPendingRequestRecord({
+        userId: USER_ID,
+        tripId: NEW_TRIP_ID,
+        request: createMutationRequest({
+          operation: "create-trip",
+          url: "/api/trips",
+          method: "POST",
+          body: { name: "旅" },
+        }),
+      }),
+    );
+    expect(create).not.toBeNull();
+    expect(create?.url).toBe("/api/trips");
+
+    // `new-trip` ではほかの経路を送り直せない（旅行が決まったように
+    // 見せた経路も、末尾に余計な / があるものも）。
+    const rejectedUrls = [
+      `/api/trips/${TRIP_ID}`,
+      `/api/trips/${TRIP_ID}/plans`,
+      "/api/trips/",
+      "/api/trips?next=/trips",
+      "/api/admin/trips",
+    ];
+    for (const url of rejectedUrls) {
+      const record = toPendingRequestRecord({
+        userId: USER_ID,
+        tripId: NEW_TRIP_ID,
+        request: createMutationRequest({
+          operation: "create-trip",
+          url,
+          method: "POST",
+          body: { name: "旅" },
+        }),
+      });
+      expect(
+        pendingRequestToMutation(record),
+        `${url} は送り直せないはず`,
+      ).toBeNull();
+    }
+
+    // 旅行の tripId では `/api/trips` ちょうどは（新規作成に見せかけて）
+    // 送り直せない。
+    const tripRecord = toPendingRequestRecord({
+      userId: USER_ID,
+      tripId: TRIP_ID,
+      request: createMutationRequest({
+        operation: "create-trip",
+        url: "/api/trips",
+        method: "POST",
+        body: { name: "旅" },
+      }),
+    });
+    expect(pendingRequestToMutation(tripRecord)).toBeNull();
+  });
+
+  it("`new-trip` の形が確かめられない保留は読み出しで消し、確かめられない扱いにする", async () => {
+    // `/api/trips` ちょうど以外の url（末尾に余計な / があるものも）は
+    // 読み出しの検証で落とし、送り直せる形としては返さない。
+    for (const url of [`/api/trips/${TRIP_ID}/plans`, "/api/trips/"]) {
+      await savePendingRequest(
+        toPendingRequestRecord({
+          userId: USER_ID,
+          tripId: NEW_TRIP_ID,
+          request: createMutationRequest({
+            operation: "create-trip",
+            url,
+            method: "POST",
+            body: { name: "旅" },
+          }),
+        }),
+      );
+      const lookup = await findPendingRequest({
+        userId: USER_ID,
+        tripId: NEW_TRIP_ID,
+        operation: "create-trip",
+      });
+      expect(lookup.status, `${url} は確かめられないはず`).toBe("invalid");
+    }
+    expect(await listPendingRequestsForUser(USER_ID)).toEqual([]);
   });
 
   it("確かめ直しの要求が今の利用者・旅行と合わなければ送らずに消す", async () => {

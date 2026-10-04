@@ -5,6 +5,7 @@ import type { ApiFailure } from "@/shared/api/api-failure";
 import type { ApiSuccess } from "@/shared/api/api-result";
 import type { MutationRequest } from "@/shared/api/mutation-request";
 import { useSaveState, type SaveState } from "@/shared/api/save-state";
+import type { PendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import {
   getPlanWithMeta,
   sendCreatePlan,
@@ -40,14 +41,40 @@ export function invalidatePlanViews(
 
 type OnPlanSaved = (result: ApiSuccess<Plan>) => void;
 
-/** 予定の追加（POST /trips/{tripId}/plans）。If-Matchは付けない。 */
+/** 送る直前に端末に残す設定。利用者が取れないあいだ（null）は残さない。 */
+function pendingOf(input: {
+  userId: string | null;
+  tripId: string;
+  check?: PendingRequestCheck;
+}): {
+  userId: string;
+  tripId: string;
+  check?: PendingRequestCheck;
+} | null {
+  return input.userId === null
+    ? null
+    : { userId: input.userId, tripId: input.tripId, check: input.check };
+}
+
+/**
+ * 予定の追加（POST /trips/{tripId}/plans）。If-Matchは付けない。
+ * 送る直前に端末に残し（ADR-0006）、残せなければ送らずに止める。
+ */
 export function useCreatePlan(options: {
   tripId: string;
+  /** 保留の照合に使う利用者のID。nullのあいだは端末に残さない。 */
+  userId: string | null;
+  check?: PendingRequestCheck;
   onSucceeded?: OnPlanSaved;
 }): PlanSave {
   const queryClient = useQueryClient();
   return useSaveState<Plan, Plan>({
     send: sendCreatePlan,
+    pendingRequest: pendingOf({
+      userId: options.userId,
+      tripId: options.tripId,
+      check: options.check,
+    }),
     onSucceeded: (result) => {
       invalidatePlanViews(queryClient, options.tripId, null);
       options.onSucceeded?.(result);
@@ -64,11 +91,19 @@ export function usePlanMutation(options: {
   tripId: string;
   planId: string;
   send: PlanSend;
+  /** 保留の照合に使う利用者のID。nullのあいだは端末に残さない。 */
+  userId: string | null;
+  check?: PendingRequestCheck;
   onSucceeded?: OnPlanSaved;
 }): PlanSave {
   const queryClient = useQueryClient();
   return useSaveState<Plan, Plan>({
     send: options.send,
+    pendingRequest: pendingOf({
+      userId: options.userId,
+      tripId: options.tripId,
+      check: options.check,
+    }),
     fetchLatest: () =>
       getPlanWithMeta(options.tripId, options.planId).map((latest) => ({
         ...latest,

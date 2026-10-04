@@ -12,7 +12,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMe } from "@/features/auth";
 import {
+  CANCEL_PLAN_OPERATION,
   CancelPlanDialog,
+  MOVE_PLAN_OPERATION,
   PlanDetailBody,
   PlanMoveSheet,
   sendCancelPlan,
@@ -24,6 +26,7 @@ import {
 } from "@/features/plans";
 import { useTrip } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { Sheet } from "@/shared/ui/sheet";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 import { isLocalDateString } from "@/shared/lib/local-date";
@@ -46,6 +49,8 @@ type Layer = "move" | "cancel";
  * `/trips/{tripId}/plans/{planId}`の予定の詳細（09）。種類・名前・時刻・
  * 記録に、編集・日の移動・取りやめの操作を添える。
  * 「← しおり」は表示していた日（`?from=`）に戻る。未指定なら予定の日。
+ * 移動・取りやめの書き込みは送る直前に端末に残し（ADR-0006）、
+ * 保留があればその操作の画面に送り直しの確認を出す（F-70〜F-73）。
  */
 export function PlanDetailScreen({
   tripId,
@@ -72,10 +77,23 @@ export function PlanDetailScreen({
   const displayName =
     meState.status === "ready" ? meState.me.user.displayName : null;
 
+  const moveCheck = usePendingRequestCheck({
+    userId,
+    tripId,
+    operation: MOVE_PLAN_OPERATION,
+  });
+  const cancelCheck = usePendingRequestCheck({
+    userId,
+    tripId,
+    operation: CANCEL_PLAN_OPERATION,
+  });
+
   const move = usePlanMutation({
     tripId,
     planId,
     send: sendMovePlan,
+    userId,
+    check: moveCheck.check,
     onSucceeded: () => {
       setLayer(null);
       setToast("移動しました");
@@ -85,6 +103,8 @@ export function PlanDetailScreen({
     tripId,
     planId,
     send: sendCancelPlan,
+    userId,
+    check: cancelCheck.check,
     onSucceeded: () => {
       setLayer(null);
       setToast("取りやめにしました");
@@ -339,6 +359,7 @@ export function PlanDetailScreen({
             plan={plan}
             etag={etag}
             move={move}
+            movePending={moveCheck}
             onClose={() => onWriteClose(move)}
             onSessionExpired={(unconfirmed) => {
               setLayer(null);
@@ -370,6 +391,7 @@ export function PlanDetailScreen({
           plan={plan}
           etag={etag}
           cancel={cancel}
+          cancelPending={cancelCheck}
           onClose={() => onWriteClose(cancel)}
           onSessionExpired={(unconfirmed) => {
             setLayer(null);

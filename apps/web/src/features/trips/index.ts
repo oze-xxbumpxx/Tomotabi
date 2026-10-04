@@ -1,22 +1,28 @@
 export {
+  CREATE_TRIP_OPERATION,
   createTripDraft,
+  FINISH_TRIP_OPERATION,
   finishTripDraft,
   getTrip,
   getTripItinerary,
   getTripWithMeta,
   listTripsPage,
+  RENAME_TRIP_OPERATION,
   renameTripDraft,
   sendCreateTrip,
   sendFinishTrip,
   sendRenameTrip,
   sendStartTrip,
   sendUpdateTripPeriod,
+  START_TRIP_OPERATION,
   startTripDraft,
+  UPDATE_TRIP_PERIOD_OPERATION,
   updateTripPeriodDraft,
 } from "./api/trips-api";
 export {
   firstInvalidField,
   TRIP_NAME_MAX_CODEPOINTS,
+  tripFormValuesFromJson,
   validateTripForm,
   type TripFormErrors,
   type TripFormField,
@@ -44,4 +50,5 @@ export { TripFormFields } from "./ui/trip-form-fields";
 export { TripHeader } from "./ui/trip-header";
 export { TripMenu } from "./ui/trip-menu";
 export { TripRow } from "./ui/trip-row";
+export { TripTabBar, type TripTab } from "./ui/trip-tab-bar";
 export { TRIP_STATUS_LABEL, TripStatusBadge } from "./ui/trip-status-badge";

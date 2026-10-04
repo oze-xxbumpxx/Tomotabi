@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { Plan, Trip } from "@tomotabi/contracts";
+import type { PendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { formatLocalDate } from "@/shared/lib/local-date";
 import { Sheet } from "@/shared/ui/sheet";
 import { ConflictNotice } from "@/shared/ui/state/conflict";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
+import { StorageUnavailable } from "@/shared/ui/state/storage-unavailable";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 import { StatusText } from "@/shared/ui/status-text";
 import { movePlanDraft } from "../api/plans-api";
@@ -40,12 +42,15 @@ function rejectedMessage(state: RejectedState): string {
  * 日の移動の小さなシート（11cの日付選択だけ）。
  * 同じ日なら保存ボタンを押せない（W-20）。結果不明・競合・拒否は
  * シートの中で状態を出し、同じ要求で確かめる。
+ * 移動の保留が残っていれば「保存されたか確認できません」と送り直しの
+ * ボタンを出す（F-71・E-11）。
  */
 export function PlanMoveSheet({
   trip,
   plan,
   etag,
   move,
+  movePending,
   onClose,
   onSessionExpired,
   onNotAvailable,
@@ -54,6 +59,8 @@ export function PlanMoveSheet({
   plan: Plan;
   etag: string;
   move: PlanSave;
+  /** 「日の移動」の保留の照合結果（再読み込みつき）。 */
+  movePending: { check: PendingRequestCheck; reload: () => void };
   onClose: () => void;
   onSessionExpired: (unconfirmed: boolean) => void;
   /** 書き込みが403 / 404で拒否（C-2）。呼び出し側が全面を差し替える。 */
@@ -62,6 +69,8 @@ export function PlanMoveSheet({
   const online = useOnlineStatus();
   const [selected, setSelected] = useState(plan.date);
   const state = move.state;
+  const pendingFound = movePending.check.status === "found";
+  const pendingUnavailable = movePending.check.status === "unavailable";
 
   const etagNow =
     state.status === "conflict" && state.latest !== null
@@ -102,7 +111,9 @@ export function PlanMoveSheet({
       title="日の移動"
       onClose={tryClose}
       footer={
-        state.status === "unknown" || state.status === "conflict" ? null : (
+        state.status === "unknown" ||
+        state.status === "conflict" ||
+        pendingFound ? null : (
           <>
             <button
               type="button"
@@ -122,6 +133,7 @@ export function PlanMoveSheet({
                 sameDay ||
                 saving ||
                 !online ||
+                movePending.check.status !== "none" ||
                 (state.status === "rejected" && state.httpStatus === 428)
               }
             >
@@ -137,6 +149,21 @@ export function PlanMoveSheet({
       {state.status === "unknown" && (
         <SaveUnknown onConfirm={() => void move.confirmWithSameRequest()} />
       )}
+      {pendingFound && movePending.check.status === "found" && (
+        <SaveUnknown
+          onConfirm={() => {
+            if (movePending.check.status !== "found") {
+              return;
+            }
+            void move
+              .confirmRequest(movePending.check.record)
+              .then(movePending.reload);
+          }}
+          confirming={saving}
+        />
+      )}
+      {pendingUnavailable && <StorageUnavailable />}
+      {state.status === "storage-unavailable" && <StorageUnavailable />}
       {state.status === "conflict" &&
         (state.latest === null ? (
           state.latestFailed ? (
@@ -193,7 +220,9 @@ export function PlanMoveSheet({
             startsOn={trip.startsOn}
             endsOn={trip.endsOn}
             value={selected}
-            disabled={saving || state.status === "unknown"}
+            disabled={
+              saving || state.status === "unknown" || pendingFound
+            }
             onSelect={(date) => {
               setSelected(date);
               // 拒否（期間外など）のあと別の日を選び直したら編集に戻す。

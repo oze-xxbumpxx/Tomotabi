@@ -506,6 +506,38 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     expect(previewFetches.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("内訳の「差」は符号なしで出し、札と説明の行に向きの矢印を付ける", async () => {
+    stubApi({});
+    const { container } = renderSettlement();
+    await screen.findAllByText("1,285 円");
+
+    // ひなたの差は-1,285だが、差の欄はどちらも符号なし（向きは札が示す）。
+    expect(screen.queryByText("-1,285 円")).not.toBeInTheDocument();
+    const diffTiles = screen
+      .getAllByText("差")
+      .map((label) => label.closest(".settle-tile"));
+    expect(diffTiles).toHaveLength(2);
+    for (const tile of diffTiles) {
+      expect(
+        within(tile as HTMLElement).getByText("1,285 円"),
+      ).toBeInTheDocument();
+    }
+
+    // 「渡す」「受け取る」の札に向きの矢印が付く。
+    const badges = container.querySelectorAll(".settle-badge");
+    expect(badges).toHaveLength(2);
+    for (const badge of badges) {
+      expect(badge.querySelector("svg")).not.toBeNull();
+    }
+
+    // 説明の行の頭に折れ曲がった矢印が付く。
+    for (const sentence of container.querySelectorAll(
+      ".settle-breakdown-sentence",
+    )) {
+      expect(sentence.querySelector("svg")).not.toBeNull();
+    }
+  });
+
   it("FW-05: 0 円は「受け渡しは不要です」と専用の主操作を出す", async () => {
     stubApi({
       balance: () =>
@@ -758,6 +790,8 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
       ).toBeEnabled(),
     );
     expect(record).toBeDisabled();
+    // ボタンにはチェックの印が付く（押せないあいだも）。
+    expect(record.querySelector("svg")).not.toBeNull();
     await user.click(
       screen.getByRole("checkbox", { name: "表示の全額を受け渡しました" }),
     );
@@ -793,6 +827,47 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
       completionKind: "transfer_completed",
       acknowledgedCancellationPaymentIds: [],
     });
+  });
+
+  it("金額のカードは向きの行・大きな金額・固定の注記を左寄せで出す（v3 の 14c）", async () => {
+    stubApi({});
+    const { container } = renderPreview();
+    await screen.findAllByText("1,285 円");
+
+    // 1行目は「{name} から {name} へ」（名前は太字、間に矢印）。
+    const direction = container.querySelector(".settle-direction");
+    expect(direction?.textContent).toMatch(
+      /ひなた\s*から\s*あおい\s*へ/,
+    );
+    expect(
+      [...(direction?.querySelectorAll("strong") ?? [])].map(
+        (el) => el.textContent,
+      ),
+    ).toEqual(["ひなた", "あおい"]);
+    expect(direction?.querySelector("svg")).not.toBeNull();
+
+    // 金額は左寄せの大きな表示で、固定の注記も左寄せ。
+    expect(
+      container.querySelector(".settle-amount.settle-amount-fixed"),
+    ).not.toBeNull();
+    expect(
+      screen.getByText("作成した時点の対象と金額で固定しています"),
+    ).toBeInTheDocument();
+  });
+
+  it("対象の明細は各行「負担 … 円」の1行にまとめる（v3 の 14c）", async () => {
+    stubApi({});
+    renderPreview();
+    await screen.findAllByText("1,285 円");
+
+    expect(
+      screen.getByText("負担 ひなた 1,000 · あおい 1,000 円"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("負担 ひなた 285 · あおい 285 円"),
+    ).toBeInTheDocument();
+    // 受け渡しがある確認では「{name} が支払い · 折半」の行は出さない。
+    expect(screen.queryByText(/が支払い/)).not.toBeInTheDocument();
   });
 
   it("FW-06: 0 円はチェックなしで「受け渡し不要として精算を記録」", async () => {
@@ -836,6 +911,10 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
     expect(await screen.findByText("受け渡しは不要です")).toBeInTheDocument();
     // 0円はチェックなし。
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    // 明細の「負担 …」の行末に「{name} が支払い」を添える（v3 の 14h）。
+    expect(
+      screen.getByText("負担 ひなた 1,000 · あおい 0 円 · ひなた が支払い"),
+    ).toBeInTheDocument();
 
     const record = await screen.findByRole("button", {
       name: "受け渡し不要として精算を記録",

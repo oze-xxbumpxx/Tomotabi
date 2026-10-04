@@ -1,6 +1,11 @@
 "use client";
 
-import { ArrowRight, CaretLeft, Lock } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  CaretLeft,
+  Check,
+  LockSimple,
+} from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,9 +13,7 @@ import { useEffect, useState } from "react";
 import { useMe } from "@/features/auth";
 import {
   CompleteSettlementDialog,
-  PersonAvatar,
   settlementPreviewQueryKey,
-  slotOf,
   TargetItemList,
   transferDirectionOf,
   useCompleteSettlement,
@@ -38,7 +41,11 @@ function failureOf(error: unknown) {
   return error instanceof ApiRequestError ? error.failure : null;
 }
 
-/** 作成した時点の対象と金額で固定した向き・金額のカード（14cのロック付き）。 */
+/**
+ * 作成した時点の対象と金額で固定した向き・金額のカード（14c・14h）。
+ * 1行目に「{name} から → {name} へ」（非0円）または「受け渡しは不要です」
+ * （0円）、その下に大きな金額、最後に固定の注記を左寄せで並べる。
+ */
 function FixedTransferCard({ preview }: { preview: Preview }) {
   const direction = transferDirectionOf(
     preview.transfer,
@@ -47,57 +54,19 @@ function FixedTransferCard({ preview }: { preview: Preview }) {
   return (
     <section className="settle-card">
       {direction === null ? (
-        <>
-          <p className="settle-amount tabular-nums">0 円</p>
-          <p className="settle-zero-title">受け渡しは不要です</p>
-        </>
+        <p className="settle-direction">受け渡しは不要です</p>
       ) : (
-        <>
-          <div className="settle-transfer">
-            <div className="settle-person">
-              <PersonAvatar
-                name={direction.fromName}
-                slot={
-                  preview.transfer.fromUserId !== null
-                    ? slotOf(
-                        preview.participants,
-                        preview.transfer.fromUserId,
-                      )
-                    : null
-                }
-              />
-              <span className="settle-person-name">{direction.fromName}</span>
-              <span className="settle-person-role">から</span>
-            </div>
-            <ArrowRight
-              size={20}
-              weight="bold"
-              className="settle-arrow"
-              aria-hidden="true"
-            />
-            <div className="settle-person">
-              <PersonAvatar
-                name={direction.toName}
-                slot={
-                  preview.transfer.toUserId !== null
-                    ? slotOf(
-                        preview.participants,
-                        preview.transfer.toUserId,
-                      )
-                    : null
-                }
-              />
-              <span className="settle-person-name">{direction.toName}</span>
-              <span className="settle-person-role">へ</span>
-            </div>
-          </div>
-          <p className="settle-amount tabular-nums">
-            {formatYen(direction.amount)}
-          </p>
-        </>
+        <p className="settle-direction">
+          <strong>{direction.fromName}</strong> から{" "}
+          <ArrowRight size={14} weight="bold" aria-hidden="true" />{" "}
+          <strong>{direction.toName}</strong> へ
+        </p>
       )}
+      <p className="settle-amount settle-amount-fixed tabular-nums">
+        {direction === null ? "0 円" : formatYen(direction.amount)}
+      </p>
       <p className="settle-fixed-note">
-        <Lock size={12} weight="bold" aria-hidden="true" />
+        <LockSimple size={12} weight="bold" aria-hidden="true" />
         作成した時点の対象と金額で固定しています
       </p>
     </section>
@@ -264,6 +233,7 @@ export function SettlementPreviewScreen({
         disabled={disabled}
         onClick={() => setDialogOpen(true)}
       >
+        <Check size={18} weight="bold" aria-hidden="true" />
         {direction === null
           ? "受け渡し不要として精算を記録"
           : "受け渡し完了を記録"}
@@ -286,7 +256,12 @@ export function SettlementPreviewScreen({
       </p>
 
       <FixedTransferCard preview={data} />
-      <TargetItemList items={data.items} participants={data.participants} />
+      <TargetItemList
+        items={data.items}
+        participants={data.participants}
+        variant="confirm"
+        showPayer={direction === null}
+      />
 
       {ready ? (
         <>

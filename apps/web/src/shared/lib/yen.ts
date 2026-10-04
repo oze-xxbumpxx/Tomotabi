@@ -64,8 +64,8 @@ export function yenToDecimalString(yen: bigint): string {
   return yen.toString();
 }
 
-/** 3桁区切りの表示（"7,001円"・負は"-3,500円"）。 */
-export function formatYen(yen: bigint): string {
+/** 3桁区切りの数字だけ（"7,001"・負は"-3,500"）。「円」を別扱いにする欄で使う。 */
+export function formatYenDigits(yen: bigint): string {
   const negative = yen < 0n;
   const digits = (negative ? -yen : yen).toString();
   let grouped = "";
@@ -76,7 +76,12 @@ export function formatYen(yen: bigint): string {
       grouped += ",";
     }
   }
-  return `${negative ? "-" : ""}${grouped} 円`;
+  return `${negative ? "-" : ""}${grouped}`;
+}
+
+/** 3桁区切りの表示（"7,001円"・負は"-3,500円"）。 */
+export function formatYen(yen: bigint): string {
+  return `${formatYenDigits(yen)} 円`;
 }
 
 /** 支払い1件として受け付ける範囲（1〜9,999,999円）か。 */

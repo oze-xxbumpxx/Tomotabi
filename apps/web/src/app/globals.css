@@ -1828,28 +1828,25 @@ dialog.dialog[open] {
   border-top: 1px solid var(--color-line);
 }
 
+.pay-share-person {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .pay-share-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.pay-share-tag {
+.pay-share-sub {
   font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-muted);
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
-}
-
-.pay-share-tag-payer {
-  background: var(--color-accent-soft);
-  color: var(--color-accent-text);
+  color: var(--color-text-muted);
 }
 
 .pay-share-percent {
@@ -2159,10 +2156,15 @@ dialog.dialog[open] {
 
 .settle-badge {
   margin-left: auto;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 2px 10px;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 10px;
   border-radius: var(--radius-pill);
+  white-space: nowrap;
 }
 
 .settle-badge-receive {
@@ -2202,9 +2204,18 @@ dialog.dialog[open] {
 
 .settle-breakdown-sentence {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
+  font-weight: 600;
   color: var(--color-text-secondary);
   line-height: 1.6;
+}
+
+.settle-breakdown-sentence-icon {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 .settle-breakdown-footer {
@@ -2374,11 +2385,39 @@ a.settle-action {
   color: var(--color-text-muted);
 }
 
+.settle-direction {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.settle-direction strong {
+  color: var(--color-text);
+}
+
+.settle-amount-fixed {
+  text-align: left;
+  font-size: 36px;
+  line-height: 1.1;
+}
+
+.settle-item-confirm .settle-item-name,
+.settle-item-confirm .settle-item-amount {
+  font-size: 14px;
+}
+
+.settle-item-confirm .settle-item-share {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
 .settle-fixed-note {
   margin: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 4px;
   font-size: 12px;
   color: var(--color-text-muted);

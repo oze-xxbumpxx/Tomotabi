@@ -1,3 +1,8 @@
+import {
+  ArrowBendDownRight,
+  ArrowDownLeft,
+  ArrowUpRight,
+} from "@phosphor-icons/react";
 import type {
   Participant,
   TargetItem,
@@ -59,6 +64,19 @@ export function BalanceBreakdown({
                         : "settle-badge settle-badge-pay"
                     }
                   >
+                    {total.diff > 0n ? (
+                      <ArrowDownLeft
+                        size={13}
+                        weight="bold"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <ArrowUpRight
+                        size={13}
+                        weight="bold"
+                        aria-hidden="true"
+                      />
+                    )}
                     {total.diff > 0n
                       ? `受け取る ${formatYen(total.diff)}`
                       : `渡す ${formatYen(-total.diff)}`}
@@ -83,11 +101,20 @@ export function BalanceBreakdown({
                     <div className="settle-tile">
                       <span className="settle-tile-label">差</span>
                       <span className="settle-tile-value tabular-nums">
-                        {formatYen(total.diff)}
+                        {formatYen(
+                          total.diff < 0n ? -total.diff : total.diff,
+                        )}
                       </span>
                     </div>
                   </div>
-                  <p className="settle-breakdown-sentence">{sentence}</p>
+                  <p className="settle-breakdown-sentence">
+                    <ArrowBendDownRight
+                      size={14}
+                      className="settle-breakdown-sentence-icon"
+                      aria-hidden="true"
+                    />
+                    {sentence}
+                  </p>
                 </>
               )}
             </div>

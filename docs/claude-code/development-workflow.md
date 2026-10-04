@@ -29,6 +29,19 @@ Orchestrator … 変更レベル判定（L1/L2/L3）・タスク分解・委譲�
 Orchestrator … 成果物の統合・矛盾解消・完了条件確認 → ユーザー報告
 ```
 
+L2/L3の機能は、分類の直後に論点の記録と進み具合（`docs/discussions/<feature>.md`・`<feature>.progress.json`）を作り、
+問いと設計の承認は確認のページ（claude.aiの非公開のページ）でユーザーに出す。工程が変わるたびに
+`node .claude/scripts/discussion.mjs stage <feature> <工程> <状態>`で進み具合を更新する
+（設計: `docs/designs/discussion-workflow.md`。手順: `ask-questions`・`create-design-document`の「承認を頼むとき」）。
+
+| 時点 | 進み具合の更新 |
+| --- | --- |
+| 問いを確認のページで出した | その工程を`waiting` |
+| 答えを記録して本文を書き始めた | その工程を`active` |
+| 要件定義書・設計書のPRを出した | その工程を`approval`（`--doc`で文書を足す） |
+| そのPRがマージされた | その工程を`done --pr <番号>`、次の工程を`active` |
+| 実装・レビュー・マージ・振り返り | それぞれ`active` → `done`。行わない工程は`skipped --reason` |
+
 Level 1（軽微）は設計書・計画を省略し、implementer（または直接修正）→ 必要なら
 reviewerの最小フローで進める。レベルの定義は
 [document-policy.md](./document-policy.md)を参照。

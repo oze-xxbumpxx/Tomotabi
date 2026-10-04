@@ -74,3 +74,6 @@ architecture-designerが担う（専用のcontract-designerは未定義）。無
 - 小規模変更にLevel 3相当の工程を当てない。
 - 判定後、L2/L3では最初のWrite担当Subagentが`.claude/state/current-feature`に
   feature-nameを書く。L0/L1では設定しない（Hook誤検知防止）。
+- L2/L3と判定したら、Orchestratorが論点の記録と進み具合を作る:
+  `node .claude/scripts/discussion.mjs init <feature-name> --level L2|L3 --title <機能の名前>`。
+  以降、工程が変わるたびに`discussion.mjs stage`で進み具合を更新する（`docs/discussions/README.md`）。

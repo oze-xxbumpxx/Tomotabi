@@ -1,0 +1,51 @@
+issue: 123
+title: 'feat(api): 残額と受け渡しの確認の API（取得・作成・一覧・検証結果）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-03T00:23:53Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-03T01:17:29Z'
+    reviewed_sha: '82e861053a114a7998e98239d0eb8c27342ef262'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-coverage'
+        summary: '他人の確認を指すカーソルの試験が存在しない id を使い、作成者の条件を外しても通る'
+      - severity: 'must'
+        category: 'test-coverage'
+        summary: '同じ作成時刻でページの境目で抜けないことの試験が無い'
+      - severity: 'must'
+        category: 'coding-standard'
+        summary: '試験の import type と import の重複（型検査で落ちる）'
+      - severity: 'nit'
+        category: 'coding-standard'
+        summary: '一覧の cursor の値なしが undefined'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '了承が要る明細を kind を見ずに拾う'
+      - severity: 'nit'
+        category: 'performance'
+        summary: '一覧の明細の N+1'
+      - severity: 'nit'
+        category: 'duplication'
+        summary: '向きと金額の計算が 2 か所'
+  - round: 1
+    reviewed_at: '2026-10-03T01:22:54Z'
+    reviewed_sha: '22cafa599c3b6a9587e6defbcb4ea12671530c43'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 124
+  pr_created_at: '2026-10-03T00:48:00Z'
+  merged_at: '2026-10-03T01:29:17Z'
+  closed_at: '2026-10-03T01:29:17Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

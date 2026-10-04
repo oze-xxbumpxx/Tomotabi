@@ -1,0 +1,31 @@
+issue: 130
+title: 'fix(web): 支払い・精算の画面を v3 に合わせる（内訳の矢印・確認のボタンとカード・二人の負担の名前）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 1
+delegated_at: '2026-10-03T22:10:35Z'
+follow_up_of: 118
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-03T22:28:48Z'
+    reviewed_sha: '2fe15ac4bf34b5b839ae15bc1291a38761ae0f08'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'ui-glitch'
+        summary: '14c の向きの行で名前が太字になっていない（v3 は太字）'
+      - severity: 'nit'
+        category: 'ui-glitch'
+        summary: '金額の「円」が数字と同じ大きさ（v3 は小さい）。Issue の範囲外'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 131
+  pr_created_at: '2026-10-03T22:26:19Z'
+  merged_at: '2026-10-04T04:47:19Z'
+  closed_at: '2026-10-04T04:47:19Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

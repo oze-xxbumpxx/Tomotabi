@@ -1,0 +1,27 @@
+issue: 118
+title: 'feat(web): 支払いを記録の画面'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-02T11:32:20Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-02T12:13:56Z'
+    reviewed_sha: '99b9456527062f197db67642aeb769f8ef4d6d76'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '利用者が分からないあいだ pendingRequest が null になり、保存の hook 自体は IndexedDB を通さずに送れる（画面が読み込み中を出すことだけで防いでいる）'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 122
+  pr_created_at: '2026-10-02T12:11:42Z'
+  merged_at: '2026-10-03T00:23:58Z'
+  closed_at: '2026-10-03T00:23:58Z'
+  commits: 4
+  ci_first_pass: true
+  closes_linked: true

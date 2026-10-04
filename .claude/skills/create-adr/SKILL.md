@@ -22,6 +22,14 @@ description: >
   **`docs/decisions/ADR-0001-<タイトル>.md`から開始**する。
 - 以降は`docs/decisions/`の最大番号 +1。`docs/`直下の配布元ADRは引き継がない。
 
+## 候補の比べ方
+
+ADR級の決定（スタック・アーキテクチャ・後方互換）は、AIが候補と比較を示し、ユーザーが決める（AGENTS.md）。
+比較は、その機能の論点の記録（`docs/discussions/<feature-name>.md`）に論点として書き、確認のページで出す
+（[ask-questions](../ask-questions/SKILL.md)の「ユーザーへの出し方」）。候補ごとに利点と欠点を書き、推奨を1つ選ぶ。
+答えが出たら、ADRのAlternativesに選ばなかった候補と理由を短く書き、詳しくは論点の記録へリンクする
+（ADRは単独で読まれるので、リンクだけにしない。2026-10-04決定）。
+
 ## テンプレート
 
 ```markdown

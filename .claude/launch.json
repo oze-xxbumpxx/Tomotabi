@@ -4,20 +4,48 @@
     {
       "name": "api",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:api"],
+      "runtimeArgs": [
+        "run",
+        "dev:api"
+      ],
       "port": 3001
     },
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:web"],
+      "runtimeArgs": [
+        "run",
+        "dev:web"
+      ],
       "port": 3000
     },
     {
       "name": "design",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "docs/design/handoff-v3"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "docs/design/handoff-v3"
+      ],
       "port": 8765
+    },
+    {
+      "name": "discussion-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        ".claude/state/discussion-preview"
+      ],
+      "port": 8766
     }
   ]
 }

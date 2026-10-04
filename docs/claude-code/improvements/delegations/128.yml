@@ -1,0 +1,27 @@
+issue: 128
+title: 'test(e2e): 支払い・精算の E2E（ふつうの精算・0 円・確認の固定・結果不明）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-03T03:18:58Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-03T03:35:18Z'
+    reviewed_sha: '2d7e4d9af2d2cf0bdadee15ae3051859401f846c'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'test-robustness'
+        summary: '金額の確かめにクラス名（.settle-amount）を使っている。役割や見出しで探せる形があればそちらにする'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 129
+  pr_created_at: '2026-10-03T03:33:02Z'
+  merged_at: '2026-10-03T03:55:39Z'
+  closed_at: '2026-10-03T03:55:39Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

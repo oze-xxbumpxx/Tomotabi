@@ -1,0 +1,51 @@
+issue: 117
+title: 'feat(api): 支払いの API（記録・取得・取り消しと、お金の書き込みの共通の流れ）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-02T11:32:18Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-02T12:10:31Z'
+    reviewed_sha: '431ea781087018997177d18c82b98341d37ec3a5'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'robustness'
+        summary: 'lock_timeout の SQLSTATE を 55P01 と誤り、ロック待ちの時間切れが 503 でなく 500 になる'
+      - severity: 'must'
+        category: 'robustness'
+        summary: '同じキーを別の旅行へ同時に送ると受領の一意違反で 500（予定の書き込みにある読み直しが無い）'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: 'ROLLBACK 失敗時に壊れた接続をプールへ戻す'
+      - severity: 'nit'
+        category: 'test-coverage'
+        summary: 'parseAmountYen の 422 の枝に試験が無い'
+      - severity: 'nit'
+        category: 'duplication'
+        summary: 'executeFinanceWrite が executePlanWrite の写し'
+  - round: 1
+    reviewed_at: '2026-10-02T12:22:14Z'
+    reviewed_sha: '8e16e758a40abc32eb9d0396348799afb1bc8cb0'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'test-flakiness'
+        summary: '別の旅行への同時送信の実 DB 試験が、負ける側がロック待ちに入ったのを確かめずに勝つ側を送る（先に受領を読めば一意違反の経路を通らずに 409 で通ってしまう。経路は単体試験で確定的に通っている）'
+      - severity: 'nit'
+        category: 'duplication'
+        summary: 'executeFinanceWrite と executePlanWrite の共通化を見送り'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 120
+  pr_created_at: '2026-10-02T11:54:31Z'
+  merged_at: '2026-10-02T13:37:57Z'
+  closed_at: '2026-10-02T13:37:57Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

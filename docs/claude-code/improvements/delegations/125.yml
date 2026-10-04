@@ -1,0 +1,51 @@
+issue: 125
+title: 'feat(api): 精算の API（完了・一覧・取得・取り消しと同時実行）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-03T01:30:21Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-03T02:46:51Z'
+    reviewed_sha: '4abd7b770a95373a7f915451789a8835ee6c2ae5'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-coverage'
+        summary: 'FD-06 が同時実行になっていない（PR の説明とも食い違う）'
+      - severity: 'must'
+        category: 'test-coverage'
+        summary: 'FD-11 の筋書きが戻しと取り消された対象の例外を通らない'
+      - severity: 'must'
+        category: 'test-coverage'
+        summary: 'エラーの details を本文に出す経路の試験が無い'
+      - severity: 'must'
+        category: 'robustness'
+        summary: 'details.changedPaymentIds を設定する場所が無い（正本は関連 ID を返す）'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '既存の精算の照会が種類・重複の検査より後'
+      - severity: 'nit'
+        category: 'test-flakiness'
+        summary: 'ロック待ちの数え方が行を絞っていない'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '了承の配列に件数の上限が無い'
+  - round: 1
+    reviewed_at: '2026-10-03T03:11:42Z'
+    reviewed_sha: '6aa570d4621495992e1ea993a82d86ed2e2d2aff'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 127
+  pr_created_at: '2026-10-03T02:34:57Z'
+  merged_at: '2026-10-03T03:18:12Z'
+  closed_at: '2026-10-03T03:18:12Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true

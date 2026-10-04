@@ -1,0 +1,30 @@
+issue: 119
+title: 'feat(web): 精算の画面と受け渡しの確認'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-02T11:32:21Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-02T12:02:01Z'
+    reviewed_sha: 'f255dcd2b9ae30a483966937d4accba07156ac78'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '利用者が分からないあいだ pendingRequest が null になり、保存の hook 自体は IndexedDB を通さずに送れる（画面のボタンの無効化だけで防いでいる）'
+      - severity: 'nit'
+        category: 'coding-standard'
+        summary: '試験の describe が画面番号（14・14f など）だけで画面を指している'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 121
+  pr_created_at: '2026-10-02T11:59:27Z'
+  merged_at: '2026-10-02T13:38:37Z'
+  closed_at: '2026-10-02T13:38:38Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

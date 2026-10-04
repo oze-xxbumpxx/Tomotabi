@@ -25,6 +25,7 @@
   --ok:#7fc89a; --ok-soft:#1c3326; --wait:#e7b061; --wait-soft:#3a2c14;
   --skip:#8a93a0; --skip-soft:#262d36; --danger:#f2a49c; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.8}
+[hidden]{display:none!important}
 .wrap{max-width:820px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:36px}
 h1,h2,h3{font-family:var(--font-display);text-wrap:balance;line-height:1.4;margin:0}
 h1{font-size:24px;font-weight:900}
@@ -93,7 +94,7 @@ button:disabled{opacity:.5;cursor:default}
 .status.ok{color:var(--ok)}
 .status.err{color:var(--danger)}
 .empty{color:var(--muted);font-size:14px}
-@media (max-width:600px){.sendbox{position:static;box-shadow:none}}
+@media (max-width:600px),(max-height:760px){.sendbox{position:static;box-shadow:none}}
 @media (prefers-reduced-motion:no-preference){.choice{transition:background .15s,border-color .15s}}
 </style>
 
@@ -172,6 +173,7 @@ button:disabled{opacity:.5;cursor:default}
   var answers = {};      // id -> {choice, other, reason, question, objection}
   var added = [];        // [{title, body}]
   var timers = {};       // id -> timeout
+  var touched = {};      // 読み込みが終わる前に書き換えた問い。読み込んだ書きかけで上書きしない
   var pending = new Set();
 
   function el(tag, attrs, text) {
@@ -240,7 +242,7 @@ button:disabled{opacity:.5;cursor:default}
       choices.appendChild(lab);
     });
     card.appendChild(choices);
-    card.appendChild(textField(q.id, "other", "その他（選択肢に無い答えを自由に書く）"));
+    card.appendChild(textField(q.id, "other", "その他（選択肢に無い答えを自由に書く。書くと、選んだ記号より優先します）"));
     var reason = textField(q.id, "reason", "推奨と違う案を選んだ理由（任意。記録の「選ばなかった理由」に写します）");
     reason.id = "reason-" + q.id; reason.hidden = true;
     card.appendChild(reason);
@@ -312,7 +314,7 @@ button:disabled{opacity:.5;cursor:default}
       var c = a.choice || q.recommended;
       if (a.other && a.other.trim()) { allRec = false; extra.push(q.n + "その他: " + a.other.trim()); }
       else { if (c !== q.recommended) allRec = false; picks.push(q.n + c); }
-      if (a.reason && a.reason.trim() && c !== q.recommended) extra.push(q.n + "の理由: " + a.reason.trim());
+      if (!(a.other && a.other.trim()) && a.reason && a.reason.trim() && c !== q.recommended) extra.push(q.n + "の理由: " + a.reason.trim());
       if (a.question && a.question.trim()) { allRec = false; extra.push(q.n + "への質問: " + a.question.trim()); }
     });
     S.provisional.forEach(function (p) {
@@ -328,12 +330,14 @@ button:disabled{opacity:.5;cursor:default}
   // ── 保存 ──
   function track(p) { pending.add(p); p.then(done, done); function done() { pending.delete(p); } return p; }
   function changed(id) {
+    touched[id] = true;
     refreshChat();
     if (!db || !canWrite) return;
     clearTimeout(timers[id]);
     timers[id] = setTimeout(function () { delete timers[id]; saveDraft(id); }, 600);
   }
   function changedAdded() {
+    touched.__added = true;
     refreshChat();
     if (!db || !canWrite) return;
     clearTimeout(timers.__added);
@@ -361,7 +365,10 @@ button:disabled{opacity:.5;cursor:default}
       var out = {};
       S.open.forEach(function (q) {
         var a = answers[q.id] || {};
-        out[q.id] = { choice: a.choice || q.recommended, other: a.other || "", reason: a.reason || "", question: a.question || "", objection: "" };
+        var other = (a.other || "").trim();
+        var choice = other ? null : (a.choice || q.recommended);
+        // 推奨に戻したあとに残った古い理由は送らない
+        out[q.id] = { choice: choice, other: other, reason: choice && choice !== q.recommended ? (a.reason || "") : "", question: a.question || "", objection: "" };
       });
       S.provisional.forEach(function (p) {
         var a = answers[p.id] || {};
@@ -389,7 +396,7 @@ button:disabled{opacity:.5;cursor:default}
   // ── 読み込み ──
   function applyLoaded() {
     S.open.forEach(function (q) {
-      var a = answers[q.id]; if (!a) return;
+      var a = answers[q.id]; if (!a || touched[q.id]) return;
       if (a.choice) { var i = $("c-" + q.id + "-" + a.choice); if (i) i.checked = true; }
       ["other", "reason", "question"].forEach(function (k) { var t = $(k + "-" + q.id); if (t && a[k]) t.value = a[k]; });
       toggleReason(q);
@@ -401,6 +408,25 @@ button:disabled{opacity:.5;cursor:default}
   $("sendNote").textContent = "このページで送れないときは、答えをコピーしてチャットに貼ってください。";
   refreshChat();
 
+  // 設計の説明の図（<pre class="mermaid">）。claude.aiが自分で描いたときは何もしない。
+  // 描かれずに文字のまま残っていたら（手元で開いたときなど）、cdnjsのmermaidで描く
+  setTimeout(function () {
+    var left = Array.prototype.filter.call(document.querySelectorAll("#review pre.mermaid"), function (p) {
+      return !p.querySelector("svg") && !p.getAttribute("data-processed");
+    });
+    if (!left.length) return;
+    var sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js";
+    sc.onload = function () {
+      if (!window.mermaid) return;
+      var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.getAttribute("data-theme") !== "light";
+      if (document.documentElement.getAttribute("data-theme") === "dark") dark = true;
+      window.mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default", securityLevel: "strict" });
+      window.mermaid.run({ nodes: left }).catch(function () {});
+    };
+    document.head.appendChild(sc);
+  }, 800);
+
   var use = window.claude && window.claude.use ? window.claude.use.bind(window.claude) : null;
   if (!use) return;
   Promise.all([use("db"), use("user")]).then(function (r) {
@@ -410,20 +436,23 @@ button:disabled{opacity:.5;cursor:default}
     return Promise.resolve(user ? user.isOwner() : false).then(function (owner) {
     canWrite = owner === true;
     if (!canWrite) { $("sendNote").textContent = "このページの答えを保存できるのは持ち主だけです。答えをコピーしてチャットに貼ってください。"; return; }
-    $("sendBtn").hidden = false;
-    $("sendNote").textContent = "書きかけは自動で残ります。「答えを送る」を押した時点の答えだけを、Claudeが記録に写します。";
+    $("sendNote").textContent = "書きかけを読み込んでいます…";
     return Promise.resolve(user.id()).then(function (id) { me = id; }, function () {}).then(function () {
       var ids = S.open.map(function (q) { return q.id; }).concat(S.provisional.map(function (p) { return p.id; }));
       return Promise.all(ids.map(function (id) {
         return db.doc("drafts/" + id).get().then(function (snap) {
           var d = snap.exists ? snap.data() : null;
-          if (d && d.round === ROUND) answers[id] = { choice: d.choice || null, other: d.other || "", reason: d.reason || "", question: d.question || "", objection: d.objection || "" };
+          if (d && d.round === ROUND && !touched[id]) answers[id] = { choice: d.choice || null, other: d.other || "", reason: d.reason || "", question: d.question || "", objection: d.objection || "" };
         });
       }).concat([
-        db.doc("drafts-added/r" + ROUND).get().then(function (snap) { var d = snap.exists ? snap.data() : null; if (d && Array.isArray(d.items)) added = d.items; }),
+        db.doc("drafts-added/r" + ROUND).get().then(function (snap) { var d = snap.exists ? snap.data() : null; if (d && Array.isArray(d.items) && !touched.__added) added = d.items; }),
         db.doc("submissions/r" + ROUND).get().then(function (snap) { var d = snap.exists ? snap.data() : null; if (d && d.submittedAt) { setStatus("送信済み（" + new Date(d.submittedAt).toLocaleString("ja-JP") + "）。直して送り直せます", "ok"); $("sendBtn").textContent = "答えを送り直す"; } })
       ]));
-    }).then(applyLoaded, function () { setStatus("書きかけを読み込めませんでした。答えは送れます", "err"); });
+    }).then(applyLoaded, function () { setStatus("書きかけを読み込めませんでした。答えは送れます", "err"); }).then(function () {
+      // 書きかけを読み終えてから送れるようにする（古い書きかけで送る答えが変わらないように）
+      $("sendBtn").hidden = false;
+      $("sendNote").textContent = "書きかけは自動で残ります。「答えを送る」を押した時点の答えだけを、Claudeが記録に写します。";
+    });
     });
   });
 })();

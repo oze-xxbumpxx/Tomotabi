@@ -274,9 +274,10 @@ claude.aiのArtifactとして非公開で出す。機能ごとに1つのペー�
 2. 問いを書き出す（ask-questions）
    Claudeが <機能名>.md に論点を書く（状態・工程・優先度つき）
    discussion.mjs check <機能名>        形式を確かめる
+   discussion.mjs stage <機能名> <工程> waiting   先に「回答待ち」にする（ページは作った時点の進み具合を埋め込む）
    discussion.mjs page <機能名> --out <scratchpad>/<機能名>.html
    → Artifactとして出す（初回は非公開で新しいURL、2回目からは同じURLへ）
-   → ページのURLを .md と .progress.json に書き、工程を「回答待ち」にする
+   → ページのURLを .md と .progress.json に書く（set-page）
    → チャットにはURLと、問いの一覧（今と同じ形）を短く出す
 
 3. 答える
@@ -294,9 +295,10 @@ claude.aiのArtifactとして非公開で出す。機能ごとに1つのペー�
 
 5. 書く
    要件定義書・設計書を書き、決定ごとに「反映先」を埋める
-   設計の説明（図と画像）を断片に書き、discussion.mjs page <機能名> --review <断片> で同じURLへ出し直す
+   工程を「承認待ち」にしてから、設計の説明（図と画像）を断片に書き、
+   discussion.mjs page <機能名> --review <断片> で同じURLへ出し直す
    PRの説明の先頭に確認のページのURLを書く
-   工程を「承認待ち」にする → PRのマージで「完了」、承認したPR番号を残す
+   PRのマージで「完了」にし、承認したPR番号を残す
    仮決定は、異議がなければこのとき「決定」に移す
 ```
 

@@ -207,6 +207,12 @@ export function checkRecord(record, feature) {
     }
     if (f['状態'] === '決定') {
       if (!f['決定']) problems.push(`${name}: 決定の論点には「決定」を書く`);
+      else if (p.options.length > 0 && !/^その他/.test(f['決定'])) {
+        const key = choiceKey(f['決定']);
+        if (!key || !keys.includes(key)) {
+          problems.push(`${name}: 決定は選択肢の記号（${keys.join('・')}）か「その他: <答え>」で書く`);
+        }
+      }
       if (p.options.length >= 2 && !f['選ばなかった理由']) {
         problems.push(`${name}: 決定の論点には「選ばなかった理由」を書く（聞いていなければ「理由は聞いていない」）`);
       }
@@ -382,18 +388,23 @@ export function matchAnswers(raw, record, round) {
       warnings.push(`記録に無い論点「${id}」への答えがある`);
       continue;
     }
+    const other = String(a?.other ?? '').trim();
     const answer = {
       id,
       n: openOrder.includes(id) ? openOrder.indexOf(id) + 1 : null,
       title: p.title,
       state: p.fields['状態'],
-      choice: a?.choice ?? null,
-      other: String(a?.other ?? '').trim(),
-      reason: String(a?.reason ?? '').trim(),
+      // 「その他」は選択肢に無い答えなので、書かれていれば記号より優先する（記号と両方を決定に見せない）
+      choice: other ? null : (a?.choice ?? null),
+      other,
+      reason: '',
       question: String(a?.question ?? '').trim(),
       objection: String(a?.objection ?? '').trim(),
       recommended: choiceKey(p.fields['推奨']),
     };
+    // 理由は推奨と違う案を選んだときだけ意味を持つ。推奨に戻したあとに残った古い理由は捨てる
+    const rawReason = String(a?.reason ?? '').trim();
+    if (rawReason && !other && answer.choice && answer.choice !== answer.recommended) answer.reason = rawReason;
     if (answer.choice && !p.options.some((o) => o.key === answer.choice)) {
       warnings.push(`「${p.title}」の答え ${answer.choice} は選択肢に無い`);
     }
@@ -558,13 +569,13 @@ export function main(argv, { dir = process.env.DISCUSSION_DIR || DEFAULT_DIR, ou
         for (const p of problems) err(`  - ${p}`);
         return 1;
       }
-      if (opts['next-round']) {
-        progress = { ...progress, round: (progress.round ?? 1) + 1, updated_at: nowIso() };
-        writeJson(progressPath(dir, feature), progress);
-      }
+      // 回は、ページを書き出せたあとで進める（途中で失敗すると、公開中のページの答えを別の回として読めなくなるため）
+      if (opts['next-round']) progress = { ...progress, round: (progress.round ?? 1) + 1, updated_at: nowIso() };
       const review = opts.review ? readFileSync(opts.review, 'utf8') : '';
       const state = buildPageState(record, progress, { now: nowIso() });
+      mkdirSync(dirname(resolve(opts.out)), { recursive: true });
       writeFileSync(opts.out, renderPage(readFileSync(TEMPLATE_PATH, 'utf8'), state, review));
+      if (opts['next-round']) writeJson(progressPath(dir, feature), progress);
       out(`ページを作った: ${opts.out}（${state.round}回目、回答待ち ${state.open.length}問）`);
       return 0;
     }

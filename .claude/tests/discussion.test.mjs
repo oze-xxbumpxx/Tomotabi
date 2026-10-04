@@ -147,6 +147,12 @@ test('D-02 形の確認: 状態の値・id・推奨・選択肢の誤りを見�
 test('D-03 形の確認: 決定の論点は「決定」と「選ばなかった理由」が要る', () => {
   const noReason = withPoint(RECORD, '- 選ばなかった理由: B（件数がすぐ分からないため）\n', '');
   assert.ok(checkRecord(parseRecord(noReason), 'sample').some((p) => /選ばなかった理由/.test(p)));
+  const wrongKey = withPoint(RECORD, '- 決定: A\n', '- 決定: C\n');
+  assert.ok(checkRecord(parseRecord(wrongKey), 'sample').some((p) => /決定は選択肢の記号/.test(p)));
+  const prose = withPoint(RECORD, '- 決定: A\n', '- 決定: 出すことにした\n');
+  assert.ok(checkRecord(parseRecord(prose), 'sample').some((p) => /決定は選択肢の記号/.test(p)));
+  const other = withPoint(RECORD, '- 決定: A\n', '- 決定: その他: 件数だけ出す\n');
+  assert.deepEqual(checkRecord(parseRecord(other), 'sample'), []);
   const noDecision = withPoint(RECORD, '- 決定: A\n', '');
   assert.ok(checkRecord(parseRecord(noDecision), 'sample').some((p) => /「決定」を書く/.test(p)));
   // 選択肢の無い決定（ユーザーの提案など）は「選ばなかった理由」が要らない
@@ -229,6 +235,20 @@ test('D-08 答えの取り出し: 写しの答えを番号つきで並べ、推�
   assert.equal(matchAnswers({ data: doc }, record, 1).ok, true);
 });
 
+test('D-17 答えの取り出し: 「その他」が書かれていれば記号より優先し、両方を答えに見せない', () => {
+  const r = matchAnswers({ round: 1, answers: { reconfirm: { choice: 'B', other: '次回まで決めない' }, 'zero-yen': { choice: 'A' } } }, parseRecord(RECORD), 1);
+  const a = r.items.find((x) => x.id === 'reconfirm');
+  assert.equal(a.choice, null);
+  assert.equal(a.other, '次回まで決めない');
+  const text = formatAnswers(r);
+  assert.match(text, /1\. 取り消したあと[^\n]*（回答待ち）: その他: 次回まで決めない$/m);
+  assert.doesNotMatch(text, /推奨どおり[^\n]*次回まで/);
+  // 推奨に戻したあとに残った古い理由は答えに含めない
+  const back = matchAnswers({ round: 1, answers: { 'zero-yen': { choice: 'A', reason: '前に書いた理由' }, reconfirm: { choice: 'A', reason: '違う理由' } } }, parseRecord(RECORD), 1);
+  assert.equal(back.items.find((x) => x.id === 'zero-yen').reason, '');
+  assert.equal(back.items.find((x) => x.id === 'reconfirm').reason, '違う理由');
+});
+
 test('D-09 答えの取り出し: 写しが無い・別の回なら止め、記録に無い論点と答え漏れを警告する', () => {
   const record = parseRecord(RECORD);
   assert.equal(matchAnswers(null, record, 1).ok, false);
@@ -289,7 +309,7 @@ test('D-13 コマンド: init → check → page → stage → status → answer
     assert.equal(run('init', 'sample', '--level', 'L2', '--title', '見本'), 0, '二度目は何もしない');
     writeFileSync(join(dir, 'sample.md'), RECORD);
     assert.equal(run('check', 'sample'), 0);
-    const pagePath = join(dir, 'page.html');
+    const pagePath = join(dir, 'nested', 'preview', 'page.html'); // 置き場が無くても作る
     assert.equal(run('page', 'sample', '--out', pagePath, '--next-round'), 0);
     assert.match(readFileSync(pagePath, 'utf8'), /"round":2/);
     assert.equal(run('set-page', 'sample', 'https://claude.ai/artifact/abc'), 0);
@@ -307,6 +327,11 @@ test('D-13 コマンド: init → check → page → stage → status → answer
     writeFileSync(join(dir, 'sample.md'), RECORD.replace('- 状態: 仮決定', '- 状態: たぶん'));
     assert.equal(run('check', 'sample'), 1);
     assert.equal(run('page', 'sample', '--out', pagePath), 1, '形が崩れた記録からページを作らない');
+    // ページを書き出せなかったときは回を進めない（公開中のページの答えを読めなくしない）
+    writeFileSync(join(dir, 'sample.md'), RECORD);
+    const roundBefore = JSON.parse(readFileSync(join(dir, 'sample.progress.json'), 'utf8')).round;
+    assert.throws(() => run('page', 'sample', '--out', pagePath, '--next-round', '--review', join(dir, 'missing.html')));
+    assert.equal(JSON.parse(readFileSync(join(dir, 'sample.progress.json'), 'utf8')).round, roundBefore);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

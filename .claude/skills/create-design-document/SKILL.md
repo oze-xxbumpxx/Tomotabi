@@ -80,8 +80,8 @@ description: >
 1. 設計の説明をHTMLの断片でscratchpadに書く。順番は、一言で → 今と変更後の図 → 動きの流れの図 → 画面が変わるならその画面の画像 → 選んだ案と選ばなかった案の表 → 変わらないこと・やらないこと。
    図はmermaid（`<figure class="fig"><pre class="mermaid">…</pre></figure>`）。既存の画面はアプリのブラウザで撮り、新しい画面はv3の画像かHTMLで描いた見本を使う。
    見出しには結論を書く（`.claude/rules/writing-style.md`）。
-2. `node .claude/scripts/discussion.mjs page <feature-name> --out <path> --review <断片>`でページを作り、同じURLへ出し直す（ask-questionsの「ユーザーへの出し方」）。
-3. `discussion.mjs stage <feature-name> design approval --doc docs/designs/<feature-name>.md`。PRの説明の先頭に確認のページのURLを書く。
+2. 先に`discussion.mjs stage <feature-name> design approval --doc docs/designs/<feature-name>.md`で「承認待ち」にする（ページは作った時点の進み具合を埋め込むため）。
+3. `node .claude/scripts/discussion.mjs page <feature-name> --out <path> --review <断片>`でページを作り、同じURLへ出し直す（ask-questionsの「ユーザーへの出し方」）。PRの説明の先頭に確認のページのURLを書く。
 4. マージされたら`discussion.mjs stage <feature-name> design done --pr <番号>`。仮決定で異議が無かったものを「決定」に移す。
 - アーキテクチャ原則に反する設計が含まれていない。
 

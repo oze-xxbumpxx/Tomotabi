@@ -634,14 +634,16 @@ function parseArgs(argv) {
 }
 
 /**
- * 記録に書いた画面を撮る。記録にv3の版が無ければ今の版を書き込む（--v3-latestなら書き換える）。
- * @returns {Promise<{screens: Map<string, {name: string, src: string | null}>, note: string} | null>} 止めるときはnull
+ * 記録に書いた画面を撮る。記録にv3の版が無ければ今の版で撮り（--v3-latestなら今の版で撮り直し）、newVersionで返す。
+ * 記録への書き込みは、ページを書き出せたあとに呼び出し側がする（撮れなかったときに前の版を失わないため）。
+ * @returns {Promise<{screens: Map<string, {name: string, src: string | null}>, note: string, newVersion: string | null} | null>} 止めるときはnull
  */
-async function prepareScreens({ dir, feature, record, opts, err, root = ROOT, cacheDir = SHOTS_DIR }) {
+async function prepareScreens({ record, opts, err, root = ROOT, cacheDir = SHOTS_DIR }) {
   const numbers = screenNumbers(record);
-  if (numbers.length === 0) return { screens: new Map(), note: '' };
-  if (opts['no-screens']) return { screens: new Map(), note: '画面は撮らずに番号だけ出した（--no-screens）' };
+  if (numbers.length === 0) return { screens: new Map(), note: '', newVersion: null };
+  if (opts['no-screens']) return { screens: new Map(), note: '画面は撮らずに番号だけ出した（--no-screens）', newVersion: null };
   let version = record.header['v3の版'];
+  let newVersion = null;
   if (!version || opts['v3-latest']) {
     // どの版を見たかを残せないので、コミットしていない変更があれば撮らない
     if (v3HasChanges(root)) {
@@ -649,14 +651,17 @@ async function prepareScreens({ dir, feature, record, opts, err, root = ROOT, ca
       return null;
     }
     version = currentV3Version(root);
-    const rp = recordPath(dir, feature);
-    writeFileSync(rp, setV3Version(readFileSync(rp, 'utf8'), version));
+    if (version !== record.header['v3の版']) newVersion = version;
   } else if (!versionExists(root, version)) {
     err(`v3の版 ${version} が無い。--v3-latest で今の版にする`);
     return null;
   }
   const { screens, offline } = await captureScreens({ root, version, numbers, cacheDir });
-  return { screens, note: offline ? '画面を撮れなかった（v3の部品を取れない）。番号だけ出した' : `v3の版 ${version} から${screens.size}画面を撮った` };
+  return {
+    screens,
+    note: offline ? '画面を撮れなかった（v3の部品を取れない）。番号と名前だけ出した' : `v3の版 ${version} から${screens.size}画面を撮った`,
+    newVersion,
+  };
 }
 
 export function main(argv, { dir = process.env.DISCUSSION_DIR || DEFAULT_DIR, out = console.log, err = console.error } = {}) {
@@ -710,20 +715,24 @@ export function main(argv, { dir = process.env.DISCUSSION_DIR || DEFAULT_DIR, ou
         return 1;
       }
       const review = opts.review ? readFileSync(opts.review, 'utf8') : '';
-      const write = ({ screens, note }) => {
+      const write = ({ screens, note, newVersion = null }) => {
         // 回は、ページを書き出せたあとで進める（途中で失敗すると、公開中のページの答えを別の回として読めなくなるため）
         if (opts['next-round']) progress = { ...progress, round: (progress.round ?? 1) + 1, updated_at: nowIso() };
         const state = buildPageState(record, progress, { now: nowIso(), screens });
         mkdirSync(dirname(resolve(opts.out)), { recursive: true });
         writeFileSync(opts.out, renderPage(readFileSync(TEMPLATE_PATH, 'utf8'), state, review));
         if (opts['next-round']) writeJson(progressPath(dir, feature), progress);
+        if (newVersion) {
+          const rp = recordPath(dir, feature);
+          writeFileSync(rp, setV3Version(readFileSync(rp, 'utf8'), newVersion));
+        }
         out(`ページを作った: ${opts.out}（${state.round}回目、回答待ち ${state.open.length}問）`);
         if (note) out(note);
         return 0;
       };
       // 画面の無い記録はChromiumもGitも使わず、今までどおりその場で作る
       if (screenNumbers(record).length === 0) return write({ screens: new Map(), note: '' });
-      return prepareScreens({ dir, feature, record, opts, err }).then(
+      return prepareScreens({ record, opts, err }).then(
         (prepared) => (prepared ? write(prepared) : 1),
         (e) => {
           if (!(e instanceof V3Error)) throw e;

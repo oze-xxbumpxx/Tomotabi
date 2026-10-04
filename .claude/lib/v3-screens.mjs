@@ -8,7 +8,10 @@
 //   架空の置き場（http://v3.invalid/）からGitの中身を返す。
 // - v3が読み込むunpkg.comの部品（React・ReactDOM・Phosphorのアイコン）は版の入ったURLなので、
 //   一度取れば置き場の写しを返す。ほかの外への読み込みは止める。
-// - 置き場の名前の決め方・番号の読み方は純粋関数にしてテストする。Chromiumで撮る部分はテストしない。
+// - 画面の名前は、v3の原稿の`sc('14e', 's14e', '<名前>', ...)`から読む。ブラウザもネットも使わないので、
+//   画面を撮れないときも番号と名前は出せる。
+// - 部品を1つでも取れなかった回は、欠けた画面を置き場に残さない（次に撮り直せるように）。
+// - 置き場の名前の決め方・番号と名前の読み方は純粋関数にしてテストする。Chromiumで撮る部分はテストしない。
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -48,9 +51,15 @@ export function shotFile(version, no) {
   return `${version}-${no}.jpg`;
 }
 
-/** 版ごとの画面の名前の一覧（番号→名前）の置き場での名前。 */
-export function labelsFile(version) {
-  return `${version}-labels.json`;
+/**
+ * v3の原稿から、画面の番号と名前を読む。
+ * @param {string} source v3のHTML
+ * @returns {Record<string, string>} 番号→名前
+ */
+export function parseLabels(source) {
+  const labels = {};
+  for (const m of String(source).matchAll(/\bsc\(\s*'([0-9]{2}[a-z]?)'\s*,\s*'s\1'\s*,\s*'([^']*)'/g)) labels[m[1]] = m[2];
+  return labels;
 }
 
 /**
@@ -118,26 +127,28 @@ function contentType(name) {
 
 /**
  * 番号の画面を撮る。置き場にあれば撮り直さない。
- * v3の部品を取れず描けないときは、画面なしで返す（offline: true）。
+ * v3の部品を取れず描けないときは、番号と名前だけを返す（offline: true。画像はnull）。
  * @param {{root: string, version: string, numbers: string[], cacheDir: string, timeoutMs?: number}} args
  * @returns {Promise<{screens: Map<string, {name: string, src: string | null}>, offline: boolean}>}
  */
 export async function captureScreens({ root, version, numbers, cacheDir, timeoutMs = 20000 }) {
   const screens = new Map();
   if (numbers.length === 0) return { screens, offline: false };
+  const labels = parseLabels(git(root, ['show', `${version}:${V3_DIR}/${V3_FILE}`], { encoding: 'utf8' }));
+  if (Object.keys(labels).length === 0) throw new V3Error('v3の原稿から画面の番号と名前を読めない（v3の作りが変わった可能性）');
+  const missing = numbers.filter((no) => !(no in labels));
+  if (missing.length > 0) throw new V3Error(noScreenMessage(missing, labels));
+
   mkdirSync(cacheDir, { recursive: true });
-  const labelsPath = join(cacheDir, labelsFile(version));
-  let labels = existsSync(labelsPath) ? JSON.parse(readFileSync(labelsPath, 'utf8')) : null;
   const shotPath = (no) => join(cacheDir, shotFile(version, no));
   const toUri = (no) => `data:image/jpeg;base64,${readFileSync(shotPath(no)).toString('base64')}`;
-
-  if (labels && numbers.every((no) => no in labels && existsSync(shotPath(no)))) {
+  const namesOnly = () => {
+    for (const no of numbers) screens.set(no, { name: labels[no], src: existsSync(shotPath(no)) ? toUri(no) : null });
+    return { screens, offline: true };
+  };
+  if (numbers.every((no) => existsSync(shotPath(no)))) {
     for (const no of numbers) screens.set(no, { name: labels[no], src: toUri(no) });
     return { screens, offline: false };
-  }
-  if (labels) {
-    const missing = numbers.filter((no) => !(no in labels));
-    if (missing.length > 0) throw new V3Error(noScreenMessage(missing, labels));
   }
 
   const { chromium } = loadPlaywright(root);
@@ -183,32 +194,23 @@ export async function captureScreens({ root, version, numbers, cacheDir, timeout
     try {
       await page.waitForFunction(() => document.querySelector('[id="s01"]') !== null, null, { timeout: timeoutMs });
       await page.evaluate(() => document.fonts.ready.then(() => true));
+      await page.waitForLoadState('networkidle');
     } catch {
-      if (vendorFailed) return { screens, offline: true };
+      if (vendorFailed) return namesOnly();
       throw new V3Error('v3の画面を描けなかった（画面の枠 s01 が出ない。v3の作りが変わった可能性）');
     }
-    // 番号の欄は枠の最初の子の、最初の印（番号）と次の文字（名前）
-    labels = await page.evaluate(() => {
-      const out = {};
-      for (const frame of document.querySelectorAll('[id^="s"]')) {
-        const no = frame.id.slice(1);
-        const head = frame.children[0];
-        if (!head || head.children[0]?.textContent.trim() !== no) continue;
-        out[no] = head.children[1]?.textContent.trim() ?? '';
-      }
-      return out;
-    });
-    writeFileSync(labelsPath, `${JSON.stringify(labels, null, 2)}\n`);
-    const missing = numbers.filter((no) => !(no in labels));
-    if (missing.length > 0) throw new V3Error(noScreenMessage(missing, labels));
+    // アイコンのCSSやフォントだけ取れなかったときも、欠けた画面を置き場に残さない
+    if (vendorFailed) return namesOnly();
+    const shots = new Map();
     for (const no of numbers) {
-      if (!existsSync(shotPath(no))) {
-        const phone = page.locator(`[id="s${no}"] > :nth-child(2)`);
-        await phone.scrollIntoViewIfNeeded();
-        writeFileSync(shotPath(no), await phone.screenshot({ type: 'jpeg', quality: 70 }));
-      }
-      screens.set(no, { name: labels[no], src: toUri(no) });
+      if (existsSync(shotPath(no))) continue;
+      const phone = page.locator(`[id="s${no}"] > :nth-child(2)`);
+      await phone.scrollIntoViewIfNeeded();
+      shots.set(no, await phone.screenshot({ type: 'jpeg', quality: 70 }));
     }
+    if (vendorFailed) return namesOnly();
+    for (const [no, jpeg] of shots) writeFileSync(shotPath(no), jpeg);
+    for (const no of numbers) screens.set(no, { name: labels[no], src: toUri(no) });
     return { screens, offline: false };
   } finally {
     await browser.close();

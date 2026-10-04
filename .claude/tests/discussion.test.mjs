@@ -357,7 +357,7 @@ test('D-14 status: 記録の置き場が無くても何も出さずに終わる'
   assert.deepEqual(out, []);
 });
 
-// ── 種類・画面・図・いまの確認（docs/designs/discussion-page-v2.md） ──
+// ── 種類・画面・図・いまの確認（観点IDはdocs/tests/discussion-page-v2.md） ──
 
 const FENCE = '```';
 const VISUAL = RECORD.replace(
@@ -476,6 +476,25 @@ test('D-26 コマンド: 画面のある記録も --no-screens なら撮らず�
     assert.match(html, /"screens":\[\{"no":"14h","name":"","src":null\}/);
     assert.ok(out.some((s) => /--no-screens/.test(s)));
     assert.ok(!/v3の版/.test(readFileSync(join(dir, 'sample.md'), 'utf8')), '撮らないときは版を書き込まない');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('D-27 コマンド: 撮れずにページを作れなかったときは、記録のv3の版を書き換えない', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'discussion-'));
+  const err = [];
+  const run = (...args) => main(args, { dir, out: () => {}, err: (s) => err.push(s) });
+  try {
+    run('init', 'sample', '--level', 'L2', '--title', '見本');
+    // v3に無い番号なので、今の版で撮ろうとして止まる（ブラウザを開く前に止まる）
+    const md = setV3Version(VISUAL.replace('- 画面: v3 14h, v3 14f、v3 14h', '- 画面: v3 99'), '0000000a');
+    writeFileSync(join(dir, 'sample.md'), md);
+    const pagePath = join(dir, 'page.html');
+    assert.equal(await run('page', 'sample', '--out', pagePath, '--v3-latest'), 1);
+    assert.match(readFileSync(join(dir, 'sample.md'), 'utf8'), /- v3の版: 0000000a/);
+    assert.throws(() => readFileSync(pagePath));
+    assert.ok(err.some((s) => /v3に画面 99 が無い|コミットしていない変更/.test(s)), err.join(' / '));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

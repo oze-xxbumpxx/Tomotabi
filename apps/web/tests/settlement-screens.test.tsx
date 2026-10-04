@@ -46,6 +46,7 @@ const secondPreviewId = "2f5e5a1c-1234-4abc-9def-0a1b2c3d4e5f";
 const settlementId = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const paymentId = "11111111-2222-4333-8444-555555555555";
 const secondPaymentId = "66666666-7777-4888-8999-000000000000";
+const thirdPaymentId = "77777777-8888-4999-9aaa-111111111111";
 
 const meBody = {
   user: { id: userId, displayName: "ひなた" },
@@ -96,6 +97,22 @@ function payment(overrides: Partial<WirePayment> = {}): WirePayment {
     cancellation: null,
     ...overrides,
   };
+}
+
+function cancelledPayment(
+  id: string,
+  cancelledBy: string,
+  overrides: Partial<WirePayment> = {},
+): WirePayment {
+  return payment({
+    id,
+    cancellation: {
+      targetId: id,
+      cancelledBy,
+      createdAt: "2026-10-02T10:00:00.000Z",
+    },
+    ...overrides,
+  });
 }
 
 function itemOf(p: WirePayment, contribution: string, kind = "BASE") {
@@ -754,7 +771,7 @@ describe("精算の画面（14・14f・14g・14i）", () => {
   });
 });
 
-describe("受け渡しの確認（14c・14d・14h）", () => {
+describe("受け渡しの確認（14c・14d・14e・14f・14h）", () => {
   it("FW-06: 非 0 円はチェックするまで完了を押せず、記録の前に確認のダイアログを出す", async () => {
     const completeCalls: RequestInit[] = [];
     stubApi({
@@ -967,8 +984,7 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
     expect(writeCalls(fetchMock)).toHaveLength(0);
   });
 
-  it("FW-07: 対象の変化・取り消された対象の了承が要るときは記録できない表示と精算への導線だけ", async () => {
-    // 対象が変わった
+  it("FW-07: 対象の変化のときは記録できない表示と精算への導線だけ", async () => {
     stubApi({
       preview: () =>
         json(
@@ -979,7 +995,7 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
           }),
         ),
     });
-    const first = renderPreview();
+    renderPreview();
     await screen.findByText(
       "この確認では記録できません。精算の画面に戻って確認し直してください。",
     );
@@ -987,29 +1003,6 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
     expect(
       screen.queryByRole("button", { name: /記録/ }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "精算の画面へ" }),
-    ).toHaveAttribute("href", `/trips/${tripId}/settlement`);
-    first.unmount();
-
-    // 取り消された対象の了承が要る
-    stubApi({
-      preview: () =>
-        json(
-          previewBody({
-            id: secondPreviewId,
-            validation: validationOf("cancelled_items_ack_required", {
-              cancelledPaymentIds: [paymentId],
-            }),
-          }),
-        ),
-    });
-    renderPreview(secondPreviewId);
-    expect(
-      await screen.findByText(
-        "この確認では記録できません。精算の画面に戻って確認し直してください。",
-      ),
-    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "精算の画面へ" }),
     ).toHaveAttribute("href", `/trips/${tripId}/settlement`);
@@ -1096,5 +1089,365 @@ describe("受け渡しの確認（14c・14d・14h）", () => {
       screen.queryByRole("button", { name: /記録/ }),
     ).not.toBeInTheDocument();
     expect(writeCalls(fetchMock)).toHaveLength(0);
+  });
+
+  it("RW-16: 確認を作ったあとに追加された支払いの件数の案内を出す。金額は変わらない", async () => {
+    const addedPayment = payment({
+      id: thirdPaymentId,
+      label: "抹茶パフェ",
+      amountYen: "1200",
+      allocations: [
+        { userId, percent: 50, burdenYen: "600" },
+        { userId: otherUserId, percent: 50, burdenYen: "600" },
+      ],
+    });
+    stubApi({
+      balance: () =>
+        json(
+          balanceBody({
+            targetCount: 3,
+            items: [...balanceBody().items, itemOf(addedPayment, "600")],
+          }),
+        ),
+    });
+    const first = renderPreview();
+
+    await screen.findAllByText("1,285 円");
+    const notice = await screen.findByRole("status");
+    expect(notice).toHaveTextContent(
+      "確認を作ったあとに支払いが 1 件追加されました。",
+    );
+    expect(notice).toHaveTextContent("次回の精算に含まれます。");
+    expect(notice).toHaveTextContent("この画面の金額は変わりません。");
+    // 確認の金額・明細は固定のまま（追加された支払いは明細に出ない）。
+    expect(screen.getAllByText("1,285 円").length).toBeGreaterThan(0);
+    expect(screen.queryByText("抹茶パフェ")).not.toBeInTheDocument();
+    first.unmount();
+
+    // 追加分が0件なら案内を出さない。
+    const secondFetch = stubApi({});
+    renderPreview();
+    await screen.findAllByText("1,285 円");
+    // 残額の取得が済んでから案内の無いことを見る。
+    await waitFor(() =>
+      expect(
+        secondFetch.mock.calls.filter(
+          ([input]) => urlOf(input) === `/api/trips/${tripId}/balance`,
+        ),
+      ).toHaveLength(1),
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("RW-17: 取り消された明細を出し、作り直しの道と、確かめるまで押せない記録の道を出す", async () => {
+    const completeCalls: RequestInit[] = [];
+    // 残額には取り消された支払いは無く、確認のあとに追加された支払いがある。
+    const balanceWithAddition = balanceBody({
+      targetCount: 2,
+      items: [
+        itemOf(
+          payment({
+            id: secondPaymentId,
+            label: "美ら海水族館",
+            amountYen: "570",
+            allocations: [
+              { userId, percent: 50, burdenYen: "285" },
+              { userId: otherUserId, percent: 50, burdenYen: "285" },
+            ],
+          }),
+          "1285",
+        ),
+        itemOf(
+          payment({ id: thirdPaymentId, label: "抹茶パフェ", amountYen: "1200" }),
+          "600",
+        ),
+      ],
+    });
+    stubApi({
+      preview: () =>
+        json(
+          previewBody({
+            id: secondPreviewId,
+            items: [
+              itemOf(cancelledPayment(paymentId, otherUserId), "1285"),
+              itemOf(
+                payment({
+                  id: secondPaymentId,
+                  label: "美ら海水族館",
+                  amountYen: "570",
+                  allocations: [
+                    { userId, percent: 50, burdenYen: "285" },
+                    { userId: otherUserId, percent: 50, burdenYen: "285" },
+                  ],
+                }),
+                "1285",
+              ),
+            ],
+            validation: validationOf("cancelled_items_ack_required", {
+              cancelledPaymentIds: [paymentId],
+            }),
+          }),
+        ),
+      balance: () => json(balanceWithAddition),
+      complete: (init) => {
+        if (init !== undefined) {
+          completeCalls.push(init);
+        }
+        return json(settlementBody({ previewId: secondPreviewId }), 201);
+      },
+    });
+    const user = userEvent.setup();
+    renderPreview(secondPreviewId);
+
+    // 取り消された明細: 名前・金額・誰がいつ取り消したか。
+    expect(
+      await screen.findByText("対象の支払いが取り消されました"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/あおい が .+ に取り消しました/),
+    ).toBeInTheDocument();
+    // 追加の件数の案内も出る（F-60、数えられる状態）。
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "支払いが 1 件追加されました",
+    );
+
+    // まだ受け渡していないときは最新の残額で確認を作り直す。
+    expect(
+      screen.getByRole("link", { name: "最新の残額で確認を作り直す" }),
+    ).toHaveAttribute("href", `/trips/${tripId}/settlement`);
+
+    // チェックを付けるまで記録できない。
+    const record = screen.getByRole("button", {
+      name: "了承して受け渡し完了を記録",
+    });
+    expect(record).toBeDisabled();
+    const ackCheck = await screen.findByRole("checkbox", {
+      name: "錦市場で昼食の取り消しを確かめました",
+    });
+    await waitFor(() => expect(ackCheck).toBeEnabled());
+    expect(record).toBeDisabled();
+    await user.click(ackCheck);
+    expect(record).toBeEnabled();
+
+    await user.click(record);
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText("受け渡し完了を記録しますか？"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        /取り消された支払い 1 件を了承したこともあわせて記録します/,
+      ),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "記録する" }),
+    );
+
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/trips/${tripId}/settlement`),
+    );
+    // 了承した支払いのIDをacknowledgedCancellationPaymentIdsで送る。
+    expect(completeCalls).toHaveLength(1);
+    const body = JSON.parse(String(completeCalls[0]?.body));
+    expect(body).toEqual({
+      previewId: secondPreviewId,
+      completionKind: "transfer_completed",
+      acknowledgedCancellationPaymentIds: [paymentId],
+    });
+  });
+
+  it("RW-17: 取り直して取り消しの一覧が変わったらチェックを外して確かめ直す", async () => {
+    const completeCalls: RequestInit[] = [];
+    const itemSecond = itemOf(
+      payment({
+        id: secondPaymentId,
+        label: "美ら海水族館",
+        amountYen: "570",
+        allocations: [
+          { userId, percent: 50, burdenYen: "285" },
+          { userId: otherUserId, percent: 50, burdenYen: "285" },
+        ],
+      }),
+      "1285",
+    );
+    const cancelledItems = [
+      itemOf(cancelledPayment(paymentId, otherUserId), "1285"),
+      itemOf(
+        cancelledPayment(secondPaymentId, userId, {
+          label: "美ら海水族館",
+          amountYen: "570",
+          allocations: [
+            { userId, percent: 50, burdenYen: "285" },
+            { userId: otherUserId, percent: 50, burdenYen: "285" },
+          ],
+        }),
+        "1285",
+      ),
+    ];
+    let previewCalls = 0;
+    stubApi({
+      preview: () => {
+        previewCalls += 1;
+        // 取り直した確認では取り消された対象が1件増えている。
+        return previewCalls === 1
+          ? json(
+              previewBody({
+                id: secondPreviewId,
+                items: [itemOf(cancelledPayment(paymentId, otherUserId), "1285"), itemSecond],
+                validation: validationOf("cancelled_items_ack_required", {
+                  cancelledPaymentIds: [paymentId],
+                }),
+              }),
+            )
+          : json(
+              previewBody({
+                id: secondPreviewId,
+                items: cancelledItems,
+                validation: validationOf("cancelled_items_ack_required", {
+                  cancelledPaymentIds: [paymentId, secondPaymentId],
+                }),
+              }),
+            );
+      },
+      complete: (init) => {
+        if (init !== undefined) {
+          completeCalls.push(init);
+        }
+        return completeCalls.length === 1
+          ? json({ code: "CANCELLED_ITEMS_ACK_REQUIRED" }, 409)
+          : json(settlementBody({ previewId: secondPreviewId }), 201);
+      },
+    });
+    const user = userEvent.setup();
+    renderPreview(secondPreviewId);
+
+    const firstCheck = await screen.findByRole("checkbox", {
+      name: "錦市場で昼食の取り消しを確かめました",
+    });
+    await waitFor(() => expect(firstCheck).toBeEnabled());
+    await user.click(firstCheck);
+    await user.click(
+      screen.getByRole("button", { name: "了承して受け渡し完了を記録" }),
+    );
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "記録する",
+      }),
+    );
+
+    // 409で確認を取り直すと、増えた取り消しのチェックが現れ、
+    // 付けていたチェックは外れている（新しい取り消しを自動で了承しない）。
+    const secondCheck = await screen.findByRole("checkbox", {
+      name: "美ら海水族館の取り消しを確かめました",
+    });
+    expect(secondCheck).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", {
+        name: "錦市場で昼食の取り消しを確かめました",
+      }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "了承して受け渡し完了を記録" }),
+    ).toBeDisabled();
+
+    await waitFor(() => expect(secondCheck).toBeEnabled());
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "錦市場で昼食の取り消しを確かめました",
+      }),
+    );
+    await user.click(secondCheck);
+    await user.click(
+      screen.getByRole("button", { name: "了承して受け渡し完了を記録" }),
+    );
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "記録する",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/trips/${tripId}/settlement`),
+    );
+    expect(completeCalls).toHaveLength(2);
+    const retryBody = JSON.parse(String(completeCalls[1]?.body));
+    expect(retryBody.acknowledgedCancellationPaymentIds).toEqual([
+      paymentId,
+      secondPaymentId,
+    ]);
+  });
+
+  it("RW-18: 0円の確認では了承を出さず作り直しだけ。ほかの状態では残額を数えない", async () => {
+    // 0円の確認で対象が取り消された: 了承のチェックは無く、作り直しだけ。
+    const firstFetch = stubApi({
+      preview: () =>
+        json(
+          previewBody({
+            id: secondPreviewId,
+            transfer: zeroTransfer,
+            items: [itemOf(cancelledPayment(paymentId, otherUserId), "0")],
+            validation: validationOf("cancelled_items_ack_required", {
+              cancelledPaymentIds: [paymentId],
+            }),
+          }),
+        ),
+      balance: () =>
+        json(balanceBody({ targetCount: 0, items: [], transfer: zeroTransfer })),
+    });
+    const first = renderPreview(secondPreviewId);
+
+    expect(
+      await screen.findByText("対象の支払いが取り消されました"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "最新の残額で確認を作り直す" }),
+    ).toHaveAttribute("href", `/trips/${tripId}/settlement`);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /記録/ }),
+    ).not.toBeInTheDocument();
+    // 追加分0件なら案内も出さない。
+    await waitFor(() =>
+      expect(
+        firstFetch.mock.calls.filter(
+          ([input]) => urlOf(input) === `/api/trips/${tripId}/balance`,
+        ),
+      ).toHaveLength(1),
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    first.unmount();
+
+    // target_changed・already_completed・completed_then_cancelledでは
+    // 残額を取らず、追加の案内も出さない。
+    for (const [status, text] of [
+      [
+        "target_changed",
+        "この確認では記録できません。精算の画面に戻って確認し直してください。",
+      ],
+      [
+        "already_completed",
+        "この確認はすでに精算として記録されています。",
+      ],
+      [
+        "completed_then_cancelled",
+        "この確認の精算は取り消されています。",
+      ],
+    ] as const) {
+      const fetchMock = stubApi({
+        preview: () =>
+          json(
+            previewBody({ validation: validationOf(status) }),
+          ),
+      });
+      const { unmount } = renderPreview();
+      await screen.findByText(text);
+      expect(
+        fetchMock.mock.calls.filter(
+          ([input]) => urlOf(input) === `/api/trips/${tripId}/balance`,
+        ),
+      ).toHaveLength(0);
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });

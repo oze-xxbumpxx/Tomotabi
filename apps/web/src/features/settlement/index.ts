@@ -24,6 +24,7 @@ export type {
   TargetItem,
   Transfer,
 } from "./api/settlement-api";
+export { addedAfterPreviewCount } from "./model/added-items";
 export {
   completionKindOf,
   itemShareLabel,
@@ -57,6 +58,7 @@ export {
   type SettlementSaveState,
 } from "./model/settlement-save";
 export { BalanceBreakdown } from "./ui/balance-breakdown";
+export { CancelledItemsAck } from "./ui/cancelled-items-ack";
 export { CompleteSettlementDialog } from "./ui/complete-settlement-dialog";
 export { PendingPreviewList } from "./ui/pending-preview-list";
 export { PersonAvatar } from "./ui/person-avatar";

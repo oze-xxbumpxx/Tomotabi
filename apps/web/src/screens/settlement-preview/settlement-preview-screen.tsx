@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CaretLeft,
   Check,
+  Info,
   LockSimple,
 } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,10 +13,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMe } from "@/features/auth";
 import {
+  addedAfterPreviewCount,
+  CancelledItemsAck,
   CompleteSettlementDialog,
   settlementPreviewQueryKey,
   TargetItemList,
   transferDirectionOf,
+  useBalance,
   useCompleteSettlement,
   useSettlementPreview,
 } from "@/features/settlement";
@@ -74,15 +78,27 @@ function FixedTransferCard({ preview }: { preview: Preview }) {
 }
 
 const CANNOT_RECORD_STATUSES: readonly PreviewValidationStatus[] = [
-  "cancelled_items_ack_required",
   "target_changed",
 ];
 
 /**
+ * 追加の案内を出せる状態（F-60）。この2つは確認のあとに精算が1つも
+ * 済んでいないので、残額の対象のうち確認の明細に無い支払いが
+ * 確認を作ったあとに追加された分として数えられる。
+ */
+const COUNTABLE_STATUSES: readonly PreviewValidationStatus[] = [
+  "ready",
+  "cancelled_items_ack_required",
+];
+
+/**
  * `/trips/{tripId}/settlement/previews/{previewId}`の受け渡しの確認
- * （v3の14c・14d・14h）。非0円は「表示の全額を受け渡しました」に
+ * （v3の14c・14d・14e・14f・14h）。非0円は「表示の全額を受け渡しました」に
  * チェックするまで完了を押せない。0円はチェックなし。
- * 検証結果が`cancelled_items_ack_required`・`target_changed`のときは
+ * `ready`・`cancelled_items_ack_required`では、確認を作ったあとに
+ * 追加された支払いの件数を上部の案内で出す（F-60）。
+ * `cancelled_items_ack_required`は取り消された明細の了承（F-61）を
+ * `CancelledItemsAck`で出す。`target_changed`は
  * 「この確認では記録できません」と精算の画面への導線だけ。
  * `already_completed`・`completed_then_cancelled`は既存の精算への導線。
  */
@@ -98,6 +114,12 @@ export function SettlementPreviewScreen({
   const { state: meState } = useMe();
   const online = useOnlineStatus();
   const preview = useSettlementPreview(tripId, previewId);
+  const previewStatus = preview.data?.validation.status;
+  const balance = useBalance(tripId, {
+    enabled:
+      previewStatus !== undefined &&
+      COUNTABLE_STATUSES.includes(previewStatus),
+  });
   const [checked, setChecked] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetExpired, setSheetExpired] = useState<boolean | null>(null);
@@ -199,6 +221,10 @@ export function SettlementPreviewScreen({
   const status = data.validation.status;
   const ready = status === "ready";
   const cannotRecord = CANNOT_RECORD_STATUSES.includes(status);
+  const addedCount =
+    balance.data === undefined
+      ? null
+      : addedAfterPreviewCount(status, data.items, balance.data.items);
 
   const settlementUrl = `/trips/${tripId}/settlement`;
 
@@ -255,6 +281,20 @@ export function SettlementPreviewScreen({
         {`${formatDateTime(data.createdAt)} に作成 · 対象 ${data.items.length} 件`}
       </p>
 
+      {addedCount !== null && addedCount > 0 && (
+        <div className="banner banner-info" role="status">
+          <Info size={18} weight="bold" className="banner-icon" aria-hidden="true" />
+          <div className="banner-text">
+            <span className="banner-body">
+              確認を作ったあとに支払いが {addedCount}{" "}
+              件追加されました。
+              <strong>次回の精算に含まれます。</strong>
+              この画面の金額は変わりません。
+            </span>
+          </div>
+        </div>
+      )}
+
       <FixedTransferCard preview={data} />
       <TargetItemList
         items={data.items}
@@ -297,6 +337,21 @@ export function SettlementPreviewScreen({
             />
           )}
         </>
+      ) : status === "cancelled_items_ack_required" ? (
+        <CancelledItemsAck
+          key={data.validation.cancelledPaymentIds
+            .slice()
+            .sort()
+            .join(",")}
+          tripId={tripId}
+          preview={data}
+          complete={complete}
+          check={check}
+          reload={reload}
+          onSessionExpired={(unconfirmed) =>
+            setSheetExpired(unconfirmed)
+          }
+        />
       ) : cannotRecord ? (
         <div className="settle-cannot">
           <p className="settle-cannot-text">

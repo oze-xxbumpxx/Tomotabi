@@ -18,10 +18,15 @@ export const settlementPreviewQueryKey = (
 export const settlementsQueryKey = (tripId: string) =>
   ["settlements", tripId] as const;
 
-/** 残額（GET /api/trips/{tripId}/balance）。 */
-export function useBalance(tripId: string) {
+/**
+ * 残額（GET /api/trips/{tripId}/balance）。
+ * `enabled: false`なら取りに行かない（受け渡しの確認で、追加の件数を
+ * 数えられない状態のときに使う）。
+ */
+export function useBalance(tripId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: balanceQueryKey(tripId),
+    enabled: options?.enabled ?? true,
     queryFn: () =>
       getBalance(tripId).match(
         (balance) => balance,

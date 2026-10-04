@@ -30,14 +30,15 @@
       "state": "done"
     },
     "review": {
-      "state": "active"
+      "state": "done"
     },
     "merge": {
-      "state": "pending"
+      "state": "done"
     },
     "reflect": {
-      "state": "pending"
+      "state": "skipped",
+      "reason": "改善サイクルを運用していない（休眠中）"
     }
   },
-  "updated_at": "2026-10-04T05:00:21.846Z"
+  "updated_at": "2026-10-04T06:03:43.747Z"
 }

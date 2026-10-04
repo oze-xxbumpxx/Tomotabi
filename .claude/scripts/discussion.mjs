@@ -21,7 +21,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dayInTz } from '../lib/harness-time.mjs';
+import { dayInTz, harnessTz } from '../lib/harness-time.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.CLAUDE_PROJECT_DIR || resolve(here, '../..');
@@ -423,10 +423,22 @@ export function matchAnswers(raw, record, round) {
   return { ok: true, round: doc.round, submittedAt: doc.submittedAt ?? null, submittedBy: doc.submittedBy ?? null, items, added, warnings };
 }
 
+/** ISOの日時を、ハーネスの時間帯（既定は日本時間）の「YYYY-MM-DD HH:MM」にする。読めなければそのまま返す。 */
+export function localTime(iso, tz = harnessTz()) {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return iso ?? '不明';
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(d)
+      .map((x) => [x.type, x.value]),
+  );
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+}
+
 /** matchAnswersの結果を読みやすい行にする。 */
 export function formatAnswers(result) {
   if (!result.ok) return result.reason;
-  const lines = [`${result.round}回目の答え（送った日時: ${result.submittedAt ?? '不明'}）`];
+  const lines = [`${result.round}回目の答え（送った日時: ${localTime(result.submittedAt)}）`];
   for (const a of result.items) {
     const head = a.n ? `${a.n}. ` : '';
     const parts = [];

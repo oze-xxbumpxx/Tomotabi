@@ -14,6 +14,7 @@ import {
   currentStage,
   embedJson,
   formatAnswers,
+  localTime,
   main,
   matchAnswers,
   newProgress,
@@ -247,6 +248,13 @@ test('D-17 答えの取り出し: 「その他」が書かれていれば記号�
   const back = matchAnswers({ round: 1, answers: { 'zero-yen': { choice: 'A', reason: '前に書いた理由' }, reconfirm: { choice: 'A', reason: '違う理由' } } }, parseRecord(RECORD), 1);
   assert.equal(back.items.find((x) => x.id === 'zero-yen').reason, '');
   assert.equal(back.items.find((x) => x.id === 'reconfirm').reason, '違う理由');
+});
+
+test('D-19 送った日時は日本時間で出す', () => {
+  assert.equal(localTime('2026-10-04T05:56:52.604Z', 'Asia/Tokyo'), '2026-10-04 14:56');
+  assert.equal(localTime('2026-10-03T16:30:00.000Z', 'Asia/Tokyo'), '2026-10-04 01:30');
+  assert.equal(localTime(null), '不明');
+  assert.equal(localTime('not-a-date'), 'not-a-date');
 });
 
 test('D-09 答えの取り出し: 写しが無い・別の回なら止め、記録に無い論点と答え漏れを警告する', () => {

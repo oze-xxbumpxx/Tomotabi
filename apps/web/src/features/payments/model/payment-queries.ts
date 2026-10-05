@@ -10,6 +10,10 @@ import {
 export const balanceQueryKey = (tripId: string) =>
   ["balance", tripId] as const;
 
+/** 支払い1件のキーは`["payment", tripId, paymentId]`（支払いの詳細のデータ元）。 */
+export const paymentQueryKey = (tripId: string, paymentId: string) =>
+  ["payment", tripId, paymentId] as const;
+
 /**
  * 確認の一覧・確認の詳細のキー。支払いの保存が成功したあとに
  * `["settlement-previews", tripId]`・`["settlement-preview", tripId]`の
@@ -20,10 +24,6 @@ export const settlementPreviewsQueryKey = (tripId: string) =>
   ["settlement-previews", tripId] as const;
 export const settlementPreviewQueryKey = (tripId: string, previewId: string) =>
   ["settlement-preview", tripId, previewId] as const;
-
-/** 支払い1件のキーは`["payment", tripId, paymentId]`。 */
-export const paymentQueryKey = (tripId: string, paymentId: string) =>
-  ["payment", tripId, paymentId] as const;
 
 /**
  * 残額（GET /trips/{tripId}/balance）。支払いを記録の画面は
@@ -36,6 +36,28 @@ export function useBalance(tripId: string, options?: { enabled?: boolean }) {
     queryFn: () =>
       getBalance(tripId).match(
         (balance) => balance,
+        (failure) => {
+          throw new ApiRequestError(failure);
+        },
+      ),
+  });
+}
+
+/**
+ * 支払い1件（GET /trips/{tripId}/payments/{paymentId}）。支払いの詳細の
+ * データ元。取り消し状態は`cancellation`に入る。
+ */
+export function usePayment(
+  tripId: string,
+  paymentId: string,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: paymentQueryKey(tripId, paymentId),
+    enabled: options?.enabled ?? true,
+    queryFn: () =>
+      getPayment(tripId, paymentId).match(
+        (payment) => payment,
         (failure) => {
           throw new ApiRequestError(failure);
         },

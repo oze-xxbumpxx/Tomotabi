@@ -4,10 +4,12 @@ import { callApi } from "@/shared/api/api-result";
 import type { ApiFailure } from "@/shared/api/api-failure";
 import {
   getBalance as getBalanceRequest,
-  getPayment as getPaymentRequest,
+  getCancelPaymentUrl,
   getCreatePaymentUrl,
+  getPayment as getPaymentRequest,
 } from "@/shared/api/generated/finance";
 import {
+  CancelPaymentResponse,
   CreatePaymentResponse,
   GetBalanceResponse,
   GetPaymentResponse,
@@ -27,6 +29,7 @@ import type {
 import type {
   AllocationInput,
   Balance,
+  Cancellation,
   Participant,
   Payment,
   PaymentCreate,
@@ -36,6 +39,7 @@ import type {
 export type {
   AllocationInput,
   Balance,
+  Cancellation,
   Participant,
   Payment,
   PaymentCreate,
@@ -43,6 +47,9 @@ export type {
 
 /** 支払いの記録の操作名（保留中の要求の照合に使う）。 */
 export const CREATE_PAYMENT_OPERATION = "create-payment";
+
+/** 支払いの取り消しの操作名（保留中の要求の照合に使う）。 */
+export const CANCEL_PAYMENT_OPERATION = "cancel-payment";
 
 // ---- 読み取り ----
 
@@ -58,14 +65,15 @@ export function getBalance(
 }
 
 /**
- * GET /api/trips/{tripId}/payments/{id}。支払い1件（取り消し状態を含む）。
- * 取り消しの行の「〇〇を取り消し」の元の用途を調べるときに使う。
+ * GET /api/trips/{tripId}/payments/{paymentId}。支払い1件（取り消し
+ * 状態を含む）。支払いの詳細のデータ元のほか、ホーム・記録の一覧の
+ * 取り消しの行の「〇〇を取り消し」の元の用途を調べるときにも使う。
  */
 export function getPayment(
   tripId: string,
-  id: string,
+  paymentId: string,
 ): ResultAsync<Payment, ApiFailure> {
-  return callApi(getPaymentRequest(tripId, id), GetPaymentResponse);
+  return callApi(getPaymentRequest(tripId, paymentId), GetPaymentResponse);
 }
 
 // ---- 変更要求の組み立て（MutationDraft） ----
@@ -83,10 +91,29 @@ export function createPaymentDraft(
   };
 }
 
+/** POST /api/trips/{tripId}/payments/{paymentId}/cancel。If-Matchは付けない。 */
+export function cancelPaymentDraft(
+  tripId: string,
+  paymentId: string,
+): MutationDraft {
+  return {
+    operation: CANCEL_PAYMENT_OPERATION,
+    url: getCancelPaymentUrl(tripId, paymentId),
+    method: "POST",
+    body: null,
+  };
+}
+
 // ---- 要求の送信（応答を検証して返す） ----
 
 export function sendCreatePayment(
   request: MutationRequest,
 ): ResultAsync<ApiSuccess<Payment>, ApiFailure> {
   return sendMutationRequest(request, CreatePaymentResponse);
+}
+
+export function sendCancelPayment(
+  request: MutationRequest,
+): ResultAsync<ApiSuccess<Cancellation>, ApiFailure> {
+  return sendMutationRequest(request, CancelPaymentResponse);
 }

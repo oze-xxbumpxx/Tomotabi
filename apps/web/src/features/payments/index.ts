@@ -1,11 +1,15 @@
 export {
+  CANCEL_PAYMENT_OPERATION,
+  cancelPaymentDraft,
   CREATE_PAYMENT_OPERATION,
   createPaymentDraft,
   getBalance,
   getPayment,
+  sendCancelPayment,
   sendCreatePayment,
   type AllocationInput,
   type Balance,
+  type Cancellation,
   type Participant,
   type Payment,
   type PaymentCreate,
@@ -16,6 +20,7 @@ export {
   settlementPreviewQueryKey,
   settlementPreviewsQueryKey,
   useBalance,
+  usePayment,
   usePayments,
 } from "./model/payment-queries";
 export {
@@ -31,6 +36,7 @@ export {
   shareNoteOf,
   slot0PercentOf,
   validatePaymentForm,
+  valuesOfPayment,
   valuesOfPendingBody,
   type PaymentFormErrors,
   type PaymentFormField,
@@ -41,7 +47,9 @@ export {
 } from "./model/payment-form";
 export {
   invalidatePaymentViews,
+  useCancelPayment,
   useCreatePayment,
+  type PaymentCancelSave,
   type PaymentSave,
   type PaymentSaveState,
 } from "./model/payment-save";

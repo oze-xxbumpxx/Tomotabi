@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ArrowsLeftRight,
   BookOpenText,
@@ -53,30 +54,58 @@ const TABS: ReadonlyArray<{
   },
 ];
 
+/**
+ * 画面から差し替える主ボタン。予定の詳細の「達成を記録」のように、
+ * その画面の主な操作を1つ出すときに使う（v3の09）。
+ * 指定が無ければ「支払いを記録」へのリンクを出す。
+ */
+export type TripMainAction = {
+  label: string;
+  icon: ReactNode;
+  onPress: () => void;
+  /** 保存中・保留の照合中など、今は押せないときtrue。 */
+  disabled?: boolean;
+};
+
 export function TripTabBar({
   tripId,
   current,
+  action,
 }: {
   tripId: string;
   /** 今の画面のタブ。`aria-current="page"`の印を付ける。 */
   current: TripTab;
+  /** 画面から差し替える主ボタン。省略時は「支払いを記録」。 */
+  action?: TripMainAction;
 }) {
   const online = useOnlineStatus();
 
   return (
     <>
       {online ? (
-        <Link
-          className="main-action"
-          href={`/trips/${tripId}/payments/new`}
-        >
-          <Plus size={20} weight="bold" aria-hidden="true" />
-          支払いを記録
-        </Link>
+        action !== undefined ? (
+          <button
+            type="button"
+            className="main-action"
+            onClick={action.onPress}
+            disabled={action.disabled}
+          >
+            {action.icon}
+            {action.label}
+          </button>
+        ) : (
+          <Link
+            className="main-action"
+            href={`/trips/${tripId}/payments/new`}
+          >
+            <Plus size={20} weight="bold" aria-hidden="true" />
+            支払いを記録
+          </Link>
+        )
       ) : (
         <span className="main-action main-action-offline" aria-disabled="true">
           <WifiSlash size={18} weight="bold" aria-hidden="true" />
-          支払いを記録
+          {action?.label ?? "支払いを記録"}
         </span>
       )}
       <nav className="tabbar" aria-label="タブ">

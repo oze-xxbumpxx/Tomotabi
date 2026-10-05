@@ -1786,9 +1786,10 @@ dialog.dialog[open] {
   text-decoration: none;
 }
 
-/* 予定の詳細・フォームのページ（ヘッダー行と余白） */
+/* 予定の詳細・フォームのページ（ヘッダー行と余白）
+   下のタブと主ボタン（固定・最大約160px）に被らないよう下を広くあける */
 .plan-page {
-  padding-bottom: calc(var(--space-8) + 96px);
+  padding-bottom: 170px;
 }
 
 .plan-detail-header {
@@ -2111,6 +2112,8 @@ dialog.dialog[open] {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
+  /* buttonとして使う画面もあるため共通のmargin-topを消す */
+  margin-top: 0;
   bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   z-index: 20;
   width: min(
@@ -2308,6 +2311,12 @@ dialog.dialog[open] {
 
 .pay-plan-row-locked {
   color: var(--color-text-muted);
+}
+
+/* 支払いの詳細で予定の詳細へのリンクにするときは読める色にする */
+a.pay-plan-row-locked {
+  color: var(--color-text);
+  text-decoration: none;
 }
 
 .pay-plan-text {
@@ -2807,4 +2816,342 @@ a.settle-action {
   gap: 4px;
   font-size: 12px;
   color: var(--color-text-muted);
+}
+
+/* 記録の一覧（v3 10） */
+.records-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* 固定のタブと主ボタンに最後の行が重ならないよう下を広くあける */
+  padding-bottom: 170px;
+}
+
+/* 「すべて・支払い・達成・予約」のピル。狭い画面では横スクロール */
+.record-filters {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  /* 画面端までピルを流せるよう親の余白を相殺する */
+  margin-inline: calc(-1 * var(--space-5));
+  padding-inline: var(--space-5);
+  scrollbar-width: none;
+}
+
+.record-filter {
+  margin-top: 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.record-filter-current {
+  background: var(--color-surface-inverse);
+  color: var(--color-bg);
+  box-shadow: none;
+}
+
+/* 日付の見出し（「10/13 日 · 今日」） */
+.record-day-label {
+  margin: var(--space-3) 0 0;
+  padding: 0 var(--space-1);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* 1日分の記録を束ねる白カード */
+.record-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 0 var(--space-4);
+}
+
+/* 記録の行: アイコン36・名前と細かい情報・金額 */
+.rrow {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-3) 0;
+}
+
+.rrow + .rrow {
+  border-top: 1px solid var(--color-line);
+}
+
+/* 行全体をリンク・ボタンにするときの見た目の揃え直し */
+.rrow-as-link,
+.rrow-as-button {
+  color: inherit;
+  text-decoration: none;
+}
+
+.rrow-as-button {
+  width: 100%;
+  margin-top: 0;
+  padding: var(--space-3) 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rrow-as-button:active:not(:disabled) {
+  transform: none;
+}
+
+.rrow-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+/* 達成は緑、予約は青、取り消しは赤っぽい面にする */
+.rrow-icon-done {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.rrow-icon-booked {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.rrow-icon-cancelled {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.rrow-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rrow-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 取り消し済みの元の行は名・金額を細い打ち消しにする */
+.rrow-voided .rrow-name,
+.rrow-voided .rrow-amount {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.rrow-meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rrow-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.rrow-amount {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 「取り消し済み」の小さな印 */
+.rrow-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  box-shadow: inset 0 0 0 1.5px var(--color-line-strong);
+}
+
+/* 絞り込み中の案内（「この記録に絞り込み中」「この予定の記録に絞り込み中」） */
+.record-banner {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.record-banner-link {
+  color: var(--color-link);
+  font-weight: 600;
+}
+
+/* 続きの読み込み（sentinel・再読み込みボタン） */
+.record-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.record-more-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* 何も無いとき・条件に合う記録が無いとき */
+.record-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+}
+
+.record-empty-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.record-empty-clear {
+  text-decoration: none;
+}
+
+/* 小さな詳細（達成・予約の記録）の行 */
+.record-detail-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.record-detail-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.record-detail-label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.record-detail-value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 予定の詳細の記録の行は記録の絞り込みへのリンクになる */
+a.plan-record-row-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 「このアプリの中の記録です。お店の予約は変わりません」（F-08） */
+.record-note {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* 「取り消しと新しい記録は別々に保存されます」など、操作に添える注 */
+.record-side-note {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* 支払いの詳細 */
+.payment-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: 170px;
+}
+
+.payment-detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.payment-detail-voided {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.payment-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.payment-detail-actions .btn-secondary {
+  text-decoration: none;
+}
+
+/* 予定の詳細の「関連する支払い」（F-14） */
+.plan-payments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.plan-payments-title {
+  margin: 0;
+  padding: 0 var(--space-1);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.plan-payments-more {
+  text-decoration: none;
+}
+
+
+/* 操作欄の中の注は間隔を持たせない */
+.plan-detail-actions .record-note {
+  margin: 0;
 }

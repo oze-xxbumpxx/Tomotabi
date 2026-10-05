@@ -149,6 +149,8 @@ function stubApi(handlers: {
   patch?: Handler;
   move?: Handler;
   cancel?: Handler;
+  records?: Handler;
+  balance?: Handler;
 }): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = urlOf(input);
@@ -168,6 +170,24 @@ function stubApi(handlers: {
     if (url === `/api/trips/${tripId}` && method === "GET") {
       return Promise.resolve(
         handlers.trip !== undefined ? handlers.trip(init) : json(trip()),
+      );
+    }
+    if (
+      url.startsWith(`/api/trips/${tripId}/records`) &&
+      method === "GET"
+    ) {
+      return Promise.resolve(
+        handlers.records !== undefined
+          ? handlers.records(init)
+          : json({ items: [], nextCursor: null }),
+      );
+    }
+    if (
+      url === `/api/trips/${tripId}/balance` &&
+      method === "GET"
+    ) {
+      return Promise.resolve(
+        handlers.balance !== undefined ? handlers.balance(init) : notFound(),
       );
     }
     if (url === `/api/trips/${tripId}/plans` && method === "POST") {

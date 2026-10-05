@@ -79,5 +79,9 @@ export { TripFormFields } from "./ui/trip-form-fields";
 export { TripHeader } from "./ui/trip-header";
 export { TripMenu } from "./ui/trip-menu";
 export { TripRow } from "./ui/trip-row";
-export { TripTabBar, type TripTab } from "./ui/trip-tab-bar";
+export {
+  TripTabBar,
+  type TripMainAction,
+  type TripTab,
+} from "./ui/trip-tab-bar";
 export { TRIP_STATUS_LABEL, TripStatusBadge } from "./ui/trip-status-badge";

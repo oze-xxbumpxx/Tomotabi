@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CaretRight, Warning } from "@phosphor-icons/react";
 import { useId, type RefObject } from "react";
 import { formatLocalDate } from "@/shared/lib/local-date";
@@ -62,6 +63,7 @@ export function PaymentFormFields({
   onOpenPlanPicker,
   onPlanRetry,
   onPlanClear,
+  planHref,
 }: {
   values: PaymentFormValues;
   errors: PaymentFormErrors;
@@ -79,6 +81,8 @@ export function PaymentFormFields({
   /** URLの予定の確認に失敗したときの再取得と解除。 */
   onPlanRetry: () => void;
   onPlanClear: () => void;
+  /** 固定表示かつ予定があるとき、行を予定の詳細へのリンクにする。 */
+  planHref?: string;
 }) {
   const amountId = useId();
   const me = participants.find((p) => p.userId === meUserId);
@@ -284,13 +288,22 @@ export function PaymentFormFields({
             </div>
           </div>
         ) : locked ? (
-          <div className="pay-plan-row pay-plan-row-locked">
-            <span className="pay-plan-text">
-              {values.plan === null
-                ? "選択しない"
-                : `${formatLocalDate(values.plan.date)} · ${values.plan.name}`}
-            </span>
-          </div>
+          planHref !== undefined && values.plan !== null ? (
+            <Link className="pay-plan-row pay-plan-row-locked" href={planHref}>
+              <span className="pay-plan-text">
+                {`${formatLocalDate(values.plan.date)} · ${values.plan.name}`}
+              </span>
+              <CaretRight size={16} weight="bold" aria-hidden="true" />
+            </Link>
+          ) : (
+            <div className="pay-plan-row pay-plan-row-locked">
+              <span className="pay-plan-text">
+                {values.plan === null
+                  ? "選択しない"
+                  : `${formatLocalDate(values.plan.date)} · ${values.plan.name}`}
+              </span>
+            </div>
+          )
         ) : (
           <button
             type="button"

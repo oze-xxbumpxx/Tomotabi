@@ -1,6 +1,6 @@
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
-import type { Payment } from "../api/payments-api";
-import { sendCreatePayment } from "../api/payments-api";
+import type { Cancellation, Payment } from "../api/payments-api";
+import { sendCancelPayment, sendCreatePayment } from "../api/payments-api";
 import { useSaveState, type SaveState } from "@/shared/api/save-state";
 import type { PendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import {
@@ -31,6 +31,9 @@ export function invalidatePaymentViews(
   void queryClient.invalidateQueries({
     queryKey: ["settlement-preview", tripId],
   });
+  // 記録の一覧・支払いの詳細・その旅行の支払いも取り直す。
+  void queryClient.invalidateQueries({ queryKey: ["records", tripId] });
+  void queryClient.invalidateQueries({ queryKey: ["payment", tripId] });
 }
 
 /**
@@ -50,6 +53,40 @@ export function useCreatePayment(options: {
     send: sendCreatePayment,
     pendingRequest:
       options.userId === ""
+        ? null
+        : {
+            userId: options.userId,
+            tripId: options.tripId,
+            check: options.check,
+          },
+    onSucceeded: (result) => {
+      invalidatePaymentViews(queryClient, options.tripId);
+      options.onSucceeded?.(result.data);
+    },
+  });
+}
+
+/** 支払いの取り消しの保存状態。 */
+export type PaymentCancelSave = ReturnType<
+  typeof useSaveState<Cancellation, Cancellation>
+>;
+
+/**
+ * 支払いの取り消し（POST /trips/{tripId}/payments/{paymentId}/cancel）。
+ * 作成と同じく送る直前に端末に残し（ADR-0006）、残せなければ送らない。
+ */
+export function useCancelPayment(options: {
+  tripId: string;
+  /** nullのあいだは端末に残さない。 */
+  userId: string | null;
+  check?: PendingRequestCheck;
+  onSucceeded?: (result: Cancellation) => void;
+}): PaymentCancelSave {
+  const queryClient = useQueryClient();
+  return useSaveState<Cancellation, Cancellation>({
+    send: sendCancelPayment,
+    pendingRequest:
+      options.userId === null
         ? null
         : {
             userId: options.userId,

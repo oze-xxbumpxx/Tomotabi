@@ -633,15 +633,6 @@ describe("HomeScreen (/trips/{id}/home)", () => {
   });
 
   it("RW-14: 「達成済み N 件」「ほか N 件」、宿・移動には達成を出さない", async () => {
-    const achieved = {
-      id: "22222222-3333-4444-8555-666666666666",
-      tripId,
-      planId,
-      kind: "achievement" as const,
-      createdBy: partnerId,
-      createdAt: "2026-10-13T02:00:00.000Z",
-      cancellation: null,
-    };
     stubApi({
       home: () =>
         json(
@@ -656,7 +647,6 @@ describe("HomeScreen (/trips/{id}/home)", () => {
                     name: "首里城",
                     kind: "place",
                     date: "2026-10-12",
-                    achievement: achieved,
                   }),
                   plan({
                     id: "33333333-4444-4555-8666-777777777777",
@@ -664,7 +654,6 @@ describe("HomeScreen (/trips/{id}/home)", () => {
                     kind: "lodging",
                     date: "2026-10-12",
                     time: null,
-                    achievement: achieved,
                   }),
                   plan({
                     id: "44444444-5555-4666-8777-888888888888",
@@ -684,7 +673,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
     renderScreen();
 
     await screen.findByRole("heading", { name: "沖縄" });
-    // 達成済みの折りたたみと「ほか N 件」（6 - 3行 - 達成2 = 1）。
+    // 達成済みの折りたたみと「ほか N 件」（6 - 達成2 - 出した未達成3 = 1）。
     expect(
       screen.getByRole("link", { name: /達成済み 2 件/ }),
     ).toHaveAttribute(
@@ -694,13 +683,11 @@ describe("HomeScreen (/trips/{id}/home)", () => {
     expect(
       screen.getByRole("link", { name: /ほか 1 件/ }),
     ).toBeInTheDocument();
-    // 場所には達成を出すが、宿・移動には出さない（F-46）。
+    // 行は未達成だけなので、宿・移動に達成の印は出ない（F-46）。
     const hotel = screen.getByRole("link", { name: /ホテルに泊まる/ });
     expect(within(hotel).queryByText(/達成/)).not.toBeInTheDocument();
     const airport = screen.getByRole("link", { name: /那覇空港へ/ });
     expect(within(airport).queryByText(/達成/)).not.toBeInTheDocument();
-    const castle = screen.getByRole("link", { name: /首里城/ });
-    expect(within(castle).getByText("達成")).toBeInTheDocument();
     // すべて見るは期間の日のしおりへ。
     expect(
       screen.getByRole("link", { name: "すべて見る" }),
@@ -708,6 +695,74 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       "href",
       `/trips/${tripId}/itinerary?date=2026-10-12`,
     );
+  });
+
+  it("RW-14: 未達成が3件より少なくitemsに達成済みが入る日は、行に出さず「達成済み N 件」にだけまとめる", async () => {
+    const achieved = {
+      id: "22222222-3333-4444-8555-666666666666",
+      tripId,
+      planId: "55555555-6666-4777-8888-999999999999",
+      kind: "achievement" as const,
+      createdBy: partnerId,
+      createdAt: "2026-10-13T02:00:00.000Z",
+      cancellation: null,
+    };
+    stubApi({
+      home: () =>
+        json(
+          home({
+            schedule: {
+              status: "ok",
+              data: {
+                date: "2026-10-12",
+                items: [
+                  plan({
+                    id: planId,
+                    name: "首里城",
+                    kind: "place",
+                    date: "2026-10-12",
+                  }),
+                  plan({
+                    id: "33333333-4444-4555-8666-777777777777",
+                    name: "ホテルに泊まる",
+                    kind: "lodging",
+                    date: "2026-10-12",
+                    time: null,
+                  }),
+                  plan({
+                    id: "55555555-6666-4777-8888-999999999999",
+                    name: "美ら海水族館",
+                    kind: "place",
+                    date: "2026-10-12",
+                    achievement: achieved,
+                  }),
+                ],
+                totalCount: 5,
+                achievedCount: 3,
+              },
+            },
+          }),
+        ),
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    // 達成済みの予定は行に出さず、折りたたみにだけまとめる（二重に出さない）。
+    expect(
+      screen.getByRole("link", { name: /達成済み 3 件/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /美ら海水族館/ }),
+    ).not.toBeInTheDocument();
+    // 「ほか N 件」は出していない未達成の数（5 - 達成3 - 出した未達成2 = 0で出ない）。
+    expect(
+      screen.queryByRole("link", { name: /ほか / }),
+    ).not.toBeInTheDocument();
+    // 未達成の2件は行に出る。
+    expect(screen.getByRole("link", { name: /首里城/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /ホテルに泊まる/ }),
+    ).toBeInTheDocument();
   });
 
   it("予定0件は「この日の予定はまだありません」と予定の追加（data:nullは欄を出さない）", async () => {

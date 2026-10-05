@@ -19,7 +19,8 @@ import { HomePlanItem } from "./home-plan-item";
 
 /**
  * ホームの予定の欄（v3のタイムラインカード。最大3件はAPIの並びのまま）。
- * - 「達成済み N 件」と「ほか N 件」は折りたたみ行（しおりへ）
+ * - 達成済みの予定は「達成済み N 件」の行にだけまとめる（F-44）
+ * - 「ほか N 件」は出していない未達成の予定の数（折りたたみ行、しおりへ）
  * - 0件は「この日の予定はまだありません」と予定の追加（欄を出さない
  *   `data: null`とは区別する。F-45）
  * - 欄の取得失敗はこのカードだけ「取得できませんでした」（F-48）
@@ -62,8 +63,11 @@ export function HomeScheduleCard({
   }
 
   const schedule = section.data;
-  const plans = schedule.items;
-  const hidden = hiddenCountOf(schedule);
+  // 達成済みの予定は行に出さず「達成済み N 件」の行にだけまとめる
+  // （F-44）。APIは`items`を未達成優先の最大3件で返し、未達成が
+  // 3件より少ない日は達成済みも入るため、ここで除く。
+  const plans = schedule.items.filter((plan) => plan.achievement === null);
+  const hidden = hiddenCountOf(schedule, plans.length);
   const itinerary = `/trips/${tripId}/itinerary?date=${schedule.date}`;
   const next = now !== null ? nextPlanOf(plans, now) : null;
   const nowIndex =

@@ -74,11 +74,16 @@ export function homeBarsOf(context: Home["context"], trip: Trip): HomeBar[] {
 }
 
 /**
- * 予定の欄の「ほか N 件」。`items`（最大3件）と達成済みの折りたたみを
- * 除いた残り（全部未達成。並びはAPIのまま）。
+ * 予定の欄の「ほか N 件」。`totalCount`から達成済み（「達成済み N 件」の
+ * 行にまとめる分）と出した未達成の予定を除いた残り。APIが`items`に
+ * 達成済みを入れても入れなくても同じ数になるよう、0未満にはしない
+ * （F-44）。
  */
-export function hiddenCountOf(schedule: Schedule): number {
-  return schedule.totalCount - schedule.items.length - schedule.achievedCount;
+export function hiddenCountOf(
+  schedule: Pick<Schedule, "totalCount" | "achievedCount">,
+  shownCount: number,
+): number {
+  return Math.max(0, schedule.totalCount - schedule.achievedCount - shownCount);
 }
 
 /**

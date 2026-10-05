@@ -12,6 +12,20 @@ import {
   type ParticipantsPort,
 } from "../modules/planning/adapter/outbound/participants.port";
 import {
+  HOME_BALANCE_FACTORY,
+  type HomeBalanceFactory,
+  type HomeBalancePort,
+} from "../modules/planning/adapter/outbound/home-balance.port";
+import {
+  HOME_READ_UNIT_OF_WORK,
+  type HomeReadUnitOfWork,
+} from "../modules/planning/adapter/outbound/home-read.port";
+import {
+  HOME_RECORDS_FACTORY,
+  type HomeRecordsFactory,
+  type HomeRecordsPort,
+} from "../modules/planning/adapter/outbound/home-records.port";
+import {
   PLANNING_READ_PORT,
   type PlanningReadPort,
 } from "../modules/planning/adapter/outbound/planning-read.port";
@@ -28,9 +42,12 @@ import {
   WRITE_LOG,
   type WriteLog,
 } from "../modules/planning/adapter/outbound/write-log.port";
+import { PgHomeReadUnitOfWork } from "../modules/planning/infrastructure/pg-home-read.unit-of-work";
 import { PgPlanningRead } from "../modules/planning/infrastructure/pg-planning-read";
 import { PgPlanningUnitOfWork } from "../modules/planning/infrastructure/pg-planning-unit-of-work";
+import { PgHomeRecordsRead } from "../modules/record/infrastructure/pg-home-records-read";
 import { PgRecordHistoryQuery } from "../modules/record/infrastructure/pg-record-history.query";
+import { PgHomeBalanceRead } from "../modules/settlement/infrastructure/pg-home-balance-read";
 
 function useDatabase(): boolean {
   // 未設定と空文字はどちらも「DBなし」。foundation・identityと同じ判定に
@@ -76,6 +93,33 @@ const missingDatabase = (): Promise<never> =>
       inject: [PARTICIPANTS_FACTORY, RECORD_HISTORY_FACTORY],
     },
     {
+      provide: HOME_RECORDS_FACTORY,
+      useFactory: (): HomeRecordsFactory =>
+        (db): HomeRecordsPort =>
+          new PgHomeRecordsRead(db as NodePgDatabase),
+    },
+    {
+      provide: HOME_BALANCE_FACTORY,
+      useFactory: (): HomeBalanceFactory =>
+        (db): HomeBalancePort =>
+          new PgHomeBalanceRead(db as NodePgDatabase),
+    },
+    {
+      provide: HOME_READ_UNIT_OF_WORK,
+      useFactory: (
+        recordsFactory: HomeRecordsFactory,
+        balanceFactory: HomeBalanceFactory,
+      ): HomeReadUnitOfWork =>
+        useDatabase()
+          ? new PgHomeReadUnitOfWork(
+              getPool(),
+              recordsFactory,
+              balanceFactory,
+            )
+          : { run: missingDatabase },
+      inject: [HOME_RECORDS_FACTORY, HOME_BALANCE_FACTORY],
+    },
+    {
       provide: PLANNING_READ_PORT,
       useFactory: (): PlanningReadPort =>
         useDatabase()
@@ -99,6 +143,9 @@ const missingDatabase = (): Promise<never> =>
   ],
   exports: [
     PARTICIPANTS_FACTORY,
+    HOME_RECORDS_FACTORY,
+    HOME_BALANCE_FACTORY,
+    HOME_READ_UNIT_OF_WORK,
     PLANNING_UNIT_OF_WORK,
     PLANNING_READ_PORT,
     CLOCK,

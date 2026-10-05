@@ -51,6 +51,64 @@ function toActivePlanEvent(row: JoinedEventRow): ActivePlanEvent | null {
 }
 
 /**
+ * 予定と、有効な達成・予約（active_plan_events経由）・履歴の有無を
+ * 1回の読み取りで取る。取り消し済みはactiveに行が無いのでnullに
+ * なるが、hasRecordHistoryはplan_eventsの存在で別に立てる。
+ * ホームの読み取り（pg-home-read.ts）がtxのdbハンドルで使い回すため
+ * 関数として切り出してある。
+ */
+export async function planViews(
+  db: NodePgDatabase,
+  where: SQL | undefined,
+  ...orderBy: SQL[]
+): Promise<PlanView[]> {
+  const activeAchievement = alias(activePlanEvents, "active_achievement");
+  const achievementEvent = alias(planEvents, "achievement_event");
+  const activeBooking = alias(activePlanEvents, "active_booking");
+  const bookingEvent = alias(planEvents, "booking_event");
+  const rows = await db
+    .select({
+      plan: plans,
+      achievementEvent,
+      bookingEvent,
+      hasRecordHistory: exists(
+        db
+          .select({ _: sql`1` })
+          .from(planEvents)
+          .where(eq(planEvents.planId, plans.id)),
+      ),
+    })
+    .from(plans)
+    .leftJoin(
+      activeAchievement,
+      and(
+        eq(activeAchievement.planId, plans.id),
+        eq(activeAchievement.eventKind, "achievement"),
+      ),
+    )
+    .leftJoin(
+      achievementEvent,
+      eq(achievementEvent.id, activeAchievement.eventId),
+    )
+    .leftJoin(
+      activeBooking,
+      and(
+        eq(activeBooking.planId, plans.id),
+        eq(activeBooking.eventKind, "booking"),
+      ),
+    )
+    .leftJoin(bookingEvent, eq(bookingEvent.id, activeBooking.eventId))
+    .where(where)
+    .orderBy(...orderBy);
+  return rows.map((row) => ({
+    plan: toPlanDomain(row.plan),
+    achievement: toActivePlanEvent(row.achievementEvent),
+    booking: toActivePlanEvent(row.bookingEvent),
+    hasRecordHistory: row.hasRecordHistory as boolean,
+  }));
+}
+
+/**
  * 一覧・取得の読み取り。トランザクション・行ロックは使わず、
  * プールの接続から直接読む（書き込みの整合はUoW側が持つ）。
  */
@@ -129,7 +187,7 @@ export class PgPlanningRead implements PlanningReadPort {
     tripId: string,
     planId: string,
   ): Promise<PlanView | null> {
-    const rows = await this.planViews(and(eq(plans.tripId, tripId), eq(plans.id, planId)));
+    const rows = await planViews(this.db, and(eq(plans.tripId, tripId), eq(plans.id, planId)));
     return rows[0] === undefined ? null : rows[0];
   }
 
@@ -137,68 +195,14 @@ export class PgPlanningRead implements PlanningReadPort {
     tripId: string,
     date: LocalDate,
   ): Promise<PlanView[]> {
-    return this.planViews(
+    return planViews(
+      this.db,
       and(eq(plans.tripId, tripId), eq(plans.plannedDate, date)),
       // 時刻の早い順・未定（NULL）は末尾（ASCの既定）・登録日時・id。
       asc(plans.plannedTime),
       asc(plans.createdAt),
       asc(plans.id),
     );
-  }
-
-  /**
-   * 予定と、有効な達成・予約（active_plan_events経由）・履歴の有無を
-   * 1回の読み取りで取る。取り消し済みはactiveに行が無いのでnullに
-   * なるが、hasRecordHistoryはplan_eventsの存在で別に立てる。
-   */
-  private async planViews(
-    where: SQL | undefined,
-    ...orderBy: SQL[]
-  ): Promise<PlanView[]> {
-    const activeAchievement = alias(activePlanEvents, "active_achievement");
-    const achievementEvent = alias(planEvents, "achievement_event");
-    const activeBooking = alias(activePlanEvents, "active_booking");
-    const bookingEvent = alias(planEvents, "booking_event");
-    const rows = await this.db
-      .select({
-        plan: plans,
-        achievementEvent,
-        bookingEvent,
-        hasRecordHistory: exists(
-          this.db
-            .select({ _: sql`1` })
-            .from(planEvents)
-            .where(eq(planEvents.planId, plans.id)),
-        ),
-      })
-      .from(plans)
-      .leftJoin(
-        activeAchievement,
-        and(
-          eq(activeAchievement.planId, plans.id),
-          eq(activeAchievement.eventKind, "achievement"),
-        ),
-      )
-      .leftJoin(
-        achievementEvent,
-        eq(achievementEvent.id, activeAchievement.eventId),
-      )
-      .leftJoin(
-        activeBooking,
-        and(
-          eq(activeBooking.planId, plans.id),
-          eq(activeBooking.eventKind, "booking"),
-        ),
-      )
-      .leftJoin(bookingEvent, eq(bookingEvent.id, activeBooking.eventId))
-      .where(where)
-      .orderBy(...orderBy);
-    return rows.map((row) => ({
-      plan: toPlanDomain(row.plan),
-      achievement: toActivePlanEvent(row.achievementEvent),
-      booking: toActivePlanEvent(row.bookingEvent),
-      hasRecordHistory: row.hasRecordHistory as boolean,
-    }));
   }
 
   private participates(userId: UserId) {

@@ -15,6 +15,15 @@ export type {
   Transfer,
 } from "./finance";
 export type { HealthView } from "./health";
+export type {
+  BalanceSummary,
+  Context,
+  ContextMode,
+  ContextSuggestedAction,
+  Home,
+  HomeSection,
+  Schedule,
+} from "./home";
 export type { Me } from "./me";
 export type {
   Cancellation,

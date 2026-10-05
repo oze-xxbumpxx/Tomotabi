@@ -14,6 +14,11 @@ import {
   CREATE_TRIP_INPUT_PORT,
   type CreateTripInputPort,
 } from "./adapter/inbound/create-trip.input-port";
+import { PinoLogger } from "nestjs-pino";
+import {
+  GET_HOME_INPUT_PORT,
+  type GetHomeInputPort,
+} from "./adapter/inbound/get-home.input-port";
 import {
   GET_ITINERARY_INPUT_PORT,
   type GetItineraryInputPort,
@@ -55,6 +60,10 @@ import {
   type UpdatePlanInputPort,
 } from "./adapter/inbound/update-plan.input-port";
 import {
+  HOME_READ_UNIT_OF_WORK,
+  type HomeReadUnitOfWork,
+} from "./adapter/outbound/home-read.port";
+import {
   PLANNING_READ_PORT,
   type PlanningReadPort,
 } from "./adapter/outbound/planning-read.port";
@@ -66,11 +75,13 @@ import {
   WRITE_LOG,
   type WriteLog,
 } from "./adapter/outbound/write-log.port";
+import { HomeController } from "./controller/home.controller";
 import { PlansController } from "./controller/plans.controller";
 import { TripsController } from "./controller/trips.controller";
 import { CancelPlanUseCase } from "./usecase/cancel-plan.usecase";
 import { CreatePlanUseCase } from "./usecase/create-plan.usecase";
 import { CreateTripUseCase } from "./usecase/create-trip.usecase";
+import { GetHomeUseCase } from "./usecase/get-home.usecase";
 import { GetItineraryUseCase } from "./usecase/get-itinerary.usecase";
 import { GetPlanUseCase } from "./usecase/get-plan.usecase";
 import { GetTripUseCase } from "./usecase/get-trip.usecase";
@@ -91,7 +102,7 @@ const WRITE_INJECT = [PLANNING_UNIT_OF_WORK, CLOCK, WRITE_LOG];
 
 @Module({
   imports: [PlanningCompositionModule],
-  controllers: [TripsController, PlansController],
+  controllers: [TripsController, PlansController, HomeController],
   providers: [
     {
       provide: CREATE_TRIP_INPUT_PORT,
@@ -140,6 +151,18 @@ const WRITE_INJECT = [PLANNING_UNIT_OF_WORK, CLOCK, WRITE_LOG];
       useFactory: (read: PlanningReadPort, clock: Clock): GetItineraryInputPort =>
         new GetItineraryUseCase(read, clock),
       inject: [PLANNING_READ_PORT, CLOCK],
+    },
+    {
+      provide: GET_HOME_INPUT_PORT,
+      useFactory: (
+        uow: HomeReadUnitOfWork,
+        clock: Clock,
+        logger: PinoLogger,
+      ): GetHomeInputPort =>
+        new GetHomeUseCase(uow, clock, {
+          warn: (entry) => logger.warn(entry),
+        }),
+      inject: [HOME_READ_UNIT_OF_WORK, CLOCK, PinoLogger],
     },
     {
       provide: CREATE_PLAN_INPUT_PORT,

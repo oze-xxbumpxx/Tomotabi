@@ -12,6 +12,9 @@ export type ApiErrorCode =
   | "PLAN_OUTSIDE_TRIP_PERIOD"
   | "PLAN_HAS_RECORD_HISTORY"
   | "PLAN_CANCELLED"
+  | "PLAN_KIND_NOT_SUPPORTED"
+  | "RECORD_ALREADY_ACTIVE"
+  | "RECORD_NOT_FOUND"
   | "TRIP_NOT_ACCESSIBLE"
   | "PLAN_NOT_FOUND"
   | "PAYMENT_NOT_FOUND"
@@ -39,6 +42,7 @@ export type ApiErrorCode =
 export type ApiErrorDetails = Readonly<{
   existingSettlementId?: string;
   changedPaymentIds?: readonly string[];
+  existingRecordId?: string;
 }>;
 
 /**

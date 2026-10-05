@@ -10,6 +10,14 @@ import {
   type CreatePaymentInputPort,
 } from "./adapter/inbound/create-payment.input-port";
 import {
+  CANCEL_PLAN_EVENT_INPUT_PORT,
+  type CancelPlanEventInputPort,
+} from "./adapter/inbound/cancel-plan-event.input-port";
+import {
+  CREATE_PLAN_EVENT_INPUT_PORT,
+  type CreatePlanEventInputPort,
+} from "./adapter/inbound/create-plan-event.input-port";
+import {
   GET_PAYMENT_INPUT_PORT,
   type GetPaymentInputPort,
 } from "./adapter/inbound/get-payment.input-port";
@@ -22,14 +30,22 @@ import {
   type FinanceWorkContext,
 } from "./adapter/outbound/finance-work-context";
 import {
+  PLAN_EVENT_UNIT_OF_WORK,
+  type PlanEventUnitOfWork,
+} from "./adapter/outbound/plan-event-work-context";
+import {
   RECORDS_READ_UNIT_OF_WORK,
   type RecordsReadUnitOfWork,
 } from "./adapter/outbound/records-read.port";
 import { WRITE_LOG, type WriteLog } from "../planning/adapter/outbound/write-log.port";
+import { AchievementsController } from "./controller/achievements.controller";
+import { BookingsController } from "./controller/bookings.controller";
 import { PaymentsController } from "./controller/payments.controller";
 import { RecordsController } from "./controller/records.controller";
 import { CancelPaymentUseCase } from "./usecase/cancel-payment.usecase";
+import { CancelPlanEventUseCase } from "./usecase/cancel-plan-event.usecase";
 import { CreatePaymentUseCase } from "./usecase/create-payment.usecase";
+import { CreatePlanEventUseCase } from "./usecase/create-plan-event.usecase";
 import { GetPaymentUseCase } from "./usecase/get-payment.usecase";
 import { ListRecordsUseCase } from "./usecase/list-records.usecase";
 
@@ -39,9 +55,20 @@ type WriteDeps = [
 ];
 const WRITE_INJECT = [FINANCE_UNIT_OF_WORK, WRITE_LOG];
 
+type PlanEventWriteDeps = [
+  uow: PlanEventUnitOfWork,
+  writeLog: WriteLog,
+];
+const PLAN_EVENT_INJECT = [PLAN_EVENT_UNIT_OF_WORK, WRITE_LOG];
+
 @Module({
   imports: [RecordCompositionModule],
-  controllers: [PaymentsController, RecordsController],
+  controllers: [
+    PaymentsController,
+    RecordsController,
+    AchievementsController,
+    BookingsController,
+  ],
   providers: [
     {
       provide: CREATE_PAYMENT_INPUT_PORT,
@@ -68,6 +95,20 @@ const WRITE_INJECT = [FINANCE_UNIT_OF_WORK, WRITE_LOG];
         uow: RecordsReadUnitOfWork,
       ): ListRecordsInputPort => new ListRecordsUseCase(uow),
       inject: [RECORDS_READ_UNIT_OF_WORK],
+    },
+    // 達成・予約の付ける・取り消すは達成と予約で同じUseCase（URLの種類は
+    // 入力のeventKind）。両方のコントローラから同じ口に入る。
+    {
+      provide: CREATE_PLAN_EVENT_INPUT_PORT,
+      useFactory: (...deps: PlanEventWriteDeps): CreatePlanEventInputPort =>
+        new CreatePlanEventUseCase(...deps),
+      inject: PLAN_EVENT_INJECT,
+    },
+    {
+      provide: CANCEL_PLAN_EVENT_INPUT_PORT,
+      useFactory: (...deps: PlanEventWriteDeps): CancelPlanEventInputPort =>
+        new CancelPlanEventUseCase(...deps),
+      inject: PLAN_EVENT_INJECT,
     },
   ],
 })

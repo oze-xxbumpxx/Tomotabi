@@ -168,6 +168,9 @@ export class ApiErrorFilter implements ExceptionFilter {
     if (normalized.details?.changedPaymentIds !== undefined) {
       body.changedPaymentIds = [...normalized.details.changedPaymentIds];
     }
+    if (normalized.details?.existingRecordId !== undefined) {
+      body.existingRecordId = normalized.details.existingRecordId;
+    }
     response.status(normalized.status).json(body);
   }
 }

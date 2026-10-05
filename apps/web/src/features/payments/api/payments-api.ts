@@ -4,11 +4,13 @@ import { callApi } from "@/shared/api/api-result";
 import type { ApiFailure } from "@/shared/api/api-failure";
 import {
   getBalance as getBalanceRequest,
+  getPayment as getPaymentRequest,
   getCreatePaymentUrl,
 } from "@/shared/api/generated/finance";
 import {
   CreatePaymentResponse,
   GetBalanceResponse,
+  GetPaymentResponse,
 } from "@/shared/api/generated/finance.zod";
 import { sendMutationRequest } from "@/shared/api/mutation-request";
 import type {
@@ -53,6 +55,17 @@ export function getBalance(
   tripId: string,
 ): ResultAsync<Balance, ApiFailure> {
   return callApi(getBalanceRequest(tripId), GetBalanceResponse);
+}
+
+/**
+ * GET /api/trips/{tripId}/payments/{id}。支払い1件（取り消し状態を含む）。
+ * 取り消しの行の「〇〇を取り消し」の元の用途を調べるときに使う。
+ */
+export function getPayment(
+  tripId: string,
+  id: string,
+): ResultAsync<Payment, ApiFailure> {
+  return callApi(getPaymentRequest(tripId, id), GetPaymentResponse);
 }
 
 // ---- 変更要求の組み立て（MutationDraft） ----

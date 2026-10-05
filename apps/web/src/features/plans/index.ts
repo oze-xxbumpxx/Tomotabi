@@ -14,7 +14,11 @@ export {
   UPDATE_PLAN_OPERATION,
   updatePlanDraft,
 } from "./api/plans-api";
-export { planQueryKey, usePlan } from "./model/plan-queries";
+export {
+  planQueryKey,
+  usePlan,
+  usePlanNames,
+} from "./model/plan-queries";
 export {
   invalidatePlanViews,
   useCreatePlan,

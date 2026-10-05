@@ -15,8 +15,8 @@ export type CommandReceipt = Readonly<{
   tripId: string;
   /** 64桁の16進（computeRequestHashの結果） */
   requestHash: string;
-  // infra.command_receiptsのCHECKが許す種類。財務（支払い・確認・精算）の
-  // 種類はM3の表に合わせて先に含めてある（plan_event系はM4の記録APIで使う）。
+  // infra.command_receiptsのCHECKが許す種類。財務（支払い・確認・精算）と
+  // 記録（plan_event系）の種類はM3・M4の表に合わせて先に含めてある。
   resourceType:
     | "trip"
     | "plan"
@@ -24,7 +24,9 @@ export type CommandReceipt = Readonly<{
     | "payment_cancellation"
     | "preview"
     | "settlement"
-    | "settlement_cancellation";
+    | "settlement_cancellation"
+    | "plan_event"
+    | "plan_event_cancellation";
   resourceId: string;
   httpStatus: 200 | 201;
   responseBody: unknown;

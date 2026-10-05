@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { UnitOfWork } from "../adapter/transaction/unit-of-work";
 import { getPool } from "../infrastructure/database/pool";
 import {
@@ -6,9 +7,20 @@ import {
   type FinanceWorkContext,
 } from "../modules/record/adapter/outbound/finance-work-context";
 import {
+  PLAN_ELIGIBILITY_FACTORY,
+  type PlanEligibilityFactory,
+  type PlanEligibilityPort,
+} from "../modules/record/adapter/outbound/plan-eligibility.port";
+import {
+  PLAN_EVENT_UNIT_OF_WORK,
+  type PlanEventWorkContext,
+} from "../modules/record/adapter/outbound/plan-event-work-context";
+import {
   RECORDS_READ_UNIT_OF_WORK,
   type RecordsReadUnitOfWork,
 } from "../modules/record/adapter/outbound/records-read.port";
+import { PgPlanEligibilityQuery } from "../modules/record/infrastructure/pg-plan-eligibility.query";
+import { PgPlanEventUnitOfWork } from "../modules/record/infrastructure/pg-plan-event.unit-of-work";
 import { PgRecordsReadUnitOfWork } from "../modules/record/infrastructure/pg-records-read.unit-of-work";
 import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-finance-unit-of-work";
 import { PlanningCompositionModule } from "./planning-composition.module";
@@ -43,6 +55,24 @@ const missingDatabase = (): Promise<never> =>
           ? new PgRecordsReadUnitOfWork(getPool())
           : { run: missingDatabase },
     },
+    {
+      // 達成・予約の書き込みが使う、予定を付けられる状態かの照会。
+      // planningの予定の読み取りにつなぐ（予定行のロックも含めて同じ実装）。
+      provide: PLAN_ELIGIBILITY_FACTORY,
+      useFactory: (): PlanEligibilityFactory =>
+        (db): PlanEligibilityPort =>
+          new PgPlanEligibilityQuery(db as NodePgDatabase),
+    },
+    {
+      provide: PLAN_EVENT_UNIT_OF_WORK,
+      useFactory: (
+        planEligibilityFactory: PlanEligibilityFactory,
+      ): UnitOfWork<PlanEventWorkContext> =>
+        useDatabase()
+          ? new PgPlanEventUnitOfWork(getPool(), planEligibilityFactory)
+          : { run: missingDatabase },
+      inject: [PLAN_ELIGIBILITY_FACTORY],
+    },
   ],
   // PlanningCompositionModuleを再輸出して、recordのUseCaseが時計・
   // 書き込みログを同じ実装で受け取れるようにする。
@@ -50,6 +80,7 @@ const missingDatabase = (): Promise<never> =>
     PlanningCompositionModule,
     FINANCE_UNIT_OF_WORK,
     RECORDS_READ_UNIT_OF_WORK,
+    PLAN_EVENT_UNIT_OF_WORK,
   ],
 })
 export class RecordCompositionModule {}

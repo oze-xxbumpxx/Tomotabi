@@ -1427,6 +1427,365 @@ dialog.dialog[open] {
   color: var(--color-text-secondary);
 }
 
+/* ホーム（v3 の 04・18・19。日付行・名前・「…」・切り替え・期間の帯） */
+.home-page {
+  /* タブとその上の主ボタン「支払いを記録」のぶん。 */
+  padding-bottom: calc(var(--space-8) + 168px);
+}
+
+.home-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.home-header-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-header-date {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.home-header-name {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 「切り替え」の丸いボタン（旅行の一覧へ） */
+.home-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 12px 0 14px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+/* 期間の日ごとの4pxの帯（過ぎた日は塗り、今日は途中まで） */
+.home-bars {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.home-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-line-strong);
+}
+
+.home-bar-past {
+  background: var(--color-text);
+}
+
+/* お知らせの帯（期間が過ぎた・未開始の案内）。帯の中のボタン */
+.home-banner {
+  margin-top: var(--space-3);
+}
+
+.home-banner-button {
+  margin-top: var(--space-2);
+  align-self: flex-start;
+}
+
+/* ホームの各欄（予定・記録は白いカード。精算は別の並び） */
+.home-card {
+  margin-top: var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: 4px var(--space-4);
+}
+
+.home-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0 var(--space-1);
+  gap: var(--space-3);
+}
+
+.home-card-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.home-card-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-left: var(--space-1);
+}
+
+.home-card-link {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-link);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.home-card-body {
+  padding: var(--space-3) 0 var(--space-5);
+}
+
+/* 予定の行（タイムラインの部品はplan-item系を使いまわす） */
+.home-plan-items {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1) 0 0;
+}
+
+/* 「達成済み N 件」「ほか N 件」の折りたたみ行（しおりへ） */
+.home-fold {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.home-fold-done {
+  color: var(--color-text);
+}
+
+/* 0件の欄（予定なし・記録なし） */
+.home-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-1) 0 var(--space-5);
+}
+
+.home-empty-text {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.home-empty-solo {
+  padding: 6px 0 18px;
+}
+
+/* 精算の欄（アイコン・文・「精算へ」の横並び） */
+.home-settle {
+  margin-top: var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.home-settle-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-text);
+}
+
+.home-settle-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.home-settle-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.home-settle-text {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.home-settle-amount {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.home-settle-yen {
+  font-size: 14px;
+  margin-left: 2px;
+}
+
+.home-settle-unknown {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+}
+
+.home-settle-error {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.home-settle-retry {
+  height: 40px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-inverse);
+  color: var(--color-bg);
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* 最近の記録の行（アイコン・名前+補足・金額/印の3列） */
+.home-rec-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-rec-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-line);
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.home-rec-items > li:first-child .home-rec-row {
+  border-top: none;
+}
+
+.home-rec-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-rec-icon-pay {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.home-rec-icon-done {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.home-rec-icon-booked {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.home-rec-icon-cancel {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.home-rec-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.home-rec-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-rec-name-voided {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.home-rec-meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-rec-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.home-rec-amount {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.home-rec-voided-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  box-shadow: inset 0 0 0 1.5px var(--color-line-strong);
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+}
+
+/* 終了後・期間が過ぎたときの「しおりへ」の案内 */
+.home-guide {
+  margin-top: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-link);
+  text-decoration: none;
+}
+
 /* 予定の詳細・フォームのページ（ヘッダー行と余白） */
 .plan-page {
   padding-bottom: calc(var(--space-8) + 96px);

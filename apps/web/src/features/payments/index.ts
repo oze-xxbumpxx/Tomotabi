@@ -2,6 +2,7 @@ export {
   CREATE_PAYMENT_OPERATION,
   createPaymentDraft,
   getBalance,
+  getPayment,
   sendCreatePayment,
   type AllocationInput,
   type Balance,
@@ -11,9 +12,11 @@ export {
 } from "./api/payments-api";
 export {
   balanceQueryKey,
+  paymentQueryKey,
   settlementPreviewQueryKey,
   settlementPreviewsQueryKey,
   useBalance,
+  usePayments,
 } from "./model/payment-queries";
 export {
   burdensOf,

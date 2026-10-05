@@ -11,8 +11,10 @@ import type {
 import { callApi, callApiWithMeta } from "@/shared/api/api-result";
 import type { ApiSuccess } from "@/shared/api/api-result";
 import type { ApiFailure } from "@/shared/api/api-failure";
+import type { Home } from "@/shared/api/generated/trips";
 import {
   getTrip as getTripRequest,
+  getHome as getHomeRequest,
   listTrips as listTripsRequest,
   getCreateTripUrl,
   getRenameTripUrl,
@@ -25,6 +27,7 @@ import {
 } from "@/shared/api/generated/planning";
 import {
   CreateTripResponse,
+  GetHomeResponse,
   GetTripResponse,
   ListTripsResponse,
   RenameTripResponse,
@@ -49,6 +52,25 @@ import type {
 
 // ---- 読み取り ----
 
+/**
+ * ホームの型は@tomotabi/contractsには無く、生成クライアントの型を
+ * この層で公開入口に再輸出する（画面・試験はfeature経由で使う）。
+ */
+export type {
+  BalanceSummary,
+  Context,
+  ContextMode,
+  ContextSuggestedAction,
+  Home,
+  HomeBalance,
+  HomeRecentRecords,
+  HomeSchedule,
+  Schedule,
+  TimelineItem,
+  TimelineItemKind,
+  Transfer,
+} from "@/shared/api/generated/trips";
+
 export function listTripsPage(input: {
   status?: TripStatus | null;
   cursor?: string | null;
@@ -67,6 +89,17 @@ export function getTrip(
   tripId: string,
 ): ResultAsync<Trip, ApiFailure> {
   return callApi(getTripRequest(tripId), GetTripResponse);
+}
+
+/**
+ * ホーム（GET /api/trips/{tripId}/home）。旅行・表示の種類・
+ * 予定の欄・精算の欄・最近の記録を1回で返す。欄ごとの失敗は
+ * 各欄の`status`（ok / unavailable）で出し分ける。
+ */
+export function getHome(
+  tripId: string,
+): ResultAsync<Home, ApiFailure> {
+  return callApi(getHomeRequest(tripId), GetHomeResponse);
 }
 
 /**

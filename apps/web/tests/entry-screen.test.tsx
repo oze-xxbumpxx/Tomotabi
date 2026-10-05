@@ -80,16 +80,14 @@ afterEach(() => {
 });
 
 describe("EntryScreen (/)", () => {
-  it("W-01: 保存値が有効なら前回の旅行のしおりへ", async () => {
+  it("W-01: 保存値が有効なら前回の旅行のホームへ", async () => {
     stubApi({ status: 200, body: meBody });
     window.localStorage.setItem(selectedKey, tripId);
 
     render(<EntryScreen />);
 
     await waitFor(() =>
-      expect(replaceMock).toHaveBeenCalledWith(
-        `/trips/${tripId}/itinerary`,
-      ),
+      expect(replaceMock).toHaveBeenCalledWith(`/trips/${tripId}/home`),
     );
     // 保存値は残す（次回も同じ旅行へ戻れる）。
     expect(window.localStorage.getItem(selectedKey)).toBe(tripId);
@@ -112,9 +110,7 @@ describe("EntryScreen (/)", () => {
       expect.objectContaining({ method: "GET" }),
     );
     expect(window.localStorage.getItem(selectedKey)).toBeNull();
-    expect(replaceMock).not.toHaveBeenCalledWith(
-      `/trips/${tripId}/itinerary`,
-    );
+    expect(replaceMock).not.toHaveBeenCalledWith(`/trips/${tripId}/home`);
   });
 
   it("W-03: 保存値が無ければ /trips へ", async () => {

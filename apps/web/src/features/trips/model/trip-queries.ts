@@ -1,9 +1,16 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ApiRequestError } from "@/shared/api/api-failure";
-import { getTrip, getTripItinerary, listTripsPage } from "../api/trips-api";
+import {
+  getHome,
+  getTrip,
+  getTripItinerary,
+  listTripsPage,
+} from "../api/trips-api";
 
 export const tripsListQueryKey = ["trips", "all"] as const;
 export const tripQueryKey = (tripId: string) => ["trip", tripId] as const;
+/** ホームのキーは`["home", tripId]`（日付を持たない1回取得）。 */
+export const homeQueryKey = (tripId: string) => ["home", tripId] as const;
 /**
  * しおりのキーは`["itinerary", tripId, date]`。URLでdateが省略された
  * 取得は`date = null`のキーに入る（サーバー既定の日）。
@@ -42,6 +49,24 @@ export function useTrip(tripId: string, options?: { enabled?: boolean }) {
     queryFn: () =>
       getTrip(tripId).match(
         (trip) => trip,
+        (failure) => {
+          throw new ApiRequestError(failure);
+        },
+      ),
+  });
+}
+
+/**
+ * ホーム（GET /trips/{tripId}/home）。旅行・表示の種類・予定の欄・
+ * 精算の欄・最近の記録を1回で返す（home応答のtripがヘッダーの
+ * データ元になる）。
+ */
+export function useHome(tripId: string) {
+  return useQuery({
+    queryKey: homeQueryKey(tripId),
+    queryFn: () =>
+      getHome(tripId).match(
+        (home) => home,
         (failure) => {
           throw new ApiRequestError(failure);
         },

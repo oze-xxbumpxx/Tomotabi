@@ -29,4 +29,5 @@ export type {
   PlanPatch,
 } from "./plan";
 export type { ProbeView } from "./probe";
+export type { Records, TimelineItem, TimelineItemKind } from "./record";
 export type { Trip, TripCreate, TripPage, TripRename, TripStatus } from "./trip";

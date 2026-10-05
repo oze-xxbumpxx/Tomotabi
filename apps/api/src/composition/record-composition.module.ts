@@ -5,6 +5,11 @@ import {
   FINANCE_UNIT_OF_WORK,
   type FinanceWorkContext,
 } from "../modules/record/adapter/outbound/finance-work-context";
+import {
+  RECORDS_READ_UNIT_OF_WORK,
+  type RecordsReadUnitOfWork,
+} from "../modules/record/adapter/outbound/records-read.port";
+import { PgRecordsReadUnitOfWork } from "../modules/record/infrastructure/pg-records-read.unit-of-work";
 import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-finance-unit-of-work";
 import { PlanningCompositionModule } from "./planning-composition.module";
 
@@ -31,9 +36,20 @@ const missingDatabase = (): Promise<never> =>
           ? new PgFinanceUnitOfWork(getPool())
           : { run: missingDatabase },
     },
+    {
+      provide: RECORDS_READ_UNIT_OF_WORK,
+      useFactory: (): RecordsReadUnitOfWork =>
+        useDatabase()
+          ? new PgRecordsReadUnitOfWork(getPool())
+          : { run: missingDatabase },
+    },
   ],
   // PlanningCompositionModuleを再輸出して、recordのUseCaseが時計・
   // 書き込みログを同じ実装で受け取れるようにする。
-  exports: [PlanningCompositionModule, FINANCE_UNIT_OF_WORK],
+  exports: [
+    PlanningCompositionModule,
+    FINANCE_UNIT_OF_WORK,
+    RECORDS_READ_UNIT_OF_WORK,
+  ],
 })
 export class RecordCompositionModule {}

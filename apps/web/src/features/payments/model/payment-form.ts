@@ -2,6 +2,7 @@ import { boundedTextLength } from "@/shared/lib/text-length";
 import { isPaymentYenAmount, yenToDecimalString } from "@/shared/lib/yen";
 import type {
   Participant,
+  Payment,
   PaymentCreate,
 } from "../api/payments-api";
 
@@ -316,4 +317,32 @@ export function valuesOfPendingBody(
     label: body.label ?? "",
     plan,
   };
+}
+
+/**
+ * サーバーが返した支払い1件からフォーム値を作る。支払いの詳細の
+ * 読み取り専用表示と、「正しい内容で支払いを記録」の初期値に使う
+ * （形はPendingPaymentBodyと同じなので同じ関数で逆算する）。
+ */
+export function valuesOfPayment(
+  payment: Payment,
+  me: Participant,
+  participants: readonly Participant[],
+  plan: SelectedPlan | null,
+): PaymentFormValues | null {
+  return valuesOfPendingBody(
+    {
+      amountYen: payment.amountYen,
+      payerUserId: payment.payerUserId,
+      allocations: payment.allocations.map((a) => ({
+        userId: a.userId,
+        percent: a.percent,
+      })),
+      label: payment.label ?? undefined,
+      planId: payment.planId ?? undefined,
+    },
+    me,
+    participants,
+    plan,
+  );
 }

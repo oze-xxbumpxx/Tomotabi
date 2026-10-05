@@ -2,7 +2,9 @@
 
 import {
   CalendarBlank,
+  CalendarCheck,
   CaretLeft,
+  CheckCircle,
   PencilSimple,
   Prohibit,
   Wallet,
@@ -22,10 +24,23 @@ import {
   usePlan,
   usePlanMutation,
   type PlanSave,
-  type PlanSaveState,
 } from "@/features/plans";
-import { useTrip } from "@/features/trips";
+import {
+  actorNameOf,
+  CREATE_ACHIEVEMENT_OPERATION,
+  CREATE_BOOKING_OPERATION,
+  createAchievementDraft,
+  createBookingDraft,
+  RecordRowView,
+  sendCreateAchievement,
+  sendCreateBooking,
+  useCreatePlanEvent,
+  usePlanPayments,
+} from "@/features/records";
+import { useBalance } from "@/features/payments";
+import { TripTabBar, useTrip } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import type { SaveState } from "@/shared/api/save-state";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { Sheet } from "@/shared/ui/sheet";
 import { takePendingToast } from "@/shared/lib/pending-toast";
@@ -38,12 +53,27 @@ import {
   RefetchFailed,
   Refetching,
 } from "@/shared/ui/state/refetch-failed";
+import { SaveUnknown } from "@/shared/ui/state/save-unknown";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
+import { StorageUnavailable } from "@/shared/ui/state/storage-unavailable";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 import { StatusText } from "@/shared/ui/status-text";
 import { Toast } from "@/shared/ui/toast";
 
 type Layer = "move" | "cancel";
+
+/** 達成を付けられる種類（取りやめた予定には付けられない）。 */
+const ACHIEVABLE_KINDS: ReadonlyArray<string> = [
+  "place",
+  "food",
+  "shopping",
+];
+/** 予約を付けられる種類（取りやめた予定にも付けられる）。 */
+const BOOKABLE_KINDS: ReadonlyArray<string> = [
+  "food",
+  "lodging",
+  "transport",
+];
 
 /**
  * `/trips/{tripId}/plans/{planId}`の予定の詳細（09）。種類・名前・時刻・
@@ -87,6 +117,17 @@ export function PlanDetailScreen({
     tripId,
     operation: CANCEL_PLAN_OPERATION,
   });
+  // 達成・予約の記録はこの画面から始まるので、その保留の照合もここで行う。
+  const achieveCheck = usePendingRequestCheck({
+    userId,
+    tripId,
+    operation: CREATE_ACHIEVEMENT_OPERATION,
+  });
+  const bookCheck = usePendingRequestCheck({
+    userId,
+    tripId,
+    operation: CREATE_BOOKING_OPERATION,
+  });
 
   const move = usePlanMutation({
     tripId,
@@ -110,6 +151,31 @@ export function PlanDetailScreen({
       setToast("取りやめにしました");
     },
   });
+  const createAchievement = useCreatePlanEvent({
+    tripId,
+    planId,
+    send: sendCreateAchievement,
+    userId,
+    check: achieveCheck.check,
+    onSucceeded: () => {
+      setToast("達成を記録しました");
+    },
+  });
+  const createBooking = useCreatePlanEvent({
+    tripId,
+    planId,
+    send: sendCreateBooking,
+    userId,
+    check: bookCheck.check,
+    onSucceeded: () => {
+      setToast("予約を記録しました");
+    },
+  });
+
+  // 関連する支払い（その予定に結びついたもの新しい順・最大3件）と、
+  // 記録の行の名前の解決に使う参加者。
+  const balance = useBalance(tripId);
+  const planPayments = usePlanPayments(tripId, planId);
 
   // 別画面での保存成功（編集）を遷移先で1回だけ知らせる。
   useEffect(() => {
@@ -148,6 +214,24 @@ export function PlanDetailScreen({
     }
   }, [move.state, refetchTrip]);
 
+  // 達成・予約の409（すでに記録がある・取りやめ・種類不可）は予定を
+  // 取り直して画面を「今付けられる操作」に合わせる（F-13）。
+  // RECORD_ALREADY_ACTIVEはもう一度付けるよう促さず静かに追いつく
+  // （E-03）。そのほかの409は理由を画面に出す。
+  const refetchPlan = planQuery.refetch;
+  useEffect(() => {
+    for (const save of [createAchievement, createBooking]) {
+      const s = save.state;
+      if (s.status !== "rejected" || s.httpStatus !== 409) {
+        continue;
+      }
+      void refetchPlan();
+      if (s.code === "RECORD_ALREADY_ACTIVE") {
+        save.backToEditing();
+      }
+    }
+  }, [createAchievement, createBooking, refetchPlan]);
+
   const backDate =
     from !== null && isLocalDateString(from)
       ? from
@@ -155,10 +239,19 @@ export function PlanDetailScreen({
   const backHref = `/trips/${tripId}/itinerary${backDate !== null ? `?date=${backDate}` : ""}`;
   const toItinerary = { label: "しおりに戻る", onClick: () => router.push(backHref) };
 
-  const saves: PlanSaveState[] = [move.state, cancel.state];
+  const saves: SaveState<unknown, unknown>[] = [
+    move.state,
+    cancel.state,
+    createAchievement.state,
+    createBooking.state,
+  ];
   const expired = saves.find(
-    (state): state is Extract<PlanSaveState, { status: "session-expired" }> =>
-      state.status === "session-expired",
+    (
+      state,
+    ): state is Extract<
+      SaveState<unknown, unknown>,
+      { status: "session-expired" }
+    > => state.status === "session-expired",
   );
   if (expired !== undefined || sheetExpired !== null) {
     const unconfirmed = expired?.unconfirmed === true || sheetExpired === true;
@@ -174,7 +267,12 @@ export function PlanDetailScreen({
 
   // 書き込みが403 / 404で拒否されたらC-2。新しいキーで回避しない（07 §10）。
   const writeNotAvailable = saves.find(
-    (state): state is Extract<PlanSaveState, { status: "rejected" }> =>
+    (
+      state,
+    ): state is Extract<
+      SaveState<unknown, unknown>,
+      { status: "rejected" }
+    > =>
       state.status === "rejected" &&
       (state.httpStatus === 403 || state.httpStatus === 404),
   );
@@ -278,6 +376,60 @@ export function PlanDetailScreen({
   const etag = `"${plan.version}"`;
   const canCancel = plan.cancelledAt === null;
 
+  // 「達成を記録」「予約済みを記録」は種類と取りやめで条件が分かれる
+  // （F-10）。すでに記録があるときは代わりに記録行が記録の絞り込みへ
+  // つながる（F-11・PlanDetailBody側）。
+  const canAchieve =
+    plan.cancelledAt === null &&
+    plan.achievement === null &&
+    ACHIEVABLE_KINDS.includes(plan.kind);
+  const canBook =
+    plan.booking === null && BOOKABLE_KINDS.includes(plan.kind);
+  // 保存中は同じボタンを押せない（F-12）。
+  const achieveBlocked =
+    createAchievement.state.status === "saving" ||
+    achieveCheck.check.status !== "none";
+  const bookBlocked =
+    createBooking.state.status === "saving" ||
+    bookCheck.check.status !== "none";
+
+  const participants = balance.data?.participants;
+  const nameOfUser = (uid: string) =>
+    actorNameOf(uid, participants, userId, displayName);
+
+  const createRejected = [createAchievement.state, createBooking.state].find(
+    (s): s is Extract<typeof s, { status: "rejected" }> =>
+      s.status === "rejected" &&
+      s.httpStatus !== 403 &&
+      s.httpStatus !== 404,
+  );
+
+  const mainAction = canAchieve
+    ? {
+        label: "達成を記録",
+        icon: (
+          <CheckCircle size={20} weight="fill" aria-hidden="true" />
+        ),
+        onPress: () => {
+          void createAchievement.submit(
+            createAchievementDraft(tripId, planId),
+          );
+        },
+        disabled: achieveBlocked || !online,
+      }
+    : canBook
+      ? {
+          label: "予約済みを記録",
+          icon: (
+            <CalendarCheck size={20} weight="fill" aria-hidden="true" />
+          ),
+          onPress: () => {
+            void createBooking.submit(createBookingDraft(tripId, planId));
+          },
+          disabled: bookBlocked || !online,
+        }
+      : undefined;
+
   const openLayer = (next: Layer) => {
     // 前回の拒否・競合は開き直したときに持ち越さない（結果不明は残す）。
     move.backToEditing();
@@ -305,6 +457,62 @@ export function PlanDetailScreen({
         />
       )}
       {planQuery.isRefetching && <Refetching />}
+
+      {/* 送り直しの確認（この画面で始める操作の保留が残っていれば出す） */}
+      {achieveCheck.check.status === "found" && (
+        <SaveUnknown
+          onConfirm={() => {
+            if (achieveCheck.check.status !== "found") {
+              return;
+            }
+            void createAchievement
+              .confirmRequest(achieveCheck.check.record)
+              .then(achieveCheck.reload);
+          }}
+          confirming={createAchievement.state.status === "saving"}
+        />
+      )}
+      {bookCheck.check.status === "found" && (
+        <SaveUnknown
+          onConfirm={() => {
+            if (bookCheck.check.status !== "found") {
+              return;
+            }
+            void createBooking
+              .confirmRequest(bookCheck.check.record)
+              .then(bookCheck.reload);
+          }}
+          confirming={createBooking.state.status === "saving"}
+        />
+      )}
+      {createAchievement.state.status === "unknown" && (
+        <SaveUnknown
+          onConfirm={() => void createAchievement.confirmWithSameRequest()}
+          confirming={false}
+        />
+      )}
+      {createBooking.state.status === "unknown" && (
+        <SaveUnknown
+          onConfirm={() => void createBooking.confirmWithSameRequest()}
+          confirming={false}
+        />
+      )}
+      {(achieveCheck.check.status === "unavailable" ||
+        bookCheck.check.status === "unavailable" ||
+        createAchievement.state.status === "storage-unavailable" ||
+        createBooking.state.status === "storage-unavailable") && (
+        <StorageUnavailable />
+      )}
+      {createRejected !== undefined && (
+        <StatusText tone="error">
+          {createRejected.code === "PLAN_CANCELLED"
+            ? "取りやめた予定には記録できません"
+            : createRejected.code === "PLAN_KIND_NOT_SUPPORTED"
+              ? "この種類の予定には記録できません"
+              : "記録できませんでした"}
+        </StatusText>
+      )}
+
       <header className="plan-detail-header">
         <Link className="plan-back" href={backHref}>
           <CaretLeft size={18} weight="bold" aria-hidden="true" />
@@ -333,6 +541,27 @@ export function PlanDetailScreen({
           <Wallet size={18} aria-hidden="true" />
           支払いを記録
         </Link>
+        {/* 達成と予約の両方を付けられる予定では、予約は副ボタンにする
+            （主ボタンは下のタブの上に達成を記録として出る）。 */}
+        {canAchieve && canBook && (
+          <button
+            type="button"
+            className="btn-outline"
+            disabled={bookBlocked || !online}
+            onClick={() => {
+              void createBooking.submit(createBookingDraft(tripId, planId));
+            }}
+          >
+            <CalendarCheck size={18} aria-hidden="true" />
+            予約済みを記録
+          </button>
+        )}
+        {/* 予約はこのアプリの中の記録であることを添える（F-08） */}
+        {canBook && (
+          <p className="record-note">
+            このアプリの中の記録です。お店の予約は変わりません
+          </p>
+        )}
         <button
           type="button"
           className="btn-outline"
@@ -352,6 +581,39 @@ export function PlanDetailScreen({
           </button>
         )}
       </div>
+      {/* その予定に結びついた支払いを新しい順に最大3件（F-14） */}
+      <section className="plan-payments" aria-label="関連する支払い">
+        <h2 className="plan-payments-title">関連する支払い</h2>
+        {planPayments.isPending ? (
+          <Loading />
+        ) : planPayments.data === undefined ? (
+          <FetchFailed
+            message="支払いを取得できませんでした"
+            onRetry={() => void planPayments.refetch()}
+          />
+        ) : planPayments.data.length === 0 ? (
+          <p className="record-empty-text">まだありません</p>
+        ) : (
+          <div className="record-card">
+            {planPayments.data.map((item) => (
+              <RecordRowView
+                key={item.id}
+                tripId={tripId}
+                item={item}
+                actorName={nameOfUser(item.actorId)}
+                nameOfUser={nameOfUser}
+                onOpenEvent={() => {}}
+              />
+            ))}
+          </div>
+        )}
+        <Link
+          className="btn-outline plan-payments-more"
+          href={`/trips/${tripId}/records?planId=${planId}`}
+        >
+          記録で見る
+        </Link>
+      </section>
       {layer === "move" &&
         (tripQuery.data !== undefined ? (
           <PlanMoveSheet
@@ -406,6 +668,7 @@ export function PlanDetailScreen({
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
+      <TripTabBar tripId={tripId} current="itinerary" action={mainAction} />
     </main>
   );
 }

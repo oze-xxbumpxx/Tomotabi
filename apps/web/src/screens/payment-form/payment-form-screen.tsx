@@ -17,7 +17,9 @@ import {
   PaymentFormFields,
   useBalance,
   useCreatePayment,
+  usePayment,
   validatePaymentForm,
+  valuesOfPayment,
   valuesOfPendingBody,
   type PaymentFormChange,
   type PaymentFormErrors,
@@ -86,10 +88,13 @@ function rejectedMessage(
 export function PaymentFormScreen({
   tripId,
   planId,
+  fromPaymentId,
 }: {
   tripId: string;
   /** URLの`planId`（予定の詳細から開いた入口。無ければnull）。 */
   planId: string | null;
+  /** URLの`from`（支払いの詳細の「正しい内容で支払いを記録」。写す支払いのID。無ければnull）。 */
+  fromPaymentId?: string | null;
 }) {
   const router = useRouter();
   const { state: meState, reload: reloadMe } = useMe();
@@ -100,7 +105,9 @@ export function PaymentFormScreen({
   const [values, setValues] = useState<PaymentFormValues>(EMPTY_VALUES);
   const [errors, setErrors] = useState<PaymentFormErrors>({});
   const [hydrated, setHydrated] = useState(false);
+  const [fromSeeded, setFromSeeded] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const from = fromPaymentId ?? null;
   // URLの予定の確認: pending（getPlanで確認中）→ none（選択済み・解除）
   // / failed（確認に失敗。勝手に関連なしへ変えず再取得か解除を待つ）。
   const [urlPlanCheck, setUrlPlanCheck] = useState<
@@ -129,12 +136,18 @@ export function PaymentFormScreen({
       ? paymentBodyFromJson(pendingRecord.bodyJson)
       : null;
 
-  // 確認が要る予定は1件だけ: 固定表示は保留のplanId、編集中はURLのplanId。
+  // 確認が要る予定は1件だけ: 固定表示は保留のplanId、訂正入口は
+  // 写す支払いのplanId、編集中はURLのplanId。
+  const fromPayment = usePayment(tripId, from ?? "", {
+    enabled: from !== null && !locked,
+  });
   const displayPlanId = locked
     ? (storedBody?.planId ?? null)
-    : urlPlanCheck !== "none"
-      ? planId
-      : null;
+    : from !== null
+      ? (fromPayment.data?.planId ?? null)
+      : urlPlanCheck !== "none"
+        ? planId
+        : null;
   const planQuery = usePlan(tripId, displayPlanId ?? "", {
     enabled: displayPlanId !== null,
   });
@@ -149,6 +162,59 @@ export function PaymentFormScreen({
       setHydrated(true);
     }
   }, [locked, hydrated, meUserId]);
+
+  // 「正しい内容で支払いを記録」: 写す支払いと予定・参加者が揃ったら
+  // 金額・払った人・負担の分け方・用途・関連する予定を一度だけ写す
+  // （形が確かめられない支払いや取得に失敗した予定は空のままにする）。
+  useEffect(() => {
+    if (locked || fromSeeded || from === null) {
+      return;
+    }
+    const source = fromPayment.data;
+    if (
+      source === undefined ||
+      meParticipant === undefined ||
+      participants.length === 0
+    ) {
+      return;
+    }
+    const seedPlan =
+      source.planId !== null && planQuery.data !== undefined
+        ? {
+            id: planQuery.data.id,
+            date: planQuery.data.date,
+            name: planQuery.data.name,
+          }
+        : null;
+    if (
+      source.planId !== null &&
+      planQuery.data === undefined &&
+      !planQuery.isError
+    ) {
+      // 予定の取得待ち（失敗したら関連なしで写す）。
+      return;
+    }
+    const seeded = valuesOfPayment(
+      source,
+      meParticipant,
+      participants,
+      seedPlan,
+    );
+    if (seeded === null) {
+      return;
+    }
+    setValues(seeded);
+    setFromSeeded(true);
+    setHydrated(true);
+  }, [
+    locked,
+    fromSeeded,
+    from,
+    fromPayment.data,
+    meParticipant,
+    participants,
+    planQuery,
+  ]);
 
   // URLの予定をgetPlanで確かめて選んだ状態にする（別の旅行の予定は
   // 404になりfailedへ。選び直しは選んだ日のgetItineraryを使う）。

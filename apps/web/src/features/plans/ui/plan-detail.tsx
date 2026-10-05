@@ -107,7 +107,10 @@ export function PlanDetailBody({
       {hasRecords && (
       <section className="plan-records" aria-label="記録">
         {plan.achievement !== null && (
-          <div className="plan-record-row">
+          <Link
+            className="plan-record-row plan-record-row-link"
+            href={`/trips/${tripId}/records?recordId=${plan.achievement.id}&recordType=achievement`}
+          >
             <CheckCircle
               size={20}
               className="plan-record-icon-achieved"
@@ -120,10 +123,13 @@ export function PlanDetailBody({
                 {formatDateTime(plan.achievement.createdAt)} に記録
               </span>
             </div>
-          </div>
+          </Link>
         )}
         {plan.booking !== null && (
-          <div className="plan-record-row">
+          <Link
+            className="plan-record-row plan-record-row-link"
+            href={`/trips/${tripId}/records?recordId=${plan.booking.id}&recordType=booking`}
+          >
             <CalendarCheck
               size={20}
               className="plan-record-icon-booked"
@@ -136,7 +142,7 @@ export function PlanDetailBody({
                 {formatDateTime(plan.booking.createdAt)} に記録
               </span>
             </div>
-          </div>
+          </Link>
         )}
         {cancelled && plan.cancelledAt !== null && (
           <div className="plan-record-row">

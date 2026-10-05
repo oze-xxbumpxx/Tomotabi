@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { ApiRequestError } from "@/shared/api/api-failure";
-import { getBalance } from "../api/payments-api";
+import { getBalance, getPayment } from "../api/payments-api";
 
 /** 残額のキーは`["balance", tripId]`（設計書「クエリと再取得」の残額）。 */
 export const balanceQueryKey = (tripId: string) =>
   ["balance", tripId] as const;
+
+/** 支払い1件のキーは`["payment", tripId, paymentId]`（支払いの詳細のデータ元）。 */
+export const paymentQueryKey = (tripId: string, paymentId: string) =>
+  ["payment", tripId, paymentId] as const;
 
 /**
  * 確認の一覧・確認の詳細のキー。支払いの保存が成功したあとに
@@ -28,6 +32,28 @@ export function useBalance(tripId: string, options?: { enabled?: boolean }) {
     queryFn: () =>
       getBalance(tripId).match(
         (balance) => balance,
+        (failure) => {
+          throw new ApiRequestError(failure);
+        },
+      ),
+  });
+}
+
+/**
+ * 支払い1件（GET /trips/{tripId}/payments/{paymentId}）。支払いの詳細の
+ * データ元。取り消し状態は`cancellation`に入る。
+ */
+export function usePayment(
+  tripId: string,
+  paymentId: string,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: paymentQueryKey(tripId, paymentId),
+    enabled: options?.enabled ?? true,
+    queryFn: () =>
+      getPayment(tripId, paymentId).match(
+        (payment) => payment,
         (failure) => {
           throw new ApiRequestError(failure);
         },

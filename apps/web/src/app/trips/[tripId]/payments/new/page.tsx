@@ -11,17 +11,34 @@ export default async function PaymentNewPage({
   searchParams,
 }: {
   params: Promise<{ tripId: string }>;
-  searchParams: Promise<{ planId?: string | string[] }>;
+  searchParams: Promise<{
+    planId?: string | string[];
+    from?: string | string[];
+  }>;
 }) {
   const { tripId } = await params;
   if (!isUuidString(tripId)) {
     notFound();
   }
-  const raw = (await searchParams).planId;
-  const planIdParam = Array.isArray(raw) ? raw[0] : raw;
+  const raw = await searchParams;
+  const planIdParam = Array.isArray(raw.planId)
+    ? raw.planId[0]
+    : raw.planId;
   const planId =
     planIdParam !== undefined && isUuidString(planIdParam)
       ? planIdParam
       : null;
-  return <PaymentFormScreen tripId={tripId} planId={planId} />;
+  // 「正しい内容で支払いを記録」の写す支払い（形の合わない指定は無し扱い）。
+  const fromParam = Array.isArray(raw.from) ? raw.from[0] : raw.from;
+  const fromPaymentId =
+    fromParam !== undefined && isUuidString(fromParam)
+      ? fromParam
+      : null;
+  return (
+    <PaymentFormScreen
+      tripId={tripId}
+      planId={planId}
+      fromPaymentId={fromPaymentId}
+    />
+  );
 }

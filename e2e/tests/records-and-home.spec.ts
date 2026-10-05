@@ -4,6 +4,7 @@
 
 import type { Locator, Page } from "@playwright/test";
 
+import { daysFromToday, formatDayLabel } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
 
@@ -11,7 +12,7 @@ type PlanInput = {
   name: string;
   /** 種類の選択肢の読み上げ名（`場所`・`食べ処`など）。 */
   kindLabel: string;
-  /** 期間内の日付の表示（`11/7 土`の形）。 */
+  /** 期間内の日付の表示（`11/7 土`の形。formatDayLabelで作る）。 */
   dateLabel: string;
 };
 
@@ -94,14 +95,14 @@ function recordRow(page: Page, name: string): Locator {
     });
 }
 
-// どの試験も開始日より前に実行されるよう、旅行の期間は未来に置く
-// （ホームの表示の種類を「出発前」に固定する。11/7は土曜）。
+// いつ走らせてもホームの表示の種類が「出発前」になるよう、旅行の期間は
+// 実行日の日本時間の今日から数えて作る（決め打ちだと日が変わると落ちる）。
 const TRIP = {
   name: "広島 2 泊",
-  startsOn: "2026-11-07", // 11/7 土
-  endsOn: "2026-11-09", // 11/9 月
+  startsOn: daysFromToday(30),
+  endsOn: daysFromToday(32),
 };
-const DAY_ONE_LABEL = "11/7 土";
+const DAY_ONE_LABEL = formatDayLabel(TRIP.startsOn);
 
 test("RE-01: ホームから達成を付け、記録で取り消して付け直す", async ({
   hinataPage: page,
@@ -196,8 +197,8 @@ test("RE-02: 終了すると予定の欄が消えて精算が上に出る。終�
 }) => {
   const tripId = await createTrip(page, {
     name: "尾道 2 泊",
-    startsOn: "2026-11-07",
-    endsOn: "2026-11-09",
+    startsOn: daysFromToday(30),
+    endsOn: daysFromToday(32),
   });
 
   // 精算の欄に受け渡しが出るよう、先に支払いを入れておく。
@@ -301,8 +302,8 @@ test("RE-03: 確認を作ったあと支払いを取り消し、了承して記�
 }) => {
   const tripId = await createTrip(page, {
     name: "倉敷 1 泊",
-    startsOn: "2026-11-07",
-    endsOn: "2026-11-08",
+    startsOn: daysFromToday(30),
+    endsOn: daysFromToday(31),
   });
 
   // ひなた 2,000円（折半）→ あおい → ひなた 1,000円 の確認を作る。
@@ -392,8 +393,8 @@ test("RE-04: 予定の編集で応答が届かなければ、再読み込みの�
 }) => {
   await createTrip(page, {
     name: "福山 1 泊",
-    startsOn: "2026-11-07",
-    endsOn: "2026-11-08",
+    startsOn: daysFromToday(30),
+    endsOn: daysFromToday(31),
   });
   await addPlan(page, {
     name: "福山城",

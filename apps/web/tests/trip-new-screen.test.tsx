@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -9,7 +10,15 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Trip } from "@tomotabi/contracts";
+import { CREATE_TRIP_OPERATION } from "@/features/trips";
+import { createMutationRequest } from "@/shared/api/mutation-request";
 import { createQueryClient } from "@/shared/api/query-client";
+import {
+  findPendingRequest,
+  NEW_TRIP_ID,
+  savePendingRequest,
+  toPendingRequestRecord,
+} from "@/shared/browser/pending-requests";
 
 const { replaceMock, pushMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
@@ -105,11 +114,21 @@ function fillDates(startsOn: string, endsOn: string): void {
   });
 }
 
-afterEach(() => {
+async function resetDb(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const request = indexedDB.deleteDatabase("tomotabi");
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  });
+}
+
+afterEach(async () => {
   cleanup();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   window.localStorage.clear();
+  await resetDb();
 });
 
 describe("TripNewScreen (/trips/new)", () => {
@@ -117,7 +136,7 @@ describe("TripNewScreen (/trips/new)", () => {
     stubApi(() => new Response(JSON.stringify(tripBody), { status: 201 }));
     renderScreen();
 
-    fireEvent.change(screen.getByLabelText("旅行名"), {
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
       target: { value: "   " },
     });
     fillDates("2026-10-12", "2026-10-14");
@@ -140,7 +159,7 @@ describe("TripNewScreen (/trips/new)", () => {
     );
     renderScreen();
 
-    fireEvent.change(screen.getByLabelText("旅行名"), {
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
       target: { value: "あ".repeat(101) },
     });
     fillDates("2026-10-14", "2026-10-12");
@@ -165,7 +184,7 @@ describe("TripNewScreen (/trips/new)", () => {
     renderScreen();
 
     const emojiName = "🍡".repeat(51);
-    fireEvent.change(screen.getByLabelText("旅行名"), {
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
       target: { value: emojiName },
     });
     fillDates("2026-10-12", "2026-10-14");
@@ -186,7 +205,7 @@ describe("TripNewScreen (/trips/new)", () => {
     renderScreen();
 
     const emojiName = "😀".repeat(100);
-    fireEvent.change(screen.getByLabelText("旅行名"), {
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
       target: { value: emojiName },
     });
     fillDates("2026-10-12", "2026-10-14");
@@ -212,7 +231,7 @@ describe("TripNewScreen (/trips/new)", () => {
     );
     renderScreen();
 
-    fireEvent.change(screen.getByLabelText("旅行名"), {
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
       target: { value: "  沖縄  " },
     });
     fillDates("2026-10-12", "2026-10-14");
@@ -265,7 +284,7 @@ describe("TripNewScreen (/trips/new)", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderScreen();
 
-    fireEvent.change(screen.getByLabelText("旅行名"), {
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
       target: { value: "沖縄" },
     });
     fillDates("2026-10-12", "2026-10-14");
@@ -276,7 +295,9 @@ describe("TripNewScreen (/trips/new)", () => {
     expect(
       await screen.findByText("保存されたか確認できません"),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("旅行名")).toHaveAttribute("readonly");
+    expect(await screen.findByLabelText("旅行名")).toHaveAttribute(
+      "readonly",
+    );
     expect(
       screen.queryByRole("button", { name: "旅行をつくる" }),
     ).not.toBeInTheDocument();
@@ -309,7 +330,7 @@ describe("TripNewScreen (/trips/new)", () => {
     // シートの後ろに元の画面（旅行一覧）が透けて見える。
     expect(await screen.findByText("沖縄")).toBeInTheDocument();
     // 開いたときのフォーカスは「×」ではなく最初の欄。
-    expect(screen.getByLabelText("旅行名")).toHaveFocus();
+    expect(await screen.findByLabelText("旅行名")).toHaveFocus();
   });
 
   it("「やめる」は送らず旅行一覧へ戻る", async () => {
@@ -317,9 +338,151 @@ describe("TripNewScreen (/trips/new)", () => {
     renderScreen();
 
     await screen.findByRole("dialog", { name: "新しい旅行" });
+    // 保留の照合が終わってフォームが出るまで待つ。
+    await screen.findByLabelText("旅行名");
     await userEvent.click(screen.getByRole("button", { name: "やめる" }));
 
     expect(pushMock).toHaveBeenCalledWith("/trips");
     expect(writeCalls(fetchMock)).toHaveLength(0);
+  });
+
+  it("RW-02: 「旅行をつくる」は new-trip の操作として端末に残してから送る", async () => {
+    // 作成の応答を保留にして、送信の前に端末へ残ったことを確かめる。
+    const fetchMock = vi.fn(
+      (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = urlOf(input);
+        if (url === "/api/me") {
+          return Promise.resolve(json(meBody));
+        }
+        if (url === "/api/trips" && init?.method === "POST") {
+          return new Promise<Response>(() => {});
+        }
+        if (url.startsWith("/api/trips")) {
+          return Promise.resolve(
+            json({ items: [tripBody], nextCursor: null }),
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ code: "NOT_FOUND" }), {
+            status: 404,
+          }),
+        );
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderScreen();
+
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
+      target: { value: "沖縄" },
+    });
+    fillDates("2026-10-12", "2026-10-14");
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行をつくる" }),
+    );
+
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
+    // 送った要求は、new-trip の tripId・create-trip の操作として
+    // 端末に残っている（応答はまだ無い）。
+    const lookup = await findPendingRequest({
+      userId,
+      tripId: NEW_TRIP_ID,
+      operation: CREATE_TRIP_OPERATION,
+    });
+    expect(lookup.status).toBe("found");
+    if (lookup.status !== "found") {
+      throw new Error("unreachable");
+    }
+    expect(lookup.record.url).toBe("/api/trips");
+    const body =
+      lookup.record.bodyJson !== null
+        ? (JSON.parse(lookup.record.bodyJson) as { name?: string })
+        : null;
+    expect(body?.name).toBe("沖縄");
+    // 送った要求と端末に残した要求は同じ冪等キー。
+    const [, init] = writeCalls(fetchMock)[0];
+    expect(new Headers(init?.headers).get("idempotency-key")).toBe(
+      lookup.record.idempotencyKey,
+    );
+  });
+
+  it("RW-02: 端末に残せなければ送らずに止めて案内を出す", async () => {
+    const fetchMock = stubApi(() => json(tripBody, 201));
+    renderScreen();
+
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
+      target: { value: "沖縄" },
+    });
+    fillDates("2026-10-12", "2026-10-14");
+
+    const putSpy = vi
+      .spyOn(IDBObjectStore.prototype, "put")
+      .mockImplementation(() => {
+        throw new DOMException("writes blocked", "InvalidStateError");
+      });
+    try {
+      await userEvent.click(
+        screen.getByRole("button", { name: "旅行をつくる" }),
+      );
+      expect(
+        await screen.findByText(
+          "この端末では保存の確認に使う領域が使えません",
+        ),
+      ).toBeInTheDocument();
+      expect(writeCalls(fetchMock)).toHaveLength(0);
+    } finally {
+      putSpy.mockRestore();
+    }
+  });
+
+  it("RW-04: 新規作成の保留があれば欄を固定して戻し、同じ内容で確認できる", async () => {
+    const record = toPendingRequestRecord({
+      userId,
+      tripId: NEW_TRIP_ID,
+      request: createMutationRequest({
+        operation: CREATE_TRIP_OPERATION,
+        url: "/api/trips",
+        method: "POST",
+        body: {
+          name: "沖縄",
+          startsOn: "2026-10-12",
+          endsOn: "2026-10-14",
+        },
+      }),
+    });
+    await savePendingRequest(record);
+    const fetchMock = stubApi(() => json(tripBody, 201));
+    renderScreen();
+
+    // 欄は残した内容で固定して戻し、保存のボタンは出さない。
+    expect(
+      await screen.findByText("保存されたか確認できません"),
+    ).toBeInTheDocument();
+    const nameInput = await screen.findByLabelText("旅行名");
+    expect(nameInput).toHaveAttribute("readonly");
+    expect(nameInput).toHaveValue("沖縄");
+    expect(screen.getByLabelText("開始日")).toHaveAttribute("readonly");
+    expect(
+      screen.queryByRole("button", { name: "旅行をつくる" }),
+    ).not.toBeInTheDocument();
+
+    // 「同じ内容で確認する」は保存済みの要求をそのまま送る。
+    await userEvent.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/itinerary`,
+      ),
+    );
+    const [url, init] = writeCalls(fetchMock)[0];
+    expect(url).toBe("/api/trips");
+    expect(new Headers(init?.headers).get("idempotency-key")).toBe(
+      record.idempotencyKey,
+    );
+    expect(JSON.parse(String(init?.body))).toEqual({
+      name: "沖縄",
+      startsOn: "2026-10-12",
+      endsOn: "2026-10-14",
+    });
   });
 });

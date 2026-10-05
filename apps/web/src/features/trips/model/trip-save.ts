@@ -5,6 +5,8 @@ import type { ApiFailure } from "@/shared/api/api-failure";
 import type { ApiSuccess } from "@/shared/api/api-result";
 import type { MutationRequest } from "@/shared/api/mutation-request";
 import { useSaveState, type SaveState } from "@/shared/api/save-state";
+import { NEW_TRIP_ID } from "@/shared/browser/pending-requests";
+import type { PendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { getTripWithMeta, sendCreateTrip } from "../api/trips-api";
 
 /**
@@ -39,16 +41,43 @@ export function invalidateTripViews(
 
 type OnTripSaved = (result: ApiSuccess<Trip>) => void;
 
-/** 旅行の作成（POST /trips）。If-Matchは付けない。 */
-export function useCreateTrip(options?: {
+/** 送る直前に端末に残す設定。利用者が取れないあいだ（null）は残さない。 */
+function pendingOf(input: {
+  userId: string | null;
+  tripId: string;
+  check?: PendingRequestCheck;
+}): {
+  userId: string;
+  tripId: string;
+  check?: PendingRequestCheck;
+} | null {
+  return input.userId === null
+    ? null
+    : { userId: input.userId, tripId: input.tripId, check: input.check };
+}
+
+/**
+ * 旅行の作成（POST /trips）。If-Matchは付けない。
+ * 送る直前に端末に残す要求の旅行のIDは、送る時点でIDが無いので
+ * 決まった値`new-trip`を使う（ADR-0006・設計書「端末に残す仕組みの広げ方」）。
+ */
+export function useCreateTrip(options: {
+  /** 保留の照合に使う利用者のID。未ログインのあいだはnull（残さない）。 */
+  userId: string | null;
+  check?: PendingRequestCheck;
   onSucceeded?: OnTripSaved;
 }): TripSave {
   const queryClient = useQueryClient();
   return useSaveState<Trip, Trip>({
     send: sendCreateTrip,
+    pendingRequest: pendingOf({
+      userId: options.userId,
+      tripId: NEW_TRIP_ID,
+      check: options.check,
+    }),
     onSucceeded: (result) => {
       invalidateTripViews(queryClient, null);
-      options?.onSucceeded?.(result);
+      options.onSucceeded?.(result);
     },
   });
 }
@@ -61,11 +90,19 @@ export function useCreateTrip(options?: {
 export function useTripMutation(options: {
   tripId: string;
   send: TripSend;
+  /** 保留の照合に使う利用者のID。nullのあいだは端末に残さない。 */
+  userId: string | null;
+  check?: PendingRequestCheck;
   onSucceeded?: OnTripSaved;
 }): TripSave {
   const queryClient = useQueryClient();
   return useSaveState<Trip, Trip>({
     send: options.send,
+    pendingRequest: pendingOf({
+      userId: options.userId,
+      tripId: options.tripId,
+      check: options.check,
+    }),
     fetchLatest: () =>
       getTripWithMeta(options.tripId).map((latest) => ({
         ...latest,

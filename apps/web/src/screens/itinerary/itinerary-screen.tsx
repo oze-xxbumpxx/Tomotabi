@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  ArrowsLeftRight,
-  BookOpenText,
-  Plus,
-  WifiSlash,
-} from "@phosphor-icons/react";
+import { Plus } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,18 +13,22 @@ import {
   PlanCard,
 } from "@/features/plans";
 import {
+  FINISH_TRIP_OPERATION,
   FinishTripDialog,
   sendFinishTrip,
   sendStartTrip,
+  START_TRIP_OPERATION,
   TripEditSheet,
   TripHeader,
   TripMenu,
+  TripTabBar,
   useTrip,
   useTripItinerary,
   useTripMutation,
   type TripSaveState,
 } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import {
   clearSelectedTripId,
   saveSelectedTripId,
@@ -61,8 +60,10 @@ type Layer = "menu" | "edit" | "finish";
  * `/trips/{tripId}/itinerary`のしおり（08）。旅行ヘッダー・日付バー
  * （期間の日を並べ、選択はURLの`date`で再現）と予定の一覧。
  * `date`を省略するとサーバーの既定、期間外なら「旅行期間外です」。
- * 下部のタブは「しおり」と「精算」。開けた旅行はその人の「前回の旅行」
- * として保存する（F-23）。
+ * 下部のタブは共通の下のタブ（TripTabBar）。開けた旅行はその人の
+ * 「前回の旅行」として保存する（F-23）。開始・終了の書き込みは送る
+ * 直前に端末に残し、保留があればその操作の画面に送り直しの確認を出す
+ * （ADR-0006・F-70〜F-73）。
  */
 export function ItineraryScreen({
   tripId,
@@ -83,9 +84,26 @@ export function ItineraryScreen({
   const [sheetExpired, setSheetExpired] = useState<boolean | null>(null);
   const [sheetNotAvailable, setSheetNotAvailable] = useState(false);
 
+  const userId = meState.status === "ready" ? meState.me.user.id : null;
+  const displayName =
+    meState.status === "ready" ? meState.me.user.displayName : null;
+
+  const startCheck = usePendingRequestCheck({
+    userId,
+    tripId,
+    operation: START_TRIP_OPERATION,
+  });
+  const finishCheck = usePendingRequestCheck({
+    userId,
+    tripId,
+    operation: FINISH_TRIP_OPERATION,
+  });
+
   const start = useTripMutation({
     tripId,
     send: sendStartTrip,
+    userId,
+    check: startCheck.check,
     onSucceeded: () => {
       setLayer(null);
       setToast("旅行を開始しました");
@@ -94,6 +112,8 @@ export function ItineraryScreen({
   const finish = useTripMutation({
     tripId,
     send: sendFinishTrip,
+    userId,
+    check: finishCheck.check,
     onSucceeded: () => {
       setLayer(null);
       setToast("旅行を終了しました");
@@ -104,10 +124,6 @@ export function ItineraryScreen({
     pending: signOutPending,
     failed: signOutFailed,
   } = useSignOut();
-
-  const userId = meState.status === "ready" ? meState.me.user.id : null;
-  const displayName =
-    meState.status === "ready" ? meState.me.user.displayName : null;
 
   const handleSignOut = async () => {
     if (await signOut(userId)) {
@@ -425,6 +441,7 @@ export function ItineraryScreen({
           etag={etag}
           displayName={displayName}
           start={start}
+          startPending={startCheck}
           onEdit={() => setLayer("edit")}
           onRequestFinish={() => {
             finish.backToEditing();
@@ -447,6 +464,7 @@ export function ItineraryScreen({
         <TripEditSheet
           trip={trip}
           etag={etag}
+          userId={userId}
           onClose={() => setLayer(null)}
           onSaved={() => {
             setLayer(null);
@@ -467,6 +485,7 @@ export function ItineraryScreen({
           trip={trip}
           etag={etag}
           finish={finish}
+          finishPending={finishCheck}
           onClose={() => {
             if (finish.state.status === "rejected") {
               void itinerary.refetch();
@@ -478,36 +497,8 @@ export function ItineraryScreen({
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
-      {/* 下部の主ボタン「支払いを記録」（v3 11。オフラインは灰色の固定表示）。 */}
-      {online ? (
-        <Link
-          className="main-action"
-          href={`/trips/${tripId}/payments/new`}
-        >
-          <Plus size={20} weight="bold" aria-hidden="true" />
-          支払いを記録
-        </Link>
-      ) : (
-        <span className="main-action main-action-offline" aria-disabled="true">
-          <WifiSlash size={18} weight="bold" aria-hidden="true" />
-          支払いを記録
-        </span>
-      )}
-      <nav className="tabbar" aria-label="タブ">
-        <div className="tabbar-inner">
-          <span className="tabbar-item tabbar-item-current" aria-current="page">
-            <BookOpenText size={18} weight="fill" aria-hidden="true" />
-            しおり
-          </span>
-          <Link
-            className="tabbar-item"
-            href={`/trips/${tripId}/settlement`}
-          >
-            <ArrowsLeftRight size={18} weight="bold" aria-hidden="true" />
-            精算
-          </Link>
-        </div>
-      </nav>
+      {/* 下部の主ボタン「支払いを記録」と4つのタブ（共通の部品）。 */}
+      <TripTabBar tripId={tripId} current="itinerary" />
     </main>
   );
 }

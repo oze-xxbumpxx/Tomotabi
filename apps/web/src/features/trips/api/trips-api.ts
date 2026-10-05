@@ -98,9 +98,19 @@ export function getTripItinerary(
 
 // ---- 変更要求の組み立て（MutationDraft） ----
 
+/**
+ * 各書き込みの操作名。端末に残した保留は「同じ利用者・旅行・操作」で
+ * 探すので、保留の照合にもこの値を使う。
+ */
+export const CREATE_TRIP_OPERATION = "create-trip";
+export const RENAME_TRIP_OPERATION = "rename-trip";
+export const UPDATE_TRIP_PERIOD_OPERATION = "update-trip-period";
+export const START_TRIP_OPERATION = "start-trip";
+export const FINISH_TRIP_OPERATION = "finish-trip";
+
 export function createTripDraft(values: TripCreate): MutationDraft {
   return {
-    operation: "create-trip",
+    operation: CREATE_TRIP_OPERATION,
     url: getCreateTripUrl(),
     method: "POST",
     body: values,
@@ -114,7 +124,7 @@ export function renameTripDraft(
 ): MutationDraft {
   const body: TripRename = { name };
   return {
-    operation: "rename-trip",
+    operation: RENAME_TRIP_OPERATION,
     url: getRenameTripUrl(tripId),
     method: "PATCH",
     body,
@@ -128,7 +138,7 @@ export function updateTripPeriodDraft(
   ifMatch: string | null,
 ): MutationDraft {
   return {
-    operation: "update-trip-period",
+    operation: UPDATE_TRIP_PERIOD_OPERATION,
     url: getUpdateTripPeriodUrl(tripId),
     method: "PUT",
     body: period,
@@ -141,7 +151,7 @@ export function startTripDraft(
   ifMatch: string | null,
 ): MutationDraft {
   return {
-    operation: "start-trip",
+    operation: START_TRIP_OPERATION,
     url: getStartTripUrl(tripId),
     method: "POST",
     body: null,
@@ -154,7 +164,7 @@ export function finishTripDraft(
   ifMatch: string | null,
 ): MutationDraft {
   return {
-    operation: "finish-trip",
+    operation: FINISH_TRIP_OPERATION,
     url: getFinishTripUrl(tripId),
     method: "POST",
     body: null,

@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -41,6 +42,15 @@ vi.mock("@/shared/lib/use-now", () => ({
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
 import { PlanDetailScreen } from "@/screens/plan-detail/plan-detail-screen";
 import { PlanFormScreen } from "@/screens/plan-form/plan-form-screen";
+import {
+  CREATE_PLAN_OPERATION,
+  MOVE_PLAN_OPERATION,
+} from "@/features/plans";
+import { createMutationRequest } from "@/shared/api/mutation-request";
+import {
+  savePendingRequest,
+  toPendingRequestRecord,
+} from "@/shared/browser/pending-requests";
 
 const userId = "550e8400-e29b-41d4-a716-446655440000";
 const otherUserId = "3f7c1f68-9c05-4f2e-9b4c-2d5b1a90f811";
@@ -209,12 +219,29 @@ function writeCalls(fetchMock: ReturnType<typeof vi.fn>) {
   );
 }
 
-afterEach(() => {
+async function resetDb(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const request = indexedDB.deleteDatabase("tomotabi");
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  });
+}
+
+/** 端末に残した保留の照合が終わるまで待ってから押す。 */
+async function clickWhenEnabled(name: string | RegExp) {
+  const button = await screen.findByRole("button", { name });
+  await waitFor(() => expect(button).toBeEnabled());
+  await userEvent.click(button);
+}
+
+afterEach(async () => {
   cleanup();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   window.localStorage.clear();
   nowRef.value = null;
+  await resetDb();
 });
 
 describe("ItineraryScreen の予定一覧（08）", () => {
@@ -628,7 +655,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     await userEvent.click(
       screen.getByRole("radio", { name: "10/14 水" }),
     );
-    expect(submit).toBeEnabled();
+    await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);
 
     expect(await screen.findByText("移動しました")).toBeInTheDocument();
@@ -699,6 +726,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     const confirm = dialogEl.getByRole("button", {
       name: "取りやめにする",
     });
+    await waitFor(() => expect(confirm).toBeEnabled());
     await userEvent.click(confirm);
 
     expect(
@@ -707,6 +735,56 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/plans/${planId}/cancel`);
     expect(new Headers(init?.headers).get("if-match")).toBe('"2"');
+  });
+
+  it("RW-03: 移動の保留があれば「保存されたか確認できません」を出し、同じキーで送り直す", async () => {
+    const record = toPendingRequestRecord({
+      userId,
+      tripId,
+      request: createMutationRequest({
+        operation: MOVE_PLAN_OPERATION,
+        url: `/api/trips/${tripId}/plans/${planId}/move`,
+        method: "POST",
+        body: { date: "2026-10-14" },
+        ifMatch: '"1"',
+      }),
+    });
+    await savePendingRequest(record);
+    const fetchMock = stubApi({
+      plan: () => json(plan()),
+      trip: () => json(trip()),
+      move: () => json(plan({ date: "2026-10-14", version: "4" })),
+    });
+    renderDetail();
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    await userEvent.click(
+      screen.getByRole("button", { name: /日の移動/ }),
+    );
+    await screen.findByRole("heading", { name: "日の移動" });
+
+    // 保留があるあいだは移動のボタンを出さず、確認の案内だけ出す。
+    expect(
+      await screen.findByText("保存されたか確認できません"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "この日に移動する" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+
+    expect(await screen.findByText("移動しました")).toBeInTheDocument();
+    const [url, init] = writeCalls(fetchMock)[0];
+    expect(url).toBe(`/api/trips/${tripId}/plans/${planId}/move`);
+    expect(new Headers(init?.headers).get("idempotency-key")).toBe(
+      record.idempotencyKey,
+    );
+    expect(new Headers(init?.headers).get("if-match")).toBe('"1"');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      date: "2026-10-14",
+    });
   });
 });
 
@@ -741,9 +819,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(
@@ -786,9 +862,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
 
     await screen.findByLabelText("名前");
     await userEvent.type(screen.getByLabelText("名前"), "国際通り");
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     expect(
       await screen.findByText("種類を選んでください"),
@@ -810,9 +884,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     );
 
     await screen.findByLabelText("名前");
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     expect(
       await screen.findByText("予定名を入力してください"),
@@ -872,6 +944,72 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
       screen.getByRole("checkbox", { name: "時刻未定" }),
     ).toBeInTheDocument();
   });
+
+  it("RW-02/RW-03: 追加の保留があれば欄を固定して戻し、同じ内容で確認できる", async () => {
+    const record = toPendingRequestRecord({
+      userId,
+      tripId,
+      request: createMutationRequest({
+        operation: CREATE_PLAN_OPERATION,
+        url: `/api/trips/${tripId}/plans`,
+        method: "POST",
+        body: {
+          name: "国際通りで買い物",
+          kind: "shopping",
+          date: "2026-10-13",
+          time: null,
+          memo: null,
+        },
+      }),
+    });
+    await savePendingRequest(record);
+    const fetchMock = stubApi({
+      trip: () => json(trip()),
+      create: () => json(plan({ id: planId }), 201),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen
+          mode="new"
+          tripId={tripId}
+          date="2026-10-13"
+        />
+      </QueryClientProvider>,
+    );
+
+    // 欄は残した内容で固定して戻し、保存のボタンは出さない。
+    expect(
+      await screen.findByText("保存されたか確認できません"),
+    ).toBeInTheDocument();
+    const nameInput = await screen.findByLabelText("名前");
+    expect(nameInput).toHaveAttribute("readonly");
+    expect(nameInput).toHaveValue("国際通りで買い物");
+    expect(
+      screen.queryByRole("button", { name: "保存する" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/itinerary?date=2026-10-13`,
+      ),
+    );
+    const [url, init] = writeCalls(fetchMock)[0];
+    expect(url).toBe(`/api/trips/${tripId}/plans`);
+    expect(new Headers(init?.headers).get("idempotency-key")).toBe(
+      record.idempotencyKey,
+    );
+    expect(JSON.parse(String(init?.body))).toEqual({
+      name: "国際通りで買い物",
+      kind: "shopping",
+      date: "2026-10-13",
+      time: null,
+      memo: null,
+    });
+  });
 });
 
 describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
@@ -915,9 +1053,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     fireEvent.change(nameInput, {
       target: { value: "錦市場で昼食と買い物" },
     });
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(
@@ -944,9 +1080,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
 
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(
@@ -985,9 +1119,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
     fireEvent.change(nameInput, { target: { value: "あなたの名前" } });
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     expect(
       await screen.findByText("相手が先に変更しました"),
@@ -1006,9 +1138,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     fireEvent.change(screen.getByLabelText("名前"), {
       target: { value: "錦市場で昼食" },
     });
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(
@@ -1079,7 +1209,9 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     expect(
       screen.getByRole("button", { name: "再試行" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("読み込み中")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText("読み込み中")).not.toBeInTheDocument(),
+    );
   });
 
   it("日の移動で旅行期間の取得が失敗したらシート内で再試行できる", async () => {
@@ -1246,9 +1378,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     expect(
       await screen.findByText("この旅行を開けません"),
@@ -1269,9 +1399,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
     fireEvent.change(nameInput, { target: { value: "別の名前" } });
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     expect(
       await screen.findByText("この項目を開けません"),
@@ -1294,9 +1422,11 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
       screen.getByRole("button", { name: "取りやめにする" }),
     );
     const dialog = await screen.findByRole("dialog");
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "取りやめにする" }),
-    );
+    const cancelConfirm = within(dialog).getByRole("button", {
+      name: "取りやめにする",
+    });
+    await waitFor(() => expect(cancelConfirm).toBeEnabled());
+    await userEvent.click(cancelConfirm);
 
     expect(
       await screen.findByText("この項目を開けません"),
@@ -1319,15 +1449,15 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
     expect(
       await screen.findByText("もう一度ログインしてください"),
     ).toBeInTheDocument();
 
     // network失敗（結果不明）→ 同じ内容で確認 → 401は「確認できていません」。
     cleanup();
+    // さっきの401で残った保留を消す（再利用のない新しい画面として開く）。
+    await resetDb();
     let calls = 0;
     stubApi({
       trip: () => json(trip()),
@@ -1348,9 +1478,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
     expect(
       await screen.findByText("保存されたか確認できません"),
     ).toBeInTheDocument();
@@ -1382,9 +1510,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
     fireEvent.change(nameInput, { target: { value: "悪い名前" } });
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     expect(
       await screen.findByText("入力内容を確認してください"),
@@ -1392,7 +1518,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     // 欄を直したら保存できる（送り直しは新しいidempotency-key）。
     fireEvent.change(nameInput, { target: { value: "直した名前" } });
     const submit = screen.getByRole("button", { name: "保存する" });
-    expect(submit).toBeEnabled();
+    await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);
 
     await waitFor(() =>
@@ -1439,9 +1565,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
     fireEvent.change(nameInput, { target: { value: "直した名前" } });
-    await userEvent.click(
-      screen.getByRole("button", { name: "保存する" }),
-    );
+    await clickWhenEnabled("保存する");
 
     expect(
       await screen.findByText("画面を更新してからやり直してください"),
@@ -1497,9 +1621,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await userEvent.click(
       screen.getByRole("radio", { name: "10/14 水" }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "この日に移動する" }),
-    );
+    await clickWhenEnabled("この日に移動する");
 
     // 期間外は日付欄のエラーとして出る。
     expect(

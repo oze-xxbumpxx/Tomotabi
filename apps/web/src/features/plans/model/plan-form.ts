@@ -2,6 +2,7 @@ import type { Plan, PlanCreate, PlanPatch } from "@tomotabi/contracts";
 import type { PlanKind } from "@tomotabi/contracts";
 import { boundedTextLength } from "@/shared/lib/text-length";
 import { isLocalDateString } from "@/shared/lib/local-date";
+import { PLAN_KINDS } from "./plan-kind";
 
 /**
  * 予定の追加・編集フォームで共通の検証と、編集時のdiff（変更のあった
@@ -146,4 +147,45 @@ export function planPatchOf(
     patch.memo = memo;
   }
   return patch;
+}
+
+/**
+ * 端末に残した要求の本文（PlanCreate）から、固定表示するフォームの値を戻す。
+ * 形が確かめられないものはnull（確認の操作だけを出す）。
+ */
+export function planFormValuesFromJson(
+  bodyJson: string,
+): PlanFormValues | null {
+  let body: unknown;
+  try {
+    body = JSON.parse(bodyJson);
+  } catch {
+    return null;
+  }
+  if (typeof body !== "object" || body === null) {
+    return null;
+  }
+  const candidate = body as Record<string, unknown>;
+  if (
+    typeof candidate.name !== "string" ||
+    typeof candidate.kind !== "string" ||
+    !(PLAN_KINDS as readonly string[]).includes(candidate.kind) ||
+    typeof candidate.date !== "string" ||
+    (candidate.time !== null &&
+      candidate.time !== undefined &&
+      typeof candidate.time !== "string") ||
+    (candidate.memo !== null &&
+      candidate.memo !== undefined &&
+      typeof candidate.memo !== "string")
+  ) {
+    return null;
+  }
+  return {
+    name: candidate.name,
+    kind: candidate.kind as PlanKind,
+    date: candidate.date,
+    timeUndecided: candidate.time === null || candidate.time === undefined,
+    time: typeof candidate.time === "string" ? candidate.time : "",
+    memo: typeof candidate.memo === "string" ? candidate.memo : "",
+  };
 }

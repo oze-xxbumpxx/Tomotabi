@@ -56,12 +56,21 @@ export function getPlanWithMeta(
 
 // ---- 変更要求の組み立て（MutationDraft） ----
 
+/**
+ * 各書き込みの操作名。端末に残した保留は「同じ利用者・旅行・操作」で
+ * 探すので、保留の照合にもこの値を使う。
+ */
+export const CREATE_PLAN_OPERATION = "create-plan";
+export const UPDATE_PLAN_OPERATION = "update-plan";
+export const MOVE_PLAN_OPERATION = "move-plan";
+export const CANCEL_PLAN_OPERATION = "cancel-plan";
+
 export function createPlanDraft(
   tripId: string,
   values: PlanCreate,
 ): MutationDraft {
   return {
-    operation: "create-plan",
+    operation: CREATE_PLAN_OPERATION,
     url: getCreatePlanUrl(tripId),
     method: "POST",
     body: values,
@@ -76,7 +85,7 @@ export function updatePlanDraft(
   ifMatch: string | null,
 ): MutationDraft {
   return {
-    operation: "update-plan",
+    operation: UPDATE_PLAN_OPERATION,
     url: getUpdatePlanUrl(tripId, planId),
     method: "PATCH",
     body: patch,
@@ -92,7 +101,7 @@ export function movePlanDraft(
 ): MutationDraft {
   const body: Move = { date };
   return {
-    operation: "move-plan",
+    operation: MOVE_PLAN_OPERATION,
     url: getMovePlanUrl(tripId, planId),
     method: "POST",
     body,
@@ -106,7 +115,7 @@ export function cancelPlanDraft(
   ifMatch: string | null,
 ): MutationDraft {
   return {
-    operation: "cancel-plan",
+    operation: CANCEL_PLAN_OPERATION,
     url: getCancelPlanUrl(tripId, planId),
     method: "POST",
     body: null,

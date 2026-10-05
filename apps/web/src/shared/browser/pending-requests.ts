@@ -25,11 +25,32 @@ const UUID_SEGMENT =
   "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
 /**
+ * 旅行の作成で残す要求の、旅行のIDの代わりに入れる決まった値。
+ * 旅行の作成は送る時点で旅行のIDが無く送り先も`/api/trips`なので、
+ * この値のときだけ送り先が`/api/trips`ちょうどであることを確かめる
+ * （設計書「端末に残す仕組みの広げ方」）。
+ */
+export const NEW_TRIP_ID = "new-trip";
+
+/**
  * 送り直せる経路の許可リスト。{tripId} 部はその保留のtripIdと一致させる。
- * 支払い・精算の書き込み（createPayment・cancelPayment・createSettlementPreview・
- * completeSettlement・cancelSettlement）だけを許す。
+ * 旅行（名前の変更・期間の変更・開始・終了）、予定（追加・編集・日の移動・
+ * 取りやめ）、達成・予約（付ける・取り消す）、支払い・精算の書き込みを許す。
+ * 予定・達成・予約・支払い・精算のレコードID部はUUIDの形だけ許す。
  */
 const ALLOWED_PATHS: readonly RegExp[] = [
+  /^\/api\/trips\/[^/]+$/,
+  /^\/api\/trips\/[^/]+\/period$/,
+  /^\/api\/trips\/[^/]+\/start$/,
+  /^\/api\/trips\/[^/]+\/finish$/,
+  /^\/api\/trips\/[^/]+\/plans$/,
+  new RegExp(`^/api/trips/[^/]+/plans/${UUID_SEGMENT}$`, "i"),
+  new RegExp(`^/api/trips/[^/]+/plans/${UUID_SEGMENT}/move$`, "i"),
+  new RegExp(`^/api/trips/[^/]+/plans/${UUID_SEGMENT}/cancel$`, "i"),
+  /^\/api\/trips\/[^/]+\/achievements$/,
+  new RegExp(`^/api/trips/[^/]+/achievements/${UUID_SEGMENT}/cancel$`, "i"),
+  /^\/api\/trips\/[^/]+\/bookings$/,
+  new RegExp(`^/api/trips/[^/]+/bookings/${UUID_SEGMENT}/cancel$`, "i"),
   /^\/api\/trips\/[^/]+\/payments$/,
   new RegExp(`^/api/trips/[^/]+/payments/${UUID_SEGMENT}/cancel$`, "i"),
   /^\/api\/trips\/[^/]+\/settlement-previews$/,
@@ -61,8 +82,19 @@ function isAllowedPendingUrl(record: {
   if (parsed.origin !== window.location.origin) {
     return false;
   }
-  const prefix = `/api/trips/${record.tripId}/`;
-  if (!record.url.startsWith(prefix) || !parsed.pathname.startsWith(prefix)) {
+  if (record.tripId === NEW_TRIP_ID) {
+    // 旅行の作成: その値のときだけ送り先が`/api/trips`ちょうどであることを確かめる。
+    return (
+      record.url === "/api/trips" && parsed.pathname === "/api/trips"
+    );
+  }
+  // 旅行そのものへの書き込み（名前の変更）は`/api/trips/{tripId}`ちょうどなので、
+  // 経路の頭は`/api/trips/{tripId}`ちょうどか、その下の経路だけを許す。
+  const base = `/api/trips/${record.tripId}`;
+  const inTrip =
+    (record.url === base || record.url.startsWith(`${base}/`)) &&
+    (parsed.pathname === base || parsed.pathname.startsWith(`${base}/`));
+  if (!inTrip) {
     return false;
   }
   return ALLOWED_PATHS.some((pattern) => pattern.test(parsed.pathname));

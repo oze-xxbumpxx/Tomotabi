@@ -10,9 +10,11 @@ import {
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { Trip } from "@tomotabi/contracts";
+import type { PendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { formatTripPeriod } from "@/shared/lib/local-date";
 import { ConflictNotice } from "@/shared/ui/state/conflict";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
+import { StorageUnavailable } from "@/shared/ui/state/storage-unavailable";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 import { Sheet } from "@/shared/ui/sheet";
 import { StatusText } from "@/shared/ui/status-text";
@@ -77,6 +79,8 @@ function StartStateBlock({ start }: { start: TripSave }) {
           onConfirm={() => void start.confirmWithSameRequest()}
         />
       );
+    case "storage-unavailable":
+      return <StorageUnavailable />;
     case "conflict":
       return (
         <StartConflict start={start} />
@@ -128,12 +132,15 @@ function StartConflict({ start }: { start: TripSave }) {
  * 旅行のメニュー（16）。シートの見出しは旅行名、期間と状態バッジを付ける。
  * 「旅行を開始する」の状態遷移はシートの中に出す（結果不明は同じ要求で確認）。
  * 「旅行を終了する」は確認ダイアログ（17）を呼び出し側が開く。
+ * 開始の保留が残っていれば「保存されたか確認できません」と送り直しの
+ * ボタンを出し、開始の項目だけは押せなくする（ほかの操作は止めない）。
  */
 export function TripMenu({
   trip,
   etag,
   displayName,
   start,
+  startPending,
   onEdit,
   onRequestFinish,
   onSwitch,
@@ -146,6 +153,8 @@ export function TripMenu({
   etag: string;
   displayName: string | null;
   start: TripSave;
+  /** 「旅行を開始する」の保留の照合結果（再読み込みつき）。 */
+  startPending: { check: PendingRequestCheck; reload: () => void };
   onEdit: () => void;
   onRequestFinish: () => void;
   onSwitch: () => void;
@@ -158,6 +167,7 @@ export function TripMenu({
 
   const startInFlight =
     start.state.status !== "editing" && start.state.status !== "succeeded";
+  const pendingFound = startPending.check.status === "found";
 
   return (
     <Sheet title={trip.name} onClose={onClose}>
@@ -167,6 +177,23 @@ export function TripMenu({
         </span>
         <TripStatusBadge status={trip.status} />
       </div>
+      {/* 書き込み中・結果不明は StartStateBlock が確認を出すので、
+          保留の確認は編集待ち（editing / succeeded）のあいだだけ出す。 */}
+      {!startInFlight && pendingFound && (
+        <SaveUnknown
+          onConfirm={() => {
+            if (startPending.check.status !== "found") {
+              return;
+            }
+            void start
+              .confirmRequest(startPending.check.record)
+              .then(startPending.reload);
+          }}
+        />
+      )}
+      {!startInFlight && startPending.check.status === "unavailable" && (
+        <StorageUnavailable />
+      )}
       {startInFlight ? (
         <StartStateBlock start={start} />
       ) : (
@@ -180,7 +207,7 @@ export function TripMenu({
             <MenuItem
               icon={<Flag size={22} />}
               label="旅行を開始する"
-              disabled={!online}
+              disabled={!online || startPending.check.status !== "none"}
               onClick={() => void start.submit(startTripDraft(trip.id, etag))}
             />
           )}

@@ -56,3 +56,34 @@ export function firstInvalidField(
   const order: TripFormField[] = ["name", "startsOn", "endsOn"];
   return order.find((field) => errors[field] !== undefined) ?? null;
 }
+
+/**
+ * 端末に残した要求の本文（`{name, startsOn, endsOn}`）から、固定表示する
+ * フォームの値を戻す。形が確かめられないものはnull（確認の操作だけを出す）。
+ */
+export function tripFormValuesFromJson(
+  bodyJson: string,
+): TripFormValues | null {
+  let body: unknown;
+  try {
+    body = JSON.parse(bodyJson);
+  } catch {
+    return null;
+  }
+  if (typeof body !== "object" || body === null) {
+    return null;
+  }
+  const candidate = body as Record<string, unknown>;
+  if (
+    typeof candidate.name !== "string" ||
+    typeof candidate.startsOn !== "string" ||
+    typeof candidate.endsOn !== "string"
+  ) {
+    return null;
+  }
+  return {
+    name: candidate.name,
+    startsOn: candidate.startsOn,
+    endsOn: candidate.endsOn,
+  };
+}

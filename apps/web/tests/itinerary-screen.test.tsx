@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -6,12 +7,21 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Itinerary, Trip } from "@tomotabi/contracts";
-import { itineraryQueryKey } from "@/features/trips";
+import {
+  itineraryQueryKey,
+  START_TRIP_OPERATION,
+} from "@/features/trips";
+import { createMutationRequest } from "@/shared/api/mutation-request";
 import { createQueryClient } from "@/shared/api/query-client";
+import {
+  savePendingRequest,
+  toPendingRequestRecord,
+} from "@/shared/browser/pending-requests";
 
 const { replaceMock, pushMock, signOutMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
@@ -164,11 +174,28 @@ function writeCalls(fetchMock: ReturnType<typeof vi.fn>) {
   );
 }
 
-afterEach(() => {
+async function resetDb(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const request = indexedDB.deleteDatabase("tomotabi");
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  });
+}
+
+/** 端末に残した保留の照合が終わるまで待ってから押す。 */
+async function clickWhenEnabled(name: string | RegExp) {
+  const button = await screen.findByRole("button", { name });
+  await waitFor(() => expect(button).toBeEnabled());
+  await userEvent.click(button);
+}
+
+afterEach(async () => {
   cleanup();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   window.localStorage.clear();
+  await resetDb();
 });
 
 describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
@@ -181,10 +208,25 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("10/12 月 – 10/14 水")).toBeInTheDocument();
     expect(screen.getByText("出発前")).toBeInTheDocument();
-    // 下部タブは「しおり」だけ。
+    // 下部タブは4つと「支払いを記録」。「しおり」にだけ aria-current。
+    const nav = screen.getByRole("navigation", { name: "タブ" });
+    for (const [label, href] of [
+      ["ホーム", `/trips/${tripId}/home`],
+      ["記録", `/trips/${tripId}/records`],
+      ["精算", `/trips/${tripId}/settlement`],
+    ] as const) {
+      expect(
+        within(nav).getByRole("link", { name: label }),
+      ).toHaveAttribute("href", href);
+    }
+    // 今のタブはリンクではなく、aria-current="page" の項目。
+    expect(within(nav).queryByRole("link", { name: "しおり" })).toBeNull();
+    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent(
+      "しおり",
+    );
     expect(
-      screen.getByRole("navigation", { name: "タブ" }),
-    ).toHaveTextContent("しおり");
+      screen.getByRole("link", { name: "支払いを記録" }),
+    ).toHaveAttribute("href", `/trips/${tripId}/payments/new`);
     await waitFor(() =>
       expect(window.localStorage.getItem(selectedKey)).toBe(tripId),
     );
@@ -257,9 +299,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "旅行のメニュー" }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行を開始する" }),
-    );
+    await clickWhenEnabled("旅行を開始する");
 
     expect(
       await screen.findByText("旅行を開始しました"),
@@ -313,9 +353,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
       await screen.findByRole("heading", { name: "旅行を終了しますか？" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/終了後に精算できます/)).toBeInTheDocument();
-    await userEvent.click(
-      screen.getByRole("button", { name: "終了する" }),
-    );
+    await clickWhenEnabled("終了する");
 
     expect(
       await screen.findByText("旅行を終了しました"),
@@ -356,7 +394,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     fireEvent.change(screen.getByLabelText("終了日"), {
       target: { value: "2026-10-22" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    await clickWhenEnabled("保存");
 
     expect(await screen.findByText("変更しました")).toBeInTheDocument();
     const writes = writeCalls(fetchMock);
@@ -401,13 +439,13 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     fireEvent.change(screen.getByLabelText("開始日"), {
       target: { value: "2026-10-01" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("旅行名は保存済みです"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
+      await screen.findByText(
         "この期間に入らない予定があります。予定の日付を先に変更してください",
       ),
     ).toBeInTheDocument();
@@ -561,9 +599,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
         screen.getByRole("button", { name: "旅行のメニュー" }),
       );
       if (target === "start") {
-        await userEvent.click(
-          screen.getByRole("button", { name: "旅行を開始する" }),
-        );
+        await clickWhenEnabled("旅行を開始する");
       } else {
         await userEvent.click(
           screen.getByRole("button", { name: "旅行名と期間を変更" }),
@@ -571,7 +607,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
         fireEvent.change(screen.getByLabelText("旅行名"), {
           target: { value: "石垣島" },
         });
-        await userEvent.click(screen.getByRole("button", { name: "保存" }));
+        await clickWhenEnabled("保存");
       }
 
       expect(
@@ -599,9 +635,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "旅行のメニュー" }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行を開始する" }),
-    );
+    await clickWhenEnabled("旅行を開始する");
 
     expect(
       await screen.findByText("画面を更新してからやり直してください"),
@@ -655,7 +689,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     fireEvent.change(screen.getByLabelText("開始日"), {
       target: { value: "2026-10-01" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("旅行名は保存済みです"),
@@ -667,7 +701,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     fireEvent.change(screen.getByLabelText("終了日"), {
       target: { value: "2026-10-22" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    await clickWhenEnabled("保存");
 
     expect(await screen.findByText("変更しました")).toBeInTheDocument();
     const puts = writeCalls(fetchMock).filter(
@@ -676,5 +710,60 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(puts).toHaveLength(2);
     // 2回目のPUTは、名前の保存が返したETag（しおりの再取得を待たない）。
     expect(new Headers(puts[1][1]?.headers).get("if-match")).toBe('"2"');
+  });
+
+  it("RW-03: 開始の保留があれば「保存されたか確認できません」を出し、同じキーで送り直す", async () => {
+    const record = toPendingRequestRecord({
+      userId,
+      tripId,
+      request: createMutationRequest({
+        operation: START_TRIP_OPERATION,
+        url: `/api/trips/${tripId}/start`,
+        method: "POST",
+        body: null,
+        ifMatch: '"1"',
+      }),
+    });
+    await savePendingRequest(record);
+    const fetchMock = stubApi({
+      start: () =>
+        json(
+          trip({
+            status: "traveling",
+            version: "2",
+            startedAt: "2026-10-12T01:00:00.000Z",
+            startedBy: userId,
+          }),
+        ),
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+
+    // 保留があるあいだは新しい送信は押せず、確認の案内だけ出す。
+    expect(
+      await screen.findByText("保存されたか確認できません"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "旅行を開始する" }),
+    ).toBeDisabled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+
+    expect(
+      await screen.findByText("旅行を開始しました"),
+    ).toBeInTheDocument();
+    const [url, init] = writeCalls(fetchMock)[0];
+    expect(url).toBe(`/api/trips/${tripId}/start`);
+    // 同じ要求（同じ冪等キー・同じETag）をそのまま送り直す。
+    expect(new Headers(init?.headers).get("idempotency-key")).toBe(
+      record.idempotencyKey,
+    );
+    expect(new Headers(init?.headers).get("if-match")).toBe('"1"');
   });
 });

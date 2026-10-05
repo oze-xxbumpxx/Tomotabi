@@ -3,10 +3,12 @@
 import { Prohibit } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import type { Plan } from "@tomotabi/contracts";
+import type { PendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { formatLocalDate } from "@/shared/lib/local-date";
 import { Dialog } from "@/shared/ui/dialog";
 import { ConflictNotice } from "@/shared/ui/state/conflict";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
+import { StorageUnavailable } from "@/shared/ui/state/storage-unavailable";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 import { StatusText } from "@/shared/ui/status-text";
 import { cancelPlanDraft } from "../api/plans-api";
@@ -26,11 +28,14 @@ function isNotAvailableState(state: PlanSaveState): state is RejectedState {
  * 取りやめの確認（17の形、決定ボタンは危険色）。
  * 名前と日付を見せ、記録が残ることを伝える。結果不明・競合・拒否は
  * ダイアログの中で状態を出し、同じ要求で確かめる。
+ * 取りやめの保留が残っていれば「保存されたか確認できません」と
+ * 送り直しのボタンを出す（F-71・E-11）。
  */
 export function CancelPlanDialog({
   plan,
   etag,
   cancel,
+  cancelPending,
   onClose,
   onSessionExpired,
   onNotAvailable,
@@ -38,6 +43,8 @@ export function CancelPlanDialog({
   plan: Plan;
   etag: string;
   cancel: PlanSave;
+  /** 「予定の取りやめ」の保留の照合結果（再読み込みつき）。 */
+  cancelPending: { check: PendingRequestCheck; reload: () => void };
   onClose: () => void;
   onSessionExpired: (unconfirmed: boolean) => void;
   /** 書き込みが403 / 404で拒否（C-2）。呼び出し側が全面を差し替える。 */
@@ -45,6 +52,9 @@ export function CancelPlanDialog({
 }) {
   const online = useOnlineStatus();
   const state = cancel.state;
+  const pendingFound = cancelPending.check.status === "found";
+  const pendingUnavailable =
+    cancelPending.check.status === "unavailable";
 
   // C-1 / C-2は呼び出し側の全面表示に切り替える。
   useEffect(() => {
@@ -73,6 +83,21 @@ export function CancelPlanDialog({
       {state.status === "unknown" && (
         <SaveUnknown onConfirm={() => void cancel.confirmWithSameRequest()} />
       )}
+      {pendingFound && cancelPending.check.status === "found" && (
+        <SaveUnknown
+          onConfirm={() => {
+            if (cancelPending.check.status !== "found") {
+              return;
+            }
+            void cancel
+              .confirmRequest(cancelPending.check.record)
+              .then(cancelPending.reload);
+          }}
+          confirming={state.status === "saving"}
+        />
+      )}
+      {pendingUnavailable && <StorageUnavailable />}
+      {state.status === "storage-unavailable" && <StorageUnavailable />}
       {state.status === "conflict" &&
         (state.latest === null ? (
           state.latestFailed ? (
@@ -112,7 +137,10 @@ export function CancelPlanDialog({
         ))}
       {(state.status === "editing" ||
         state.status === "saving" ||
-        state.status === "rejected") && (
+        state.status === "rejected" ||
+        state.status === "storage-unavailable") &&
+        !pendingFound &&
+        !pendingUnavailable && (
         <>
           <p className="dialog-body">
             {`「${plan.name}」（${formatLocalDate(plan.date)}）を取りやめにします。達成・予約・支払いの記録は残ります。`}
@@ -144,7 +172,8 @@ export function CancelPlanDialog({
               disabled={
                 state.status === "saving" ||
                 !online ||
-                state.status === "rejected"
+                state.status === "rejected" ||
+                cancelPending.check.status !== "none"
               }
             >
               <Prohibit size={16} weight="bold" aria-hidden="true" />

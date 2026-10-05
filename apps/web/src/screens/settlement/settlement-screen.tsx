@@ -1,8 +1,7 @@
 "use client";
 
-import { ArrowsLeftRight, BookOpenText } from "@phosphor-icons/react";
+import { ArrowsLeftRight } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMe } from "@/features/auth";
@@ -18,6 +17,7 @@ import {
   usePendingSettlementPreviews,
   useSettlements,
 } from "@/features/settlement";
+import { TripTabBar } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { takePendingToast } from "@/shared/lib/pending-toast";
@@ -335,18 +335,8 @@ export function SettlementScreen({ tripId }: { tripId: string }) {
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
-      <nav className="tabbar" aria-label="タブ">
-        <div className="tabbar-inner">
-          <Link className="tabbar-item" href={`/trips/${tripId}/itinerary`}>
-            <BookOpenText size={18} weight="bold" aria-hidden="true" />
-            しおり
-          </Link>
-          <span className="tabbar-item tabbar-item-current" aria-current="page">
-            <ArrowsLeftRight size={18} weight="fill" aria-hidden="true" />
-            精算
-          </span>
-        </div>
-      </nav>
+      {/* 「支払いを記録」と4つのタブ（共通の部品）。 */}
+      <TripTabBar tripId={tripId} current="settlement" />
     </main>
   );
 }

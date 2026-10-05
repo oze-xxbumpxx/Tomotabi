@@ -16,7 +16,7 @@ import { StatusText } from "@/shared/ui/status-text";
  * `/`の入口（F-23）。遷移だけを担い、コンテンツは持たない。
  * 1. 利用者を取得し、その人の保存値（前回の旅行）を読む。
  * 2. 保存値があればGET /trips/{id} で開けるか確かめる
- *    （200 → しおりへ、403 → 値を消して /tripsへ）。
+ *    （200 → ホームへ、403 → 値を消して /tripsへ）。
  * 3. 値が無い・壊れている・届かないときは /tripsへ
  *    （403以外では値を残し、次回また試す）。
  */
@@ -47,7 +47,7 @@ export function EntryScreen() {
     void getTrip(saved).match(
       () => {
         if (!cancelled) {
-          router.replace(`/trips/${saved}/itinerary`);
+          router.replace(`/trips/${saved}/home`);
         }
       },
       (failure) => {

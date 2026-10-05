@@ -79,6 +79,7 @@ const BOOKABLE_KINDS: ReadonlyArray<string> = [
  * `/trips/{tripId}/plans/{planId}`の予定の詳細（09）。種類・名前・時刻・
  * 記録に、編集・日の移動・取りやめの操作を添える。
  * 「← しおり」は表示していた日（`?from=`）に戻る。未指定なら予定の日。
+ * `?from=home`ならホームに戻る（ホームの予定の行から開いたとき）。
  * 移動・取りやめの書き込みは送る直前に端末に残し（ADR-0006）、
  * 保留があればその操作の画面に送り直しの確認を出す（F-70〜F-73）。
  */
@@ -89,7 +90,7 @@ export function PlanDetailScreen({
 }: {
   tripId: string;
   planId: string;
-  /** 遷移元のしおりの日（`YYYY-MM-DD`）。未指定は予定の日に戻す。 */
+  /** 遷移元。`YYYY-MM-DD`はしおりの日、`home`はホーム。未指定は予定の日。 */
   from: string | null;
 }) {
   const router = useRouter();
@@ -232,12 +233,21 @@ export function PlanDetailScreen({
     }
   }, [createAchievement, createBooking, refetchPlan]);
 
+  // `from`はしおりの日（`YYYY-MM-DD`）か`home`。ホームから開いた
+  // ときは「← ホーム」でホームに戻る（予定の行の行き先と同じ）。
+  const fromHome = from === "home";
   const backDate =
-    from !== null && isLocalDateString(from)
+    !fromHome && from !== null && isLocalDateString(from)
       ? from
       : (planQuery.data?.date ?? null);
-  const backHref = `/trips/${tripId}/itinerary${backDate !== null ? `?date=${backDate}` : ""}`;
-  const toItinerary = { label: "しおりに戻る", onClick: () => router.push(backHref) };
+  const backHref = fromHome
+    ? `/trips/${tripId}/home`
+    : `/trips/${tripId}/itinerary${backDate !== null ? `?date=${backDate}` : ""}`;
+  const backLabel = fromHome ? "ホーム" : "しおり";
+  const toItinerary = {
+    label: fromHome ? "ホームに戻る" : "しおりに戻る",
+    onClick: () => router.push(backHref),
+  };
 
   const saves: SaveState<unknown, unknown>[] = [
     move.state,
@@ -516,7 +526,7 @@ export function PlanDetailScreen({
       <header className="plan-detail-header">
         <Link className="plan-back" href={backHref}>
           <CaretLeft size={18} weight="bold" aria-hidden="true" />
-          しおり
+          {backLabel}
         </Link>
         <Link
           className="plan-icon-btn"

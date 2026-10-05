@@ -27,6 +27,7 @@ export function etagOf(result: ApiSuccess<{ version: string }>): string {
  * 07 §11: 旅行の名前・期間・状態が変わったら、旅行一覧・旅行・しおりの日付選択を
  * 再取得する。しおりの日付キーはM2-dで`["itinerary", tripId, date]`になる
  * ため、ここでは`["itinerary", tripId]`までの前方一致で無効にする。
+ * ホーム（`["home", tripId]`）も旅行の状態・期間を読むので同じく無効にする。
  */
 export function invalidateTripViews(
   queryClient: QueryClient,
@@ -36,6 +37,7 @@ export function invalidateTripViews(
   if (tripId !== null) {
     void queryClient.invalidateQueries({ queryKey: ["trip", tripId] });
     void queryClient.invalidateQueries({ queryKey: ["itinerary", tripId] });
+    void queryClient.invalidateQueries({ queryKey: ["home", tripId] });
   }
 }
 

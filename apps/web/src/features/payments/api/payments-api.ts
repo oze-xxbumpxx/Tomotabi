@@ -65,8 +65,9 @@ export function getBalance(
 }
 
 /**
- * GET /api/trips/{tripId}/payments/{paymentId}。支払い1件を
- * 取り消し状態を含めて返す。支払いの詳細のデータ元。
+ * GET /api/trips/{tripId}/payments/{paymentId}。支払い1件（取り消し
+ * 状態を含む）。支払いの詳細のデータ元のほか、ホーム・記録の一覧の
+ * 取り消しの行の「〇〇を取り消し」の元の用途を調べるときにも使う。
  */
 export function getPayment(
   tripId: string,

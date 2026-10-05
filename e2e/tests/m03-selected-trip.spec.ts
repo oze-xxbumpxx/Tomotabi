@@ -3,11 +3,78 @@ import { HINATA_USER_ID } from "../support/env";
 import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
 
+/**
+ * GET /api/trips/{id}/home の応答を模擬する（ホームのAPIは後続の別PR
+ * でまだ無いため）。旅行は本物のAPIで作ったものを返す。
+ */
+async function stubHome(
+  page: import("@playwright/test").Page,
+  trip: { id: string; name: string; startsOn: string; endsOn: string },
+): Promise<void> {
+  await page.route("**/api/trips/*/home", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      json: {
+        trip: {
+          id: trip.id,
+          name: trip.name,
+          startsOn: trip.startsOn,
+          endsOn: trip.endsOn,
+          status: "planning",
+          version: "1",
+          createdAt: "2026-10-01T00:00:00.000Z",
+          startedAt: null,
+          finishedAt: null,
+          createdBy: HINATA_USER_ID,
+          startedBy: null,
+          finishedBy: null,
+        },
+        context: {
+          today: "2026-10-05",
+          mode: "before",
+          targetDate: trip.startsOn,
+          dayNumber: null,
+          daysUntilStart: 10,
+          suggestedAction: null,
+        },
+        schedule: {
+          status: "ok",
+          data: {
+            date: trip.startsOn,
+            items: [],
+            totalCount: 0,
+            achievedCount: 0,
+          },
+        },
+        balance: {
+          status: "ok",
+          data: {
+            transfer: {
+              signedTotalYen: "0",
+              amountYen: "0",
+              fromUserId: null,
+              toUserId: null,
+              requiresTransfer: false,
+            },
+            targetCount: 0,
+          },
+        },
+        recentRecords: { status: "ok", data: [] },
+        fetchedAt: "2026-10-05T00:00:00.000Z",
+      },
+    });
+  });
+  // 試験の終わりまで残す（unrouteしない）。
+}
+
 // M-03（docs/tests/m2-trips-and-plans.md）: ひなたで旅行を2つ作り、
 // 2つ目のしおりを開く → メニューからログアウト → 新しいセッションの
 // Cookieを入れ直して`/`を開く → 旅行一覧（ログアウトで保存値が
 // 消えている）。一覧で1つ目を選んでしおりを開く → `/`を開き直す →
-// 1つ目のしおりに戻る。
+// 1つ目のホームに戻る（前回の旅行はホームを開く）。
 const FIRST_TRIP = {
   name: "高松 2 泊",
   startsOn: "2026-10-15",
@@ -53,9 +120,10 @@ test("M-03: ログアウトのあと、前回開いた旅行に戻る", async ({
     page.getByRole("heading", { name: FIRST_TRIP.name }),
   ).toBeVisible();
 
-  // `/`を開き直す → 今度は1つ目のしおりに戻る。
+  // `/`を開き直す → 今度は1つ目のホームに戻る（前回の旅行はホームを開く）。
+  await stubHome(page, { id: firstTripId, ...FIRST_TRIP });
   await page.goto("/");
-  await page.waitForURL(`/trips/${firstTripId}/itinerary`);
+  await page.waitForURL(`/trips/${firstTripId}/home`);
   await expect(
     page.getByRole("heading", { name: FIRST_TRIP.name }),
   ).toBeVisible();

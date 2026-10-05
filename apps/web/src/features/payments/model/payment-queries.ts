@@ -1,6 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { ApiRequestError } from "@/shared/api/api-failure";
-import { getBalance, getPayment } from "../api/payments-api";
+import {
+  getBalance,
+  getPayment,
+  type Payment,
+} from "../api/payments-api";
 
 /** 残額のキーは`["balance", tripId]`（設計書「クエリと再取得」の残額）。 */
 export const balanceQueryKey = (tripId: string) =>
@@ -58,5 +62,37 @@ export function usePayment(
           throw new ApiRequestError(failure);
         },
       ),
+  });
+}
+
+/**
+ * 支払いIDの一覧を支払いの対応表にする。ホーム・記録の一覧の
+ * 支払いの取り消しの行が「〇〇を取り消し」の元の用途を引くときに使う
+ * （失敗した支払いは対応表に入れず、呼び出し側の代替表示に任せる）。
+ */
+export function usePayments(
+  tripId: string,
+  paymentIds: readonly string[],
+): Map<string, Payment> {
+  return useQueries({
+    queries: paymentIds.map((paymentId) => ({
+      queryKey: paymentQueryKey(tripId, paymentId),
+      queryFn: () =>
+        getPayment(tripId, paymentId).match(
+          (payment) => payment,
+          (failure) => {
+            throw new ApiRequestError(failure);
+          },
+        ),
+    })),
+    combine: (results) => {
+      const payments = new Map<string, Payment>();
+      results.forEach((result, index) => {
+        if (result.data !== undefined) {
+          payments.set(paymentIds[index] ?? "", result.data);
+        }
+      });
+      return payments;
+    },
   });
 }

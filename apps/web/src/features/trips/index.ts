@@ -3,6 +3,7 @@ export {
   createTripDraft,
   FINISH_TRIP_OPERATION,
   finishTripDraft,
+  getHome,
   getTrip,
   getTripItinerary,
   getTripWithMeta,
@@ -19,6 +20,20 @@ export {
   UPDATE_TRIP_PERIOD_OPERATION,
   updateTripPeriodDraft,
 } from "./api/trips-api";
+export type {
+  BalanceSummary,
+  Context,
+  ContextMode,
+  ContextSuggestedAction,
+  Home,
+  HomeBalance,
+  HomeRecentRecords,
+  HomeSchedule,
+  Schedule,
+  TimelineItem,
+  TimelineItemKind,
+  Transfer,
+} from "./api/trips-api";
 export {
   firstInvalidField,
   TRIP_NAME_MAX_CODEPOINTS,
@@ -29,9 +44,23 @@ export {
   type TripFormValues,
 } from "./model/trip-form";
 export {
+  displayNameOf,
+  headerDateTextOf,
+  hiddenCountOf,
+  type HomeBar,
+  homeBarsOf,
+  isCancellationItem,
+  recordTitleOf,
+  recordVerbOf,
+  recordVoided,
+  scheduleTitleOf,
+} from "./model/home-model";
+export {
+  homeQueryKey,
   itineraryQueryKey,
   tripQueryKey,
   tripsListQueryKey,
+  useHome,
   useTrip,
   useTripItinerary,
   useTripList,

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { getPlan } from "../api/plans-api";
 
@@ -24,5 +24,37 @@ export function usePlan(
           throw new ApiRequestError(failure);
         },
       ),
+  });
+}
+
+/**
+ * 予定IDの一覧を予定名の対応表にする。ホーム・記録の一覧の
+ * 「予定の名前」を持たない行が、行ごとの予定名を引くときに使う
+ * （失敗した予定は対応表に入れず、呼び出し側の代替表示に任せる）。
+ */
+export function usePlanNames(
+  tripId: string,
+  planIds: readonly string[],
+): Map<string, string> {
+  return useQueries({
+    queries: planIds.map((planId) => ({
+      queryKey: planQueryKey(tripId, planId),
+      queryFn: () =>
+        getPlan(tripId, planId).match(
+          (plan) => plan,
+          (failure) => {
+            throw new ApiRequestError(failure);
+          },
+        ),
+    })),
+    combine: (results) => {
+      const names = new Map<string, string>();
+      results.forEach((result, index) => {
+        if (result.data !== undefined) {
+          names.set(planIds[index] ?? "", result.data.name);
+        }
+      });
+      return names;
+    },
   });
 }

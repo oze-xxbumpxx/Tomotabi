@@ -21,6 +21,7 @@ export {
   settlementPreviewsQueryKey,
   useBalance,
   usePayment,
+  usePayments,
 } from "./model/payment-queries";
 export {
   burdensOf,

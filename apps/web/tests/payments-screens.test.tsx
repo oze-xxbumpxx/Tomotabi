@@ -665,11 +665,14 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
         screen.getByText("関連する予定を確認できませんでした"),
       ).toBeInTheDocument(),
     );
+    // 文言（getByText）は見えているかに関係なく当たるが、ボタン（getByRole）は
+    // シートが開ききって見える状態になるまで当たらない。重いときはその差で
+    // 落ちていたので、ボタンも見える状態になるまで待つ。
     expect(
-      screen.getByRole("button", { name: "再取得する" }),
+      await screen.findByRole("button", { name: "再取得する" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "関連付けを解除する" }),
+      await screen.findByRole("button", { name: "関連付けを解除する" }),
     ).toBeInTheDocument();
     void fetchMock;
   });

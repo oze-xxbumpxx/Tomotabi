@@ -701,12 +701,32 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     fireEvent.change(screen.getByLabelText("終了日"), {
       target: { value: "2026-10-22" },
     });
-    await clickWhenEnabled("保存");
 
-    expect(await screen.findByText("変更しました")).toBeInTheDocument();
-    const puts = writeCalls(fetchMock).filter(
-      ([url]) => url === `/api/trips/${tripId}/period`,
+    // 2回目の「保存」は、送信が起きるまで押し直す。全部の試験を一緒に走らせて
+    // 重いとき、押した瞬間だけボタンが押せない状態になって押しが空振りし、
+    // 落ちることがあった（2026-10-06に調べた。落ちたときも「保存」のボタンは
+    // 1つで押せる状態、欄の値も正しかったが、送信が起きていなかった）。
+    // 保存は送っている間・確かめている間は送らないので、押し直しても二重には送らない。
+    const periodPuts = () =>
+      writeCalls(fetchMock).filter(
+        ([url]) => url === `/api/trips/${tripId}/period`,
+      );
+    await waitFor(
+      async () => {
+        if (periodPuts().length < 2) {
+          const button = screen.getByRole("button", { name: "保存" });
+          if (!(button as HTMLButtonElement).disabled) {
+            await userEvent.click(button);
+          }
+        }
+        expect(periodPuts()).toHaveLength(2);
+      },
+      { timeout: 3000 },
     );
+    expect(
+      await screen.findByText("変更しました", undefined, { timeout: 3000 }),
+    ).toBeInTheDocument();
+    const puts = periodPuts();
     expect(puts).toHaveLength(2);
     // 2回目のPUTは、名前の保存が返したETag（しおりの再取得を待たない）。
     expect(new Headers(puts[1][1]?.headers).get("if-match")).toBe('"2"');

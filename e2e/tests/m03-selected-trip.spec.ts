@@ -1,4 +1,5 @@
 import { addSessionCookies } from "../support/auth";
+import { daysFromToday } from "../support/dates";
 import { HINATA_USER_ID } from "../support/env";
 import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
@@ -8,15 +9,17 @@ import { createTrip } from "../support/trips";
 // Cookieを入れ直して`/`を開く → 旅行一覧（ログアウトで保存値が
 // 消えている）。一覧で1つ目を選んでしおりを開く → `/`を開き直す →
 // 1つ目のホームに戻る（前回の旅行はホームを開く）。
+// 期間は実行日の日本時間の今日から数えて作る（決め打ちだと日が変わると
+// 表示の種類が変わって落ちる）。
 const FIRST_TRIP = {
   name: "高松 2 泊",
-  startsOn: "2026-10-15",
-  endsOn: "2026-10-17",
+  startsOn: daysFromToday(30),
+  endsOn: daysFromToday(32),
 };
 const SECOND_TRIP = {
   name: "直島日帰り",
-  startsOn: "2026-11-20",
-  endsOn: "2026-11-20",
+  startsOn: daysFromToday(40),
+  endsOn: daysFromToday(40),
 };
 
 test("M-03: ログアウトのあと、前回開いた旅行に戻る", async ({

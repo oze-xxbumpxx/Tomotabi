@@ -4,6 +4,7 @@
 
 import type { Page } from "@playwright/test";
 
+import { daysFromToday } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
 
@@ -53,8 +54,8 @@ async function openSettlement(page: Page): Promise<void> {
 test("FE-01: 支払いを2件記録して受け渡しを確認・記録する", async ({ hinataPage: page }) => {
   const tripId = await createTrip(page, {
     name: "宮島 1 泊",
-    startsOn: "2026-11-14",
-    endsOn: "2026-11-15",
+    startsOn: daysFromToday(30),
+    endsOn: daysFromToday(31),
   });
 
   // ひなたが 7,001 円（折半、あおいの負担 3,500 円）、あおいが 3,000 円（折半、ひなたの負担 1,500 円）。
@@ -95,8 +96,8 @@ test("FE-02: 互いに同額を立て替えたときは 0 円として精算を�
 }) => {
   const tripId = await createTrip(page, {
     name: "鎌倉 1 泊",
-    startsOn: "2026-11-21",
-    endsOn: "2026-11-22",
+    startsOn: daysFromToday(30),
+    endsOn: daysFromToday(31),
   });
 
   // ひなた 4,000 円・あおい 4,000 円（ともに折半）→ 差し引き 0 円。
@@ -138,8 +139,8 @@ test("FE-03: 確認を作ったあとの支払いは確認の金額を変えな�
 }) => {
   const tripId = await createTrip(page, {
     name: "金沢 2 泊",
-    startsOn: "2026-12-12",
-    endsOn: "2026-12-14",
+    startsOn: daysFromToday(30),
+    endsOn: daysFromToday(32),
   });
 
   // ひなたが 1,000 円（折半）→ あおい → ひなた 500 円 の受け渡し。

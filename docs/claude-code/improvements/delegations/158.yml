@@ -1,0 +1,33 @@
+issue: 158
+title: 'test(e2e): 記録と4画面の完成の E2E（達成と取り消し・終了後の精算・取り消しの了承・送り直し）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-05T22:32:01Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-05T22:58:18Z'
+    reviewed_sha: 'cae3fd3ec524c60ffacdf850b1cc09cc910d178c'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-robustness'
+        summary: '旅行の期間を年まで決め打ちしていて2026-11-07を過ぎるとE2Eが落ち始める'
+  - round: 1
+    reviewed_at: '2026-10-05T23:06:25Z'
+    reviewed_sha: '19a54c765322cc0908c848fccaef45975817ab6e'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 159
+  pr_created_at: '2026-10-05T22:57:23Z'
+  merged_at: '2026-10-05T23:08:01Z'
+  closed_at: '2026-10-05T23:08:01Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

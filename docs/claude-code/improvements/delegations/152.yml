@@ -1,0 +1,36 @@
+issue: 152
+title: 'feat(web): ホームの画面（4つの表示の種類・欄ごとの失敗・ログインのあとの行き先）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-05T00:25:32Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-05T01:05:58Z'
+    reviewed_sha: '31453e23ee98d28927a245c3b122c4582e421079'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'logic-error'
+        summary: '予定の欄で達成済みの予定が行と達成済みN件に二重に出て、ほかN件が合わない'
+      - severity: 'nit'
+        category: 'test-robustness'
+        summary: 'E2EのM-03でホームの取得を模擬している（ホームのAPIのマージ後に外す）'
+  - round: 1
+    reviewed_at: '2026-10-05T01:13:36Z'
+    reviewed_sha: '00023ec1d09c48e172e483b647c43c483f8c2408'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 154
+  pr_created_at: '2026-10-05T01:04:20Z'
+  merged_at: '2026-10-05T13:13:15Z'
+  closed_at: '2026-10-05T13:13:15Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

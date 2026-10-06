@@ -694,6 +694,18 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(
       await screen.findByText("旅行名は保存済みです"),
     ).toBeInTheDocument();
+    // 「旅行名は保存済みです」は名前の成功で出て、期間の1回目の送信はそのあと
+    // （端末に要求を残してから）始まる。ここで先へ進むと、日付を直して押した
+    // 「保存」が1回目の期間の送信と重なり、押せない状態のボタンを押して
+    // 空振りしていた（全部の試験を一緒に走らせたときに落ちていた原因）。
+    // この試験は「期間が422のあと」なので、422の結果が出るのを待つ。
+    expect(
+      await screen.findByText(
+        "この期間に入らない予定があります。予定の日付を先に変更してください",
+        undefined,
+        { timeout: 3000 },
+      ),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("開始日"), {
       target: { value: "2026-10-20" },
@@ -702,27 +714,16 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
       target: { value: "2026-10-22" },
     });
 
-    // 2回目の「保存」は、送信が起きるまで押し直す。全部の試験を一緒に走らせて
-    // 重いとき、押した瞬間だけボタンが押せない状態になって押しが空振りし、
-    // 落ちることがあった（2026-10-06に調べた。落ちたときも「保存」のボタンは
-    // 1つで押せる状態、欄の値も正しかったが、送信が起きていなかった）。
-    // 保存は送っている間・確かめている間は送らないので、押し直しても二重には送らない。
     const periodPuts = () =>
       writeCalls(fetchMock).filter(
         ([url]) => url === `/api/trips/${tripId}/period`,
       );
-    await waitFor(
-      async () => {
-        if (periodPuts().length < 2) {
-          const button = screen.getByRole("button", { name: "保存" });
-          if (!(button as HTMLButtonElement).disabled) {
-            await userEvent.click(button);
-          }
-        }
-        expect(periodPuts()).toHaveLength(2);
-      },
-      { timeout: 3000 },
-    );
+    expect(periodPuts()).toHaveLength(1);
+    // 押すのは1回だけ。1回の押しで2回目の送信が起きることを確かめる。
+    await clickWhenEnabled("保存");
+    await waitFor(() => expect(periodPuts()).toHaveLength(2), {
+      timeout: 3000,
+    });
     expect(
       await screen.findByText("変更しました", undefined, { timeout: 3000 }),
     ).toBeInTheDocument();

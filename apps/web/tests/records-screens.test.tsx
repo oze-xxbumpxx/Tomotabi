@@ -743,9 +743,12 @@ describe("取り消しの確認と支払いの詳細（RW-09・RW-10）", () => 
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
     // 「項目名と値」の並び
-    for (const label of ["払った人", "負担の分け方", "負担額", "関連する予定"]) {
+    for (const label of ["払った人", "負担の分け方", "二人の負担", "関連する予定"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+    // 折半でも、二人の割合と負担額を並べる（F-30）
+    expect(screen.getByText("折半")).toBeInTheDocument();
+    expect(screen.getAllByText(/50% · /)).toHaveLength(2);
     // 予定の行（関連する予定）はその予定へのリンク
     expect(
       await screen.findByRole("link", { name: /錦市場で昼食/ }),

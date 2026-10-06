@@ -253,23 +253,21 @@ export function PaymentDetailScreen({
               <dt>負担の分け方</dt>
               <dd>
                 {shareNoteOfPayment(paymentData, nameOfUser) === "割合"
-                  ? `割合を指定（${paymentData.allocations
-                      .map((a) => `${nameOfUser(a.userId) || "相手"} ${a.percent}%`)
-                      .join(" · ")}）`
+                  ? "割合を指定"
                   : shareNoteOfPayment(paymentData, nameOfUser)}
               </dd>
             </div>
             <div className="payment-detail-row">
-              <dt>負担額</dt>
-              <dd className="tabular-nums">
-                {paymentData.allocations
-                  .map(
-                    (a) =>
-                      `${nameOfUser(a.userId) || "相手"} ${formatYen(
-                        yenFromDecimalString(a.burdenYen) ?? 0n,
-                      )}`,
-                  )
-                  .join(" · ")}
+              {/* 分け方の名前に関係なく、二人の割合と負担額をいつも並べる（F-30） */}
+              <dt>二人の負担</dt>
+              <dd className="payment-detail-shares tabular-nums">
+                {paymentData.allocations.map((a) => (
+                  <span key={a.userId}>
+                    {`${nameOfUser(a.userId) || "相手"} ${a.percent}% · ${formatYen(
+                      yenFromDecimalString(a.burdenYen) ?? 0n,
+                    )}`}
+                  </span>
+                ))}
               </dd>
             </div>
             <div className="payment-detail-row">

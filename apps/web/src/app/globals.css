@@ -3184,6 +3184,12 @@ a.plan-record-row-link {
   overflow-wrap: anywhere;
 }
 
+.payment-detail-shares {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .payment-detail-plan {
   display: inline-flex;
   align-items: center;

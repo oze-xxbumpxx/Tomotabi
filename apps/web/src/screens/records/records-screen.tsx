@@ -29,7 +29,7 @@ import {
 } from "@/features/records";
 import { useBalance, usePayment } from "@/features/payments";
 import { usePlan } from "@/features/plans";
-import { TripTabBar } from "@/features/trips";
+import { TripTabBar, useTrip } from "@/features/trips";
 import { useMe } from "@/features/auth";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
@@ -78,6 +78,11 @@ type SheetOpen =
 /** 予定の名前（行・小さな詳細・確認に出す）。取れないあいだは汎用の名。 */
 function PlanNameCell({ tripId, planId }: { tripId: string; planId: string }) {
   const plan = usePlan(tripId, planId);
+  // 読み込み中に「予定」と出すと、そういう名前の予定に見えるので、
+  // 取れるまでは「…」にする。取れなかったときだけ汎用の名を出す。
+  if (plan.isPending) {
+    return <span aria-label="読み込み中">…</span>;
+  }
   return <>{plan.data?.name ?? "予定"}</>;
 }
 
@@ -115,6 +120,8 @@ export function RecordsScreen({
   recordId: string | null;
   recordType: ListRecordsType | null;
 }) {
+  const tripQuery = useTrip(tripId);
+  const tripName = tripQuery.data?.name ?? null;
   const router = useRouter();
   const { state: meState } = useMe();
   const online = useOnlineStatus();
@@ -337,6 +344,8 @@ export function RecordsScreen({
   return (
     <main className="records-page">
       {!online && <OfflineBanner at={null} />}
+      {/* v3の10: 見出しの上に旅行名 */}
+      {tripName !== null && <p className="page-eyebrow">{tripName}</p>}
       <h1 className="page-title">記録</h1>
 
       {/* 送り直しの確認（この画面で始める操作の保留が残っていれば出す） */}

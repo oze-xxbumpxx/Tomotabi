@@ -333,14 +333,15 @@ describe("TripNewScreen (/trips/new)", () => {
     expect(await screen.findByLabelText("旅行名")).toHaveFocus();
   });
 
-  it("「やめる」は送らず旅行一覧へ戻る", async () => {
+  it("右上の×（閉じる）は送らず旅行一覧へ戻る。下に「やめる」は無い（v3のシート）", async () => {
     const fetchMock = stubApi(() => json(tripBody, 201));
     renderScreen();
 
     await screen.findByRole("dialog", { name: "新しい旅行" });
     // 保留の照合が終わってフォームが出るまで待つ。
     await screen.findByLabelText("旅行名");
-    await userEvent.click(screen.getByRole("button", { name: "やめる" }));
+    expect(screen.queryByRole("button", { name: "やめる" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "閉じる" }));
 
     expect(pushMock).toHaveBeenCalledWith("/trips");
     expect(writeCalls(fetchMock)).toHaveLength(0);

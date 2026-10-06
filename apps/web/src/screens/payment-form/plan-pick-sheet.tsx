@@ -41,7 +41,7 @@ export function PlanPickSheet({
       footer={
         <button
           type="button"
-          className="btn-primary"
+          className="btn-ink"
           onClick={() => onPick(picked)}
         >
           この予定にする

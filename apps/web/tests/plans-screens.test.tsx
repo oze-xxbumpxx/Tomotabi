@@ -839,7 +839,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(
@@ -882,7 +882,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
 
     await screen.findByLabelText("名前");
     await userEvent.type(screen.getByLabelText("名前"), "国際通り");
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("種類を選んでください"),
@@ -904,7 +904,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     );
 
     await screen.findByLabelText("名前");
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("予定名を入力してください"),
@@ -1005,7 +1005,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     expect(nameInput).toHaveAttribute("readonly");
     expect(nameInput).toHaveValue("国際通りで買い物");
     expect(
-      screen.queryByRole("button", { name: "保存する" }),
+      screen.queryByRole("button", { name: "保存" }),
     ).not.toBeInTheDocument();
 
     await userEvent.click(
@@ -1073,7 +1073,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     fireEvent.change(nameInput, {
       target: { value: "錦市場で昼食と買い物" },
     });
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(
@@ -1100,7 +1100,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
 
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(
@@ -1139,7 +1139,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
     fireEvent.change(nameInput, { target: { value: "あなたの名前" } });
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("相手が先に変更しました"),
@@ -1158,7 +1158,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     fireEvent.change(screen.getByLabelText("名前"), {
       target: { value: "錦市場で昼食" },
     });
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(
@@ -1398,7 +1398,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("この旅行を開けません"),
@@ -1419,7 +1419,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
     fireEvent.change(nameInput, { target: { value: "別の名前" } });
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("この項目を開けません"),
@@ -1469,7 +1469,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
     expect(
       await screen.findByText("もう一度ログインしてください"),
     ).toBeInTheDocument();
@@ -1498,7 +1498,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await userEvent.click(
       screen.getByRole("radio", { name: "買い物" }),
     );
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
     expect(
       await screen.findByText("保存されたか確認できません"),
     ).toBeInTheDocument();
@@ -1530,14 +1530,14 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
     fireEvent.change(nameInput, { target: { value: "悪い名前" } });
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("入力内容を確認してください"),
     ).toBeInTheDocument();
     // 欄を直したら保存できる（送り直しは新しいidempotency-key）。
     fireEvent.change(nameInput, { target: { value: "直した名前" } });
-    const submit = screen.getByRole("button", { name: "保存する" });
+    const submit = screen.getByRole("button", { name: "保存" });
     await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);
 
@@ -1585,7 +1585,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     const nameInput = await screen.findByLabelText("名前");
     await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
     fireEvent.change(nameInput, { target: { value: "直した名前" } });
-    await clickWhenEnabled("保存する");
+    await clickWhenEnabled("保存");
 
     expect(
       await screen.findByText("画面を更新してからやり直してください"),
@@ -1593,7 +1593,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     // 欄を変えても送り直せない（ETagが古い）。
     fireEvent.change(nameInput, { target: { value: "もう一度直す" } });
     expect(
-      screen.getByRole("button", { name: "保存する" }),
+      screen.getByRole("button", { name: "保存" }),
     ).toBeDisabled();
 
     // 最新を取り直すと予定を再取得し、新しいETagで送れる。
@@ -1601,7 +1601,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
       screen.getByRole("button", { name: "最新を取り直す" }),
     );
     await waitFor(() => expect(planCalls).toBeGreaterThanOrEqual(2));
-    const submit = await screen.findByRole("button", { name: "保存する" });
+    const submit = await screen.findByRole("button", { name: "保存" });
     await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);
 

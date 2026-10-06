@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -485,24 +486,9 @@ export function PaymentFormScreen({
         onClose={tryClose}
         initialFocus={locked ? undefined : amountRef}
         footer={
-          locked ? (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={tryClose}
-            >
-              やめる
-            </button>
-          ) : state.status === "conflict" ? null : (
+          // 閉じるのは右上の×だけ（v3の11。下は「保存」1つ）
+          locked || state.status === "conflict" ? null : (
             <>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={tryClose}
-                disabled={fieldsLocked}
-              >
-                やめる
-              </button>
               <button
                 type="button"
                 className="btn-primary"
@@ -514,7 +500,14 @@ export function PaymentFormScreen({
                   (state.status === "rejected" && state.httpStatus === 428)
                 }
               >
-                {state.status === "saving" ? "保存中" : "保存"}
+                {state.status === "saving" ? (
+                  "保存中"
+                ) : (
+                  <>
+                    <Check size={18} weight="bold" aria-hidden="true" />
+                    保存
+                  </>
+                )}
               </button>
             </>
           )

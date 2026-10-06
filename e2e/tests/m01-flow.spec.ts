@@ -43,7 +43,7 @@ async function addPlan(
       .uncheck();
     await page.getByLabel("時刻", { exact: true }).fill(plan.time);
   }
-  await page.getByRole("button", { name: "保存する" }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "追加しました" })).toBeVisible();
   await expect(
     page.getByRole("listitem").filter({ hasText: plan.name }),
@@ -117,7 +117,7 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     page.getByRole("heading", { name: "予定を編集" }),
   ).toBeVisible();
   await page.getByLabel("名前").fill("清水寺（早朝参り）");
-  await page.getByRole("button", { name: "保存する" }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "変更しました" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "清水寺（早朝参り）" }),

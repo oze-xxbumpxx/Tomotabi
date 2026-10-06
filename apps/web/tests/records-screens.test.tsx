@@ -734,17 +734,33 @@ describe("取り消しの確認と支払いの詳細（RW-09・RW-10）", () => 
       <PaymentDetailScreen tripId={tripId} paymentId={paymentId} />,
     );
     await waitLoaded();
-    // 読み取り専用の入力欄に写る（金額は3桁区切り）
-    expect(screen.getByDisplayValue("2,400")).toBeInTheDocument();
+    // 用途を見出しに、金額は3桁区切りで出す
     expect(
-      screen.getByDisplayValue("参道で朝ごはん"),
+      screen.getByRole("heading", { name: "参道で朝ごはん" }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/2,400/)).toBeInTheDocument();
+    // 読むだけの画面なので、入力欄や押せる切り替えは出さない（入力の画面に見せない）
+    expect(screen.queryAllByRole("textbox")).toHaveLength(0);
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    // 「項目名と値」の並び
+    for (const label of ["払った人", "負担の分け方", "二人の負担", "関連する予定"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    // 折半でも、二人の割合と負担額を並べる（F-30）
+    expect(screen.getByText("折半")).toBeInTheDocument();
+    expect(screen.getAllByText(/50% · /)).toHaveLength(2);
     // 予定の行（関連する予定）はその予定へのリンク
     expect(
-      screen.getByRole("link", { name: /錦市場で昼食/ }),
+      await screen.findByRole("link", { name: /錦市場で昼食/ }),
     ).toHaveAttribute("href", `/trips/${tripId}/plans/${planId}`);
-    // 誰がいつ記録したか
-    expect(screen.getByText(/に記録/)).toBeInTheDocument();
+    // 記録の一覧へ戻るリンク
+    expect(
+      screen.getByRole("link", { name: "記録" }),
+    ).toBeInTheDocument();
+    // 有効な支払いでは、下の主ボタン「支払いを記録」をいつもどおり出す（RW-01）
+    expect(
+      screen.getByRole("link", { name: "支払いを記録" }),
+    ).toBeInTheDocument();
   });
 
   it("支払いを取り消したあとは「正しい内容で支払いを記録」で、写した支払いを記録の画面へ進む（RW-10）", async () => {
@@ -778,6 +794,11 @@ describe("取り消しの確認と支払いの詳細（RW-09・RW-10）", () => 
       "href",
       `/trips/${tripId}/payments/new?from=${paymentId}`,
     );
+    // 取り消し済みでは、下の主ボタン「支払いを記録」は出さない
+    // （「正しい内容で支払いを記録」と意味が重なり、並べると中身に重なるため）
+    expect(
+      screen.queryByRole("link", { name: "支払いを記録" }),
+    ).not.toBeInTheDocument();
   });
 
   it("支払いを記録の画面は?from=の内容で埋まる（RW-10）", async () => {
@@ -908,6 +929,10 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     stubApi({});
     renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
     expect(await screen.findByText("まだありません")).toBeInTheDocument();
+    // 0件でも「記録で見る」は出す（行き先は予定で絞った一覧で、達成・予約も見られる）
+    expect(
+      screen.getByRole("link", { name: "記録で見る" }),
+    ).toHaveAttribute("href", `/trips/${tripId}/records?planId=${planId}`);
   });
 
   it("達成を記録すると保存され、保存中は同じボタンを押せない（RW-11・RW-19）", async () => {

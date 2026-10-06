@@ -617,6 +617,8 @@ export function PlanDetailScreen({
             ))}
           </div>
         )}
+        {/* 支払いが0件でも出す。行き先はその予定で絞った記録の一覧で、
+            達成・予約も見られる（F-14） */}
         <Link
           className="btn-outline plan-payments-more"
           href={`/trips/${tripId}/records?planId=${planId}`}

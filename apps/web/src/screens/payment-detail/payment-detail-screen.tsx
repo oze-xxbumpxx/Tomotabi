@@ -366,9 +366,14 @@ export function PaymentDetailScreen({
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
-      {/* 「支払いを記録」は画面の中の「正しい内容で支払いを記録」と
-          意味が重なり、下に固定すると中身に重なるので出さない */}
-      <TripTabBar tripId={tripId} current="records" action={null} />
+      {/* 取り消し済みのときだけ、画面の中の「正しい内容で支払いを記録」と
+          意味が重なるので主ボタンを出さない。有効な支払いではいつもどおり
+          「支払いを記録」を出す（F-55・RW-01） */}
+      <TripTabBar
+        tripId={tripId}
+        current="records"
+        action={cancellation !== null ? null : undefined}
+      />
     </main>
   );
 }

@@ -617,15 +617,14 @@ export function PlanDetailScreen({
             ))}
           </div>
         )}
-        {/* 支払いが1件も無ければ、記録の一覧で見るものが無いので出さない */}
-        {planPayments.data !== undefined && planPayments.data.length > 0 && (
-          <Link
-            className="btn-outline plan-payments-more"
-            href={`/trips/${tripId}/records?planId=${planId}`}
-          >
-            記録で見る
-          </Link>
-        )}
+        {/* 支払いが0件でも出す。行き先はその予定で絞った記録の一覧で、
+            達成・予約も見られる（F-14） */}
+        <Link
+          className="btn-outline plan-payments-more"
+          href={`/trips/${tripId}/records?planId=${planId}`}
+        >
+          記録で見る
+        </Link>
       </section>
       {layer === "move" &&
         (tripQuery.data !== undefined ? (

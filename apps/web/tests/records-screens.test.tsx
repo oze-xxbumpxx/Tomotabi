@@ -754,10 +754,10 @@ describe("取り消しの確認と支払いの詳細（RW-09・RW-10）", () => 
     expect(
       screen.getByRole("link", { name: "記録" }),
     ).toBeInTheDocument();
-    // 下の主ボタン「支払いを記録」は出さない（画面の中の操作と重なるため）
+    // 有効な支払いでは、下の主ボタン「支払いを記録」をいつもどおり出す（RW-01）
     expect(
-      screen.queryByRole("link", { name: "支払いを記録" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("link", { name: "支払いを記録" }),
+    ).toBeInTheDocument();
   });
 
   it("支払いを取り消したあとは「正しい内容で支払いを記録」で、写した支払いを記録の画面へ進む（RW-10）", async () => {
@@ -791,6 +791,11 @@ describe("取り消しの確認と支払いの詳細（RW-09・RW-10）", () => 
       "href",
       `/trips/${tripId}/payments/new?from=${paymentId}`,
     );
+    // 取り消し済みでは、下の主ボタン「支払いを記録」は出さない
+    // （「正しい内容で支払いを記録」と意味が重なり、並べると中身に重なるため）
+    expect(
+      screen.queryByRole("link", { name: "支払いを記録" }),
+    ).not.toBeInTheDocument();
   });
 
   it("支払いを記録の画面は?from=の内容で埋まる（RW-10）", async () => {
@@ -883,7 +888,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     );
   });
 
-  it("関連する支払いは最大3件と「記録で見る」、無ければ「まだありません」だけ（RW-11）", async () => {
+  it("関連する支払いは最大3件と「記録で見る」、無ければ「まだありません」（RW-11）", async () => {
     const paymentIds = [
       "0e1e2e3e-0000-4000-8000-000000000001",
       "0e1e2e3e-0000-4000-8000-000000000002",
@@ -921,10 +926,10 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     stubApi({});
     renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
     expect(await screen.findByText("まだありません")).toBeInTheDocument();
-    // 1件も無ければ、記録の一覧で見るものが無いので「記録で見る」は出さない
+    // 0件でも「記録で見る」は出す（行き先は予定で絞った一覧で、達成・予約も見られる）
     expect(
-      screen.queryByRole("link", { name: "記録で見る" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("link", { name: "記録で見る" }),
+    ).toHaveAttribute("href", `/trips/${tripId}/records?planId=${planId}`);
   });
 
   it("達成を記録すると保存され、保存中は同じボタンを押せない（RW-11・RW-19）", async () => {

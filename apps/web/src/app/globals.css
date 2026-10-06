@@ -1800,7 +1800,8 @@ dialog.dialog[open] {
 /* 予定の詳細・フォームのページ（ヘッダー行と余白）
    下のタブと主ボタン（固定・最大約160px）に被らないよう下を広くあける */
 .plan-page {
-  padding-bottom: 170px;
+  /* しおり・ホームと同じ。タブとその上の主ボタン「支払いを記録」のぶん */
+  padding-bottom: calc(var(--space-8) + 168px);
 }
 
 .plan-detail-header {
@@ -2835,7 +2836,8 @@ a.settle-action {
   flex-direction: column;
   gap: var(--space-3);
   /* 固定のタブと主ボタンに最後の行が重ならないよう下を広くあける */
-  padding-bottom: 170px;
+  /* しおり・ホームと同じ。タブとその上の主ボタン「支払いを記録」のぶん */
+  padding-bottom: calc(var(--space-8) + 168px);
 }
 
 /* 「すべて・支払い・達成・予約」のピル。狭い画面では横スクロール */
@@ -3112,7 +3114,8 @@ a.plan-record-row-link {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding-bottom: 170px;
+  /* しおり・ホームと同じ。タブとその上の主ボタン「支払いを記録」のぶん */
+  padding-bottom: calc(var(--space-8) + 168px);
 }
 
 /* 支払いの詳細の見出しと「項目名と値」の並び（v3の予定の詳細と同じ形） */

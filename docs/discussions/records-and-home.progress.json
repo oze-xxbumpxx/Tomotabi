@@ -36,14 +36,19 @@
       "state": "done"
     },
     "review": {
-      "state": "active"
+      "state": "done"
     },
     "merge": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 160,
+        "at": "2026-10-06"
+      }
     },
     "reflect": {
-      "state": "pending"
+      "state": "skipped",
+      "reason": "改善サイクルは休眠中"
     }
   },
-  "updated_at": "2026-10-06T13:08:03.617Z"
+  "updated_at": "2026-10-06T13:16:32.166Z"
 }

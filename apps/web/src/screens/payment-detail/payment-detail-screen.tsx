@@ -3,20 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowUUpLeft } from "@phosphor-icons/react";
+import { ArrowUUpLeft, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import {
   actorNameOf,
   CancelRecordDialog,
+  shareNoteOfPayment,
 } from "@/features/records";
 import {
   CANCEL_PAYMENT_OPERATION,
   cancelPaymentDraft,
-  PaymentFormFields,
   useBalance,
   useCancelPayment,
   usePayment,
-  valuesOfPayment,
-  type SelectedPlan,
 } from "@/features/payments";
 import { usePlan } from "@/features/plans";
 import { TripTabBar } from "@/features/trips";
@@ -104,27 +102,6 @@ export function PaymentDetailScreen({
     },
   });
 
-  const meParticipant =
-    participants !== undefined && userId !== null
-      ? participants.find((p) => p.userId === userId)
-      : undefined;
-  const selectedPlan: SelectedPlan | null =
-    planId !== null && plan.data !== undefined
-      ? { id: planId, date: plan.data.date, name: plan.data.name }
-      : null;
-  const values =
-    payment.data !== undefined &&
-    meParticipant !== undefined &&
-    participants !== undefined &&
-    (planId === null || plan.data !== undefined)
-      ? valuesOfPayment(
-          payment.data,
-          meParticipant,
-          participants,
-          selectedPlan,
-        )
-      : null;
-
   // ---- C-1 / C-2 ----
   if (meState.status === "unauthenticated") {
     return (
@@ -202,7 +179,13 @@ export function PaymentDetailScreen({
   return (
     <main className="payment-detail">
       {!online && <OfflineBanner at={null} />}
-      <h1 className="page-title">支払い</h1>
+      <header className="plan-detail-header">
+        <Link className="plan-back" href={`/trips/${tripId}/records`}>
+          <CaretLeft size={18} weight="bold" aria-hidden="true" />
+          記録
+        </Link>
+      </header>
+      <p className="payment-detail-kind">支払い</p>
 
       {cancelPending.check.status === "found" && (
         <SaveUnknown
@@ -237,37 +220,92 @@ export function PaymentDetailScreen({
             onRetry={() => void balance.refetch()}
           />
         </section>
-      ) : values === null ? (
-        <Loading />
       ) : (
         <>
-          <section className="payment-detail-card">
-            <PaymentFormFields
-              values={values}
-              errors={{}}
-              locked
-              participants={participants ?? []}
-              meUserId={userId ?? ""}
-              planRowState={
-                planId !== null && plan.isError ? "failed" : "ready"
+          {/* 読むだけの画面なので、入力の部品ではなく「項目名と値」で並べる
+              （v3の予定の詳細と同じ形） */}
+          <div className="payment-detail-head">
+            <h1
+              className={
+                cancellation !== null
+                  ? "payment-detail-name payment-detail-name-voided"
+                  : "payment-detail-name"
               }
-              onChange={() => {}}
-              onOpenPlanPicker={() => {}}
-              onPlanRetry={() => void plan.refetch()}
-              onPlanClear={() => {}}
-              planHref={
-                planId !== null
-                  ? `/trips/${tripId}/plans/${planId}`
-                  : undefined
+            >
+              {paymentData.label ?? "支払い"}
+            </h1>
+            <p
+              className={
+                cancellation !== null
+                  ? "payment-detail-amount tabular-nums payment-detail-name-voided"
+                  : "payment-detail-amount tabular-nums"
               }
-            />
-            <p className="record-note">
-              {nameOfUser(paymentData.createdBy) !== ""
-                ? `${nameOfUser(paymentData.createdBy)} が `
-                : ""}
-              {formatDateTime(paymentData.createdAt)} に記録
+            >
+              {amountText}
             </p>
-          </section>
+          </div>
+          <dl className="payment-detail-rows">
+            <div className="payment-detail-row">
+              <dt>払った人</dt>
+              <dd>{nameOfUser(paymentData.payerUserId) || "相手"}</dd>
+            </div>
+            <div className="payment-detail-row">
+              <dt>負担の分け方</dt>
+              <dd>
+                {shareNoteOfPayment(paymentData, nameOfUser) === "割合"
+                  ? `割合を指定（${paymentData.allocations
+                      .map((a) => `${nameOfUser(a.userId) || "相手"} ${a.percent}%`)
+                      .join(" · ")}）`
+                  : shareNoteOfPayment(paymentData, nameOfUser)}
+              </dd>
+            </div>
+            <div className="payment-detail-row">
+              <dt>負担額</dt>
+              <dd className="tabular-nums">
+                {paymentData.allocations
+                  .map(
+                    (a) =>
+                      `${nameOfUser(a.userId) || "相手"} ${formatYen(
+                        yenFromDecimalString(a.burdenYen) ?? 0n,
+                      )}`,
+                  )
+                  .join(" · ")}
+              </dd>
+            </div>
+            <div className="payment-detail-row">
+              <dt>関連する予定</dt>
+              <dd>
+                {planId === null ? (
+                  "なし"
+                ) : plan.isError ? (
+                  <button
+                    type="button"
+                    className="payment-detail-retry"
+                    onClick={() => void plan.refetch()}
+                  >
+                    予定を取得できませんでした。再取得する
+                  </button>
+                ) : (
+                  <Link
+                    className="payment-detail-plan"
+                    href={`/trips/${tripId}/plans/${planId}`}
+                  >
+                    {plan.data?.name ?? "予定"}
+                    <CaretRight size={14} weight="bold" aria-hidden="true" />
+                  </Link>
+                )}
+              </dd>
+            </div>
+            <div className="payment-detail-row">
+              <dt>記録</dt>
+              <dd>
+                {nameOfUser(paymentData.createdBy) !== ""
+                  ? `${nameOfUser(paymentData.createdBy)} が `
+                  : ""}
+                {formatDateTime(paymentData.createdAt)}
+              </dd>
+            </div>
+          </dl>
 
           {cancellation !== null ? (
             <>
@@ -328,7 +366,9 @@ export function PaymentDetailScreen({
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
-      <TripTabBar tripId={tripId} current="records" />
+      {/* 「支払いを記録」は画面の中の「正しい内容で支払いを記録」と
+          意味が重なり、下に固定すると中身に重なるので出さない */}
+      <TripTabBar tripId={tripId} current="records" action={null} />
     </main>
   );
 }

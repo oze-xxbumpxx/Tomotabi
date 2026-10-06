@@ -75,14 +75,18 @@ export function TripTabBar({
   tripId: string;
   /** 今の画面のタブ。`aria-current="page"`の印を付ける。 */
   current: TripTab;
-  /** 画面から差し替える主ボタン。省略時は「支払いを記録」。 */
-  action?: TripMainAction;
+  /**
+   * 画面から差し替える主ボタン。省略時は「支払いを記録」。
+   * `null`なら主ボタンを出さない（支払いの詳細のように、画面の中に
+   * 同じ意味の操作があり、並べると重なるとき）。
+   */
+  action?: TripMainAction | null;
 }) {
   const online = useOnlineStatus();
 
   return (
     <>
-      {online ? (
+      {action === null ? null : online ? (
         action !== undefined ? (
           <button
             type="button"

@@ -617,12 +617,15 @@ export function PlanDetailScreen({
             ))}
           </div>
         )}
-        <Link
-          className="btn-outline plan-payments-more"
-          href={`/trips/${tripId}/records?planId=${planId}`}
-        >
-          記録で見る
-        </Link>
+        {/* 支払いが1件も無ければ、記録の一覧で見るものが無いので出さない */}
+        {planPayments.data !== undefined && planPayments.data.length > 0 && (
+          <Link
+            className="btn-outline plan-payments-more"
+            href={`/trips/${tripId}/records?planId=${planId}`}
+          >
+            記録で見る
+          </Link>
+        )}
       </section>
       {layer === "move" &&
         (tripQuery.data !== undefined ? (

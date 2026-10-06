@@ -114,15 +114,8 @@ export function PlanMoveSheet({
         state.status === "unknown" ||
         state.status === "conflict" ||
         pendingFound ? null : (
+          // 閉じるのは右上の×だけ（v3のシートの形。下は決める操作1つ）
           <>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={tryClose}
-              disabled={saving}
-            >
-              やめる
-            </button>
             <button
               type="button"
               className="btn-ink"

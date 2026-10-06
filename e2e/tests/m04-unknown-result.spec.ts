@@ -52,7 +52,7 @@ test("M-04: 応答の届かなかった保存は同じ内容で確認する", as
   await sheet
     .getByRole("radio", { name: "11/3 火", exact: true })
     .click();
-  await sheet.getByRole("button", { name: "保存する" }).click();
+  await sheet.getByRole("button", { name: "保存", exact: true }).click();
 
   // C-4: 「保存されたか確認できません」と、入力欄の固定。
   await expect(

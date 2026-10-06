@@ -180,27 +180,12 @@ export function TripNewScreen() {
         onClose={tryClose}
         initialFocus={locked ? undefined : nameRef}
         footer={
-          unknown ? null : locked ? (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={tryClose}
-            >
-              やめる
-            </button>
-          ) : (
+          // 閉じるのは右上の×だけ（v3のシートの形。下は決める操作1つ）
+          unknown || locked ? null : (
             <>
               <button
                 type="button"
-                className="btn-secondary"
-                onClick={tryClose}
-                disabled={saving}
-              >
-                やめる
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
+                className="btn-ink"
                 onClick={submit}
                 disabled={
                   saving ||

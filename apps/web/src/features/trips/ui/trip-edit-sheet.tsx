@@ -304,18 +304,11 @@ export function TripEditSheet({
         unknownSave !== undefined ||
         conflictSave !== undefined ||
         pendingFound !== null ? null : (
+          // 閉じるのは右上の×だけ（v3のシートの形。下は決める操作1つ）
           <>
             <button
               type="button"
-              className="btn-secondary"
-              onClick={tryClose}
-              disabled={saving}
-            >
-              やめる
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
+              className="btn-ink"
               onClick={save}
               disabled={
                 saving ||
@@ -324,7 +317,14 @@ export function TripEditSheet({
                 periodCheck.check.status !== "none"
               }
             >
-              {saving ? "保存中" : "保存"}
+              {saving ? (
+                "保存中"
+              ) : (
+                <>
+                  <Check size={18} weight="bold" aria-hidden="true" />
+                  保存
+                </>
+              )}
             </button>
           </>
         )

@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -496,24 +497,9 @@ export function PlanFormScreen({
         onClose={tryClose}
         initialFocus={pendingLocked ? undefined : nameRef}
         footer={
-          state.status === "conflict" ? null : pendingLocked ? (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={tryClose}
-            >
-              やめる
-            </button>
-          ) : (
+          // 閉じるのは右上の×だけ（v3のシートの形。下は決める操作1つ）
+          state.status === "conflict" || pendingLocked ? null : (
             <>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={tryClose}
-                disabled={locked}
-              >
-                やめる
-              </button>
               <button
                 type="button"
                 className="btn-ink"
@@ -527,7 +513,14 @@ export function PlanFormScreen({
                   (state.status === "rejected" && state.httpStatus === 428)
                 }
               >
-                {state.status === "saving" ? "保存中" : "保存する"}
+                {state.status === "saving" ? (
+                  "保存中"
+                ) : (
+                  <>
+                    <Check size={18} weight="bold" aria-hidden="true" />
+                    保存
+                  </>
+                )}
               </button>
             </>
           )

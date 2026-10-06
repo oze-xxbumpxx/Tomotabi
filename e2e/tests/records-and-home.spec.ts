@@ -38,7 +38,7 @@ async function addPlan(page: Page, plan: PlanInput): Promise<void> {
   await sheet
     .getByRole("radio", { name: plan.dateLabel, exact: true })
     .click();
-  await sheet.getByRole("button", { name: "保存する" }).click();
+  await sheet.getByRole("button", { name: "保存", exact: true }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "追加しました" }),
   ).toBeVisible();
@@ -425,7 +425,7 @@ test("RE-04: 予定の編集で応答が届かなければ、再読み込みの�
     await route.abort("failed");
   });
   await sheet.getByLabel("名前").fill("福山城（天守）");
-  await sheet.getByRole("button", { name: "保存する" }).click();
+  await sheet.getByRole("button", { name: "保存", exact: true }).click();
 
   // 「保存されたか確認できません」と入力の固定。
   await expect(

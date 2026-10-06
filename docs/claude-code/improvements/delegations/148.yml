@@ -1,0 +1,27 @@
+issue: 148
+title: 'feat(api): 記録の一覧の API（支払い・達成・予約と取り消しを新しい順に）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-04T23:21:37Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-04T23:54:07Z'
+    reviewed_sha: 'e032457ed3ac3429e4e2414e315b87ae41170157'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '中身を読む3つのクエリを同じトランザクションの接続にPromise.allで投げている（ホームのセーブポイントの中で使うときは順に読む）'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 150
+  pr_created_at: '2026-10-04T23:51:58Z'
+  merged_at: '2026-10-05T00:23:00Z'
+  closed_at: '2026-10-05T00:23:00Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

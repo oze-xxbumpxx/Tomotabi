@@ -1,0 +1,24 @@
+issue: 151
+title: 'feat(web): 記録の画面（記録の一覧・支払いの詳細・予定の詳細の達成と予約）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-05T00:25:31Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-05T01:41:06Z'
+    reviewed_sha: 'ccb8bfe005380bef49834fc92f5304b8781bcb05'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 155
+  pr_created_at: '2026-10-05T01:38:36Z'
+  merged_at: '2026-10-05T13:21:36Z'
+  closed_at: '2026-10-05T13:21:37Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

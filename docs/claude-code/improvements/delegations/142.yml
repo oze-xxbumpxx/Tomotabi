@@ -1,0 +1,33 @@
+issue: 142
+title: 'feat(web): 共通の下のタブと、旅行・予定の保存を端末に残す仕組み'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-04T22:48:46Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-04T23:38:21Z'
+    reviewed_sha: '490aa0544cc97258dcff7ab0e21ba6aae4e19d42'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'ui-glitch'
+        summary: '下のタブが支払いを記録のボタンに重なり押せない（CIのE2Eが4件落ちる）'
+  - round: 1
+    reviewed_at: '2026-10-04T23:49:29Z'
+    reviewed_sha: 'bd12cde3c84159047378d0ba33b8f216923c97da'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 149
+  pr_created_at: '2026-10-04T23:26:38Z'
+  merged_at: '2026-10-05T00:22:19Z'
+  closed_at: '2026-10-05T00:22:19Z'
+  commits: 3
+  ci_first_pass: false
+  closes_linked: true

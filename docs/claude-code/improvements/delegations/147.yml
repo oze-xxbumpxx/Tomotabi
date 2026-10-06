@@ -1,0 +1,24 @@
+issue: 147
+title: 'feat(api): 達成・予約の API（付ける・取り消すと、同時に送られたときの決まり）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-04T23:21:36Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-05T13:57:11Z'
+    reviewed_sha: 'a3345414a878cb295525e0385841140f57ffe326'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 156
+  pr_created_at: '2026-10-05T13:54:49Z'
+  merged_at: '2026-10-05T22:30:32Z'
+  closed_at: '2026-10-05T22:30:32Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

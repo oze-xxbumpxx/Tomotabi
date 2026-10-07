@@ -13,13 +13,13 @@ reviews:
     posted: true
     findings:
       - severity: 'must'
-        category: 'test-coverage'
+        category: 'missing-test'
         summary: 'FD-06 が同時実行になっていない（PR の説明とも食い違う）'
       - severity: 'must'
-        category: 'test-coverage'
+        category: 'missing-test'
         summary: 'FD-11 の筋書きが戻しと取り消された対象の例外を通らない'
       - severity: 'must'
-        category: 'test-coverage'
+        category: 'missing-test'
         summary: 'エラーの details を本文に出す経路の試験が無い'
       - severity: 'must'
         category: 'robustness'

@@ -13,10 +13,10 @@ reviews:
     posted: true
     findings:
       - severity: 'must'
-        category: 'test-coverage'
+        category: 'missing-test'
         summary: '他人の確認を指すカーソルの試験が存在しない id を使い、作成者の条件を外しても通る'
       - severity: 'must'
-        category: 'test-coverage'
+        category: 'missing-test'
         summary: '同じ作成時刻でページの境目で抜けないことの試験が無い'
       - severity: 'must'
         category: 'coding-standard'

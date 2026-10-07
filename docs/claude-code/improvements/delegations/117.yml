@@ -22,7 +22,7 @@ reviews:
         category: 'robustness'
         summary: 'ROLLBACK 失敗時に壊れた接続をプールへ戻す'
       - severity: 'nit'
-        category: 'test-coverage'
+        category: 'missing-test'
         summary: 'parseAmountYen の 422 の枝に試験が無い'
       - severity: 'nit'
         category: 'duplication'

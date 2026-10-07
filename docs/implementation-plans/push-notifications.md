@@ -40,22 +40,23 @@
 
 ## 変更対象ファイル
 
-| path                                                                                                                                    | なぜ変えるか                                                                                |
-| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `packages/contracts/openapi/auth.json`                                                                                                  | サインアウトの503 `PUSH_STOP_FAILED`と応答ヘッダー`X-Push-Stopped`                          |
-| `orval.config.ts`と生成物                                                                                                               | 通知の契約を足したので作り直す                                                              |
-| `apps/api/src/common/http/api-error.ts`                                                                                                 | 通知のエラーコード（設計書「エラー処理」の表）                                              |
-| `apps/api/src/modules/identity/adapter/outbound/session-verifier.ts`と実装、`common/guard/session.guard.ts`・`authenticated-request.ts` | `authenticated`の結果と要求にセッションのIDを載せる                                         |
-| `apps/api/src/bootstrap/configure-app.ts`                                                                                               | `/api/auth/sign-out`のBetter Authの処理の手前にガードを置く                                 |
-| `apps/api/src/app.module.ts`・`composition/*`                                                                                           | notificationのモジュールの配線と、3つのモジュールへの`NotificationPublisher`の受け渡し      |
-| 11種類の保存のUseCase（`planning`・`record`・`settlement`の`usecase/`）                                                                 | 初めて保存できて状態が変わったときに`publish`する                                           |
-| `apps/api/src/main.ts`                                                                                                                  | 終了のときに保存のあとの処理を待つ（最大5秒）                                               |
-| `apps/web/src/features/trips/ui/trip-menu.tsx`                                                                                          | 「この端末の通知」の行                                                                      |
-| `apps/web/src/features/auth/model/use-sign-out.ts`とログインの画面                                                                      | ブラウザの購読の解除、503と`X-Push-Stopped`の扱い、案内                                     |
-| `apps/web/src/screens/home/home-screen.tsx`                                                                                             | 案内のカード                                                                                |
-| `apps/web/src/screens/settlement/settlement-screen.tsx`・`features/settlement/ui/settlement-history.tsx`                                | `settlementId`の行を目立たせてスクロール                                                    |
-| `apps/web/package.json`・`.gitignore`                                                                                                   | Service Workerのビルド（`predev`・`prebuild`、`esbuild`を開発の依存に足す）。出力を無視する |
-| `docs/tests/final-acceptance.md`                                                                                                        | 実機での確認の行（PM-03）                                                                   |
+| path                                                                                                                                    | なぜ変えるか                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `apps/api/drizzle.config.ts`                                                                                                            | `schemaFilter`に`notification`を足す（足さないと`db:generate`が新しいスキーマの表を作らない） |
+| `packages/contracts/openapi/auth.json`                                                                                                  | サインアウトの503 `PUSH_STOP_FAILED`と応答ヘッダー`X-Push-Stopped`                            |
+| `orval.config.ts`と生成物                                                                                                               | 通知の契約を足したので作り直す                                                                |
+| `apps/api/src/common/http/api-error.ts`                                                                                                 | 通知のエラーコード（設計書「エラー処理」の表）                                                |
+| `apps/api/src/modules/identity/adapter/outbound/session-verifier.ts`と実装、`common/guard/session.guard.ts`・`authenticated-request.ts` | `authenticated`の結果と要求にセッションのIDを載せる                                           |
+| `apps/api/src/bootstrap/configure-app.ts`                                                                                               | `/api/auth/sign-out`のBetter Authの処理の手前にガードを置く                                   |
+| `apps/api/src/app.module.ts`・`composition/*`                                                                                           | notificationのモジュールの配線と、3つのモジュールへの`NotificationPublisher`の受け渡し        |
+| 11種類の保存のUseCase（`planning`・`record`・`settlement`の`usecase/`）                                                                 | 初めて保存できて状態が変わったときに`publish`する                                             |
+| `apps/api/src/main.ts`                                                                                                                  | 終了のときに保存のあとの処理を待つ（最大5秒）                                                 |
+| `apps/web/src/features/trips/ui/trip-menu.tsx`                                                                                          | 「この端末の通知」の行                                                                        |
+| `apps/web/src/features/auth/model/use-sign-out.ts`とログインの画面                                                                      | ブラウザの購読の解除、503と`X-Push-Stopped`の扱い、案内                                       |
+| `apps/web/src/screens/home/home-screen.tsx`                                                                                             | 案内のカード                                                                                  |
+| `apps/web/src/screens/settlement/settlement-screen.tsx`・`features/settlement/ui/settlement-history.tsx`                                | `settlementId`の行を目立たせてスクロール                                                      |
+| `apps/web/package.json`・`.gitignore`                                                                                                   | Service Workerのビルド（`predev`・`prebuild`、`esbuild`を開発の依存に足す）。出力を無視する   |
+| `docs/tests/final-acceptance.md`                                                                                                        | 実機での確認の行（PM-03）                                                                     |
 
 ## 新規作成ファイル
 
@@ -72,7 +73,7 @@
 
 ### DB・契約・鍵
 
-1. `schema/notification.ts`と`0009_notification_tables.sql`（設計資料の`sql/05_push_notifications.sql`を写す。`db:generate`で作り、`npm run db:check`が通る形）。完了条件: migrationが空のDBに当たる。
+1. `schema/notification.ts`と`0009_notification_tables.sql`（設計資料の`sql/05_push_notifications.sql`を写す）。先に`apps/api/drizzle.config.ts`の`schemaFilter`に`notification`を足してから`db:generate`で作り、`npm run db:check`が通る形にする。完了条件: 生成したmigrationに2つの表が入り、空のDBに当たる。
 2. `0010_notification_grants.sql`（`notification`スキーマのUSAGE、2つの表のSELECT・INSERT・UPDATE）。完了条件: PD-01。
 3. 設計資料の`openapi.notifications.json`を`packages/contracts/openapi/notifications.json`に写し、パスに`/api`を付け、一覧の項目に`vapidKeyState`・`isCurrentSession`を足す。`auth.json`のサインアウトに503 `PUSH_STOP_FAILED`と`X-Push-Stopped`を足す。`orval.config.ts`に足して`npm run api:generate`。完了条件: `npm run api:check`と`npm run type-check`が通る。
 4. `packages/contracts/src/push-payload.ts`（通知の中身の型、11種類のactionとtargetKindの組み合わせ、文字の長さの上限）。完了条件: APIとwebの両方から読める。

@@ -694,6 +694,18 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(
       await screen.findByText("旅行名は保存済みです"),
     ).toBeInTheDocument();
+    // 「旅行名は保存済みです」は名前の成功で出て、期間の1回目の送信はそのあと
+    // （端末に要求を残してから）始まる。ここで先へ進むと、日付を直して押した
+    // 「保存」が1回目の期間の送信と重なり、押せない状態のボタンを押して
+    // 空振りしていた（全部の試験を一緒に走らせたときに落ちていた原因）。
+    // この試験は「期間が422のあと」なので、422の結果が出るのを待つ。
+    expect(
+      await screen.findByText(
+        "この期間に入らない予定があります。予定の日付を先に変更してください",
+        undefined,
+        { timeout: 3000 },
+      ),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("開始日"), {
       target: { value: "2026-10-20" },
@@ -701,12 +713,21 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     fireEvent.change(screen.getByLabelText("終了日"), {
       target: { value: "2026-10-22" },
     });
-    await clickWhenEnabled("保存");
 
-    expect(await screen.findByText("変更しました")).toBeInTheDocument();
-    const puts = writeCalls(fetchMock).filter(
-      ([url]) => url === `/api/trips/${tripId}/period`,
-    );
+    const periodPuts = () =>
+      writeCalls(fetchMock).filter(
+        ([url]) => url === `/api/trips/${tripId}/period`,
+      );
+    expect(periodPuts()).toHaveLength(1);
+    // 押すのは1回だけ。1回の押しで2回目の送信が起きることを確かめる。
+    await clickWhenEnabled("保存");
+    await waitFor(() => expect(periodPuts()).toHaveLength(2), {
+      timeout: 3000,
+    });
+    expect(
+      await screen.findByText("変更しました", undefined, { timeout: 3000 }),
+    ).toBeInTheDocument();
+    const puts = periodPuts();
     expect(puts).toHaveLength(2);
     // 2回目のPUTは、名前の保存が返したETag（しおりの再取得を待たない）。
     expect(new Headers(puts[1][1]?.headers).get("if-match")).toBe('"2"');

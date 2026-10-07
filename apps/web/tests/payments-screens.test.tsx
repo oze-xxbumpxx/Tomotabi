@@ -665,11 +665,14 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
         screen.getByText("関連する予定を確認できませんでした"),
       ).toBeInTheDocument(),
     );
+    // 文言（getByText）は見えているかに関係なく当たるが、ボタン（getByRole）は
+    // シートが開ききって見える状態になるまで当たらない。重いときはその差で
+    // 落ちていたので、ボタンも見える状態になるまで待つ。
     expect(
-      screen.getByRole("button", { name: "再取得する" }),
+      await screen.findByRole("button", { name: "再取得する" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "関連付けを解除する" }),
+      await screen.findByRole("button", { name: "関連付けを解除する" }),
     ).toBeInTheDocument();
     void fetchMock;
   });
@@ -692,7 +695,10 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     const amountInput = screen.getByLabelText("金額");
     expect(amountInput).toHaveAttribute("readonly");
     expect(amountInput).toHaveValue("7,001");
-    expect(screen.getByRole("radio", { name: "折半" })).toBeDisabled();
+    // シートの<dialog>はuseEffectで開くため、役割で探すものはfindで待つ。
+    expect(
+      await screen.findByRole("radio", { name: "折半" }),
+    ).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "保存" }),
     ).not.toBeInTheDocument();

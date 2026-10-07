@@ -131,6 +131,17 @@ afterEach(async () => {
   await resetDb();
 });
 
+/**
+ * 「旅行をつくる」を押せるようになってから押す。このボタンは端末の要求を
+ * 確かめ終えるまで押せないので、待たずに押すと、全部の試験を一緒に走らせて
+ * 重いときに押しが空振りして落ちることがあった。
+ */
+async function clickCreate() {
+  const button = screen.getByRole("button", { name: "旅行をつくる" });
+  await waitFor(() => expect(button).toBeEnabled());
+  await userEvent.click(button);
+}
+
 describe("TripNewScreen (/trips/new)", () => {
   it("W-06: 空白だけの名前は欄のエラーにして最初の欄へフォーカスする", async () => {
     stubApi(() => new Response(JSON.stringify(tripBody), { status: 201 }));
@@ -140,9 +151,7 @@ describe("TripNewScreen (/trips/new)", () => {
       target: { value: "   " },
     });
     fillDates("2026-10-12", "2026-10-14");
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行をつくる" }),
-    );
+    await clickCreate();
 
     expect(
       await screen.findByText("旅行名を入力してください"),
@@ -163,9 +172,7 @@ describe("TripNewScreen (/trips/new)", () => {
       target: { value: "あ".repeat(101) },
     });
     fillDates("2026-10-14", "2026-10-12");
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行をつくる" }),
-    );
+    await clickCreate();
 
     expect(
       await screen.findByText("旅行名は 100 文字以内で入力してください"),
@@ -188,9 +195,7 @@ describe("TripNewScreen (/trips/new)", () => {
       target: { value: emojiName },
     });
     fillDates("2026-10-12", "2026-10-14");
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行をつくる" }),
-    );
+    await clickCreate();
 
     await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
     expect(
@@ -209,9 +214,7 @@ describe("TripNewScreen (/trips/new)", () => {
       target: { value: emojiName },
     });
     fillDates("2026-10-12", "2026-10-14");
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行をつくる" }),
-    );
+    await clickCreate();
 
     await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
     const [, init] = writeCalls(fetchMock)[0];
@@ -235,10 +238,12 @@ describe("TripNewScreen (/trips/new)", () => {
       target: { value: "  沖縄  " },
     });
     fillDates("2026-10-12", "2026-10-14");
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行をつくる" }),
-    );
+    await clickCreate();
 
+    // 先に送信を待つ。画面の移動（replaceMock）だけを待つと、直前の試験の
+    // 後始末の途中で呼ばれた移動で先に通り、送信の前に下の確認へ進んで
+    // 落ちることがあった。
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(
         `/trips/${tripId}/itinerary`,
@@ -288,9 +293,7 @@ describe("TripNewScreen (/trips/new)", () => {
       target: { value: "沖縄" },
     });
     fillDates("2026-10-12", "2026-10-14");
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行をつくる" }),
-    );
+    await clickCreate();
 
     expect(
       await screen.findByText("保存されたか確認できません"),
@@ -377,9 +380,7 @@ describe("TripNewScreen (/trips/new)", () => {
       target: { value: "沖縄" },
     });
     fillDates("2026-10-12", "2026-10-14");
-    await userEvent.click(
-      screen.getByRole("button", { name: "旅行をつくる" }),
-    );
+    await clickCreate();
 
     await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
     // 送った要求は、new-trip の tripId・create-trip の操作として
@@ -421,9 +422,7 @@ describe("TripNewScreen (/trips/new)", () => {
         throw new DOMException("writes blocked", "InvalidStateError");
       });
     try {
-      await userEvent.click(
-        screen.getByRole("button", { name: "旅行をつくる" }),
-      );
+      await clickCreate();
       expect(
         await screen.findByText(
           "この端末では保存の確認に使う領域が使えません",

@@ -1,0 +1,9 @@
+issue: 172
+title: 'feat(notifications): 通知のDB・契約・鍵（表と権限、契約と生成物、通知の中身の型、VAPIDの鍵）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-07T23:44:24Z'
+reviews: []
+escalations: 0

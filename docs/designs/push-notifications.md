@@ -53,7 +53,7 @@ flowchart LR
 
 ## 対象範囲
 
-- API: `notification`モジュール（購読の4つのAPI、送る処理、ログアウトの前の処理、VAPIDの鍵の読み込み、宛先の確かめ方）。11種類のUseCaseからのイベントの受け渡し。`SessionGuard`がセッションのIDも渡すようにする。
+- API: `notification`モジュール（購読の4つのAPI、送る処理、ログアウトの前の処理、VAPIDの鍵の読み込み、宛先の確かめ方）。11種類のUseCaseからのイベントの受け渡し。`SessionVerifier`の`authenticated`の結果と`SessionGuard`が、セッションのIDも渡すようにする。
 - DB: `notification`スキーマと2つの表、アプリのロールへの権限（migrationを1つ）。
 - 契約: `packages/contracts/openapi/notifications.json`（4つの操作）を足し、zodと型を生成する。
 - web: Service Worker、manifestとアイコン、通知の設定の画面（`/settings/notifications`）、旅行のメニューの行、ホームの案内のカード、精算の画面の履歴の1件を目立たせる表示、ログアウトの流れの変更。
@@ -191,18 +191,19 @@ sequenceDiagram
 ```
 
 - 停止の記録は`ON CONFLICT DO NOTHING`で、何度押しても同じ結果になる。
-- セッションが分からない（期限切れ・Cookie無し）ときはDBに触れずBetter Authへ渡す。webは「通知を止めたとは言えない」案内を出す（F-65）。そのために、ガードは止めたかどうかを応答のヘッダー`X-Push-Stopped: true|false`で返す。
+- ガードは`SessionVerifier`の4つの結果で分ける。`authenticated`は上の流れ。`unavailable`（認証の基盤の障害）は、止められたか分からないので503 `PUSH_STOP_FAILED`を返し、ログアウトしない。`forbidden`（利用許可を外された人）は、その人には送らない決まり（B-04）なので、DBに触れずBetter Authへ渡す。`unauthenticated`（期限切れ・Cookie無し）もDBに触れずBetter Authへ渡す。
+- `unauthenticated`のときは、webは「通知を止めたとは言えない」案内を出す（F-65）。そのために、ガードは止めたかどうかを応答のヘッダー`X-Push-Stopped: true|false`で返す。
 
 ## API 設計
 
 設計資料の`openapi.notifications.json`を`packages/contracts/openapi/notifications.json`に写し、パスに`/api`を付ける（今の契約と同じ書き方）。
 
-| 操作                                     | 応答                                                                                        |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `GET /api/me/push-config`                | 200 `{ keyId, publicKey }`（今の鍵）                                                        |
-| `GET /api/me/push-subscriptions`         | 200 `{ items: [{ id, deviceLabel, enabled, vapidKeyState, isCurrentSession, updatedAt }] }` |
-| `PUT /api/me/push-subscriptions`         | 200 購読の公開してよい項目。400・409・422は「エラー処理」                                   |
-| `DELETE /api/me/push-subscriptions/{id}` | 204（何度でも。他人の・無いIDも204）                                                        |
+| 操作                                     | 応答                                                                                             |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `GET /api/me/push-config`                | 200 `{ publicVapidKey, keyId, maxActiveSubscriptions }`（今の鍵。上限は3。設計資料の契約どおり） |
+| `GET /api/me/push-subscriptions`         | 200 `{ items: [{ id, deviceLabel, enabled, vapidKeyState, isCurrentSession, updatedAt }] }`      |
+| `PUT /api/me/push-subscriptions`         | 200 購読の公開してよい項目。400・409・422は「エラー処理」                                        |
+| `DELETE /api/me/push-subscriptions/{id}` | 204（何度でも。他人の・無いIDも204）                                                             |
 
 - 一覧に`vapidKeyState`（`current`・`retired`・`revoked`）と`isCurrentSession`（今のセッションで登録したか）を足す。設定の画面が「APIで無効になった」と「この端末」を出し分けるのに使う（F-02・F-09）。どちらも設計資料の契約に無い欄で、宛先と鍵は含まない。
 - 4つとも`SessionGuard`と利用許可を通す。PUT・DELETEは`OriginGuard`を通す。Idempotency-Keyは使わない（宛先と持ち主で自然に何度送っても同じになる）。応答は`Cache-Control: no-store`。
@@ -214,7 +215,7 @@ sequenceDiagram
 
 - `push_subscriptions.user_id`・`closed_push_sessions.user_id`は`identity.users(id)`を参照する。`registration_session_id`はBetter Authのセッションの表を参照しない（セッションを消しても購読の行を連鎖で消さないため）。
 - 型・長さ・`endpoint_hash`の一意・鍵のバイト数はDBの制約で守る。P-256の曲線の上の点か、ハッシュとendpointの一致、宛先のホスト、持ち主、数の上限はUseCaseで確かめる。
-- アプリのロールに、2つの表のSELECT・INSERT・UPDATEを与える。DELETEは与えない（無効にするだけ）。`identity.users`の行のFOR UPDATEは、列の一部（`email_verified`・`updated_at`）へのUPDATEの権限で足りる（`0001_app_runtime_grants.sql`で与え済み）ので、identityの権限は変えない。
+- アプリのロールに、`notification`スキーマのUSAGEと、2つの表のSELECT・INSERT・UPDATEを与える。実DBの試験はアプリのロールで走らせ、権限の足りなさを見つける。DELETEは与えない（無効にするだけ）。`identity.users`の行のFOR UPDATEは、列の一部（`email_verified`・`updated_at`）へのUPDATEの権限で足りる（`0001_app_runtime_grants.sql`で与え済み）ので、identityの権限は変えない。
 
 ## フロントエンド設計
 
@@ -242,9 +243,11 @@ sequenceDiagram
 | APIで無効になった                 | 行はあるが`enabled`がfalse、または`vapidKeyState`が`revoked`        | 登録し直す案内                       |
 
 - 端末に「今のendpointに対応する購読のID」を覚えておく（`localStorage`。キーは利用者のIDを含める）。IDが無ければ、「登録し直す」を押したときに同じendpointのPUTで照合する。画面を開いただけでは登録しない（F-09）。
-- 有効にする順番は、Service Workerの登録 → `Notification.requestPermission()` → `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` → PUT → 一覧の取り直し（F-04）。409 `PUSH_KEY_CHANGED`なら、ブラウザの購読を解除し、公開鍵を取り直して1回だけやり直す。
+- 有効にする順番は、Service Workerの登録 → `Notification.requestPermission()` → `pushManager.getSubscription()` → 今の購読があり、その`options.applicationServerKey`が今の公開鍵と違えば`unsubscribe()` → `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` → PUT → 一覧の取り直し（F-04）。ブラウザは、違う鍵の購読が残ったままでは新しい鍵で`subscribe`できないので、先に解除する（鍵の入れ替えのあとの登録し直し。F-73）。409 `PUSH_KEY_CHANGED`なら、ブラウザの購読を解除し、公開鍵を取り直して1回だけやり直す。
 - 端末の名前はブラウザの情報から自動で付ける（「iPhone · Safari」。論点の記録「端末の名前をどう決めるか」の仮決定）。
-- 別の人のログインに切り替わっていたら（覚えた購読のIDの持ち主と今の利用者が違う）、前の購読をブラウザで解除してから有効にする（F-10）。
+- 別の人のログインへの切り替え（F-10）。ふつうはログアウトを通るので、前の人のこのセッションの購読はAPIで止まっている（F-60）。ログアウトを通らずに切り替わったとき（前の人のログインが期限切れで、次の人がログインした）は、前の人としてAPIを呼べない。そのときは次のようにする。
+  - 有効にする前に、覚えた購読のIDの持ち主が今の利用者と違えば、ブラウザの購読を`unsubscribe()`する。解除できなかったら有効にせず、「前に使っていた人の通知が残っています。電波のある所でもう一度お試しください」と出す。解除できないまま登録すると、同じ宛先が前の人の購読として残り、前の人の通知がこの端末に出てしまうため。
+  - 解除すると前の宛先は配信サービスで使えなくなり、前の人あての次の送信が404・410になって、APIでその購読が無効になる（F-34）。それまでは前の人の一覧に端末が残り、3台の数にも入る。前の人は、自分の設定の画面の一覧からその端末を止められる（論点の記録「通知の設定の画面に、自分のほかの端末の一覧を出すか」の答え）。
 
 ### ホームの案内のカード
 
@@ -323,17 +326,17 @@ sequenceDiagram
 - (d) 途中の失敗: 送る処理は保存のトランザクションの外。送信・無効化が失敗しても、業務の保存は変わらない（F-31）。無効化は版が同じときだけ（F-35）。
 - (e) 配信サービスが落ちているとき: その通知は届かないまま終える。アプリは開けば最新の状態を見られる。
 
-| 場面                               | 応答                                    |
-| ---------------------------------- | --------------------------------------- |
-| 本文の形・大きさが違う             | 400 `VALIDATION_FAILED`                 |
-| 許していないホストの宛先           | 422 `UNSUPPORTED_PUSH_SERVICE`          |
-| 鍵の形が違う・P-256の点でない      | 422 `INVALID_PUSH_SUBSCRIPTION`         |
-| 別の人の宛先                       | 409 `PUSH_ENDPOINT_OWNED_BY_OTHER`      |
-| 4台目                              | 409 `PUSH_LIMIT_REACHED`                |
-| keyIdが今の鍵でない                | 409 `PUSH_KEY_CHANGED`                  |
-| ログアウトしたセッションからの登録 | 409 `PUSH_SESSION_CLOSED`               |
-| 鍵の設定が崩れている               | 503 `PUSH_UNAVAILABLE`（設定のAPIだけ） |
-| ログアウトの前の処理が失敗         | 503 `PUSH_STOP_FAILED`                  |
+| 場面                                         | 応答                                    |
+| -------------------------------------------- | --------------------------------------- |
+| 本文の形・大きさが違う                       | 400 `VALIDATION_FAILED`                 |
+| 許していないホストの宛先                     | 422 `UNSUPPORTED_PUSH_SERVICE`          |
+| 鍵の形が違う・P-256の点でない                | 422 `INVALID_PUSH_SUBSCRIPTION`         |
+| 別の人の宛先                                 | 409 `PUSH_ENDPOINT_OWNED_BY_OTHER`      |
+| 4台目                                        | 409 `PUSH_LIMIT_REACHED`                |
+| keyIdが今の鍵でない                          | 409 `PUSH_KEY_CHANGED`                  |
+| ログアウトしたセッションからの登録           | 409 `PUSH_SESSION_CLOSED`               |
+| 鍵の設定が崩れている                         | 503 `PUSH_UNAVAILABLE`（設定のAPIだけ） |
+| ログアウトの前の処理が失敗・認証の基盤の障害 | 503 `PUSH_STOP_FAILED`                  |
 
 別の人が同じendpointを同時に登録したときは、`endpoint_hash`の一意の制約で負けた側をロールバックし、409 `PUSH_ENDPOINT_OWNED_BY_OTHER`にする。
 

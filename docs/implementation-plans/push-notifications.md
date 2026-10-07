@@ -3,7 +3,7 @@
 - 前提となる設計書: docs/designs/push-notifications.md（2026-10-07承認、PR #168）
 - 試験計画: docs/tests/push-notifications.md
 - レベル: L3
-- 実装ルート: Devinに委譲する（支払い・精算、記録と4画面と同じ進め方）。起動はクラウド。effortは、同時実行・セキュリティ・送る処理を含むPRはmax、ほかはhigh
+- 実装ルート: Devinに委譲する（支払い・精算、記録と4画面と同じ進め方）。起動はクラウド（2026-10-04のユーザーの指示で、クラウドを既定にした。AGENTS.mdと`review-devin-pr`の「既定はローカル」はまだ直していない）。クラウドでは`--model`が効かず、Devin Webの既定（ユーザーが設定したSWE-2 Max）で動くので、全部のPRがmaxで動く。下の表のeffortは、クラウドが使えずローカルで起動するときの目安
 - 判断理由: API（購読・ログアウト・送る処理）・DB・契約・Service Worker・画面にまたがり、並行できるPRが多い
 
 ## この文書の読み方
@@ -14,12 +14,12 @@
 
 ## PRの分け方
 
-| PR                       | 範囲                                                                                                     | 手順   | 観点                                                   | effort                                     | マージ後にできること                             |
+| PR                       | 範囲                                                                                                     | 手順   | 観点                                                   | effort（ローカルのときの目安）             | マージ後にできること                             |
 | ------------------------ | -------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------ | ------------------------------------------ | ------------------------------------------------ |
 | DB・契約・鍵             | 2つの表と権限、通知の契約と生成物、通知の中身の型、VAPIDの鍵の読み込みと鍵を作るコマンド、`.env.example` | 1〜5   | PU-08、PD-01                                           | high                                       | APIと画面の型がそろい、鍵を作って読み込める      |
 | 購読のAPI                | 宛先と鍵の決まり、セッションのIDの受け渡し、設定・一覧・登録・停止の4つのAPI                             | 6〜9   | PU-01・PU-02、PD-02〜PD-10                             | max                                        | APIで購読を登録・停止できる                      |
 | ログアウトのガード       | `POST /api/auth/sign-out`の手前で通知を止める処理                                                        | 10     | PD-11〜PD-14                                           | max                                        | ログアウトした端末に新しい通知が届かない         |
-| 送る処理                 | 保存のあとの処理の口、イベントを渡す口、送る相手の選び方、本文、送る部品、11種類のUseCaseからのイベント  | 11〜15 | PU-03〜PU-07・PU-09・PU-10、PD-15〜PD-20、PT-01〜PT-03 | max                                        | 相手の操作で、登録した購読へ通知が送られる       |
+| 送る処理                 | 保存のあとの処理の口、イベントを渡す口、送る相手の選び方、本文、送る部品、11種類のUseCaseからのイベント  | 11〜15 | PU-03〜PU-07・PU-09・PU-10、PD-15〜PD-21、PT-01〜PT-03 | max                                        | 相手の操作で、登録した購読へ通知が送られる       |
 | Service Workerとmanifest | 中身の確かめ方と開くパス（webの`shared/push`）、Service Workerとそのビルド、manifestとアイコン           | 16〜17 | PU-11〜PU-13                                           | high                                       | ブラウザが通知を受け取って出し、押すと対象を開く |
 | 通知の画面               | 通知の設定の画面、旅行のメニューの行、ホームの案内のカード、ログアウトの流れ、精算の画面の`settlementId` | 18〜20 | PU-14、PW-01〜PW-11                                    | high                                       | 画面から通知を有効にし、止められる               |
 | E2Eと手動確認            | E2Eの4つ、手動確認の手順、最後の受け入れの行                                                             | 21     | PE-01〜PE-04、PM-01〜PM-03                             | high（E2E）・Claude Codeとユーザー（手動） | 通知の完成                                       |
@@ -95,12 +95,12 @@
 11. `adapter/after-response/`（`AfterResponse`と`InProcessAfterResponse`。`drain()`と、`main.ts`の終了のときの待ち）。完了条件: PU-09。
 12. `domain/notification-message.ts`（本文の言葉、名前の切り詰め、UTF-8で2KB以内）。完了条件: PU-03〜PU-05。
 13. `WebPushSender`（`generateRequestDetails`に`TTL: 300`・`urgency`・`contentEncoding`、購読の鍵で署名）と`HttpsPushTransport`（3秒の全体の打ち切り、転送を追わない、同時3件）。完了条件: PU-06・PU-07、PT-01〜PT-03。
-14. 送る相手の読み取り（相手の有効な購読、名前2つ。READ ONLY・`statement_timeout`と`lock_timeout`）と`DispatchNotificationUseCase`（応答ごとの扱い、版が同じときだけ無効にする、ログ）。完了条件: PD-15・PD-18〜PD-20。
+14. 送る相手の読み取り（相手の有効な購読、名前2つ。READ ONLY・`statement_timeout`と`lock_timeout`）と`DispatchNotificationUseCase`（応答ごとの扱い、版が同じときだけ無効にする、ログ）。完了条件: PD-15・PD-18〜PD-21。
 15. 各モジュールの`NotificationPublisher`と、11種類のUseCaseからの`publish`（設計書「どのUseCaseが、いつイベントを渡すか」の表）。完了条件: PU-10、PD-16・PD-17。
 
 ### Service Workerとmanifest
 
-16. `shared/push/`（中身の確かめ方、開くパス、端末の名前）と`service-worker/`（`push`・`notificationclick`）、`scripts/build-service-worker.mjs`（esbuildで`public/sw.js`）、`predev`・`prebuild`。完了条件: PU-11〜PU-13、`npm run build`が通る。
+16. `shared/push/`（中身の確かめ方、開くパス、端末の名前）と`service-worker/`（`push`・`notificationclick`）、`scripts/build-service-worker.mjs`（esbuildで`public/sw.js`）、`predev`・`prebuild`。完了条件: PU-11〜PU-13・PU-15、`npm run build`が通る。
 17. `app/manifest.ts`とアイコン（今のアプリのアイコンから192・512のPNG）。完了条件: Chromeでmanifestが読める。
 
 ### 通知の画面

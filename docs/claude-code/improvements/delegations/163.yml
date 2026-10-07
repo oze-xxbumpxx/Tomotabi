@@ -1,0 +1,24 @@
+issue: 163
+title: 'test(e2e): 既存の E2E の旅行の日付を、今日から数える形にする'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 1
+delegated_at: '2026-10-06T13:26:18Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-06T13:40:52Z'
+    reviewed_sha: '4bc859aeaf68fa7dca4c3f188052f22dce770432'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 164
+  pr_created_at: '2026-10-06T13:34:57Z'
+  merged_at: '2026-10-07T00:26:08Z'
+  closed_at: '2026-10-07T00:26:08Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

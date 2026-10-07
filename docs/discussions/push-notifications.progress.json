@@ -16,13 +16,20 @@
       }
     },
     "design": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/designs/push-notifications.md"
-      ]
+      ],
+      "approved": {
+        "pr": 168,
+        "at": "2026-10-07"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "approval",
+      "docs": [
+        "docs/implementation-plans/push-notifications.md"
+      ]
     },
     "implement": {
       "state": "pending"
@@ -37,5 +44,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-07T13:33:19.570Z"
+  "updated_at": "2026-10-07T13:44:12.610Z"
 }

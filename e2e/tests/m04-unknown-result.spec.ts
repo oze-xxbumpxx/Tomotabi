@@ -1,3 +1,4 @@
+import { daysFromToday, formatDayLabel } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
 
@@ -7,11 +8,15 @@ import { createTrip } from "../support/trips";
 // → unroute →「同じ内容で確認する」→ 成功 → その日の予定は1件だけ
 // （同じ要求の再送で重複して作られない）。
 // 日はすべて明示して選ぶ（しおりの既定の日は実行する日で変わる）。
+// 期間は実行日の日本時間の今日から数えて作る（決め打ちだと日が変わると
+// 表示の種類が変わって落ちる）。
 const TRIP = {
   name: "松山 2 泊",
-  startsOn: "2026-11-02", // 11/2 月
-  endsOn: "2026-11-04", // 11/4 水
+  startsOn: daysFromToday(30),
+  endsOn: daysFromToday(32),
 };
+const DAY_TWO = daysFromToday(31);
+const DAY_TWO_LABEL = formatDayLabel(DAY_TWO);
 const PLAN_NAME = "道後温泉";
 
 test("M-04: 応答の届かなかった保存は同じ内容で確認する", async ({
@@ -19,12 +24,12 @@ test("M-04: 応答の届かなかった保存は同じ内容で確認する", as
 }) => {
   await createTrip(page, TRIP);
 
-  // 2日目（11/3火）を日付バーで明示して選ぶ。
+  // 2日目を日付バーで明示して選ぶ。
   await page
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /^2 日目/ })
     .click();
-  await page.waitForURL(/date=2026-11-03/);
+  await page.waitForURL(new RegExp(`date=${DAY_TWO}`));
   await expect(
     page.getByText("この日の予定はまだありません"),
   ).toBeVisible();
@@ -50,7 +55,7 @@ test("M-04: 応答の届かなかった保存は同じ内容で確認する", as
     .check({ force: true });
   // 日付もフォームで明示する（既定値に依存しない）。
   await sheet
-    .getByRole("radio", { name: "11/3 火", exact: true })
+    .getByRole("radio", { name: DAY_TWO_LABEL, exact: true })
     .click();
   await sheet.getByRole("button", { name: "保存", exact: true }).click();
 
@@ -70,7 +75,7 @@ test("M-04: 応答の届かなかった保存は同じ内容で確認する", as
   await sheet
     .getByRole("button", { name: "同じ内容で確認する" })
     .click();
-  await page.waitForURL(/\/itinerary\?date=2026-11-03/);
+  await page.waitForURL(new RegExp(`/itinerary\\?date=${DAY_TWO}`));
   await expect(
     page.getByRole("status").filter({ hasText: "追加しました" }),
   ).toBeVisible();

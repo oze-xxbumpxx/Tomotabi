@@ -1,3 +1,4 @@
+import { daysFromToday } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 import { createTrip, openTripEditSheet } from "../support/trips";
 
@@ -6,10 +7,12 @@ import { createTrip, openTripEditSheet } from "../support/trips";
 // 旅行名を変える → C-5（「相手が先に変更しました」、旅行名は「変更あり」で
 // 最新（相手）とあなたの入力が並ぶ）→「あなたの入力で保存」→
 // 両方の画面であおいの名前になる（ひなたの画面は再読み込みで）。
+// 期間は実行日の日本時間の今日から数えて作る（決め打ちだと日が変わると
+// 表示の種類が変わって落ちる）。
 const TRIP = {
   name: "松山 1 泊",
-  startsOn: "2026-11-03", // 11/3 火
-  endsOn: "2026-11-04", // 11/4 水
+  startsOn: daysFromToday(30),
+  endsOn: daysFromToday(31),
 };
 
 test("M-02: 二人の変更の競合は C-5 で見比べてから保存する", async ({

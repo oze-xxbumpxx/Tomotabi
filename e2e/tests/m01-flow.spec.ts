@@ -1,13 +1,18 @@
 import type { Page } from "@playwright/test";
+import { daysFromToday, formatDayLabel } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 
 // M-01（docs/tests/m2-trips-and-plans.md）: ひなたで旅行を作る → しおりで
 // 予定を3件（時刻なしを含む）→ 編集・移動・取りやめ → 開始 → 終了 →
 // 終了後に予定を追加。すべて画面どおりに反映されることを確かめる。
+// 期間は実行日から数える（出発前のまま確かめる。e2e/support/dates.ts）。
+const DAY_1 = daysFromToday(30);
+const DAY_2 = daysFromToday(31);
+const DAY_3 = daysFromToday(32);
 const TRIP = {
   name: "京都 2 泊",
-  startsOn: "2026-10-10", // 10/10 土
-  endsOn: "2026-10-12", // 10/12 月
+  startsOn: DAY_1,
+  endsOn: DAY_3,
 };
 
 async function addPlan(
@@ -78,12 +83,12 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /^1 日目/ })
     .click();
-  await page.waitForURL(/date=2026-10-10/);
+  await page.waitForURL(new RegExp(`date=${DAY_1}`));
   await expect(
     page.getByText("この日の予定はまだありません"),
   ).toBeVisible();
 
-  // 1日目（10/10）に予定を3件。時刻順に並び、時刻未定は末尾。
+  // 1日目に予定を3件。時刻順に並び、時刻未定は末尾。
   await addPlan(page, {
     name: "清水寺",
     kindLabel: "場所",
@@ -123,45 +128,45 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     page.getByRole("heading", { name: "清水寺（早朝参り）" }),
   ).toBeVisible();
 
-  // 日の移動: 10/10 → 10/11
+  // 日の移動: 1日目 → 2日目
   await page.getByRole("button", { name: "日の移動" }).click();
   const moveSheet = page.getByRole("dialog", { name: "日の移動" });
   await moveSheet
-    .getByRole("radio", { name: "10/11 日", exact: true })
+    .getByRole("radio", { name: formatDayLabel(DAY_2), exact: true })
     .click();
   await moveSheet
     .getByRole("button", { name: "この日に移動する" })
     .click();
   await expect(page.getByRole("status").filter({ hasText: "移動しました" })).toBeVisible();
 
-  // 詳細の日付リンク（`?date=plan.date`行き）から10/11のしおりへ
+  // 詳細の日付リンク（`?date=plan.date`行き）から2日目のしおりへ
   const planDateLink = page.getByRole("link", {
-    name: "10/11 日",
+    name: formatDayLabel(DAY_2),
     exact: true,
   });
   await expect(planDateLink).toBeVisible();
   await planDateLink.click();
-  await page.waitForURL(/date=2026-10-11/);
+  await page.waitForURL(new RegExp(`date=${DAY_2}`));
   await expect(
     page.getByRole("listitem").filter({ hasText: "清水寺（早朝参り）" }),
   ).toBeVisible();
 
-  // 10/10のしおりには出ない
+  // 1日目のしおりには出ない
   await page
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /^1 日目/ })
     .click();
-  await page.waitForURL(/date=2026-10-10/);
+  await page.waitForURL(new RegExp(`date=${DAY_1}`));
   await expect(
     page.getByRole("listitem").filter({ hasText: "清水寺" }),
   ).toHaveCount(0);
 
-  // 取りやめ（予定は10/11にある。日付バーで明示して選ぶ）
+  // 取りやめ（予定は2日目にある。日付バーで明示して選ぶ）
   await page
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /2 日目/ })
     .click();
-  await page.waitForURL(/date=2026-10-11/);
+  await page.waitForURL(new RegExp(`date=${DAY_2}`));
   await page.getByRole("link", { name: /清水寺（早朝参り）/ }).click();
   await page.getByRole("button", { name: "取りやめにする" }).click();
   const cancelDialog = page.getByRole("dialog", {
@@ -176,9 +181,11 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
   await expect(
     page.getByRole("button", { name: "取りやめにする" }),
   ).not.toBeVisible();
-  // 詳細の日付リンクで10/11のしおりへ戻る（取りやめでも日付は変わらない）
-  await page.getByRole("link", { name: "10/11 日", exact: true }).click();
-  await page.waitForURL(/date=2026-10-11/);
+  // 詳細の日付リンクで2日目のしおりへ戻る（取りやめでも日付は変わらない）
+  await page
+    .getByRole("link", { name: formatDayLabel(DAY_2), exact: true })
+    .click();
+  await page.waitForURL(new RegExp(`date=${DAY_2}`));
   await expect(
     page.getByRole("listitem").filter({ hasText: "清水寺（早朝参り）" }),
   ).toContainText("取りやめ");
@@ -207,12 +214,12 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
   ).toBeVisible();
   await expect(page.getByText("終了", { exact: true })).toBeVisible();
 
-  // 終了後も予定を追加できる（10/12に時刻未定で追加）
+  // 終了後も予定を追加できる（3日目に時刻未定で追加）
   await page
     .getByRole("navigation", { name: "日付を選ぶ" })
     .getByRole("link", { name: /3 日目/ })
     .click();
-  await page.waitForURL(/date=2026-10-12/);
+  await page.waitForURL(new RegExp(`date=${DAY_3}`));
   await addPlan(page, { name: "駅でお土産", kindLabel: "買い物" });
   await expect(
     page.getByRole("listitem").filter({ hasText: "駅でお土産" }),

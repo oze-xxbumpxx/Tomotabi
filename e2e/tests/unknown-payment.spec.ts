@@ -4,6 +4,7 @@
 // 保存済みの結果が返り、支払いが1件だけであることを実DBでも確かめる。
 
 import { countPayments } from "../support/db";
+import { daysFromToday } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
 
@@ -12,8 +13,8 @@ test("FE-04: 応答の届かなかった支払いの記録は同じ内容で確�
 }) => {
   const tripId = await createTrip(page, {
     name: "広島 1 泊",
-    startsOn: "2026-11-28",
-    endsOn: "2026-11-29",
+    startsOn: daysFromToday(30),
+    endsOn: daysFromToday(31),
   });
 
   // POST /payments の応答だけを捨てる。request は route.fetch で本物の

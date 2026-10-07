@@ -1,3 +1,4 @@
+import { daysFromToday } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 import { createTrip, openTripEditSheet } from "../support/trips";
 
@@ -8,8 +9,8 @@ import { createTrip, openTripEditSheet } from "../support/trips";
 // 両方の画面であおいの名前になる（ひなたの画面は再読み込みで）。
 const TRIP = {
   name: "松山 1 泊",
-  startsOn: "2026-11-03", // 11/3 火
-  endsOn: "2026-11-04", // 11/4 水
+  startsOn: daysFromToday(30),
+  endsOn: daysFromToday(31),
 };
 
 test("M-02: 二人の変更の競合は C-5 で見比べてから保存する", async ({

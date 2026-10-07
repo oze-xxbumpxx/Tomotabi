@@ -694,6 +694,13 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(
       await screen.findByText("旅行名は保存済みです"),
     ).toBeInTheDocument();
+    // 「旅行名は保存済みです」は1回目の期間の送信が終わる前にも出る。
+    // 422が返るのを待ってから直さないと、送信中の2回目の保存は受け付けられない。
+    expect(
+      await screen.findByText(
+        "この期間に入らない予定があります。予定の日付を先に変更してください",
+      ),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("開始日"), {
       target: { value: "2026-10-20" },

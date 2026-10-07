@@ -1,5 +1,6 @@
 import { addSessionCookies } from "../support/auth";
 import { HINATA_USER_ID } from "../support/env";
+import { daysFromToday } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
 
@@ -10,13 +11,13 @@ import { createTrip } from "../support/trips";
 // 1つ目のホームに戻る（前回の旅行はホームを開く）。
 const FIRST_TRIP = {
   name: "高松 2 泊",
-  startsOn: "2026-10-15",
-  endsOn: "2026-10-17",
+  startsOn: daysFromToday(30),
+  endsOn: daysFromToday(32),
 };
 const SECOND_TRIP = {
   name: "直島日帰り",
-  startsOn: "2026-11-20",
-  endsOn: "2026-11-20",
+  startsOn: daysFromToday(40),
+  endsOn: daysFromToday(40),
 };
 
 test("M-03: ログアウトのあと、前回開いた旅行に戻る", async ({

@@ -665,8 +665,10 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
         screen.getByText("関連する予定を確認できませんでした"),
       ).toBeInTheDocument(),
     );
+    // シートの<dialog>はuseEffectで開くため、文字が出た直後はまだ閉じていて
+    // 役割（role）では見つからないことがある。役割で探すものはfindで待つ。
     expect(
-      screen.getByRole("button", { name: "再取得する" }),
+      await screen.findByRole("button", { name: "再取得する" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "関連付けを解除する" }),
@@ -692,7 +694,10 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     const amountInput = screen.getByLabelText("金額");
     expect(amountInput).toHaveAttribute("readonly");
     expect(amountInput).toHaveValue("7,001");
-    expect(screen.getByRole("radio", { name: "折半" })).toBeDisabled();
+    // シートの<dialog>はuseEffectで開くため、役割で探すものはfindで待つ。
+    expect(
+      await screen.findByRole("radio", { name: "折半" }),
+    ).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "保存" }),
     ).not.toBeInTheDocument();

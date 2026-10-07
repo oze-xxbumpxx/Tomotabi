@@ -103,7 +103,7 @@ flowchart TB
 
 - **イベントを渡す口**: 各モジュールの`adapter/outbound`に`NotificationPublisher`（`publish(event)`だけ）を置く。UseCaseは、トランザクションが成功し、再送でなく、状態が実際に変わったときだけ呼ぶ。`publish`は例外を投げない（中で受け止めてログに出す）。
 - **保存のあとの処理の口**: `adapter/after-response`に`AfterResponse`（`schedule(name, task)`）を置く。手元の実装`InProcessAfterResponse`は、応答を返したあとにタスクを走らせ、走っているタスクを持っておき、例外をログに出す。試験は`drain()`で全部が終わるまで待つ。Vercelの実装（`waitUntil`に渡す）は結合検証の環境を作る回で足す。
-- **送る部品**: `WebPushSender`は`web-push`の`generateRequestDetails`で暗号化と署名をした要求を作り、`PushTransport`（HTTPSで送る口）に渡す。本番の`HttpsPushTransport`はNodeの`https.request`で、`AbortSignal`による3秒の全体の打ち切りと、転送を追わない設定で送る。試験では`PushTransport`だけを偽物に差し替える。
+- **送る部品**: `WebPushSender`は`web-push`の`generateRequestDetails`で暗号化と署名をした要求を作り（`TTL: 300`・`urgency: "normal"`・`contentEncoding: "aes128gcm"`を必ず指定する。F-36）、`PushTransport`（HTTPSで送る口）に渡す。本番の`HttpsPushTransport`はNodeの`https.request`で、`AbortSignal`による3秒の全体の打ち切りと、転送を追わない設定で送る。試験では`PushTransport`だけを偽物に差し替える。
 
 ## データフロー
 
@@ -134,6 +134,7 @@ sequenceDiagram
 ```
 
 - イベントは`eventId`（新しいUUID）・`action`・`tripId`・`targetKind`・`targetId`・`actorUserId`・`occurredAt`。追加と取り消しは別のイベント。
+- 上限は「行があるか」ではなく「有効な購読が1件増えるか」で判定する。無効になっていた同じ宛先の行を有効に戻すときも、1件増えるものとして数える（B-01）。
 - 送る相手は、旅行の参加者から操作した人を除いた人で、`identity.allowed_google_accounts`の`enabled`が今もtrueの人（B-04）。その人の購読のうち、`enabled`で、期限が過ぎておらず、登録したセッションが停止の記録に無く、鍵が止めた鍵でないものだけ（F-23・F-24）。
 - 本文に入れる相手の名前（`identity.users.name`）と旅行の名前は、送る処理の中でDBから読む。名前は20文字・旅行の名前は30文字で切り、超えたら末尾を「…」にする（論点の記録「通知に入れる名前を、何文字で切り詰めるか」の仮決定）。組み立てたJSONをUTF-8で測り、2KBを超えたら名前をさらに短くする（F-44・B-03）。
 
@@ -164,7 +165,7 @@ sequenceDiagram
   API->>DB: 停止の記録に今のセッションがあれば409 PUSH_SESSION_CLOSED
   API->>DB: 期限の過ぎた自分の購読を無効にする
   API->>DB: 同じendpoint_hashの行を読む（他人なら409）
-  API->>DB: 有効な数を数える（3以上で、この宛先が新しければ409）
+  API->>DB: この登録で有効な購読が1件増えるか（同じ宛先の行が無い、または無効）を見て、増えるなら今の有効な数が3以上で409
   API->>DB: upsert（中身が同じなら版を上げない）
   API-->>B: 200 購読の公開してよい項目
 ```
@@ -234,14 +235,15 @@ sequenceDiagram
 
 | この端末の状態                    | 判定                                                                | 出すもの                             |
 | --------------------------------- | ------------------------------------------------------------------- | ------------------------------------ |
-| 使えない                          | `serviceWorker`・`PushManager`・`Notification`のどれかが無い        | 使えないことだけ                     |
 | iPhoneでホーム画面への追加が要る  | iOSの画面で`navigator.standalone`がfalse、かつ`PushManager`が無い   | ホーム画面に追加する手順             |
+| 使えない                          | `serviceWorker`・`PushManager`・`Notification`のどれかが無い        | 使えないことだけ                     |
 | まだ許可していない                | `Notification.permission === "default"`                             | 墨の「通知を有効にする」             |
 | 許可を断った                      | `"denied"`                                                          | ブラウザ・OSの設定から変える案内     |
 | ブラウザでは登録したがAPIに未登録 | `getSubscription()`があり、一覧に`isCurrentSession`の有効な行が無い | 「登録し直す」                       |
 | 有効                              | 一覧に今のendpointの有効な行がある                                  | 有効の印と「この端末の通知を止める」 |
 | APIで無効になった                 | 行はあるが`enabled`がfalse、または`vapidKeyState`が`revoked`        | 登録し直す案内                       |
 
+- 状態は表の上から順に判定し、最初に当てはまったものにする。ホーム画面に追加していないiPhoneは`PushManager`が無く「使えない」にも当てはまるので、iPhoneの判定を先に置く。
 - 端末に「今のendpointに対応する購読のID」を覚えておく（`localStorage`。キーは利用者のIDを含める）。IDが無ければ、「登録し直す」を押したときに同じendpointのPUTで照合する。画面を開いただけでは登録しない（F-09）。
 - 有効にする順番は、Service Workerの登録 → `Notification.requestPermission()` → `pushManager.getSubscription()` → 今の購読があり、その`options.applicationServerKey`が今の公開鍵と違えば`unsubscribe()` → `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` → PUT → 一覧の取り直し（F-04）。ブラウザは、違う鍵の購読が残ったままでは新しい鍵で`subscribe`できないので、先に解除する（鍵の入れ替えのあとの登録し直し。F-73）。409 `PUSH_KEY_CHANGED`なら、ブラウザの購読を解除し、公開鍵を取り直して1回だけやり直す。
 - 端末の名前はブラウザの情報から自動で付ける（「iPhone · Safari」。論点の記録「端末の名前をどう決めるか」の仮決定）。
@@ -364,14 +366,14 @@ sequenceDiagram
 
 ## テスト方針
 
-| 層       | 確かめること                                                                                                                                                                                          |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 単体     | 宛先の決まり（B-06の各例）、鍵の形とP-256、本文の言葉11種類と切り詰めと2KB（B-03）、応答ごとの扱い、Service Workerの中身の確かめ方と開くパス、鍵の設定の読み込み                                      |
-| 実DB     | 端末の上限（B-01、同時の登録を含む）、持ち主の衝突、停止の記録とPUTの競合、版が同じときだけ無効にする（F-35）、期限の過ぎた購読、送る相手の選び方（B-04・F-24）                                       |
-| HTTP     | 4つのAPIの応答とエラー、ログアウトの503と`X-Push-Stopped`、11種類の保存で送る・再送では送らない（偽物の送る部品が受け取った要求を数える。`drain()`で待つ）、通知の送信を失敗させても保存は201（E-01） |
-| 送る部品 | 本物の`HttpsPushTransport`を手元のHTTPサーバーに向け、3秒で打ち切ること・転送を追わないこと（宛先の決まりは通さず、部品だけを試す）                                                                   |
-| E2E      | 設定の画面の状態（Chromiumで`Notification`と`PushManager`を差し替える）、旅行のメニューの行、ホームのカードの出し方と閉じ方、精算の画面の`settlementId`、通知から開くパス                             |
-| 手動     | 手元のPCのChromeで、片方で有効にし、もう片方の予定・記録・精算の操作で通知が出て、押すと対象が開く（受け入れ条件）                                                                                    |
+| 層       | 確かめること                                                                                                                                                                                                                                       |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 単体     | 送る要求の`TTL: 300`・`Urgency: normal`・`Content-Encoding: aes128gcm`のヘッダー、宛先の決まり（B-06の各例）、鍵の形とP-256、本文の言葉11種類と切り詰めと2KB（B-03）、応答ごとの扱い、Service Workerの中身の確かめ方と開くパス、鍵の設定の読み込み |
+| 実DB     | 端末の上限（B-01、同時の登録を含む）、持ち主の衝突、停止の記録とPUTの競合、版が同じときだけ無効にする（F-35）、期限の過ぎた購読、送る相手の選び方（B-04・F-24）                                                                                    |
+| HTTP     | 4つのAPIの応答とエラー、ログアウトの503と`X-Push-Stopped`、11種類の保存で送る・再送では送らない（偽物の送る部品が受け取った要求を数える。`drain()`で待つ）、通知の送信を失敗させても保存は201（E-01）                                              |
+| 送る部品 | 本物の`HttpsPushTransport`を手元のHTTPサーバーに向け、3秒で打ち切ること・転送を追わないこと（宛先の決まりは通さず、部品だけを試す）                                                                                                                |
+| E2E      | 設定の画面の状態（Chromiumで`Notification`と`PushManager`を差し替える）、旅行のメニューの行、ホームのカードの出し方と閉じ方、精算の画面の`settlementId`、通知から開くパス                                                                          |
+| 手動     | 手元のPCのChromeで、片方で有効にし、もう片方の予定・記録・精算の操作で通知が出て、押すと対象が開く（受け入れ条件）                                                                                                                                 |
 
 ## 移行とリリース
 

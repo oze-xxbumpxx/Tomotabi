@@ -3,16 +3,20 @@
   "title": "相手の操作を知らせる通知",
   "level": "L3",
   "page": "https://claude.ai/artifact/HA4jgAQqUCRtki6Q6ifhGQ",
-  "round": 1,
+  "round": 2,
   "stages": {
     "requirements": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/requirements/push-notifications.md"
-      ]
+      ],
+      "approved": {
+        "pr": 167,
+        "at": "2026-10-07"
+      }
     },
     "design": {
-      "state": "pending"
+      "state": "waiting"
     },
     "plan": {
       "state": "pending"
@@ -30,5 +34,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-07T13:12:24.397Z"
+  "updated_at": "2026-10-07T13:22:26.867Z"
 }

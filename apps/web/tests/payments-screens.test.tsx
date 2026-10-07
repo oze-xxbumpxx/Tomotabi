@@ -695,7 +695,10 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     const amountInput = screen.getByLabelText("金額");
     expect(amountInput).toHaveAttribute("readonly");
     expect(amountInput).toHaveValue("7,001");
-    expect(screen.getByRole("radio", { name: "折半" })).toBeDisabled();
+    // シートの<dialog>はuseEffectで開くため、役割で探すものはfindで待つ。
+    expect(
+      await screen.findByRole("radio", { name: "折半" }),
+    ).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "保存" }),
     ).not.toBeInTheDocument();

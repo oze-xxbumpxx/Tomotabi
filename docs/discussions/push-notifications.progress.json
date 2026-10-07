@@ -6,7 +6,10 @@
   "round": 1,
   "stages": {
     "requirements": {
-      "state": "waiting"
+      "state": "approval",
+      "docs": [
+        "docs/requirements/push-notifications.md"
+      ]
     },
     "design": {
       "state": "pending"
@@ -27,5 +30,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-07T12:58:44.699Z"
+  "updated_at": "2026-10-07T13:12:24.397Z"
 }

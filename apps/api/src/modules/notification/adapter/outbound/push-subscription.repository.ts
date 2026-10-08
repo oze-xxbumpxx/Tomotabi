@@ -68,6 +68,26 @@ export interface PushSubscriptionRepository {
   isSessionClosed(sessionId: string): Promise<boolean>;
 
   /**
+   * 停止の記録にこのセッションを足す。同じsessionIdの行が
+   * 既にあれば何もしない（ON CONFLICT DO NOTHING）。
+   */
+  closeSession(
+    sessionId: string,
+    userId: UserId,
+    closedAt: Date,
+  ): Promise<void>;
+
+  /**
+   * このセッションで登録した自分の有効な購読だけを無効にする
+   * （版を上げる）。別のセッションで登録した購読は触らない。
+   */
+  disableByRegistrationSession(
+    userId: UserId,
+    sessionId: string,
+    now: Date,
+  ): Promise<void>;
+
+  /**
    * 期限切れの自分の有効購読を無効にする（上限を数える前の整理）。
    * 戻り値は無効にした件数。
    */

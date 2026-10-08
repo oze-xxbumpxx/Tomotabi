@@ -64,6 +64,20 @@
       "when": 1791155033717,
       "tag": "0008_plan_event_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791384961862,
+      "tag": "0009_notification_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791384966637,
+      "tag": "0010_notification_grants",
+      "breakpoints": true
     }
   ]
 }

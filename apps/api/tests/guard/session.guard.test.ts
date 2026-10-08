@@ -52,6 +52,7 @@ describe("SessionGuard", () => {
     const { guard, verify } = createGuard({
       kind: "authenticated",
       userId: USER_ID,
+      sessionId: "test-session-id",
       expiresAt,
     });
     const request: Record<string, unknown> = { headers: HEADERS };
@@ -60,6 +61,7 @@ describe("SessionGuard", () => {
     await expect(guard.canActivate(context)).resolves.toBe(true);
 
     expect(request.userId).toBe(USER_ID);
+    expect(request.sessionId).toBe("test-session-id");
     expect(request.sessionExpiresAt).toBe(expiresAt);
     expect(verify).toHaveBeenCalledWith(HEADERS);
   });

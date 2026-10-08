@@ -10,7 +10,13 @@ export type SessionVerifierHeaders = Readonly<
 >;
 
 export type SessionVerificationResult =
-  | { kind: "authenticated"; userId: UserId; expiresAt: Date }
+  | {
+      kind: "authenticated";
+      userId: UserId;
+      /** identity.sessionsのid。購読の登録セッション記録などに使う。 */
+      sessionId: string;
+      expiresAt: Date;
+    }
   | { kind: "unauthenticated" }
   | { kind: "forbidden" }
   | { kind: "unavailable" };

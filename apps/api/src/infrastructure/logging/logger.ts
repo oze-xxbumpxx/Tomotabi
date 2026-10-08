@@ -28,6 +28,10 @@ const REDACT_PATHS = [
   "*.refreshToken",
   "*.code",
   "*.sub",
+  "*.endpoint",
+  "*.keys",
+  "*.p256dh",
+  "*.auth",
 ];
 
 // Guard・経路制限が結果コードを渡すための取り決め（res.locals.codeに書く）。

@@ -9,11 +9,14 @@ import type { SessionVerifierHeaders } from "../../src/modules/identity/adapter/
 
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const EXPIRES_AT = new Date("2027-01-01T00:00:00.000Z");
+const SESSION_ID = "8b9c0d1e-0000-4000-8000-000000000001";
 const HEADERS: SessionVerifierHeaders = {
   cookie: "travel.session_token=signed-cookie",
 };
 
-type SessionRecord = { session: { userId: string; expiresAt: Date } } | null;
+type SessionRecord = {
+  session: { id: string; userId: string; expiresAt: Date };
+} | null;
 
 function lookupReturning(
   impl: () => Promise<SessionRecord>,
@@ -88,7 +91,7 @@ describe("BetterAuthSessionVerifier", () => {
 
   it("returns authenticated with userId and expiresAt when the allowlist matches", async () => {
     const lookup = lookupReturning(async () => ({
-      session: { userId: USER_ID, expiresAt: EXPIRES_AT },
+      session: { id: SESSION_ID, userId: USER_ID, expiresAt: EXPIRES_AT },
     }));
     const verifier = new BetterAuthSessionVerifier(lookup, poolReturning(1));
 
@@ -97,6 +100,7 @@ describe("BetterAuthSessionVerifier", () => {
     expect(result).toEqual({
       kind: "authenticated",
       userId: UserId.parse(USER_ID),
+      sessionId: SESSION_ID,
       expiresAt: EXPIRES_AT,
     });
   });
@@ -117,7 +121,7 @@ describe("BetterAuthSessionVerifier", () => {
   it("returns forbidden when the allowlist check fails", async () => {
     const verifier = new BetterAuthSessionVerifier(
       lookupReturning(async () => ({
-        session: { userId: USER_ID, expiresAt: EXPIRES_AT },
+        session: { id: SESSION_ID, userId: USER_ID, expiresAt: EXPIRES_AT },
       })),
       poolReturning(0),
     );
@@ -130,7 +134,7 @@ describe("BetterAuthSessionVerifier", () => {
   it("returns unavailable when the allowlist query fails", async () => {
     const verifier = new BetterAuthSessionVerifier(
       lookupReturning(async () => ({
-        session: { userId: USER_ID, expiresAt: EXPIRES_AT },
+        session: { id: SESSION_ID, userId: USER_ID, expiresAt: EXPIRES_AT },
       })),
       poolThrowing(),
     );

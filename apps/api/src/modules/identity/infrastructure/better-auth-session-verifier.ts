@@ -16,7 +16,9 @@ import { isAllowedGoogleAccount } from "./allowlist-query";
 export interface SessionLookup {
   getSession(input: {
     headers: Headers;
-  }): Promise<{ session: { userId: string; expiresAt: Date } } | null>;
+  }): Promise<{
+    session: { id: string; userId: string; expiresAt: Date };
+  } | null>;
 }
 
 /**
@@ -53,6 +55,7 @@ export class BetterAuthSessionVerifier implements SessionVerifier {
       return {
         kind: "authenticated",
         userId: UserId.parse(result.session.userId),
+        sessionId: result.session.id,
         expiresAt: result.session.expiresAt,
       };
     } catch {

@@ -26,13 +26,17 @@
       }
     },
     "plan": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/implementation-plans/push-notifications.md"
-      ]
+      ],
+      "approved": {
+        "pr": 169,
+        "at": "2026-10-08"
+      }
     },
     "implement": {
-      "state": "pending"
+      "state": "active"
     },
     "review": {
       "state": "pending"
@@ -44,5 +48,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-07T13:44:12.610Z"
+  "updated_at": "2026-10-07T23:44:42.005Z"
 }

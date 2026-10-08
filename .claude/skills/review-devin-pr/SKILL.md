@@ -34,7 +34,7 @@ description: >
 
    | 領域 | 予防の1行（Issueの「既知の指摘」に写す） | 出典 |
    | --- | --- | --- |
-   | （まだ無い） | | |
+   | E2E | 日付は今日から数えて作り、年や日を決め打ちしない。要素は役割・見出し・ラベルで探し、クラス名で探さない。APIを模擬したら、外す条件をPRの説明に書く | #100・#128・#152・#158 |
 
 1. `gh issue create`の後、フック（suggest-pr-watch）が促したら、まず記録を作る:
    `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud] [--level 0-3] [--follow-up-of <前の委譲>]`。

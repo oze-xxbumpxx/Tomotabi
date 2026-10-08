@@ -13,7 +13,7 @@ reviews:
     posted: true
     findings:
       - severity: 'must'
-        category: 'test-flaky'
+        category: 'test-robustness'
         summary: 'M-01 が旅行期間中の日に流すとしおりの既定の日が変わって落ちる'
   - round: 1
     reviewed_at: '2026-10-01T00:41:19Z'

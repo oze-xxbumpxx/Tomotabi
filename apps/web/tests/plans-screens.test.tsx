@@ -925,7 +925,9 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     );
 
     // フォームの欄が見えた = 読み込み用のシートから本シートへ入れ替わった。
-    expect(await screen.findByLabelText("名前")).toHaveFocus();
+    // 本シートの<dialog>はuseEffectで開いてから欄にフォーカスするので、欄が見えた直後ではなくフォーカスを待つ。
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveFocus());
     expect(
       screen.getByRole("dialog", { name: "予定を追加" }),
     ).toBeInTheDocument();
@@ -1041,7 +1043,9 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByLabelText("名前")).toHaveFocus();
+    // 本シートの<dialog>はuseEffectで開いてから欄にフォーカスするので、欄が見えた直後ではなくフォーカスを待つ。
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveFocus());
     expect(
       screen.getByRole("dialog", { name: "予定を編集" }),
     ).toBeInTheDocument();

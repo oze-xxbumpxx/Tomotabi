@@ -153,7 +153,7 @@ description: >
 | 前回投稿した`must`が直っていない | `escalate` | 投稿しない。モデルを上げる／Claudeが直す／Issueを分ける、の案を付けてユーザーに渡す |
 | `must`がある・round 2以降 | `escalate` | 同上（自動投稿の上限2回に達した） |
 | `must`がある・round 0か1 | `fix` | 下の「自動投稿」→ 更新を待つ |
-| `must`なし | `merge` | 「マージ可」をユーザーに伝える（`nit`は後続Issueの案として添える）。PushNotificationを送ってよい |
+| `must`なし | `merge` | 下の「レビュー完了のコメント」をPRに付け、「マージ可」をユーザーに伝える（`nit`は後続Issueの案として添える）。PushNotificationを送ってよい |
 
 どの場合も、記録に追記する:
 `node .claude/scripts/delegation.mjs review <Issue> --round <n> --sha <レビューした head> --verdict <merge|fix|escalate> [--posted] --finding '<severity>:<category>:<summary>' …`。
@@ -178,6 +178,30 @@ description: >
      `--sha <その head>`でもう一度待つ（1回まで。続けて失敗したらユーザーに伝える）。`success` / `none`なら次のroundのレビューへ
    - 終了コード3: 時間切れ（既定4時間）→ ユーザーに伝える。Devinの反応（返信・コミット）が無いときは、監視が止まっている可能性も伝える
    - 終了コード4: PRが閉じた / マージされた → 「完了」へ
+
+## レビュー完了のコメント（`merge`のとき）
+
+ユーザーがPRを開いたときに、レビューが終わってマージしてよいかを見分けられるようにする（2026-10-09 ユーザーの指示）。
+指摘を投稿しなかった回は、PRだけを見ても「まだレビューしていない」のか「終わった」のかがわからないため。
+
+1. 判定が`merge`になったら、PRに1つコメントを付ける。先頭に`<!-- claude-review round=<n> verdict=merge -->`を入れる。
+2. 本文は「レビュー完了。マージしてよい状態です」と、レビューしたhead（短いsha）・CIの結果・round 0からの回数を書く。
+   `nit`があれば「細かい点はユーザーに渡した」とだけ書き、中身は書かない（後続Issueの案としてユーザーに渡す）。
+3. 本文に`(aside)`を入れる（Devinが対応の要るコメントと取り違えないため）。
+4. `escalate`のときは付けない。`security`の指摘があることも、ほかの指摘の中身も書かない。
+5. このあとにpushがあって再レビューした場合は、その回の判定で同じ手順をくり返す。
+
+## 直ったスレッドを解決済みにする
+
+ユーザーがPRを開いたときに、どの指摘を見終わったかがわかるようにする（2026-10-09 ユーザーの指示）。
+GitHubは、解決済みにしたスレッドをチェックの印で表示する。
+
+1. round 1以降のレビューで、行に付いたレビューのスレッド（Codex・Devinのレビューなど）を読み、直ったことを差分で確かめたものを解決済みにする。
+   直っていないもの、確かめられないものは開いたままにする。ユーザーが自分で書いたスレッドは、ユーザーに任せて触らない。
+2. スレッドの一覧: `gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{id isResolved comments(first:1){nodes{author{login} path body}}}}}}}' -f o=<owner> -f r=<repo> -F n=<PR>`。
+3. 解決: `gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<スレッドのid>`。
+4. 自分（Claude Code）のPRで指摘を直して返信したときも、返信のあとに同じ手順で解決済みにする。
+5. 行に付かない普通のコメント（`gh pr comment`）は解決済みにできないので、何もしない。
 
 ## セキュリティ指摘
 

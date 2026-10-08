@@ -286,6 +286,7 @@ describe("購読の登録と再登録（PD-02）", () => {
 
     const first = await putSubscription(user.cookie, body);
     expect(first.status).toBe(200);
+    expect(first.headers["cache-control"]).toBe("private, no-store");
     expect(Object.keys(first.body).sort()).toEqual(PUBLIC_ITEM_KEYS);
     expect(first.body).toMatchObject({
       deviceLabel: "この端末",
@@ -314,6 +315,44 @@ describe("購読の登録と再登録（PD-02）", () => {
     expect(changed.status).toBe(200);
     expect(changed.body.id).toBe(id);
     expect((await subRow(id))?.revision).toBe("2");
+  });
+
+  it("宛先は正規化した値で保存し、ハッシュもその値から作る", async () => {
+    const user = await newUser("pd02n");
+    const tag = randomUUID();
+    const body = registrationBody();
+
+    // :443の表記は解析で取り除かれる。保存・ハッシュは取り除いた値で行う。
+    const first = await putSubscription(user.cookie, {
+      ...body,
+      endpoint: `https://fcm.googleapis.com:443/fcm/send/${tag}`,
+    });
+    expect(first.status).toBe(200);
+    const id = first.body.id as string;
+    const normalized = `https://fcm.googleapis.com/fcm/send/${tag}`;
+    const rows = await db.admin.query<{
+      endpoint: string;
+      endpoint_hash: Buffer;
+    }>(
+      `SELECT endpoint, endpoint_hash
+       FROM notification.push_subscriptions WHERE id = $1`,
+      [id],
+    );
+    expect(rows.rows[0]?.endpoint).toBe(normalized);
+    expect(
+      rows.rows[0]?.endpoint_hash.equals(
+        createHash("sha256").update(normalized, "utf8").digest(),
+      ),
+    ).toBe(true);
+
+    // 表記の違う同じ宛先（大文字のホスト）も同じ行に届き、冪等に返る。
+    const again = await putSubscription(user.cookie, {
+      ...body,
+      endpoint: `https://FCM.GOOGLEAPIS.COM/fcm/send/${tag}`,
+    });
+    expect(again.status).toBe(200);
+    expect(again.body.id).toBe(id);
+    expect((await subRow(id))?.revision).toBe("1");
   });
 });
 
@@ -420,6 +459,111 @@ describe("宛先の持ち主（PD-05）", () => {
     );
     expect(Number(rows.rows[0]!.count)).toBe(1);
   });
+
+  it("無効になった他人の購読は新しい持ち主が引き取る", async () => {
+    const owner = await newUser("pd05e");
+    const taker = await newUser("pd05f");
+    const endpoint = newEndpoint("takeover");
+    const registered = await register(owner.cookie, { endpoint });
+    const id = registered.id as string;
+
+    // 持ち主が無効にした行を、別の人が同じ宛先の登録で引き取る。
+    const removed = await authed(
+      http().delete(`/api/me/push-subscriptions/${id}`),
+      owner.cookie,
+    );
+    expect(removed.status).toBe(204);
+    expect((await subRow(id))?.enabled).toBe(false);
+
+    const response = await putSubscription(
+      taker.cookie,
+      registrationBody({ endpoint, deviceLabel: "引き取った端末" }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(id);
+    const row = await subRow(id);
+    // 持ち主・中身・有効が登録の内容に書き換わり、版が上がる。
+    expect(row?.user_id).toBe(taker.userId);
+    expect(row?.enabled).toBe(true);
+    expect(row?.revision).toBe("3");
+    expect(response.body).toMatchObject({
+      deviceLabel: "引き取った端末",
+      enabled: true,
+      isCurrentSession: true,
+    });
+
+    // 引き取られたあとは有効な他人の行なので、元の持ち主の登録は409。
+    const again = await putSubscription(
+      owner.cookie,
+      registrationBody({ endpoint }),
+    );
+    expect(again.status).toBe(409);
+    expect(again.body.code).toBe("PUSH_ENDPOINT_OWNED_BY_OTHER");
+  });
+
+  it("引き取りも有効な数が1件増えるため、有効3台の人は引き取れない", async () => {
+    const owner = await newUser("pd05g");
+    const taker = await newUser("pd05h");
+    const endpoint = newEndpoint("takeover-limit");
+    const registered = await register(owner.cookie, { endpoint });
+    await authed(
+      http().delete(`/api/me/push-subscriptions/${registered.id}`),
+      owner.cookie,
+    );
+
+    // 引き取る側は既に有効3台。
+    await register(taker.cookie);
+    await register(taker.cookie);
+    await register(taker.cookie);
+    const response = await putSubscription(
+      taker.cookie,
+      registrationBody({ endpoint }),
+    );
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("PUSH_LIMIT_REACHED");
+  });
+
+  it("無効な行を2人が同時に引き取りに来ても勝つのは1人", async () => {
+    const owner = await newUser("pd05i");
+    const endpoint = newEndpoint("takeover-race");
+    const registered = await register(owner.cookie, { endpoint });
+    const id = registered.id as string;
+    await authed(
+      http().delete(`/api/me/push-subscriptions/${id}`),
+      owner.cookie,
+    );
+    // 許可枠は2つ。引き取りを試す2人をあとから作る（元の持ち主の
+    // 許可は外れるが、その利用者の操作は済んでいる）。
+    const a = await newUser("pd05j");
+    const b = await newUser("pd05k");
+
+    const [resA, resB] = await Promise.all([
+      putSubscription(a.cookie, registrationBody({ endpoint })),
+      putSubscription(b.cookie, registrationBody({ endpoint })),
+    ]);
+    const results = [
+      { user: a, res: resA },
+      { user: b, res: resB },
+    ];
+    const winner = results.find((r) => r.res.status === 200);
+    const loser = results.find((r) => r.res.status !== 200);
+    expect(winner).toBeDefined();
+    expect(loser).toBeDefined();
+    // 負けた側は、先に有効になった他人の行を読んで409になるか、
+    // 無効の行への書き直しが0件になり例外（500）になる。
+    expect([409, 500]).toContain(loser!.res.status);
+
+    // 行は1つのまま、勝った側の持ち主で有効になっている。
+    const rows = await db.admin.query<{ count: string }>(
+      `SELECT count(*)::int AS count FROM notification.push_subscriptions
+       WHERE endpoint_hash = $1`,
+      [createHash("sha256").update(endpoint, "utf8").digest()],
+    );
+    expect(Number(rows.rows[0]!.count)).toBe(1);
+    const row = await subRow(id);
+    expect(row?.user_id).toBe(winner!.user.userId);
+    expect(row?.enabled).toBe(true);
+  });
 });
 
 describe("登録の断り（PD-06）", () => {
@@ -428,6 +572,10 @@ describe("登録の断り（PD-06）", () => {
     "http://fcm.googleapis.com/x",
     "https://fcm.googleapis.com.evil.example/x",
     "https://user@fcm.googleapis.com/x",
+    // 生の文字列に制御文字が入る宛先は422（解析で取り除かれる前に断る）。
+    "https://fcm.googleapis.com/fcm/send/\nx",
+    // 先頭のラベルが空のAppleの宛先は422。
+    "https://.push.apple.com/x",
   ])("許可しない宛先は422 UNSUPPORTED_PUSH_SERVICE: %s", async (endpoint) => {
     const user = await newUser(`pd06-${randomUUID().slice(0, 6)}`);
     const response = await putSubscription(
@@ -461,11 +609,14 @@ describe("登録の断り（PD-06）", () => {
     { endpoint: "not a url" },
     { deviceLabel: "x".repeat(61) },
     { expirationTime: Date.now() - 1000 },
+    // 制御文字（NULを含む）はDBのtextに入らないため400で断る。
+    { deviceLabel: "端\u0000末" },
   ])("本文の形・大きさ・過去の期限は400: %j", async (overrides) => {
     const user = await newUser(`pd06f-${randomUUID().slice(0, 6)}`);
     const body = registrationBody(overrides as Record<string, unknown>);
     const response = await putSubscription(user.cookie, body);
     expect(response.status).toBe(400);
+    expect(response.body.code).toBe("INVALID_REQUEST");
   });
 
   it("今の鍵でないkeyIdは409 PUSH_KEY_CHANGED", async () => {
@@ -476,6 +627,29 @@ describe("登録の断り（PD-06）", () => {
     );
     expect(response.status).toBe(409);
     expect(response.body.code).toBe("PUSH_KEY_CHANGED");
+  });
+
+  it("鍵の束が読めないときのPUTは409 PUSH_KEY_CHANGED", async () => {
+    const brokenRef = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(VAPID_KEYRING)
+      .useValue(EnvVapidKeyring.fromEnv({}))
+      .compile();
+    const brokenApp = await createHttpTestApp(brokenRef, auth);
+    try {
+      const user = await newUser(`pd06kb-${randomUUID().slice(0, 6)}`);
+      const response = await request(brokenApp.getHttpServer())
+        .put("/api/me/push-subscriptions")
+        .set("Cookie", user.cookie)
+        .set("Origin", ORIGIN)
+        .set("Content-Type", "application/json")
+        .send(registrationBody());
+      expect(response.status).toBe(409);
+      expect(response.body.code).toBe("PUSH_KEY_CHANGED");
+    } finally {
+      await brokenApp.close();
+    }
   });
 
   it("停止の記録に今のセッションがある登録は409 PUSH_SESSION_CLOSED", async () => {
@@ -513,7 +687,7 @@ describe("購読の一覧（PD-07）", () => {
       user.cookie,
     );
     expect(response.status).toBe(200);
-    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers["cache-control"]).toBe("private, no-store");
     const items = response.body.items as Record<string, unknown>[];
     expect(items).toHaveLength(4);
     for (const item of items) {
@@ -573,7 +747,7 @@ describe("購読の無効化（PD-08）", () => {
       user.cookie,
     );
     expect(missing.status).toBe(204);
-    expect(missing.headers["cache-control"]).toBe("no-store");
+    expect(missing.headers["cache-control"]).toBe("private, no-store");
   });
 });
 
@@ -585,7 +759,7 @@ describe("購読の設定（PD-09）", () => {
       user.cookie,
     );
     expect(response.status).toBe(200);
-    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers["cache-control"]).toBe("private, no-store");
     expect(response.body).toEqual({
       publicVapidKey: vapidCurrent.getPublicKey().toString("base64url"),
       keyId: "current-key",

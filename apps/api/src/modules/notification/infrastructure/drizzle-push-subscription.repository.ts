@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, asc, eq, isNotNull, lte, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { UserId } from "../../../common/domain/user-id";
@@ -110,7 +111,7 @@ export class DrizzlePushSubscriptionRepository
     const rows = await this.db
       .insert(pushSubscriptions)
       .values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         userId: input.userId,
         endpoint: input.endpoint,
         endpointHash: input.endpointHash,
@@ -134,6 +135,7 @@ export class DrizzlePushSubscriptionRepository
 
   async update(
     id: string,
+    userId: UserId,
     input: PushSubscriptionUpdate,
     now: Date,
   ): Promise<PushSubscriptionRow> {
@@ -151,11 +153,51 @@ export class DrizzlePushSubscriptionRepository
         revision: sql`${pushSubscriptions.revision} + 1`,
         updatedAt: now,
       })
-      .where(eq(pushSubscriptions.id, id))
+      .where(
+        and(
+          eq(pushSubscriptions.id, id),
+          eq(pushSubscriptions.userId, userId),
+        ),
+      )
       .returning();
     const row = rows[0];
     if (row === undefined) {
       throw new Error("update of push_subscriptions returned no row");
+    }
+    return toRow(row);
+  }
+
+  async takeOver(
+    id: string,
+    userId: UserId,
+    input: PushSubscriptionUpdate,
+    now: Date,
+  ): Promise<PushSubscriptionRow> {
+    const rows = await this.db
+      .update(pushSubscriptions)
+      .set({
+        userId,
+        endpoint: input.endpoint,
+        p256dh: input.p256dh,
+        authSecret: input.authSecret,
+        expirationTime: input.expirationTime,
+        registrationSessionId: input.registrationSessionId,
+        deviceLabel: input.deviceLabel,
+        vapidKeyId: input.vapidKeyId,
+        enabled: true,
+        revision: sql`${pushSubscriptions.revision} + 1`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(pushSubscriptions.id, id),
+          eq(pushSubscriptions.enabled, false),
+        ),
+      )
+      .returning();
+    const row = rows[0];
+    if (row === undefined) {
+      throw new Error("takeOver of push_subscriptions returned no row");
     }
     return toRow(row);
   }

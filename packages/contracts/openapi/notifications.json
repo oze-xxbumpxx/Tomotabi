@@ -3,7 +3,7 @@
   "info": {
     "title": "Tomotabi notifications boundary",
     "version": "0.0.0",
-    "description": "通知の設定の公開 API 契約。docs/旅行アプリ設計 3/詳細設計/openapi.notifications.json を移植し、一覧の PushSubscription に vapidKeyState と isCurrentSession を足した（設計書「API 設計」）。宛先と鍵は応答に含めない。全応答 Cache-Control: no-store。"
+    "description": "通知の設定の公開 API 契約。docs/旅行アプリ設計 3/詳細設計/openapi.notifications.json を移植し、一覧の PushSubscription に vapidKeyState と isCurrentSession を足した（設計書「API 設計」）。宛先と鍵は応答に含めない。全応答 Cache-Control: private, no-store。"
   },
   "security": [
     {

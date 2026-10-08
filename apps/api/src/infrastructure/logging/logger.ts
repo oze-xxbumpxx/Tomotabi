@@ -32,6 +32,12 @@ const REDACT_PATHS = [
   "*.keys",
   "*.p256dh",
   "*.auth",
+  // 実際のログの深さに届くパス（要求bodyの宛先と鍵）。
+  // "*.endpoint"等は最上段だけに効くため、bodyの下は別に指定する。
+  "req.body.endpoint",
+  "req.body.keys",
+  "req.body.keys.p256dh",
+  "req.body.keys.auth",
 ];
 
 // Guard・経路制限が結果コードを渡すための取り決め（res.locals.codeに書く）。

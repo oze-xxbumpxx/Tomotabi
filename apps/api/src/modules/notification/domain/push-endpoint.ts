@@ -12,21 +12,47 @@ export type PushEndpointRejection =
   | "has_fragment"
   | "host_not_allowed";
 
+/**
+ * 成功の結果は正規化した宛先（url.href）を持つ。
+ * WHATWGの解析はタブ・CR・LFを取り除くため、生の文字列と
+ * 解析後の値は違い得る。保存・ハッシュ・比較はこの値だけを使う。
+ */
 export type PushEndpointCheck =
-  | { ok: true }
+  | { ok: true; endpoint: string }
   | { ok: false; reason: PushEndpointRejection };
 
 const IPV4_HOST = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 
+// 生の文字列に残る制御文字（NUL・タブ・改行など）。WHATWGは解析の前に
+// タブ・CR・LFを取り除くため、生の値を確かめないと取り除いた形が
+// 通ってしまう。残る制御文字を含む宛先は受け取らない。
+const CONTROL_CHAR = /\p{Cc}/u;
+
 /**
- * 許可する配信サービスのホスト。`*.push.apple.com`はラベルの境界でだけ
- * 一致する（evilpush.apple.comは断る）。fcm.googleapis.com.evil.example
- * のような後ろに別名が付く形も完全一致でないため断られる。
+ * 許可する配信サービスのホスト。
+ * FCMは完全一致（末尾のドットや後ろに別名が付く形は断る）。
+ * Appleは1文字以上のラベルが1つ以上付く`*.push.apple.com`だけ
+ * （先頭のラベルが空の`.push.apple.com`や`push.apple.com`そのもの、
+ * `evilpush.apple.com`は断る）。
  */
+const APPLE_PUSH_HOST = /^(?:[a-z0-9-]+\.)+push\.apple\.com$/;
+
 const isAllowedHost = (hostname: string): boolean =>
-  hostname === "fcm.googleapis.com" || hostname.endsWith(".push.apple.com");
+  hostname === "fcm.googleapis.com" || APPLE_PUSH_HOST.test(hostname);
+
+/**
+ * 生の宛先の文字列に制御文字が残るか。
+ * zod.url()は解析でタブ・CR・LFを取り除いて正規化した値を返すため、
+ * UseCaseの入力には生の形が届かない。生の本文を見る側（controller）が
+ * 使う。checkPushEndpointも同じ確認を最初に行う。
+ */
+export const endpointHasControlChar = (endpoint: string): boolean =>
+  CONTROL_CHAR.test(endpoint);
 
 export function checkPushEndpoint(endpoint: string): PushEndpointCheck {
+  if (CONTROL_CHAR.test(endpoint)) {
+    return { ok: false, reason: "invalid_url" };
+  }
   let url: URL;
   try {
     url = new URL(endpoint);
@@ -50,6 +76,8 @@ export function checkPushEndpoint(endpoint: string): PushEndpointCheck {
   const hostname = url.hostname;
   // IPアドレス（IPv4の数字列・IPv6の[]囲み）とlocalhostは許可リストの
   // 確認より前に明示して断る（許可リストの改変で素通しにならないように）。
+  // WHATWGは単一の数（2130706433）や16進（0x7f.1）のホストも
+  // IPv4として読むため、ここに来る時点で正規化済みの形になる。
   const isIpLiteral = IPV4_HOST.test(hostname) || hostname.startsWith("[");
   if (
     isIpLiteral ||
@@ -59,5 +87,5 @@ export function checkPushEndpoint(endpoint: string): PushEndpointCheck {
   ) {
     return { ok: false, reason: "host_not_allowed" };
   }
-  return { ok: true };
+  return { ok: true, endpoint: url.href };
 }

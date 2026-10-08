@@ -10,6 +10,7 @@ import type {
 import type {
   NotificationUnitOfWork,
   PushSubscriptionRow,
+  PushSubscriptionUpdate,
 } from "../adapter/outbound/push-subscription.repository";
 import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port";
 import { checkPushEndpoint } from "../domain/push-endpoint";
@@ -23,17 +24,27 @@ import { toPushSubscriptionItem } from "./push-subscription-item";
 const ENDPOINT_MAX_LENGTH = 4096;
 const DEVICE_LABEL_MAX_LENGTH = 60;
 
+// 制御文字（NULを含む\p{Cc}）はDBのtextに入れると接続の層で失敗し、
+// 500になるため、入力の時点で断る。
+const CONTROL_CHAR = /\p{Cc}/u;
+
+const invalidRequest = (message: string): ApiError =>
+  new ApiError({ code: "INVALID_REQUEST", status: 400, message });
+
 /**
  * PUT /me/push-subscriptions（購読の登録・更新、設計書「購読の登録」）。
  *
  * ロックの前に確かめる: 宛先の決まり・鍵の形・keyIdが今の鍵・
  * 期限が未来。本文のuserIdは受け取らず、持ち主はセッションから。
+ * 宛先は確かめた結果の正規化した値（url.href）で保存・
+ * ハッシュ・比較する（生の入力とは違い得る）。
  *
  * 1トランザクションで: 自分のusers行をFOR UPDATEで取り、
  * 停止の記録に今のセッションがあれば409、期限切れの自分の購読を
- * 無効にし、同じ宛先を他人が持てば409、この登録で有効な数が
- * 増えるなら上限を確かめ、あとは挿入または更新する。中身が
- * 同じ再登録は版を上げない。
+ * 無効にし、同じ宛先を他人が有効で持てば409（他人の無効な行は
+ * 持ち主を書き換えて引き取る）、この登録で有効な数が増えるなら
+ * 上限を確かめ、あとは挿入または更新する。中身が同じ再登録は
+ * 版を上げない。
  */
 export class PutPushSubscriptionUseCase
   implements PutPushSubscriptionInputPort
@@ -53,11 +64,10 @@ export class PutPushSubscriptionUseCase
       input.endpoint.length > ENDPOINT_MAX_LENGTH ||
       input.deviceLabel.length > DEVICE_LABEL_MAX_LENGTH
     ) {
-      throw new ApiError({
-        code: "VALIDATION_FAILED",
-        status: 400,
-        message: "Request fields are out of range",
-      });
+      throw invalidRequest("Request fields are out of range");
+    }
+    if (CONTROL_CHAR.test(input.deviceLabel)) {
+      throw invalidRequest("deviceLabel must not contain control characters");
     }
     const endpointCheck = checkPushEndpoint(input.endpoint);
     if (!endpointCheck.ok) {
@@ -67,6 +77,8 @@ export class PutPushSubscriptionUseCase
         message: "This push endpoint is not supported",
       });
     }
+    // 確かめた結果の正規化した値を、保存・ハッシュ・比較のすべてに使う。
+    const endpoint = endpointCheck.endpoint;
     const keys = parsePushKeys(input.keys);
     if (!keys.ok) {
       throw new ApiError({
@@ -88,15 +100,9 @@ export class PutPushSubscriptionUseCase
     const expirationTime =
       input.expirationTime === null ? null : new Date(input.expirationTime);
     if (expirationTime !== null && expirationTime.getTime() <= now.getTime()) {
-      throw new ApiError({
-        code: "VALIDATION_FAILED",
-        status: 400,
-        message: "expirationTime must be in the future",
-      });
+      throw invalidRequest("expirationTime must be in the future");
     }
-    const endpointHash = createHash("sha256")
-      .update(input.endpoint, "utf8")
-      .digest();
+    const endpointHash = createHash("sha256").update(endpoint, "utf8").digest();
 
     const row = await this.unitOfWork.run(async (ctx) => {
       const repo = ctx.subscriptions;
@@ -110,14 +116,17 @@ export class PutPushSubscriptionUseCase
       }
       await repo.disableExpired(userId, now);
       const existing = await repo.findByEndpointHash(endpointHash);
-      if (existing !== null && existing.userId !== userId) {
+      const takeOver =
+        existing !== null && existing.userId !== userId && !existing.enabled;
+      if (existing !== null && existing.userId !== userId && !takeOver) {
         throw new ApiError({
           code: "PUSH_ENDPOINT_OWNED_BY_OTHER",
           status: 409,
           message: "This endpoint is registered by another account",
         });
       }
-      // 有効な数が増えるのは、新規または無効だった同じ宛先を戻すとき。
+      // 有効な数が増えるのは、新規または無効だった同じ宛先を戻すとき
+      // （他人の無効な行の引き取りも1件増える）。
       const increasesEnabled = existing === null || !existing.enabled;
       if (
         increasesEnabled &&
@@ -129,40 +138,30 @@ export class PutPushSubscriptionUseCase
           message: "The limit of active push subscriptions is reached",
         });
       }
+      const fields = {
+        endpoint,
+        p256dh: keys.p256dh,
+        authSecret: keys.authSecret,
+        expirationTime,
+        registrationSessionId: sessionId,
+        deviceLabel: input.deviceLabel,
+        vapidKeyId: input.keyId,
+      };
       try {
         if (existing === null) {
           return await repo.insert(
-            {
-              userId,
-              endpoint: input.endpoint,
-              endpointHash,
-              p256dh: keys.p256dh,
-              authSecret: keys.authSecret,
-              expirationTime,
-              registrationSessionId: sessionId,
-              deviceLabel: input.deviceLabel,
-              vapidKeyId: input.keyId,
-            },
+            { userId, endpointHash, ...fields },
             now,
           );
         }
-        if (sameContent(existing, input, keys, expirationTime, sessionId)) {
+        if (takeOver) {
+          return await repo.takeOver(existing.id, userId, fields, now);
+        }
+        if (sameContent(existing, fields)) {
           // 中身が同じ再登録は版を上げない（冪等）。
           return existing;
         }
-        return await repo.update(
-          existing.id,
-          {
-            endpoint: input.endpoint,
-            p256dh: keys.p256dh,
-            authSecret: keys.authSecret,
-            expirationTime,
-            registrationSessionId: sessionId,
-            deviceLabel: input.deviceLabel,
-            vapidKeyId: input.keyId,
-          },
-          now,
-        );
+        return await repo.update(existing.id, userId, fields, now);
       } catch (error) {
         // 同じ宛先を別の人が同時に登録した競合は一意制約の違反で届く。
         if (isUniqueViolation(error)) {
@@ -182,23 +181,21 @@ export class PutPushSubscriptionUseCase
 /**
  * 再登録で中身が同じか。registrationSessionIdも比べる
  * （別セッションからの再登録は「この端末」の記録が変わるため更新する）。
+ * endpointの比較は正規化した値どうし（行にも正規化した値が入る）。
  */
 function sameContent(
   row: PushSubscriptionRow,
-  input: PushRegistrationInput,
-  keys: { p256dh: Buffer; authSecret: Buffer },
-  expirationTime: Date | null,
-  sessionId: string,
+  fields: PushSubscriptionUpdate,
 ): boolean {
   return (
     row.enabled &&
-    row.endpoint === input.endpoint &&
-    row.p256dh.equals(keys.p256dh) &&
-    row.authSecret.equals(keys.authSecret) &&
-    sameInstant(row.expirationTime, expirationTime) &&
-    row.registrationSessionId === sessionId &&
-    row.deviceLabel === input.deviceLabel &&
-    row.vapidKeyId === input.keyId
+    row.endpoint === fields.endpoint &&
+    row.p256dh.equals(fields.p256dh) &&
+    row.authSecret.equals(fields.authSecret) &&
+    sameInstant(row.expirationTime, fields.expirationTime) &&
+    row.registrationSessionId === fields.registrationSessionId &&
+    row.deviceLabel === fields.deviceLabel &&
+    row.vapidKeyId === fields.vapidKeyId
   );
 }
 

@@ -24,7 +24,11 @@ export type PushSubscriptionRow = Readonly<{
   updatedAt: Date;
 }>;
 
-/** 新規登録の入力。id・revision・created_atはDBに任せる。 */
+/**
+ * 新規登録の入力。idは実装側がrandomUUID()で振り、
+ * created_at・updated_atは渡された時刻を入れる。
+ * revisionはDBの既定（1）に任せる。
+ */
 export type NewPushSubscription = Readonly<{
   userId: UserId;
   endpoint: string;
@@ -83,11 +87,27 @@ export interface PushSubscriptionRepository {
   ): Promise<PushSubscriptionRow>;
 
   /**
-   * 中身の更新＋有効化。revisionを1進めてupdated_atを今にする
+   * 中身の更新＋有効化。WHEREはidと持ち主（user_id）の両方に絞り、
+   * 0件なら例外（読んでから持ち主が変わった競合）。
+   * revisionを1進めてupdated_atを今にする
    * （「中身が同じなら版を上げない」の判定はUseCaseが行う）。
    */
   update(
     id: string,
+    userId: UserId,
+    input: PushSubscriptionUpdate,
+    now: Date,
+  ): Promise<PushSubscriptionRow>;
+
+  /**
+   * 他人の無効な行の引き取り。WHEREはidとenabled = falseに絞り、
+   * 0件なら例外（読んでから有効に戻った競合）。持ち主を今の
+   * 利用者に書き換え、中身を登録の内容で更新して有効にし、
+   * revisionを1進めてupdated_atを今にする。
+   */
+  takeOver(
+    id: string,
+    userId: UserId,
     input: PushSubscriptionUpdate,
     now: Date,
   ): Promise<PushSubscriptionRow>;

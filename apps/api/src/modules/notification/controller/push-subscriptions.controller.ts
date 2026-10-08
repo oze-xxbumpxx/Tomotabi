@@ -19,6 +19,8 @@ import {
   DisablePushSubscriptionParams,
   RegisterPushSubscriptionBody,
 } from "../../../generated/notifications.zod";
+import { ApiError } from "../../../common/http/api-error";
+import { endpointHasControlChar } from "../domain/push-endpoint";
 import type { PushSubscriptionItem } from "../domain/push-subscription";
 import {
   DISABLE_PUSH_SUBSCRIPTION_INPUT_PORT,
@@ -42,12 +44,13 @@ import {
 
 type DisableParams = zod.infer<typeof DisablePushSubscriptionParams>;
 
-const NO_STORE = "no-store";
+const NO_STORE = "private, no-store";
 
 /**
  * 購読のAPI（/api/me/push-*）。認証と許可はAPP_GUARDのSessionGuard、
  * PUT・DELETEのOriginの確認は同じくOriginGuardが行う。
- * 応答はCache-Control: no-store。宛先と鍵は応答にもログにも出さない。
+ * 応答はCache-Control: private, no-store（ほかのAPIと同じ）。
+ * 宛先と鍵は応答にもログにも出さない。
  */
 @Controller("me")
 export class PushSubscriptionsController {
@@ -84,11 +87,25 @@ export class PushSubscriptionsController {
   async put(
     @CurrentUser() userId: UserId,
     @Req() request: AuthenticatedRequest,
+    @Body() rawBody: unknown,
     @Body(new ZodBodyPipe(RegisterPushSubscriptionBody))
     body: PushRegistrationInput,
     @Res({ passthrough: true }) response: Response,
   ): Promise<PushSubscriptionItem> {
     response.setHeader("Cache-Control", NO_STORE);
+    // zod.url()は解析でタブ・CR・LFを取り除いた正規化した値を返すため、
+    // 生の本文の宛先に残る制御文字の確認はUseCaseの前のここで行う。
+    const rawEndpoint = (rawBody as { endpoint?: unknown }).endpoint;
+    if (
+      typeof rawEndpoint === "string" &&
+      endpointHasControlChar(rawEndpoint)
+    ) {
+      throw new ApiError({
+        code: "UNSUPPORTED_PUSH_SERVICE",
+        status: 422,
+        message: "This push endpoint is not supported",
+      });
+    }
     return this.putPushSubscription.execute(
       userId,
       request.sessionId,

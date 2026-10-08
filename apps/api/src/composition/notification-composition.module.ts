@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { CLOCK } from "../adapter/clock/clock";
+import { SystemClock } from "../infrastructure/clock/system-clock";
 import { getPool } from "../infrastructure/database/pool";
 import {
   NOTIFICATION_UNIT_OF_WORK,
@@ -36,7 +38,8 @@ const missingDatabase = (): Promise<never> =>
       provide: VAPID_KEYRING,
       useFactory: (): VapidKeyringPort => EnvVapidKeyring.fromEnv(),
     },
+    { provide: CLOCK, useClass: SystemClock },
   ],
-  exports: [NOTIFICATION_UNIT_OF_WORK, VAPID_KEYRING],
+  exports: [NOTIFICATION_UNIT_OF_WORK, VAPID_KEYRING, CLOCK],
 })
 export class NotificationCompositionModule {}

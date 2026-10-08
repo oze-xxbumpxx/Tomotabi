@@ -164,7 +164,7 @@ sequenceDiagram
   API->>DB: identity.usersの自分の行をFOR UPDATE
   API->>DB: 停止の記録に今のセッションがあれば409 PUSH_SESSION_CLOSED
   API->>DB: 期限の過ぎた自分の購読を無効にする
-  API->>DB: 同じendpoint_hashの行を読む（他人なら409）
+  API->>DB: 同じendpoint_hashの行を読む（他人の有効な行なら409、他人の無効な行は引き取る）
   API->>DB: この登録で有効な購読が1件増えるか（同じ宛先の行が無い、または無効）を見て、増えるなら今の有効な数が3以上で409
   API->>DB: upsert（中身が同じなら版を上げない）
   API-->>B: 200 購読の公開してよい項目
@@ -207,7 +207,7 @@ sequenceDiagram
 | `DELETE /api/me/push-subscriptions/{id}` | 204（何度でも。他人の・無いIDも204）                                                             |
 
 - 一覧に`vapidKeyState`（`current`・`retired`・`revoked`）と`isCurrentSession`（今のセッションで登録したか）を足す。設定の画面が「APIで無効になった」と「この端末」を出し分けるのに使う（F-02・F-09）。どちらも設計資料の契約に無い欄で、宛先と鍵は含まない。
-- 4つとも`SessionGuard`と利用許可を通す。PUT・DELETEは`OriginGuard`を通す。Idempotency-Keyは使わない（宛先と持ち主で自然に何度送っても同じになる）。応答は`Cache-Control: no-store`。
+- 4つとも`SessionGuard`と利用許可を通す。PUT・DELETEは`OriginGuard`を通す。Idempotency-Keyは使わない（宛先と持ち主で自然に何度送っても同じになる）。応答は`Cache-Control: private, no-store`。
 - `POST /api/auth/sign-out`の契約に、503 `PUSH_STOP_FAILED`と応答ヘッダー`X-Push-Stopped`を足す。
 
 ## DB 設計
@@ -330,7 +330,7 @@ sequenceDiagram
 
 | 場面                                         | 応答                                    |
 | -------------------------------------------- | --------------------------------------- |
-| 本文の形・大きさが違う                       | 400 `VALIDATION_FAILED`                 |
+| 本文の形・大きさが違う                       | 400 `INVALID_REQUEST`                   |
 | 許していないホストの宛先                     | 422 `UNSUPPORTED_PUSH_SERVICE`          |
 | 鍵の形が違う・P-256の点でない                | 422 `INVALID_PUSH_SUBSCRIPTION`         |
 | 別の人の宛先                                 | 409 `PUSH_ENDPOINT_OWNED_BY_OTHER`      |

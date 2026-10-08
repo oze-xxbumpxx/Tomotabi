@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CLOCK, type Clock } from "../../adapter/clock/clock";
 import { NotificationCompositionModule } from "../../composition/notification-composition.module";
-import { SystemClock } from "../../infrastructure/clock/system-clock";
 import {
   DISABLE_PUSH_SUBSCRIPTION_INPUT_PORT,
   type DisablePushSubscriptionInputPort,
@@ -36,7 +35,6 @@ import { PutPushSubscriptionUseCase } from "./usecase/put-push-subscription.usec
   imports: [NotificationCompositionModule],
   controllers: [PushSubscriptionsController],
   providers: [
-    { provide: CLOCK, useClass: SystemClock },
     {
       provide: GET_PUSH_CONFIG_INPUT_PORT,
       useFactory: (keyring: VapidKeyringPort): GetPushConfigInputPort =>

@@ -138,7 +138,7 @@ export class DrizzlePushSubscriptionRepository
     userId: UserId,
     input: PushSubscriptionUpdate,
     now: Date,
-  ): Promise<PushSubscriptionRow> {
+  ): Promise<PushSubscriptionRow | null> {
     const rows = await this.db
       .update(pushSubscriptions)
       .set({
@@ -161,10 +161,7 @@ export class DrizzlePushSubscriptionRepository
       )
       .returning();
     const row = rows[0];
-    if (row === undefined) {
-      throw new Error("update of push_subscriptions returned no row");
-    }
-    return toRow(row);
+    return row === undefined ? null : toRow(row);
   }
 
   async takeOver(
@@ -172,7 +169,7 @@ export class DrizzlePushSubscriptionRepository
     userId: UserId,
     input: PushSubscriptionUpdate,
     now: Date,
-  ): Promise<PushSubscriptionRow> {
+  ): Promise<PushSubscriptionRow | null> {
     const rows = await this.db
       .update(pushSubscriptions)
       .set({
@@ -196,10 +193,7 @@ export class DrizzlePushSubscriptionRepository
       )
       .returning();
     const row = rows[0];
-    if (row === undefined) {
-      throw new Error("takeOver of push_subscriptions returned no row");
-    }
-    return toRow(row);
+    return row === undefined ? null : toRow(row);
   }
 
   async disable(userId: UserId, id: string, now: Date): Promise<void> {

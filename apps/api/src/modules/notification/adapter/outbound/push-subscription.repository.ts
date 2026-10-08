@@ -88,7 +88,8 @@ export interface PushSubscriptionRepository {
 
   /**
    * 中身の更新＋有効化。WHEREはidと持ち主（user_id）の両方に絞り、
-   * 0件なら例外（読んでから持ち主が変わった競合）。
+   * 0件ならnull（読んでから持ち主が変わった競合。
+   * 持ち主が変わった行は「他人の宛先」としてUseCaseが409にする）。
    * revisionを1進めてupdated_atを今にする
    * （「中身が同じなら版を上げない」の判定はUseCaseが行う）。
    */
@@ -97,11 +98,12 @@ export interface PushSubscriptionRepository {
     userId: UserId,
     input: PushSubscriptionUpdate,
     now: Date,
-  ): Promise<PushSubscriptionRow>;
+  ): Promise<PushSubscriptionRow | null>;
 
   /**
    * 他人の無効な行の引き取り。WHEREはidとenabled = falseに絞り、
-   * 0件なら例外（読んでから有効に戻った競合）。持ち主を今の
+   * 0件ならnull（読んでから有効に戻った、または先に引き取られた
+   * 競合。UseCaseが「他人の宛先」として409にする）。持ち主を今の
    * 利用者に書き換え、中身を登録の内容で更新して有効にし、
    * revisionを1進めてupdated_atを今にする。
    */
@@ -110,7 +112,7 @@ export interface PushSubscriptionRepository {
     userId: UserId,
     input: PushSubscriptionUpdate,
     now: Date,
-  ): Promise<PushSubscriptionRow>;
+  ): Promise<PushSubscriptionRow | null>;
 
   /**
    * 自分の有効な購読だけを無効にする。他人の・無い・

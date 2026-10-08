@@ -154,14 +154,22 @@ export class PutPushSubscriptionUseCase
             now,
           );
         }
-        if (takeOver) {
-          return await repo.takeOver(existing.id, userId, fields, now);
+        const written = takeOver
+          ? await repo.takeOver(existing.id, userId, fields, now)
+          : sameContent(existing, fields)
+            ? // 中身が同じ再登録は版を上げない（冪等）。
+              existing
+            : await repo.update(existing.id, userId, fields, now);
+        if (written === null) {
+          // takeOver / update が0件なら、読んでから持ち主が変わった
+          // 競合の負け。他人の宛先と同じ409にする（500にしない）。
+          throw new ApiError({
+            code: "PUSH_ENDPOINT_OWNED_BY_OTHER",
+            status: 409,
+            message: "This endpoint is registered by another account",
+          });
         }
-        if (sameContent(existing, fields)) {
-          // 中身が同じ再登録は版を上げない（冪等）。
-          return existing;
-        }
-        return await repo.update(existing.id, userId, fields, now);
+        return written;
       } catch (error) {
         // 同じ宛先を別の人が同時に登録した競合は一意制約の違反で届く。
         if (isUniqueViolation(error)) {

@@ -549,9 +549,11 @@ describe("宛先の持ち主（PD-05）", () => {
     const loser = results.find((r) => r.res.status !== 200);
     expect(winner).toBeDefined();
     expect(loser).toBeDefined();
-    // 負けた側は、先に有効になった他人の行を読んで409になるか、
-    // 無効の行への書き直しが0件になり例外（500）になる。
-    expect([409, 500]).toContain(loser!.res.status);
+    // 負けた側は409 PUSH_ENDPOINT_OWNED_BY_OTHER。先に有効になった
+    // 他人の行を読んで断るか、無効の行への書き直しが0件になっても
+    // 「他人の宛先」と同じ409になる（500にはならない）。
+    expect(loser!.res.status).toBe(409);
+    expect(loser!.res.body.code).toBe("PUSH_ENDPOINT_OWNED_BY_OTHER");
 
     // 行は1つのまま、勝った側の持ち主で有効になっている。
     const rows = await db.admin.query<{ count: string }>(

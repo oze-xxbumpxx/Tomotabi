@@ -15,7 +15,8 @@ export type NotificationClickEventLike = {
 export type WindowClientLike = {
   url: string;
   focus(): Promise<WindowClientLike>;
-  navigate(url: string): Promise<WindowClientLike>;
+  /** 制御していないウィンドウなどではTypeErrorで失敗し、移れないときはnullが返る。 */
+  navigate(url: string): Promise<WindowClientLike | null>;
 };
 
 export type ClientsLike = {

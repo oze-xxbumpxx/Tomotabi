@@ -47,6 +47,8 @@ export async function showPushNotification(
 /**
  * `notificationclick`イベント。通知を閉じ、同じオリジンのウィンドウが
  * あれば`focus`して`navigate`、無ければ`openWindow`する（F-53・F-54）。
+ * `focus`・`navigate`できないウィンドウ（このService Workerが制御しない
+ * ものなど）や`navigate`がnullを返すときも`openWindow`で開く。
  */
 export async function openNotificationTarget(
   notification: { data: unknown; close(): void },
@@ -63,9 +65,15 @@ export async function openNotificationTarget(
     isSameOrigin(client.url, origin),
   );
   if (target !== undefined) {
-    await target.focus();
-    await target.navigate(path);
-    return;
+    try {
+      await target.focus();
+      const navigated = await target.navigate(path);
+      if (navigated !== null) {
+        return;
+      }
+    } catch {
+      // 制御していないウィンドウなど、focus・navigateできないときは新しいウィンドウで開く
+    }
   }
   await clients.openWindow(path);
 }

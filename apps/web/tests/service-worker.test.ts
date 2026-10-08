@@ -36,8 +36,10 @@ function windowClient(url: string): WindowClientLike & {
 } {
   const client = {
     url,
-    focus: vi.fn(async () => client),
-    navigate: vi.fn(async () => client),
+    focus: vi.fn(async (): Promise<WindowClientLike> => client),
+    navigate: vi.fn(
+      async (_navigateTo: string): Promise<WindowClientLike | null> => client,
+    ),
   };
   return client;
 }
@@ -208,6 +210,49 @@ describe("service workerのnotificationclick", () => {
 
     await dispatchClick(listeners.notificationclick!, notificationWith({ path: openPath }));
 
+    expect(clients.openWindow).toHaveBeenCalledWith(openPath);
+  });
+
+  it("navigateが失敗したらopenWindowで開く", async () => {
+    const client = windowClient(`${ORIGIN}/trips`);
+    client.navigate.mockRejectedValue(
+      new TypeError("ServiceWorker is not the active worker"),
+    );
+    const clients = clientsWith([client]);
+    const { scope, listeners } = fakeScope(clients);
+    registerServiceWorker(scope);
+    const notification = notificationWith({ path: openPath });
+
+    await dispatchClick(listeners.notificationclick!, notification);
+
+    expect(notification.close).toHaveBeenCalledOnce();
+    expect(client.focus).toHaveBeenCalledOnce();
+    expect(clients.openWindow).toHaveBeenCalledWith(openPath);
+  });
+
+  it("navigateがnullを返したらopenWindowで開く", async () => {
+    const client = windowClient(`${ORIGIN}/trips`);
+    client.navigate.mockResolvedValue(null);
+    const clients = clientsWith([client]);
+    const { scope, listeners } = fakeScope(clients);
+    registerServiceWorker(scope);
+
+    await dispatchClick(listeners.notificationclick!, notificationWith({ path: openPath }));
+
+    expect(client.navigate).toHaveBeenCalledWith(openPath);
+    expect(clients.openWindow).toHaveBeenCalledWith(openPath);
+  });
+
+  it("focusが失敗したらopenWindowで開く", async () => {
+    const client = windowClient(`${ORIGIN}/trips`);
+    client.focus.mockRejectedValue(new TypeError("window is gone"));
+    const clients = clientsWith([client]);
+    const { scope, listeners } = fakeScope(clients);
+    registerServiceWorker(scope);
+
+    await dispatchClick(listeners.notificationclick!, notificationWith({ path: openPath }));
+
+    expect(client.navigate).not.toHaveBeenCalled();
     expect(clients.openWindow).toHaveBeenCalledWith(openPath);
   });
 

@@ -1,0 +1,519 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tomotabi notifications boundary",
+    "version": "0.0.0",
+    "description": "購読の4操作。全応答Cache-Control: no-store。Cookie認証。秘密のendpoint・鍵・sessionIdは応答に含めない。"
+  },
+  "paths": {
+    "/api/me/push-config": {
+      "get": {
+        "operationId": "getPushConfig",
+        "summary": "今のVAPIDの公開鍵と購読の上限を取得",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "今のVAPIDの公開鍵とkeyId、有効な購読の上限",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "鍵の設定が崩れている・一時的な障害（PUSH_UNAVAILABLE・TEMPORARILY_UNAVAILABLE。retryable）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/push-subscriptions": {
+      "get": {
+        "operationId": "listPushSubscriptions",
+        "summary": "自分の購読の一覧を取得",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "自分の購読の一覧（宛先と鍵は返さない）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PushSubscriptionItem"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害（TEMPORARILY_UNAVAILABLE。retryable）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "registerPushSubscription",
+        "summary": "この端末の購読を登録・更新",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "公開オリジンと完全一致。欠落・null拒否。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushRegistration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登録した購読の公開してよい項目（宛先と鍵は返さない）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSubscription"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "競合（PUSH_ENDPOINT_OWNED_BY_OTHER・PUSH_LIMIT_REACHED・PUSH_KEY_CHANGED・PUSH_SESSION_CLOSED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "値の規則違反（UNSUPPORTED_PUSH_SERVICE・INVALID_PUSH_SUBSCRIPTION）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害（TEMPORARILY_UNAVAILABLE。retryable）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "JSON。認証済みuser/sessionで登録。ユーザー行ロック後にセッション停止記録を確認。同一endpoint無変更は更新なし。期限切れ購読を無効化後、有効数3まで。URL・曲線・canonical base64urlの意味検証を別途行う。"
+      }
+    },
+    "/api/me/push-subscriptions/{id}": {
+      "delete": {
+        "operationId": "disablePushSubscription",
+        "summary": "自分の購読を無効化",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "公開オリジンと完全一致。欠落・null拒否。"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "無効化済み。自分の対象なし・他人のID・無いIDも204（存在を漏らさない）"
+          },
+          "400": {
+            "description": "形式違反",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "認証・認可エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一時的な障害（TEMPORARILY_UNAVAILABLE。retryable）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "所有者で絞って無効化。他利用者または存在しないIDも204として情報を漏らさない。body不要。"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "SessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-travel.session_token",
+        "description": "本番のHTTPS・同一オリジン用。Better Authが署名とDBセッションを検証し、利用許可と旅行参加者を別途確認する。ローカル開発Cookie名は別設定。"
+      }
+    },
+    "schemas": {
+      "PushConfig": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "publicVapidKey",
+          "keyId",
+          "maxActiveSubscriptions"
+        ],
+        "properties": {
+          "publicVapidKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{87}$"
+          },
+          "keyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "maxActiveSubscriptions": {
+            "type": "integer",
+            "const": 3
+          }
+        }
+      },
+      "PushSubscription": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "deviceLabel",
+          "enabled",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PushRegistration": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "endpoint",
+          "keys",
+          "expirationTime",
+          "deviceLabel",
+          "keyId"
+        ],
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 4096
+          },
+          "keys": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "p256dh",
+              "auth"
+            ],
+            "properties": {
+              "p256dh": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{87}$"
+              },
+              "auth": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{22}$"
+              }
+            }
+          },
+          "expirationTime": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 8640000000000000,
+            "description": "PushSubscriptionのUnixミリ秒。非nullは未来。DBはtimestamptzへ変換。"
+          },
+          "deviceLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "keyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "requestId",
+          "retryable"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PushSubscriptionItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "deviceLabel",
+          "enabled",
+          "vapidKeyState",
+          "isCurrentSession",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "vapidKeyState": {
+            "type": "string",
+            "enum": [
+              "current",
+              "retired",
+              "revoked"
+            ],
+            "description": "登録したときのVAPIDの鍵の今の状態。revokedは登録し直しが要る。"
+          },
+          "isCurrentSession": {
+            "type": "boolean",
+            "description": "今のセッションで登録した購読か。「この端末」の判定に使う。"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

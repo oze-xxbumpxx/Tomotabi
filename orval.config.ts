@@ -246,6 +246,14 @@ const financeWebInput = {
   target: "./packages/contracts/openapi/finance.json",
   override: { transformer: stripWebValidationConstraints },
 };
+const notificationsInput = {
+  target: "./packages/contracts/openapi/notifications.json",
+  override: { transformer: stripRequestInputConstraints },
+};
+const notificationsWebInput = {
+  target: "./packages/contracts/openapi/notifications.json",
+  override: { transformer: stripWebValidationConstraints },
+};
 
 export default defineConfig({
   foundationClient: {
@@ -360,6 +368,33 @@ export default defineConfig({
       mode: "single",
       client: "zod",
       target: `${apiGeneratedDir}/finance.zod.ts`,
+      override: { zod: validationZod },
+    },
+  },
+  notificationsClient: {
+    input: { target: notificationsInput.target },
+    output: {
+      mode: "single",
+      client: "fetch",
+      target: `${generatedDir}/notifications.ts`,
+      override: { mutator },
+    },
+  },
+  notificationsZod: {
+    input: notificationsWebInput,
+    output: {
+      mode: "single",
+      client: "zod",
+      target: `${generatedDir}/notifications.zod.ts`,
+      override: { zod: validationZod },
+    },
+  },
+  notificationsApiZod: {
+    input: notificationsInput,
+    output: {
+      mode: "single",
+      client: "zod",
+      target: `${apiGeneratedDir}/notifications.zod.ts`,
       override: { zod: validationZod },
     },
   },

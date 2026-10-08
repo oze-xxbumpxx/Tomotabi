@@ -39,6 +39,7 @@ describe("foundation HTTP with guards", () => {
       verifierReturning({
         kind: "authenticated",
         userId: USER_ID,
+        sessionId: "test-session-id",
         expiresAt: EXPIRES_AT,
       }),
     );

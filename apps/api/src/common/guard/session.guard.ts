@@ -45,6 +45,7 @@ export class SessionGuard implements CanActivate {
     switch (result.kind) {
       case "authenticated": {
         request.userId = result.userId;
+        request.sessionId = result.sessionId;
         request.sessionExpiresAt = result.expiresAt;
         return true;
       }

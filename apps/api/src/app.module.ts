@@ -7,6 +7,7 @@ import { SessionGuard } from "./common/guard/session.guard";
 import { createPinoHttpOptions } from "./infrastructure/logging/logger";
 import { FoundationModule } from "./modules/foundation/foundation.module";
 import { IdentityModule } from "./modules/identity/identity.module";
+import { NotificationModule } from "./modules/notification/notification.module";
 import { PlanningModule } from "./modules/planning/planning.module";
 import { RecordModule } from "./modules/record/record.module";
 import { SettlementModule } from "./modules/settlement/settlement.module";
@@ -18,6 +19,7 @@ import { SettlementModule } from "./modules/settlement/settlement.module";
     LoggerModule.forRoot({ pinoHttp: createPinoHttpOptions(), useExisting: true }),
     FoundationModule,
     IdentityModule,
+    NotificationModule,
     PlanningModule,
     RecordModule,
     SettlementModule,

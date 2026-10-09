@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Settlement } from "@tomotabi/contracts";
 import { ApiError } from "../../../common/http/api-error";
 import { SignedYen } from "../../../common/domain/yen";
@@ -9,6 +10,10 @@ import {
   type FinanceWritePersist,
 } from "../../record/usecase/finance-write-flow";
 import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context";
+import {
+  noopNotificationPublisher,
+  type NotificationPublisher,
+} from "../adapter/outbound/notification-publisher";
 import type { ClaimHistory } from "../domain/fingerprint";
 import { validatePreview } from "../domain/preview-validation";
 import type { ClaimKind } from "../domain/settlement-target";
@@ -70,6 +75,8 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
   constructor(
     private readonly unitOfWork: SettlementUnitOfWork,
     private readonly writeLog: WriteLog,
+    private readonly publisher: NotificationPublisher =
+      noopNotificationPublisher,
   ) {}
 
   async execute(
@@ -80,18 +87,32 @@ export class CompleteSettlementUseCase implements CompleteSettlementInputPort {
       COMPLETE_SETTLEMENT_OPERATION,
       input.tripId,
       input.previewId,
-      () =>
-        runFinanceWriteTransaction<Settlement, SettlementWorkContext>(
-          this.unitOfWork,
-          {
-            userId: input.userId,
+      async () => {
+        const outcome = await runFinanceWriteTransaction<
+          Settlement,
+          SettlementWorkContext
+        >(this.unitOfWork, {
+          userId: input.userId,
+          tripId: input.tripId,
+          operation: COMPLETE_SETTLEMENT_OPERATION,
+          key: input.key,
+          requestHash: input.requestHash,
+        }, (ctx, roster) => this.persist(ctx, roster, input));
+        if (!outcome.replayed && outcome.httpStatus === 201) {
+          // 再送でなく新しい精算が書けたときだけ渡す（先に完了していた
+          // 精算を返す200は渡さない）。
+          this.publisher.publish({
+            eventId: randomUUID(),
+            action: "settlement_completed",
+            targetKind: "settlement",
             tripId: input.tripId,
-            operation: COMPLETE_SETTLEMENT_OPERATION,
-            key: input.key,
-            requestHash: input.requestHash,
-          },
-          (ctx, roster) => this.persist(ctx, roster, input),
-        ),
+            targetId: outcome.resourceId,
+            actorUserId: input.userId,
+            occurredAt: new Date().toISOString(),
+          });
+        }
+        return outcome;
+      },
     );
   }
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Cancellation } from "@tomotabi/contracts";
 import { ApiError } from "../../../common/http/api-error";
 import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
@@ -11,6 +12,10 @@ import {
   type CancelSettlementInput,
   type CancelSettlementInputPort,
 } from "../adapter/inbound/cancel-settlement.input-port";
+import {
+  noopNotificationPublisher,
+  type NotificationPublisher,
+} from "../adapter/outbound/notification-publisher";
 import type {
   SettlementUnitOfWork,
   SettlementWorkContext,
@@ -31,6 +36,8 @@ export class CancelSettlementUseCase implements CancelSettlementInputPort {
   constructor(
     private readonly unitOfWork: SettlementUnitOfWork,
     private readonly writeLog: WriteLog,
+    private readonly publisher: NotificationPublisher =
+      noopNotificationPublisher,
   ) {}
 
   async execute(
@@ -41,18 +48,32 @@ export class CancelSettlementUseCase implements CancelSettlementInputPort {
       CANCEL_SETTLEMENT_OPERATION,
       input.tripId,
       input.settlementId,
-      () =>
-        runFinanceWriteTransaction<Cancellation, SettlementWorkContext>(
-          this.unitOfWork,
-          {
-            userId: input.userId,
+      async () => {
+        const outcome = await runFinanceWriteTransaction<
+          Cancellation,
+          SettlementWorkContext
+        >(this.unitOfWork, {
+          userId: input.userId,
+          tripId: input.tripId,
+          operation: CANCEL_SETTLEMENT_OPERATION,
+          key: input.key,
+          requestHash: input.requestHash,
+        }, (ctx) => this.persist(ctx, input));
+        if (!outcome.replayed && outcome.httpStatus === 201) {
+          // 再送でなく新しい取り消しが書けたときだけ渡す
+          // （既にあった取り消しの200は渡さない）。targetIdは元の精算。
+          this.publisher.publish({
+            eventId: randomUUID(),
+            action: "settlement_cancelled",
+            targetKind: "settlement",
             tripId: input.tripId,
-            operation: CANCEL_SETTLEMENT_OPERATION,
-            key: input.key,
-            requestHash: input.requestHash,
-          },
-          (ctx) => this.persist(ctx, input),
-        ),
+            targetId: outcome.resourceId,
+            actorUserId: input.userId,
+            occurredAt: new Date().toISOString(),
+          });
+        }
+        return outcome;
+      },
     );
   }
 

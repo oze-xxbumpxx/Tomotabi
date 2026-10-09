@@ -13,6 +13,9 @@ async function bootstrap(): Promise<void> {
   });
   configureApp(app, auth);
   app.useLogger(app.get(Logger));
+  // 応答のあとに走らせる仕事（通知の送る処理など）を、終了時に最長5秒
+  // 待つInProcessAfterResponse.onApplicationShutdownが動くようにする。
+  app.enableShutdownHooks();
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
 }

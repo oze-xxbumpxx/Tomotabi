@@ -4,6 +4,10 @@ import { CLOCK } from "../../adapter/clock/clock";
 import { SettlementCompositionModule } from "../../composition/settlement-composition.module";
 import { WRITE_LOG, type WriteLog } from "../planning/adapter/outbound/write-log.port";
 import {
+  NOTIFICATION_PUBLISHER,
+  type NotificationPublisher,
+} from "./adapter/outbound/notification-publisher";
+import {
   CANCEL_SETTLEMENT_INPUT_PORT,
   type CancelSettlementInputPort,
 } from "./adapter/inbound/cancel-settlement.input-port";
@@ -93,9 +97,10 @@ import { ListSettlementsUseCase } from "./usecase/list-settlements.usecase";
       useFactory: (
         uow: SettlementUnitOfWork,
         writeLog: WriteLog,
+        publisher: NotificationPublisher,
       ): CompleteSettlementInputPort =>
-        new CompleteSettlementUseCase(uow, writeLog),
-      inject: [SETTLEMENT_UNIT_OF_WORK, WRITE_LOG],
+        new CompleteSettlementUseCase(uow, writeLog, publisher),
+      inject: [SETTLEMENT_UNIT_OF_WORK, WRITE_LOG, NOTIFICATION_PUBLISHER],
     },
     {
       provide: LIST_SETTLEMENTS_INPUT_PORT,
@@ -116,9 +121,10 @@ import { ListSettlementsUseCase } from "./usecase/list-settlements.usecase";
       useFactory: (
         uow: SettlementUnitOfWork,
         writeLog: WriteLog,
+        publisher: NotificationPublisher,
       ): CancelSettlementInputPort =>
-        new CancelSettlementUseCase(uow, writeLog),
-      inject: [SETTLEMENT_UNIT_OF_WORK, WRITE_LOG],
+        new CancelSettlementUseCase(uow, writeLog, publisher),
+      inject: [SETTLEMENT_UNIT_OF_WORK, WRITE_LOG, NOTIFICATION_PUBLISHER],
     },
   ],
 })

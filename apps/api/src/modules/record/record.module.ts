@@ -38,6 +38,10 @@ import {
   type RecordsReadUnitOfWork,
 } from "./adapter/outbound/records-read.port";
 import { WRITE_LOG, type WriteLog } from "../planning/adapter/outbound/write-log.port";
+import {
+  NOTIFICATION_PUBLISHER,
+  type NotificationPublisher,
+} from "./adapter/outbound/notification-publisher";
 import { AchievementsController } from "./controller/achievements.controller";
 import { BookingsController } from "./controller/bookings.controller";
 import { PaymentsController } from "./controller/payments.controller";
@@ -52,14 +56,20 @@ import { ListRecordsUseCase } from "./usecase/list-records.usecase";
 type WriteDeps = [
   uow: UnitOfWork<FinanceWorkContext>,
   writeLog: WriteLog,
+  publisher: NotificationPublisher,
 ];
-const WRITE_INJECT = [FINANCE_UNIT_OF_WORK, WRITE_LOG];
+const WRITE_INJECT = [FINANCE_UNIT_OF_WORK, WRITE_LOG, NOTIFICATION_PUBLISHER];
 
 type PlanEventWriteDeps = [
   uow: PlanEventUnitOfWork,
   writeLog: WriteLog,
+  publisher: NotificationPublisher,
 ];
-const PLAN_EVENT_INJECT = [PLAN_EVENT_UNIT_OF_WORK, WRITE_LOG];
+const PLAN_EVENT_INJECT = [
+  PLAN_EVENT_UNIT_OF_WORK,
+  WRITE_LOG,
+  NOTIFICATION_PUBLISHER,
+];
 
 @Module({
   imports: [RecordCompositionModule],

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Cancellation } from "@tomotabi/contracts";
 import { ApiError } from "../../../common/http/api-error";
 import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
@@ -8,6 +9,10 @@ import type {
 import { cancelPlanEventOperation } from "../adapter/inbound/cancel-plan-event.input-port";
 import type { PlanEventCancellationResult } from "../adapter/inbound/plan-event-write.result";
 import type { PlanEventUnitOfWork } from "../adapter/outbound/plan-event-work-context";
+import {
+  noopNotificationPublisher,
+  type NotificationPublisher,
+} from "../adapter/outbound/notification-publisher";
 import { toPlanEventCancellationDto } from "./plan-event-dto";
 import {
   executePlanEventWrite,
@@ -37,6 +42,8 @@ export class CancelPlanEventUseCase implements CancelPlanEventInputPort {
   constructor(
     private readonly unitOfWork: PlanEventUnitOfWork,
     private readonly writeLog: WriteLog,
+    private readonly publisher: NotificationPublisher =
+      noopNotificationPublisher,
   ) {}
 
   execute(input: CancelPlanEventInput): Promise<PlanEventCancellationResult> {
@@ -45,7 +52,30 @@ export class CancelPlanEventUseCase implements CancelPlanEventInputPort {
       cancelPlanEventOperation(input.eventKind),
       input.tripId,
       input.recordId,
-      () => this.run(input),
+      async () => {
+        const outcome = await this.run(input);
+        if (!outcome.replayed && outcome.httpStatus === 201) {
+          // 再送でなく新しい取り消しが書けたときだけ渡す
+          // （既にあった取り消しの200は渡さない）。targetIdは元の記録。
+          const base = {
+            eventId: randomUUID(),
+            tripId: input.tripId,
+            targetId: outcome.resourceId,
+            actorUserId: input.userId,
+            occurredAt: new Date().toISOString(),
+          };
+          this.publisher.publish(
+            input.eventKind === "achievement"
+              ? {
+                  ...base,
+                  targetKind: "achievement",
+                  action: "achievement_cancelled",
+                }
+              : { ...base, targetKind: "booking", action: "booking_cancelled" },
+          );
+        }
+        return outcome;
+      },
     );
   }
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Payment as PaymentContract } from "@tomotabi/contracts";
 import { ApiError } from "../../../common/http/api-error";
 import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
@@ -8,6 +9,10 @@ import {
 } from "../adapter/inbound/create-payment.input-port";
 import type { PaymentWriteResult } from "../adapter/inbound/payment-write.result";
 import type { FinanceWorkContext } from "../adapter/outbound/finance-work-context";
+import {
+  noopNotificationPublisher,
+  type NotificationPublisher,
+} from "../adapter/outbound/notification-publisher";
 import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
 import { Payment } from "../domain/payment";
 import {
@@ -32,6 +37,8 @@ export class CreatePaymentUseCase implements CreatePaymentInputPort {
   constructor(
     private readonly unitOfWork: UnitOfWork<FinanceWorkContext>,
     private readonly writeLog: WriteLog,
+    private readonly publisher: NotificationPublisher =
+      noopNotificationPublisher,
   ) {}
 
   execute(input: CreatePaymentInput): Promise<PaymentWriteResult> {
@@ -40,7 +47,22 @@ export class CreatePaymentUseCase implements CreatePaymentInputPort {
       CREATE_PAYMENT_OPERATION,
       input.tripId,
       null,
-      () => this.run(input),
+      async () => {
+        const outcome = await this.run(input);
+        if (!outcome.replayed) {
+          // 再送でない新しい支払いだけ。COMMITのあとで通知のイベントを渡す。
+          this.publisher.publish({
+            eventId: randomUUID(),
+            action: "payment_added",
+            targetKind: "payment",
+            tripId: input.tripId,
+            targetId: outcome.resourceId,
+            actorUserId: input.userId,
+            occurredAt: new Date().toISOString(),
+          });
+        }
+        return outcome;
+      },
     );
   }
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Clock } from "../../../adapter/clock/clock";
 import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
 import { Plan } from "../domain/plan";
@@ -7,6 +8,10 @@ import {
   type CancelPlanInputPort,
 } from "../adapter/inbound/cancel-plan.input-port";
 import type { PlanWriteResult } from "../adapter/inbound/plan-write.result";
+import {
+  noopNotificationPublisher,
+  type NotificationPublisher,
+} from "../adapter/outbound/notification-publisher";
 import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
 import type { WriteLog } from "../adapter/outbound/write-log.port";
 import { executePlanWrite, runPlanUpdate } from "./plan-write-flow";
@@ -20,6 +25,8 @@ export class CancelPlanUseCase implements CancelPlanInputPort {
     private readonly unitOfWork: UnitOfWork<PlanningWorkContext>,
     private readonly clock: Clock,
     private readonly writeLog: WriteLog,
+    private readonly publisher: NotificationPublisher =
+      noopNotificationPublisher,
   ) {}
 
   execute(input: CancelPlanInput): Promise<PlanWriteResult> {
@@ -28,7 +35,22 @@ export class CancelPlanUseCase implements CancelPlanInputPort {
       CANCEL_PLAN_OPERATION,
       input.tripId,
       input.planId,
-      () => this.run(input),
+      async () => {
+        const outcome = await this.run(input);
+        if (!outcome.replayed && outcome.changed) {
+          // 再送でなく、取りやめに変わったときだけ渡す。
+          this.publisher.publish({
+            eventId: randomUUID(),
+            action: "plan_cancelled",
+            targetKind: "plan",
+            tripId: input.tripId,
+            targetId: input.planId,
+            actorUserId: input.userId,
+            occurredAt: this.clock.now().toISOString(),
+          });
+        }
+        return outcome;
+      },
     );
   }
 

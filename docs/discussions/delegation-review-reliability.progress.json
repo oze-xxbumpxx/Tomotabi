@@ -1,0 +1,37 @@
+{
+  "feature": "delegation-review-reliability",
+  "title": "委譲の重複防止と最終版のレビュー確認",
+  "level": "L3",
+  "page": null,
+  "round": 1,
+  "stages": {
+    "requirements": {
+      "state": "approval",
+      "docs": [
+        "docs/requirements/delegation-review-reliability.md"
+      ]
+    },
+    "design": {
+      "state": "approval",
+      "docs": [
+        "docs/designs/delegation-review-reliability.md"
+      ]
+    },
+    "plan": {
+      "state": "pending"
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-10-09T04:52:46.130Z"
+}

@@ -45,6 +45,16 @@ export async function httpClient<T>(url: string, options: RequestInit): Promise<
     throw new ApiRequestError({ kind: "http", status: response.status, code });
   }
 
+  // 204は本文を持たない応答（購読の無効化など）。空本文として扱う。
+  if (response.status === 204) {
+    return {
+      data: null,
+      status: response.status,
+      headers: response.headers,
+      etag: null,
+    } as T;
+  }
+
   const text = await response.text();
   if (text === "") {
     throw new ApiRequestError({ kind: "invalid-json" });

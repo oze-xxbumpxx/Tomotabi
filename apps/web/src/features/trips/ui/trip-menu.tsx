@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bell,
   CaretDown,
   CaretRight,
   Flag,
@@ -8,6 +9,7 @@ import {
   PencilSimple,
   SignOut,
 } from "@phosphor-icons/react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Trip } from "@tomotabi/contracts";
 import type { PendingRequestCheck } from "@/shared/browser/use-pending-request-check";
@@ -146,7 +148,7 @@ export function TripMenu({
   onSwitch,
   onSignOut,
   signOutPending,
-  signOutFailed,
+  signOutFailure,
   onClose,
 }: {
   trip: Trip;
@@ -160,7 +162,8 @@ export function TripMenu({
   onSwitch: () => void;
   onSignOut: () => void;
   signOutPending: boolean;
-  signOutFailed: boolean;
+  /** ログアウトの失敗。通知を止められなかったときは文を変える（F-62）。 */
+  signOutFailure: "generic" | "push-stop" | null;
   onClose: () => void;
 }) {
   const online = useOnlineStatus();
@@ -224,6 +227,25 @@ export function TripMenu({
             label="旅行を切り替え"
             onClick={onSwitch}
           />
+          {/* 「この端末の通知」はログアウトの上。設定の画面へ移り、
+              fromに今の旅行のホームを付ける。 */}
+          <Link
+            className="menu-item"
+            href={`/settings/notifications?from=${encodeURIComponent(`/trips/${trip.id}/home`)}`}
+          >
+            <span className="menu-item-icon" aria-hidden="true">
+              <Bell size={22} />
+            </span>
+            <span className="menu-item-main">
+              <span className="menu-item-label">この端末の通知</span>
+            </span>
+            <CaretRight
+              size={16}
+              weight="bold"
+              className="menu-item-caret"
+              aria-hidden="true"
+            />
+          </Link>
           <MenuItem
             icon={<SignOut size={22} />}
             label="ログアウト"
@@ -235,9 +257,11 @@ export function TripMenu({
           />
         </div>
       )}
-      {signOutFailed && (
+      {signOutFailure !== null && (
         <StatusText tone="error">
-          ログアウトできませんでした。もう一度お試しください。
+          {signOutFailure === "push-stop"
+            ? "通知を止められませんでした。もう一度お試しください"
+            : "ログアウトできませんでした。もう一度お試しください。"}
         </StatusText>
       )}
       {!online && (

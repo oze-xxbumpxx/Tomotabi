@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useMe, useSignOut } from "@/features/auth";
+import { NotificationGuideCard } from "@/features/notifications";
 import { usePayments } from "@/features/payments";
 import { usePlanNames } from "@/features/plans";
 import { useBalance } from "@/features/settlement";
@@ -77,6 +78,14 @@ export function HomeScreen({ tripId }: { tripId: string }) {
   // 一覧を返す道は残額だけなので、ホームが取れたあと残額も取る。
   const balance = useBalance(tripId, { enabled: home.data !== undefined });
   const participants = balance.data?.participants ?? null;
+
+  // 案内のカードの「{相手}の記録」。取れなければカード側で「相手」と出す。
+  const partnerName = useMemo(
+    () =>
+      participants?.find((participant) => participant.userId !== userId)
+        ?.displayName ?? null,
+    [participants, userId],
+  );
 
   // 記録の行の名前。予定名は予定の欄の行から拾い、足りない分は予定を
   // 個別に引く。支払いの取り消しの行は支払いを引く（元の用途を出す）。
@@ -168,17 +177,24 @@ export function HomeScreen({ tripId }: { tripId: string }) {
   const {
     signOut,
     pending: signOutPending,
-    failed: signOutFailed,
+    failure: signOutFailure,
   } = useSignOut();
 
   const handleSignOut = async () => {
-    if (await signOut(userId)) {
+    const result = await signOut(userId);
+    if (result.ok) {
       // 前の利用者の業務データが残らないよう、キャッシュと利用者の表示、
       // 未表示のトーストを消す。
       takePendingToast();
       queryClient.clear();
       clearMe();
-      router.replace("/sign-in");
+      // 通知を止められなかった（X-Push-Stopped: false）ときはログインの
+      // 画面に案内を出す（F-65）。
+      router.replace(
+        result.pushStopped === false
+          ? "/sign-in?notice=push-remaining"
+          : "/sign-in",
+      );
     }
   };
 
@@ -320,6 +336,14 @@ export function HomeScreen({ tripId }: { tripId: string }) {
       )}
       {home.isRefetching && <Refetching />}
       <HomeHeader home={data} now={now} onOpenMenu={openMenu} />
+      {/* 通知の案内のカード（F-15〜F-18）。出す条件はカードの中で判定する。 */}
+      {userId !== null && (
+        <NotificationGuideCard
+          userId={userId}
+          partnerName={partnerName}
+          homePath={`/trips/${tripId}/home`}
+        />
+      )}
       {/* 期間が過ぎた（F-43）: 青いお知らせ帯を精算の欄の上に出す。
           旅行中なら「旅行を終了する」（今ある終了の確認へ）。
           計画中なら「開始してから終了する」の案内と開始のボタン。 */}
@@ -429,7 +453,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
           onSwitch={() => router.push("/trips")}
           onSignOut={() => void handleSignOut()}
           signOutPending={signOutPending}
-          signOutFailed={signOutFailed}
+          signOutFailure={signOutFailure}
           onClose={() => {
             // 拒否のあとに開き直すときは、取り直した最新のETagで送る。
             if (start.state.status === "rejected") {

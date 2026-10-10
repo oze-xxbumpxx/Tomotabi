@@ -148,7 +148,7 @@ description: >
 2. `schema_version`、`pr`、`head_sha`、`verdict`、`codex_evidence_hash`、`codex_evidence`（完了証拠ID／URLの配列）、`acknowledged_finding_ids`（確認した行外指摘IDの配列）、`reviewed_at`を公開JSONに書く。`node .claude/scripts/agent-review.mjs completion --input <JSON-file>`の出力をファイルへ保存し、`gh pr comment <PR> --body-file <完了ファイル>`で新規投稿する。固定Claude担当の作者IDと、未編集の投稿だけが採用される。
 3. 間違いの修正やpush後の再レビューでは、前の完了を編集せず、新しい完了を投稿する。短いSHAや旧`claude-review`の印は成功の証拠にしない。`fix`／`escalate`は成功にならない。
 4. 共通受付の`review-refresh`で最新の証拠を照合する。Codex指摘の追加・編集・削除・再開、head更新ではClaudeも再確認する。agent-reviewは同じSHAを使う対象PR全件の証拠が揃うまで成功しない。
-5. マージ前にもう一度`review-refresh`し、未処理通知、既存CI、現在headのagent-reviewを確認する。チェックの成功後も、PRのマージはユーザーが行う。
+5. マージ前にもう一度`review-refresh`の完了を確認し、`delegation.mjs status --json`で共有状態とChecks APIの両方を読み直す。未処理通知、controllerのI/O中断、既存CI、現在headのagent-reviewを確認する。check更新に失敗するとGitHubに古い成功が残り得るため、成功表示だけでマージ判断を渡さない。チェックの成功後も、PRのマージはユーザーが行う。
 
 ## 直ったスレッドを解決済みにする
 

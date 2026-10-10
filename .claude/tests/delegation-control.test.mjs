@@ -5,7 +5,7 @@ import {
   REQUEST_MARKER, EVENT_MARKER, ANCHOR_MARKER, TASK_MARKER, ZERO_HASH, taskDigest, formatAnchor,
   readSnapshot, readIssueComments, submitRequest, waitForResult, verifyControlRun, verifyMainCommit,
 } from '../scripts/delegation-shared.mjs';
-import { runController, persistEvent, verifyPlan, findCreatedIssue, refreshSha, initializeAnchor, decodeNotificationZip } from '../scripts/delegation-control.mjs';
+import { runController, runControllerMain, persistEvent, verifyPlan, findCreatedIssue, refreshSha, initializeAnchor, decodeNotificationZip } from '../scripts/delegation-control.mjs';
 import { createGitHubClient } from '../scripts/delegation-github.mjs';
 
 const REPO = 'oze-xxbumpxx/Tomotabi';
@@ -313,6 +313,7 @@ test('許可者の不正要求は一般的な拒否だけを保存し、次回�
   const first = await control(client);
   assert.deepEqual([first.processed, first.rejected, first.skipped, first.remaining], [0, 20, 0, 1]);
   assert.equal(first.errors.length, 20);
+  assert.equal(first.interrupted, false);
   assert.equal(first.errors.every((error) => error.code === 'request_rejected'), true);
   assert.equal(Object.values(first.state.requests).every((record) => record.result.code === 'request_rejected' && record.result.allowed === false), true);
   assert.equal(client.comments.filter((comment) => comment.body.startsWith(EVENT_MARKER)).some((comment) => comment.body.includes('SECRET')), false);
@@ -332,6 +333,88 @@ test('拒否の保存が不明なら再送せず停止し、未受理を残件�
   assert.deepEqual(result.errors.map((error) => error.code), ['journal_write_unknown']);
   assert.equal(client.calls.filter((call) => call.method === 'POST').length, 1);
   assert.equal(client.issues.length, 0);
+  assert.equal(result.interrupted, true);
+});
+
+test('既存Issueだけをimportで起動可能と申告してもclaim/beginは許可しない', async () => {
+  const client = memoryGitHub();
+  client.issues.push({ number: 10, state: 'open', body: '', user: { id: AUTHOR } });
+  const attempt = randomUUID();
+  const caller = randomUUID();
+  const activation = randomUUID();
+  const imported = { schema_version: 1, operation: 'import', request_id: randomUUID(), task_key: 'feature:task', task_digest: 'b'.repeat(64), issue: 10, state: 'issue_ready', start_conditions_confirmed: true, attempt_id: attempt, caller_id: caller, activation_id: activation };
+  client.add(imported);
+  let result = await control(client);
+  assert.equal(result.state.tasks[imported.task_key].state, 'launch_unknown');
+  assert.equal(result.state.tasks[imported.task_key].start_conditions_confirmed, false);
+  for (const request of [
+    { schema_version: 1, operation: 'claim', request_id: randomUUID(), task_key: imported.task_key, task_digest: imported.task_digest, caller_id: caller, runner: 'local', requested_model: 'swe-2-high' },
+    { schema_version: 1, operation: 'begin', request_id: randomUUID(), task_key: imported.task_key, attempt_id: attempt, caller_id: caller, activation_id: activation },
+  ]) {
+    const receipt = client.add(request);
+    result = await control(client);
+    const refused = await waitForResult(client, config, { requestId: request.request_id, commentId: receipt.request_comment_id });
+    assert.equal(refused.code, 'import_launch_unverified');
+    assert.equal(refused.allowed, false);
+    assert.equal(result.state.tasks[imported.task_key].state, 'launch_unknown');
+    assert.equal(result.state.tasks[imported.task_key].attempt_id, null);
+  }
+});
+
+test('importは既存予約を上書きせず、session申告をrunningへ変えない', async () => {
+  const client = memoryGitHub();
+  const task = register();
+  client.add(task);
+  await control(client);
+  client.add({ schema_version: 1, operation: 'claim', request_id: randomUUID(), task_key: task.task_key, task_digest: task.task_digest, caller_id: randomUUID(), runner: 'local', requested_model: 'swe-2-high' });
+  const reserved = (await control(client)).state.tasks[task.task_key];
+  const rewind = { schema_version: 1, operation: 'import', request_id: randomUUID(), task_key: task.task_key, task_digest: task.task_digest, issue: reserved.issue, state: 'issue_ready', start_conditions_confirmed: true };
+  const receipt = client.add(rewind);
+  const refused = await control(client);
+  assert.equal((await waitForResult(client, config, { requestId: rewind.request_id, commentId: receipt.request_comment_id })).code, 'import_conflict');
+  assert.deepEqual(refused.state.tasks[task.task_key], reserved);
+  client.add({ schema_version: 1, operation: 'import', request_id: randomUUID(), task_key: 'feature:session', task_digest: 'c'.repeat(64), session_id: 'self-report', session_url: 'https://app.devin.ai/sessions/self-report', state: 'running' });
+  const session = (await control(client)).state.tasks['feature:session'];
+  assert.equal(session.state, 'launch_unknown');
+  assert.equal(session.session_id, 'self-report');
+  assert.equal(session.import_claims.state, 'running');
+  assert.equal(session.verified_issue, false);
+});
+
+test('controllerの入口は受付I/O中断を非ゼロ、不正要求の正常拒否を0で返す', async () => {
+  const env = { GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: REPO, GITHUB_RUN_ID: '1', GITHUB_RUN_ATTEMPT: '1', GITHUB_SHA: SHA };
+  for (const interrupted of [false, true]) {
+    const client = memoryGitHub(interrupted ? { failure: { method: 'POST', path: '/comments', when: 'before' } } : {});
+    client.add({ raw_prompt: 'SECRET' });
+    const lines = [];
+    const code = await runControllerMain({ env, config, event: {}, client, review: emptyReview, output: (line) => lines.push(JSON.parse(line)) });
+    assert.equal(code, interrupted ? 5 : 0);
+    assert.equal(lines[0].interrupted, interrupted);
+    assert.equal(lines[0].rejected, interrupted ? 0 : 1);
+    assert.doesNotMatch(JSON.stringify(lines), /SECRET/);
+  }
+});
+
+test('既存GitHub successのPATCH失敗は共有pendingと非ゼロ終了を返す', async () => {
+  const client = memoryGitHub();
+  await refreshSha(client, config, await readSnapshot(client, config), client.run, SHA, emptyReview);
+  assert.equal(client.checks.get(1).conclusion, 'success');
+  client.failures.push({ method: 'PATCH', path: '/check-runs/1', when: 'before' });
+  client.add({ schema_version: 1, operation: 'review-refresh', request_id: randomUUID(), pr: 20 });
+  const env = { GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: REPO, GITHUB_RUN_ID: '1', GITHUB_RUN_ATTEMPT: '1', GITHUB_SHA: SHA };
+  const lines = [];
+  const code = await runControllerMain({ env, config, event: {}, client, review: emptyReview, output: (line) => lines.push(JSON.parse(line)) });
+  const shared = await readSnapshot(client, config);
+  assert.equal(code, 5);
+  assert.equal(lines[0].interrupted, true);
+  assert.equal(lines[0].errors.length, 1);
+  assert.equal(lines[0].errors[0].code, 'check_write_unknown');
+  assert.equal(shared.checks[SHA].state, 'in_progress');
+  assert.equal(shared.checks[SHA].conclusion, null);
+  // API書き込み前の失敗なら、GitHub上の古いsuccessを消したとは主張できない。
+  assert.equal(client.checks.get(1).status, 'completed');
+  assert.equal(client.checks.get(1).conclusion, 'success');
+  assert.doesNotMatch(JSON.stringify(lines), /SECRET/);
 });
 
 test('同callerでもrunner又はmodelが変わるclaimは予約を変えず拒否する', async () => {

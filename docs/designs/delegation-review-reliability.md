@@ -140,7 +140,7 @@ stateDiagram-v2
 | begin | request_id、attempt_id、caller_id、新activation_id（UUID）。reservedの担当と一致する初回だけlaunchingにし、初回許可を発行 |
 | started | request_id、attempt_id、activation_id、session_id／session_url、observed_model又はunknown。勝った担当の照合済み報告だけ反映 |
 | link-pr | request_id、task_key、pr。Issueとの対応をGitHubから確認。候補が複数なら勝手に最小番号を選ばない |
-| import | request_id、既存Issue／PR／セッションの対応。固定担当者だけが公開メタデータを登録する |
+| import | request_id、既存Issue／PR／セッションの対応。固定担当者だけが公開メタデータを登録する。APIで確認したIssue／PRと申告したセッション・状態は分け、起動許可や予約を作らない。既存タスクへの別要求による上書きは拒否する |
 | reconcile | 起票・起動結果、未処理要求を読み直す。unknownを単なる時間経過で解除しない |
 | review-refresh | PR番号。現在の証拠を読み直し、agent-reviewを再判定する |
 
@@ -196,6 +196,8 @@ codex_evidence_hashは、現在headのCodex完了ID／SHA／本文hashと、Code
 
 checkはChecks APIで明示作成し、head_shaはPRの完全headにする。controllerの単一writerがSHAごとに1つの`agent-review`のcheck IDを共有状態で保持して更新する。自動job名は`agent-review`にしない。未確認時はstatus=in_progress、成功はcompleted/success、不足・破損はcompleted/failureを使う。実行開始時に同じSHAの以前の成功をin_progressに戻し、全証拠を取得してから書き込む。書き込み直前にOPEN PR全ページを再取得し、同じSHAのPR番号／head／対象判定の集合と、各対象PRのClaude完了・Codex証拠集合を再確認する。変化・取得失敗ならsuccessを出さない。証拠の編集・削除・dismissも再判定する。
 
+チェック更新のPATCHが失敗すると、共有状態は確認中でもGitHubに以前の成功が残り得る。書き込み不能時に古い成功を物理的に失効させる保証はできない。controllerのI/O中断は非ゼロ終了で表示し、不正要求の予定どおりの拒否とは分ける。マージ前はreview-refreshの完了後にstatusを再取得し、共有状態と同じcheck ID／external ID／headのChecks APIがともに成功している場合だけ照合済みとする。GitHubの成功表示だけでマージ判断をしない。
+
 workflow_dispatch等の自動job checkが必須チェックを満たすとは扱わない。明示作成したcheckが実PRに結び付き、head更新とfailureでルールセットがマージを止めることを実機で検証する。未確認なら必須化しない。同名check／commit statusを重ねて作らず、Checks APIで成立しない場合は設計を見直す。別workflowの同名checkは必須設定だけでは区別できず、Actions appの指定もその真正性の保証にはならない。
 
 quality・build・api-dbは独立した既存必須チェックとして維持する。agent-reviewはCI全部成功を待たず、既存スキルでCIを確認する際もagent-reviewを除外する。CIはPRに対応するmerge commitの検証として扱い、workflowのGITHUB_SHAとPR headの単純一致を要求しない。E2Eのpaths条件も変えない。
@@ -242,7 +244,7 @@ controllerのpermissionsはcontents:read、issues:write、pull-requests:read、c
 
 管理Issueには要求ID、task_key、digest、状態、証拠ID／URL、制御run、版を残す。CLIは未配送／未処理／結果不明と次の照合操作を出す。ローカルの生ログは既存devin-watchの場所で保持し、共有のコメントや日次ログに秘密を写さない。
 
-statusは共有状態の取得日時とseqを出す。締めのPRには既存どおり完了したYAMLと日次ログを入れる。共有状態から作った写しの変更を、別worktreeの記録へ無条件で上書きしない。
+statusは共有状態の取得日時とseqを出す。締めのPRには既存どおり完了したYAMLと日次ログを入れる。共有状態から作った写しの変更を、別worktreeの記録へ無条件で上書きしない。共有フィールドは新しいseqから読み、別途追記したreviews・follow_up_of・escalations・完了履歴は両記録から残す。同じroundの内容や対応タスク、後続の対応・完了状態が競合する場合は写しを更新せず、手動で照合する。
 
 ## セキュリティ
 

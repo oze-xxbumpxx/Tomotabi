@@ -137,7 +137,7 @@ test('期限の境界とstartedはunknownで停止し、確認済みsessionだ�
 
 test('import/link-pr/review-refreshは照合結果を必要とし、公開以外の欄は保存しない', () => {
   const imported = base('import', { task_key: 'feature:task', task_digest: 'b'.repeat(64), issue: 10, start_conditions_confirmed: true });
-  const result = reduceRequest(emptyState(), imported, { ...context, import_verified: true });
+  const result = reduceRequest(emptyState(), imported, { ...context, import_issue_verified: true });
   assert.equal(result.result.code, 'imported');
   assert.equal(result.changes.tasks['feature:task'].state, 'launch_unknown');
   assert.throws(() => reduceRequest(emptyState(), imported, context), /import_unverified/);
@@ -149,4 +149,59 @@ test('import/link-pr/review-refreshは照合結果を必要とし、公開以外
   assert.throws(() => applyChanges(emptyState(), { tasks: { 'feature:task': { task_key: 'feature:task', state: 'running', raw_prompt: 'SECRET' } } }), /invalid_event_task/);
   const error = new DelegationError('content_conflict');
   assert.equal(error.exit_code, 2);
+});
+
+test('importのstate/開始条件/予約IDは申告として保存し、新規起動の状態を作らない', () => {
+  for (const reported of ['registered', 'issue_creating', 'issue_unknown', 'issue_ready', 'reserved', 'launching', 'running', 'pr_open', 'finalized']) {
+    const request = base('import', { task_key: 'feature:task', task_digest: 'b'.repeat(64), issue: 10, state: reported,
+      start_conditions_confirmed: true, attempt_id: ATTEMPT, caller_id: CALLER, activation_id: ACT,
+      session_id: 'self-report', session_url: 'https://app.devin.ai/sessions/self-report', requested_model: 'swe-2-high', observed_model: 'swe-2-high', runner: 'cloud' });
+    const state = applyChanges(emptyState(), reduceRequest(emptyState(), request, { ...context, import_issue_verified: true }).changes);
+    const task = state.tasks['feature:task'];
+    assert.equal(task.state, 'launch_unknown');
+    assert.equal(task.imported, true);
+    assert.equal(task.verified_issue, true);
+    assert.equal(task.verified_pr, false);
+    assert.equal(task.import_claims.state, reported);
+    assert.equal(task.import_claims.start_conditions_confirmed, true);
+    assert.equal(task.import_claims.attempt_id, ATTEMPT);
+    assert.equal(task.start_conditions_confirmed, false);
+    assert.deepEqual([task.attempt_id, task.caller_id, task.activation_id], [null, null, null]);
+    assert.equal(task.observed_model, 'unknown');
+    assert.throws(() => reduceRequest(state, base('claim', { task_key: task.task_key, task_digest: task.task_digest, caller_id: CALLER, runner: 'cloud', requested_model: 'swe-2-high' }), context), /import_launch_unverified/);
+    assert.throws(() => reduceRequest(state, base('begin', { task_key: task.task_key, attempt_id: ATTEMPT, caller_id: CALLER, activation_id: ACT }), context), /import_launch_unverified/);
+  }
+});
+
+test('importのsession申告はunknown、PRだけは検証したlive状態を使う', () => {
+  const session = base('import', { task_key: 'feature:task', task_digest: 'b'.repeat(64), session_id: 'self-report', session_url: 'https://app.devin.ai/sessions/self-report', state: 'running' });
+  const imported = reduceRequest(emptyState(), session, context).changes.tasks['feature:task'];
+  assert.equal(imported.state, 'launch_unknown');
+  assert.equal(imported.session_id, 'self-report');
+  assert.equal(imported.import_claims.state, 'running');
+  assert.equal(imported.verified_issue, false);
+  assert.equal(imported.verified_pr, false);
+  for (const prState of ['OPEN', 'CLOSED', 'MERGED']) {
+    const request = { ...session, pr: 20, state: 'issue_ready', start_conditions_confirmed: true };
+    assert.throws(() => reduceRequest(emptyState(), request, { ...context, import_pr_verified: false }), /import_unverified/);
+    const pr = reduceRequest(emptyState(), request, { ...context, import_pr_verified: true, pr_state: prState, head_sha: 'a'.repeat(40) }).changes.tasks['feature:task'];
+    assert.equal(pr.state, prState === 'OPEN' ? 'pr_open' : 'finalized');
+    assert.equal(pr.verified_pr, true);
+    assert.equal(pr.start_conditions_confirmed, false);
+  }
+});
+
+test('既存タスクはimportで予約・稼働・終端を巻き戻さず、同request再送だけ冪等にする', () => {
+  const request = base('import', { task_key: 'feature:task', task_digest: 'b'.repeat(64), issue: 10, state: 'issue_ready', start_conditions_confirmed: true });
+  for (const current of ['registered', 'issue_ready', 'reserved', 'launching', 'launch_unknown', 'running', 'pr_open', 'finalized', 'withdrawn']) {
+    const state = ready();
+    state.tasks['feature:task'] = { ...state.tasks['feature:task'], state: current, attempt_id: ATTEMPT, caller_id: CALLER, activation_id: ACT };
+    const original = canonicalJson(state);
+    assert.throws(() => reduceRequest(state, request, { ...context, import_issue_verified: true }), /import_conflict/);
+    assert.equal(canonicalJson(state), original);
+  }
+  const state = applyChanges(emptyState(), reduceRequest(emptyState(), request, { ...context, import_issue_verified: true }).changes);
+  state.requests[ID] = { request_hash: hashJson(request), result: { code: 'imported', allowed: false } };
+  assert.equal(reduceRequest(state, request, context).result.code, 'imported');
+  assert.throws(() => reduceRequest(state, { ...request, request_id: newRequestId() }, context), /import_conflict/);
 });

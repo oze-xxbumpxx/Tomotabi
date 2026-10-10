@@ -24,7 +24,7 @@ const FIELDS = {
   reconcile: ['task_key'],
   'review-refresh': ['pr'],
 };
-const TASK_FIELDS = new Set(['task_key', 'task_digest', 'plan_path', 'plan_sha', 'wave', 'state', 'issue', 'issue_attempt_id', 'attempt_id', 'caller_id', 'activation_id', 'runner', 'requested_model', 'observed_model', 'session_id', 'session_url', 'pr', 'reserved_at', 'start_conditions_confirmed', 'updated_seq']);
+const TASK_FIELDS = new Set(['task_key', 'task_digest', 'plan_path', 'plan_sha', 'wave', 'state', 'issue', 'issue_attempt_id', 'attempt_id', 'caller_id', 'activation_id', 'runner', 'requested_model', 'observed_model', 'session_id', 'session_url', 'pr', 'reserved_at', 'start_conditions_confirmed', 'updated_seq', 'imported', 'import_claims', 'verified_issue', 'verified_pr']);
 const TASK_STATES = new Set(['registered', 'issue_creating', 'issue_unknown', 'issue_ready', 'reserved', 'launching', 'launch_unknown', 'running', 'pr_open', 'finalized', 'withdrawn']);
 
 export class DelegationError extends Error {
@@ -230,6 +230,7 @@ export function reduceRequest(state, rawRequest, context = {}) {
     }
   } else if (request.operation === 'claim') {
     if (!task || task.task_digest !== request.task_digest) fail('content_conflict');
+    if (task.imported === true) fail('import_launch_unverified');
     if (task.state === 'reserved' && task.caller_id === request.caller_id) {
       if (task.runner !== request.runner || task.requested_model !== request.requested_model) fail('configuration_conflict');
       result = { code: 'already_reserved', attempt_id: task.attempt_id, caller_id: task.caller_id, task_key: task.task_key, allowed: false };
@@ -243,6 +244,7 @@ export function reduceRequest(state, rawRequest, context = {}) {
       result = { code: 'reserved', attempt_id: context.attempt_id, caller_id: request.caller_id, task_key: task.task_key, allowed: false };
     }
   } else if (request.operation === 'begin') {
+    if (task?.imported === true) fail('import_launch_unverified');
     if (!task || task.attempt_id !== request.attempt_id || task.caller_id !== request.caller_id) fail('unauthorized_attempt');
     if (task.state !== 'reserved') result = { code: 'already_begun', allowed: false, first_delivery: false, attempt_id: task.attempt_id };
     else if (Date.parse(context.now) - Date.parse(task.reserved_at) >= 900_000) {
@@ -268,11 +270,19 @@ export function reduceRequest(state, rawRequest, context = {}) {
     changes.prs = { [request.pr]: { ...(state.prs[request.pr] ?? {}), pr: request.pr, task_key: task.task_key, target: true, head_sha: context.head_sha, state: context.pr_state } };
     result = { code: 'linked', pr: request.pr, allowed: false };
   } else if (request.operation === 'import') {
-    if (context.import_verified !== true) fail('import_unverified');
-    if (task && (task.task_digest !== request.task_digest || (task.issue && task.issue !== request.issue) || (task.pr && task.pr !== request.pr))) fail('content_conflict');
-    if (!task && Object.keys(state.tasks).length >= (config.limits?.tasks ?? 100)) fail('task_limit');
-    const imported = Object.fromEntries(Object.entries(request).filter(([key]) => TASK_FIELDS.has(key)));
-    setTask({ ...task, ...imported, state: request.state ?? (request.pr ? 'pr_open' : request.session_id ? 'running' : 'launch_unknown'), issue: request.issue ?? task?.issue ?? null, pr: request.pr ?? task?.pr ?? null });
+    if (task) fail('import_conflict');
+    if ((request.issue && context.import_issue_verified !== true) || (request.pr && (context.import_pr_verified !== true || !SHA.test(context.head_sha ?? '') || !['OPEN', 'MERGED', 'CLOSED'].includes(context.pr_state))) || !(request.issue || request.pr || request.session_id)) fail('import_unverified');
+    if (Object.keys(state.tasks).length >= (config.limits?.tasks ?? 100)) fail('task_limit');
+    const claims = Object.fromEntries(['state', 'start_conditions_confirmed', 'attempt_id', 'caller_id', 'activation_id', 'runner', 'requested_model', 'observed_model', 'session_id', 'session_url'].filter((key) => Object.hasOwn(request, key)).map((key) => [key, request[key]]));
+    const plan = Object.fromEntries(['plan_path', 'plan_sha'].filter((key) => Object.hasOwn(request, key)).map((key) => [key, request[key]]));
+    // 移行の申告は記録に残すが、既存の起動が無いという証拠にはしない。
+    setTask({ task_key: request.task_key, task_digest: request.task_digest, ...plan, imported: true, import_claims: claims,
+      verified_issue: context.import_issue_verified === true, verified_pr: context.import_pr_verified === true,
+      state: request.pr ? context.pr_state === 'OPEN' ? 'pr_open' : 'finalized' : 'launch_unknown',
+      issue: request.issue ?? null, pr: request.pr ?? null, start_conditions_confirmed: false,
+      attempt_id: null, caller_id: null, activation_id: null, session_id: request.session_id ?? null,
+      session_url: request.session_url ?? null, requested_model: request.requested_model ?? 'unknown', observed_model: 'unknown',
+    });
     if (request.pr) changes.prs = { [request.pr]: { pr: request.pr, task_key: request.task_key, target: true, head_sha: context.head_sha, state: context.pr_state } };
     result = { code: 'imported', task_key: request.task_key, allowed: false };
   } else if (request.operation === 'reconcile') {

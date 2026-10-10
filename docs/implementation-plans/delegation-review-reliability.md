@@ -72,7 +72,7 @@
 
 ### 既存CLI・待機・Hookを担当するファイル
 
-- `delegation.mjs`の変更内容／完了条件: request/importを追加し、公開JSONと終了コード0/2/3/4/5を扱う。init/review/finalizeの既存終了コード、Issue番号／pr-N、reviews、follow_up_of、summaryを保つ。共有seq・取得日時・session/attempt/PRの対応は任意項目で写し、旧initを起動許可にしない。受付後とstatus取得後に状態ディレクトリへYAMLの写しを作り、旧review/finalizeへ接続する。古いseqでは更新せず、既存のreviewsやfollow_up_ofを保つ。
+- `delegation.mjs`の変更内容／完了条件: request/importを追加し、公開JSONと終了コード0/2/3/4/5を扱う。init/review/finalizeの既存終了コード、Issue番号／pr-N、reviews、follow_up_of、summaryを保つ。共有seq・取得日時・session/attempt/PRの対応は任意項目で写し、旧initを起動許可にしない。受付後とstatus取得後に状態ディレクトリへYAMLの写しを作り、旧review/finalizeへ接続する。古いseqでは共有フィールドを巻き戻さず、両記録のreviewsやfollow_up_ofを統合する。同じroundの内容などが競合した場合は更新を止める。
 - `delegation-status.mjs`の変更内容／完了条件: 読めた共有状態を優先する。reviews数による選択は旧記録同士に限る。古い写しは未確認と表示し、短縮SHAの前方一致をレビュー成功にしない。未処理・起票結果不明・起動結果不明・現在headへのCodex再依頼・再確認を案内する。
 - `wait-for-pr.mjs`の変更内容／完了条件: 共有登録のPRを優先し、GitHub上のIssue対応を確認する。複数候補は競合として返し、勝手に最小番号を選ばない。旧呼び出し元と試験も新しい曖昧状態を扱う。
 - `wait-for-pr-update.mjs`の変更内容／完了条件: agent-reviewをCIの待ちと結論から除く。quality/build/api-dbを維持し、PR headとCIのmerge commitを単純一致させない。

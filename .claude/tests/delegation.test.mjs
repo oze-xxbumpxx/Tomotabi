@@ -15,6 +15,7 @@ import {
   mergeRecords,
   preferRecord,
   readKnownRecords,
+  readRecord,
   readSharedSnapshot,
   runSharedRequestCli,
   readRecordMerged,
@@ -559,15 +560,57 @@ test('S-06: 「後続の委譲」の行は後続があるときだけ出す', ()
   assert.doesNotMatch(formatSummary(summarize([merged(1, 'unknown')])), /後続の委譲/);
 });
 
-test('I-21: 共有seqを旧reviews数より先に選び、同seqは取得日時で選ぶ', () => {
+test('I-21: 共有seqと取得日時を優先し、旧記録のレビューは独立して残す', () => {
   const primary = { ...base(81), shared_seq: 4, shared_fetched_at: '2026-10-09T10:00:00Z' };
   const legacy = addReview(base(81), { round: 0, sha: 'abc1234', verdict: 'merge' });
-  assert.equal(preferRecord(primary, legacy), primary);
+  const combined = preferRecord(primary, legacy);
+  assert.equal(combined.shared_seq, 4);
+  assert.deepEqual(combined.reviews, legacy.reviews);
   const newer = { ...primary, shared_seq: 5 };
   assert.equal(preferRecord(primary, newer), newer);
   const later = { ...primary, shared_fetched_at: '2026-10-09T10:01:00Z' };
   assert.equal(preferRecord(primary, later), later);
   assert.deepEqual(parseYaml(toYaml(later)), later);
+});
+
+test('共有seqが新しい記録と古い写しの追加履歴を統合し、競合時は写しを更新しない', () => {
+  const temp = mkdtempSync(join(tmpdir(), 'delegation-merge-'));
+  const dir = join(temp, 'repo');
+  const mirrorDir = join(temp, 'mirror');
+  const primary = { ...base(81), task_key: 'feature:task', shared_seq: 5, shared_fetched_at: '2026-10-10T02:00:00Z' };
+  const mirror = { ...addReview(base(81), { round: 0, sha: 'a'.repeat(40), verdict: 'escalate' }), task_key: 'feature:task', shared_seq: 4, follow_up_of: 37 };
+  try {
+    writeRecord(dir, primary);
+    writeRecord(mirrorDir, mirror);
+    const combined = readRecordMerged(dir, 81, mirrorDir);
+    assert.equal(combined.shared_seq, 5);
+    assert.deepEqual(combined.reviews, mirror.reviews);
+    assert.equal(combined.follow_up_of, 37);
+    assert.equal(combined.escalations, 1);
+    const snapshot = { seq: 6, fetched_at: '2026-10-10T03:00:00Z', tasks: { 'feature:task': { task_key: 'feature:task', issue: 81, pr: 82, state: 'pr_open' } } };
+    cacheSharedSnapshot(snapshot, { dir, mirrorDir });
+    const cached = readRecord(mirrorDir, 81);
+    assert.equal(cached.shared_seq, 6);
+    assert.deepEqual(cached.reviews, mirror.reviews);
+    assert.equal(cached.follow_up_of, 37);
+    assert.deepEqual(readKnownRecords({ dir, mirrorDir })[0].reviews, mirror.reviews);
+    const revised = { ...addReview(base(81), { round: 0, sha: 'b'.repeat(40), verdict: 'merge' }), shared_seq: 7 };
+    writeRecord(dir, revised);
+    const before = readFileSync(join(mirrorDir, '81.yml'), 'utf8');
+    assert.throws(() => readRecordMerged(dir, 81, mirrorDir), /レビュー履歴が競合/);
+    assert.throws(() => cacheSharedSnapshot({ ...snapshot, seq: 8 }, { dir, mirrorDir }), /レビュー履歴が競合/);
+    assert.equal(readFileSync(join(mirrorDir, '81.yml'), 'utf8'), before);
+    assert.throws(() => preferRecord({ ...primary, follow_up_of: 38 }, mirror), /履歴が競合/);
+    assert.throws(() => preferRecord({ ...primary, task_key: 'different:task' }, mirror), /タスクを確認/);
+    const finalized = { ...mirror, outcome: 'merged', gh: { pr: 82 } };
+    assert.equal(preferRecord(primary, finalized).outcome, 'merged');
+    assert.deepEqual(preferRecord(primary, finalized).gh, { pr: 82 });
+    assert.throws(() => preferRecord({ ...primary, outcome: 'closed' }, finalized), /履歴が競合/);
+    const another = { ...addReview(base(81), { round: 1, sha: 'b'.repeat(40), verdict: 'escalate' }), shared_seq: 5 };
+    const parallel = preferRecord(another, mirror);
+    assert.deepEqual(parallel.reviews.map((review) => review.round), [0, 1]);
+    assert.equal(parallel.escalations, 2);
+  } finally { rmSync(temp, { recursive: true, force: true }); }
 });
 
 test('I-17: 初回CIの集計からagent-reviewを外す', () => {

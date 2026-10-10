@@ -111,7 +111,7 @@ Node 22で、リポジトリルートから`HARNESS_NAMESPACE=tomotabi-harness n
 | delegation-launch | parseLaunchArgs、consumeBeginReceipt、reserveSpent、buildDevinArgs、launchDelegation、runLaunchCli | U-11〜U-15、I-08〜I-13 |
 | agent-review | collectReviewSnapshot、evaluateSha、createClaudeCompletion。判定payloadをcontrollerへ返す | U-16〜U-27、I-14〜I-17 |
 | delegation-control | persistEvent、verifyPlan、findCreatedIssue、refreshSha、runController | U-03〜U-08、I-01〜I-08、I-14〜I-22 |
-| delegation-control | decodeNotificationZip、initializeAnchor | I-18〜I-20、I-23 |
+| delegation-control | decodeNotificationZip、initializeAnchor、runControllerMain | I-18〜I-20、I-23、受付I/O中断時のCLI非ゼロ終了 |
 
 次表は走査した既存変更対象の全export関数・クラスと公開定数。クラスは`UsageError`だけで独自メソッドはなく、staticファクトリ・ゲッターはない。Rは下の回帰表を指す。
 
@@ -123,7 +123,7 @@ Node 22で、リポジトリルートから`HARNESS_NAMESPACE=tomotabi-harness n
 | delegation | firstCiCommit、buildGhSection | R-01、I-17 |
 | delegation | summarize、formatSummary | R-01、I-12、I-17、I-21 |
 | delegation | readRecord、writeRecord、readAllRecords、defaultMirrorDir | R-01、R-06、I-13、I-21 |
-| delegation | preferRecord、mergeRecords、readKnownRecords、readRecordMerged | R-01、I-21。review数の選択は旧記録同士に限る |
+| delegation | preferRecord、mergeRecords、readKnownRecords、readRecordMerged | R-01、I-21。共有seqと独立した履歴を統合し、競合時は更新しない |
 | delegation | parseOptions、runCli、UsageError | R-01、I-21〜I-22 |
 | delegation | readSharedSnapshot、cacheSharedSnapshot、runSharedRequestCli | I-01、I-13、I-21〜I-22。写しから旧reviewを続け、再取得後も履歴を保持する |
 | delegation | DEFAULT_DIR、MODELS、RUNNERS、SEVERITIES、VERDICTS、PRIVATE_SUMMARY、ORIGINS | R-01、U-26、I-12。列挙値を集合全体で固定 |
@@ -191,3 +191,11 @@ Node 22.23.3で`node --test .claude/tests/*.test.mjs`を実行し、351件すべ
 管理Issue・先頭コメントIDは未設定、migration_completeとcli_launch_verifiedはfalseのまま。statusのJSON表示と停止設定を確認した。アプリ、依存パッケージと既存CI定義は変更していないため、ローカルのアプリlint／type-check／test／buildは省略した。上表の実機確認は未実施で、試験用Devinも起動していない。
 
 固定tree `dce47487ba9fe5354420302eac8badb2505245d7`の広域・権限レビューで、検証済みの未解決BLOCKは0件。広域レビューの関連5試験106件と、権限レビューの独立再確認16件もPASS。実装コミット`28b6fc6a`のGitHub CIはquality／build／harness／api-dbすべて成功した。
+
+## PRレビュー後の再検証（2026-10-10）
+
+Devin／Codexの5件を反例として追加し、修正後の全ハーネス361件がPASS（失敗・取消・省略0、終了コード0）。PR未登録→候補検出→登録値優先、共有seqと独立したレビュー履歴の統合／競合停止、移行申告と起動許可の分離、受付中断時の実CLI非ゼロ終了、共有状態とlive check双方の照合を確認した。
+
+既存successをChecks APIへPATCHできない反例では、GitHubに古いsuccessが残ることも試験で固定した。共有pendingとcontroller失敗、マージ前のrefresh完了＋statusの両照合を要求する。API障害中の古い成功の物理的失効は保証の対象外。
+
+修正後の固定tree `ed204cebd9a042192c2d68ce688466bcd3e77c07`を独立再レビューし、広域114件・権限11件の試験がPASS。検証済みの未解決BLOCKは0件。

@@ -291,10 +291,14 @@ export function statusFromSnapshot(snapshot, legacy) {
     const live = legacy.prStates?.[prNumber] ?? null;
     const head = live?.head_sha ?? pr?.head_sha ?? task.head_sha ?? null;
     const check = head === null ? null : snapshot.checks?.[head] ?? null;
+    const liveCheck = head === null ? null : legacy.checkStates?.[head] ?? null;
     const base = { key: task.task_key, pr: prNumber, shared_seq: task.updated_seq ?? snapshot.seq };
     if (['launch_unknown', 'issue_unknown', 'launching'].includes(task.state)) actions.push({ ...base, state: 'shared-unknown' });
     else if (prNumber !== null) {
-      if (live?.state === 'OPEN' && head !== null && check?.head_sha === head && check?.state === 'completed' && check?.conclusion === 'success') actions.push({ ...base, state: 'await-user', verdict: 'merge', round: null, verified: true });
+      if (live?.state === 'OPEN' && head !== null && check?.head_sha === head && check?.state === 'completed' && check?.conclusion === 'success'
+        && Number.isSafeInteger(check.check_id) && check.check_id > 0 && typeof check.external_id === 'string'
+        && liveCheck?.id === check.check_id && liveCheck?.head_sha === head && liveCheck?.name === 'agent-review'
+        && liveCheck?.external_id === check.external_id && liveCheck?.status === 'completed' && liveCheck?.conclusion === 'success') actions.push({ ...base, state: 'await-user', verdict: 'merge', round: null, verified: true });
       else actions.push({ ...base, state: 'review-wait', headSha: head });
     } else actions.push({ ...base, state: 'shared-pending', sharedState: task.state });
   }
@@ -324,6 +328,12 @@ export async function collectSharedStatus(options = {}, dependencies = {}) {
       const pr = await client.rest('GET', `/repos/${config.repository}/pulls/${task.pr}`);
       if (pr?.number !== task.pr || pr.base?.repo?.id !== config.repository_id || !/^[0-9a-f]{40}$/.test(pr.head?.sha ?? '')) throw new Error('PR対応を確認できません');
       legacy.prStates[task.pr] = { head_sha: pr.head.sha, state: pr.state === 'open' ? 'OPEN' : 'CLOSED' };
+    }
+    legacy.checkStates = {};
+    for (const head of new Set(Object.values(legacy.prStates).map((pr) => pr.head_sha))) {
+      const check = snapshot.checks?.[head];
+      if (check?.state !== 'completed' || check?.conclusion !== 'success' || !Number.isSafeInteger(check.check_id) || check.check_id <= 0) continue;
+      legacy.checkStates[head] = await client.rest('GET', `/repos/${config.repository}/check-runs/${check.check_id}`);
     }
     return statusFromSnapshot(snapshot, legacy);
   } catch {

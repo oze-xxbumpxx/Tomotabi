@@ -39,6 +39,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { resolveStateDir } from '../lib/harness-paths.mjs';
 import { findLinkedPr, listPrs } from './wait-for-pr.mjs';
 
@@ -535,15 +536,38 @@ export function defaultMirrorDir(env = process.env) {
   }
 }
 
-/** 同じkeyでは共有seqと取得日時を優先する。旧記録同士だけreviews数とoutcomeを比べる。 */
+/** 共有フィールドは新しいseqから読み、独立して追記される履歴は両記録を照合して残す。 */
 export function preferRecord(primary, mirror) {
   if (primary === null) return mirror;
   if (mirror === null) return primary;
   const seq = (rec) => Number.isSafeInteger(rec.shared_seq) && rec.shared_seq >= 0 ? rec.shared_seq : -1;
-  if (seq(primary) !== seq(mirror)) return seq(primary) > seq(mirror) ? primary : mirror;
-  if (seq(primary) >= 0) {
+  if (seq(primary) >= 0 || seq(mirror) >= 0) {
     const at = (rec) => Date.parse(rec.shared_fetched_at ?? '') || 0;
-    return at(mirror) > at(primary) ? mirror : primary;
+    const shared = seq(primary) !== seq(mirror) ? (seq(primary) > seq(mirror) ? primary : mirror)
+      : at(mirror) > at(primary) ? mirror : primary;
+    if (recordKey(primary) !== recordKey(mirror) || (primary.task_key && mirror.task_key && primary.task_key !== mirror.task_key)) {
+      throw new UsageError('委譲の記録が競合しています（対応するタスクを確認してください）');
+    }
+    const a = primary.reviews ?? [];
+    const b = mirror.reviews ?? [];
+    const byRound = new Map();
+    for (const review of [...a, ...b]) {
+      if (!Number.isSafeInteger(review.round) || review.round < 0) throw new UsageError('レビュー履歴が不正です（写しは更新しません）');
+      if (byRound.has(review.round) && !isDeepStrictEqual(byRound.get(review.round), review)) throw new UsageError('レビュー履歴が競合しています（写しは更新しません）');
+      byRound.set(review.round, review);
+    }
+    const reviews = [...byRound.values()].sort((left, right) => left.round - right.round);
+    const merged = { ...shared, reviews,
+      escalations: Math.max(primary.escalations ?? 0, mirror.escalations ?? 0, reviews.filter((review) => review.verdict === 'escalate').length) };
+    for (const field of ['follow_up_of', 'outcome']) {
+      const left = primary[field] ?? null;
+      const right = mirror[field] ?? null;
+      if (left !== null && right !== null && left !== right) throw new UsageError('委譲の履歴が競合しています（写しは更新しません）');
+      if (left !== null || right !== null) merged[field] = left ?? right;
+    }
+    if (primary.gh?.pr && mirror.gh?.pr && primary.gh.pr !== mirror.gh.pr) throw new UsageError('PRの記録が競合しています（写しは更新しません）');
+    merged.gh = shared.gh ?? primary.gh ?? mirror.gh ?? null;
+    return isDeepStrictEqual(merged, shared) ? shared : merged;
   }
   const reviews = (rec) => (rec.reviews ?? []).length;
   if (reviews(primary) !== reviews(mirror)) return reviews(primary) > reviews(mirror) ? primary : mirror;

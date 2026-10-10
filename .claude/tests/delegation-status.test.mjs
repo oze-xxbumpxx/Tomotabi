@@ -279,7 +279,7 @@ test('I-21: 旧短縮SHAはhead一致としてマージ可を表示しない', (
 
 test('I-21: 共有seqを表示し、旧mergeやunknownから成功・再起動を推測しない', () => {
   const rec = reviewed(issueRec(11, { gh: { pr: 12 } }), 'merge');
-  const legacy = buildStatus({ records: [rec], prs: [ghPr(12)], now: NOW });
+  const legacy = { ...buildStatus({ records: [rec], prs: [ghPr(12)], now: NOW }), checkStates: { [HEAD]: { id: 55, head_sha: HEAD, name: 'agent-review', external_id: 'review-55', status: 'completed', conclusion: 'success' } } };
   const snapshot = { seq: 4, hash: 'a'.repeat(64), fetched_at: '2026-10-09T10:00:00Z', tasks: {
     'feature:one': { task_key: 'feature:one', issue: 11, pr: 12, state: 'pr_open', updated_seq: 4 },
     'feature:two': { task_key: 'feature:two', issue: 13, pr: null, state: 'launch_unknown' },
@@ -291,7 +291,7 @@ test('I-21: 共有seqを表示し、旧mergeやunknownから成功・再起動�
   assert.match(text, /両レビュー待ち.*Codex再依頼/);
   assert.match(text, /自動再起動しない/);
   assert.doesNotMatch(text, /マージ可|マージ待ち/);
-  const verified = { ...snapshot, checks: { [HEAD]: { head_sha: HEAD, state: 'completed', conclusion: 'success' } } };
+  const verified = { ...snapshot, checks: { [HEAD]: { head_sha: HEAD, check_id: 55, external_id: 'review-55', state: 'completed', conclusion: 'success' } } };
   assert.equal(statusFromSnapshot(verified, legacy).actions[0].state, 'await-user');
   const verifiedText = formatStatus(statusFromSnapshot(verified, legacy));
   assert.match(verifiedText, /両レビューの照合済み。マージ判断はユーザー/);
@@ -302,6 +302,11 @@ test('I-21: 共有seqを表示し、旧mergeやunknownから成功・再起動�
   assert.equal(statusFromSnapshot(pending, legacy).actions[0].state, 'review-wait');
   const old = { ...verified, checks: { [HEAD]: { head_sha: NEW_HEAD, state: 'completed', conclusion: 'success' } } };
   assert.equal(statusFromSnapshot(old, legacy).actions[0].state, 'review-wait');
+  assert.equal(statusFromSnapshot(verified, { ...legacy, checkStates: {} }).actions[0].state, 'review-wait');
+  for (const change of [{ id: 56 }, { head_sha: NEW_HEAD }, { name: 'other' }, { external_id: 'other' }, { status: 'in_progress' }, { conclusion: 'failure' }]) {
+    const mismatched = { ...legacy, checkStates: { [HEAD]: { ...legacy.checkStates[HEAD], ...change } } };
+    assert.equal(statusFromSnapshot(verified, mismatched).actions[0].state, 'review-wait');
+  }
 });
 
 test('I-13: 共有読取失敗は古い履歴を未確認表示だけに使う', async () => {
@@ -313,5 +318,38 @@ test('I-13: 共有読取失敗は古い履歴を未確認表示だけに使う',
     assert.match(formatStatus(status), /共有状態を確認できません/);
     assert.doesNotMatch(JSON.stringify(status), /PRIVATE TOKEN/);
     assert.equal(status.actions[0].state, 'offline');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('マージ前の表示は共有状態とGitHub checkの両方を読み、片方だけの成功では照合済みにしない', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shared-check-status-'));
+  const snapshot = { seq: 4, fetched_at: '2026-10-10T03:00:00Z', tasks: { 'feature:task': { task_key: 'feature:task', issue: 11, pr: 12, state: 'pr_open' } }, prs: { 12: { head_sha: HEAD } }, checks: { [HEAD]: { head_sha: HEAD, check_id: 55, external_id: 'review-55', state: 'completed', conclusion: 'success' } } };
+  let apiCheck = { id: 55, head_sha: HEAD, name: 'agent-review', external_id: 'review-55', status: 'completed', conclusion: 'success' };
+  let rejectCheck = false;
+  let reads = 0;
+  const dependencies = { config: { repository: 'owner/repo', repository_id: 999 }, readSnapshot: async () => snapshot, client: { rest: async (_method, path) => {
+    if (path.endsWith('/pulls/12')) return { number: 12, base: { repo: { id: 999 } }, head: { sha: HEAD }, state: 'open' };
+    assert.equal(path, '/repos/owner/repo/check-runs/55');
+    reads += 1;
+    if (rejectCheck) throw new Error('API UNAVAILABLE');
+    return apiCheck;
+  } } };
+  const collect = () => collectSharedStatus({ dir, mirrorDir: null, useGh: false }, dependencies);
+  try {
+    assert.equal((await collect()).actions[0].state, 'await-user');
+    assert.equal(reads, 1);
+    apiCheck = { ...apiCheck, conclusion: 'failure' };
+    assert.equal((await collect()).actions[0].state, 'review-wait');
+    apiCheck = { ...apiCheck, conclusion: 'success' };
+    snapshot.checks[HEAD].state = 'in_progress';
+    const before = reads;
+    assert.equal((await collect()).actions[0].state, 'review-wait');
+    assert.equal(reads, before);
+    snapshot.checks[HEAD].state = 'completed';
+    rejectCheck = true;
+    const unknown = await collect();
+    assert.equal(unknown.offline, true);
+    assert.match(unknown.ghError, /共有状態を確認できません/);
+    assert.equal(unknown.actions.some((action) => action.verified), false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

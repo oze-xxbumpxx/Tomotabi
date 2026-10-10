@@ -151,9 +151,9 @@ async function processRequest(client, config, state, run, comment, request, { no
       if (request.issue) {
         const issue = await client.rest('GET', `/repos/${config.repository}/issues/${request.issue}`);
         if (issue?.number !== request.issue || issue.pull_request) fail('import_unverified');
+        context.import_issue_verified = true;
       }
-      if (request.pr) Object.assign(context, await verifyPr(client, config, request.pr, request.issue ?? null));
-      context.import_verified = Boolean(request.issue || request.pr || request.session_id);
+      if (request.pr) Object.assign(context, await verifyPr(client, config, request.pr, request.issue ?? null), { import_pr_verified: true });
     }
     reduced = reduceRequest(state, request, context);
   } catch (error) {
@@ -235,10 +235,14 @@ async function ensureCheck(client, config, state, run, headSha) {
   }
   if (state.checks[headSha]?.check_id !== record.check_id) state = await persistEvent(client, config, state, { checks: { [headSha]: record } }, systemMeta(run, 'check-linked'), { code: 'check_pending', allowed: false });
   state = await persistEvent(client, config, state, { checks: { [headSha]: { ...record, state: 'in_progress', conclusion: null } } }, systemMeta(run, 'review-started'), { code: 'review_pending', allowed: false });
-  const current = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
+  let current = null;
+  try { current = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`); } catch { fail('check_write_unknown'); }
   if (current?.head_sha !== headSha || current.name !== 'agent-review' || current.external_id !== record.external_id) fail('check_unverified');
-  await client.rest('PATCH', `/repos/${config.repository}/check-runs/${record.check_id}`, { status: 'in_progress', output: { title: 'レビューを確認中', summary: '現在の証拠を確認しています。' } });
-  const pending = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
+  let pending = null;
+  try {
+    await client.rest('PATCH', `/repos/${config.repository}/check-runs/${record.check_id}`, { status: 'in_progress', output: { title: 'レビューを確認中', summary: '現在の証拠を確認しています。' } });
+    pending = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
+  } catch { fail('check_write_unknown'); }
   if (pending?.status !== 'in_progress' || pending.conclusion !== null) fail('check_write_unknown');
   return state;
 }
@@ -279,8 +283,11 @@ export async function refreshSha(client, config, state, run, headSha, review, { 
   delete payload.head_sha;
   delete payload.name;
   if (payload.conclusion === null) delete payload.conclusion;
-  await client.rest('PATCH', `/repos/${config.repository}/check-runs/${record.check_id}`, payload);
-  const actual = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
+  let actual = null;
+  try {
+    await client.rest('PATCH', `/repos/${config.repository}/check-runs/${record.check_id}`, payload);
+    actual = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
+  } catch { fail('check_write_unknown'); }
   if (actual?.status !== decision.status || (actual.conclusion ?? null) !== (decision.conclusion ?? null)) fail('check_write_unknown');
   state = await persistEvent(client, config, state, { checks: { [headSha]: { ...record, state: decision.status, conclusion: decision.conclusion ?? null } } }, meta ?? systemMeta(run, 'review-completed'), { code: 'review_checked', allowed: false });
   return state;
@@ -382,7 +389,7 @@ export async function runController({ client, config, runId, runAttempt, runtime
       break;
     }
   }
-  const result = () => ({ processed, rejected, skipped, remaining: pending.filter((comment) => !handled(state, comment)).length, errors, seq: state.seq, state });
+  const result = () => ({ processed, rejected, skipped, interrupted, remaining: pending.filter((comment) => !handled(state, comment)).length, errors, seq: state.seq, state });
   if (interrupted) return result();
   state = await reconcileTasks(client, config, state, run, now, uuid);
   const numbers = await notificationPrs(client, config, event);
@@ -433,18 +440,18 @@ export async function initializeAnchor(client, config, run, event) {
   return { code: 'anchor_initialized', anchor_comment_id: comment.id, seq: 0, hash: ZERO_HASH };
 }
 
-async function main() {
-  if (process.env.GITHUB_ACTIONS !== 'true') fail('controller_only');
-  const config = JSON.parse(readFileSync(new URL('../config/delegation-review.json', import.meta.url), 'utf8'));
-  if (process.env.GITHUB_REPOSITORY !== config.repository) fail('repository_unverified');
-  const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
-  const client = createGitHubClient({ repo: config.repository, maxApiCalls: config.limits.api_calls, timeoutMs: config.limits.timeout_ms, jobTimeoutMs: config.limits.job_timeout_ms });
-  if (!/^[0-9a-f]{40}$/.test(process.env.GITHUB_SHA ?? '')) fail('run_unverified');
-  const result = await runController({ client, config, runId: Number(process.env.GITHUB_RUN_ID), runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT), runtimeSha: process.env.GITHUB_SHA, event });
-  const output = result.code === 'anchor_initialized' ? result : { processed: result.processed, rejected: result.rejected, skipped: result.skipped, remaining: result.remaining, errors: result.errors, seq: result.seq };
-  console.log(canonicalJson(output));
+export async function runControllerMain({ env = process.env, config = null, event = null, client = null, review = null, output = console.log } = {}) {
+  if (env.GITHUB_ACTIONS !== 'true') fail('controller_only');
+  config ??= JSON.parse(readFileSync(new URL('../config/delegation-review.json', import.meta.url), 'utf8'));
+  if (env.GITHUB_REPOSITORY !== config.repository) fail('repository_unverified');
+  event ??= JSON.parse(readFileSync(env.GITHUB_EVENT_PATH, 'utf8'));
+  client ??= createGitHubClient({ repo: config.repository, maxApiCalls: config.limits.api_calls, timeoutMs: config.limits.timeout_ms, jobTimeoutMs: config.limits.job_timeout_ms });
+  if (!/^[0-9a-f]{40}$/.test(env.GITHUB_SHA ?? '')) fail('run_unverified');
+  const result = await runController({ client, config, runId: Number(env.GITHUB_RUN_ID), runAttempt: Number(env.GITHUB_RUN_ATTEMPT), runtimeSha: env.GITHUB_SHA, event, review });
+  output(canonicalJson(result.code === 'anchor_initialized' ? result : { processed: result.processed, rejected: result.rejected, skipped: result.skipped, interrupted: result.interrupted, remaining: result.remaining, errors: result.errors, seq: result.seq }));
+  return result.interrupted === true ? 5 : 0;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => { console.error(new DelegationError(publicError(error)).message); process.exitCode = error instanceof DelegationError ? error.exit_code : 5; });
+  runControllerMain().then((code) => { process.exitCode = code; }).catch((error) => { console.error(new DelegationError(publicError(error)).message); process.exitCode = error instanceof DelegationError ? error.exit_code : 5; });
 }

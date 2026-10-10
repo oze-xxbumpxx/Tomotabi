@@ -40,7 +40,7 @@
     },
     "review": {
       "state": "done",
-      "reason": "固定tree dce47487の広域・権限レビューで検証済みBLOCK0。再確認106件／16件PASS"
+      "reason": "外部指摘5件を修正。固定tree ed204cebの広域114件・権限11件PASS、検証済みBLOCK0"
     },
     "merge": {
       "state": "pending",
@@ -51,5 +51,5 @@
       "reason": "AGENTS.mdにより改善3Agentは休眠。実機導入後の知見を別途記録する"
     }
   },
-  "updated_at": "2026-10-10T01:18:54.121Z"
+  "updated_at": "2026-10-10T01:39:29.951Z"
 }

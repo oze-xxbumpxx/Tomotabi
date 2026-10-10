@@ -83,7 +83,7 @@ GitHub側の設定。
 
 ## 共有受付と両レビューの導入
 
-`.claude/config/delegation-review.json`の管理Issue・先頭コメント・workflow IDは、導入時に実環境で固定する。初期値の`migration_complete:false`と`cli_launch_verified:false`では新規登録と起動を止める。進行中の計画／Issue／PR／Local・Cloudセッションは固定担当者がimportで照合し、未確認はunknownに残す。
+`.claude/config/delegation-review.json`の管理Issue・先頭コメント・workflow IDは、導入時に実環境で固定する。初期値の`migration_complete:false`と`cli_launch_verified:false`では新規登録と起動を止める。進行中の計画／Issue／PR／Local・Cloudセッションは固定担当者がimportで照合し、未確認はunknownに残す。importしたタスクは起動許可を持たず、申告した状態や開始条件だけでclaim／beginを許可しない。
 
 初期anchorはActions自身が作成する。管理Issue番号とcontroller workflow IDを設定した後、main限定のworkflow_dispatchでoperation=initializeを指定する。固定要求作者IDを認証し、作成済みanchorを全件照合してからIDを設定へ反映する。POSTの結果不明ではinitializeを自動再送しない。
 

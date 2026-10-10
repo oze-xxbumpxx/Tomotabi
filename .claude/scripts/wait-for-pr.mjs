@@ -49,7 +49,9 @@ export function findLinkedPr(prs, issue, since = null) {
 export function registeredPrForIssue(snapshot, prs, issue) {
   const tasks = Object.values(snapshot.tasks ?? {}).filter((task) => task.issue === issue);
   if (tasks.length === 0) return { known: false, pr: null };
-  if (tasks.length !== 1 || !Number.isSafeInteger(tasks[0].pr)) return { known: true, pr: null };
+  if (tasks.length !== 1) return { known: true, pr: null };
+  if (tasks[0].pr === null || tasks[0].pr === undefined) return { known: false, pr: null };
+  if (!Number.isSafeInteger(tasks[0].pr) || tasks[0].pr <= 0) return { known: true, pr: null };
   return { known: true, pr: prs.find((pr) => pr.number === tasks[0].pr) ?? null };
 }
 

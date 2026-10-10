@@ -6,25 +6,41 @@
   "round": 1,
   "stages": {
     "requirements": {
-      "state": "approval",
+      "state": "done",
+      "reason": "チャットで次工程を承認。設計PR #186は2026-10-09にマージ済み",
       "docs": [
         "docs/requirements/delegation-review-reliability.md"
-      ]
+      ],
+      "approved": {
+        "pr": 186,
+        "at": "2026-10-10"
+      }
     },
     "design": {
-      "state": "approval",
+      "state": "done",
+      "reason": "チャットで次工程を承認。設計PR #186は2026-10-09にマージ済み",
       "docs": [
         "docs/designs/delegation-review-reliability.md"
-      ]
+      ],
+      "approved": {
+        "pr": 186,
+        "at": "2026-10-10"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/delegation-review-reliability.md",
+        "docs/tests/delegation-review-reliability.md"
+      ]
     },
     "implement": {
-      "state": "pending"
+      "state": "done",
+      "reason": "Node22の全ハーネス351件PASS。管理Issue未設定・移行とCLI確認false。実機導入は別途"
     },
     "review": {
-      "state": "pending"
+      "state": "active",
+      "reason": "固定tree dce47487 の広域・権限レビューを再確認中"
     },
     "merge": {
       "state": "pending"
@@ -33,5 +49,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-09T04:52:46.130Z"
+  "updated_at": "2026-10-10T01:16:10.063Z"
 }

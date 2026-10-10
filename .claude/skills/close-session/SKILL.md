@@ -34,7 +34,9 @@ description: >
      環境でもコミットがあれば動く。
 3. **日次ログ**: write-work-log Skillの手順で`logs/YYYY-MM-DD.md`を作成・追記する。
    kickoff-sessionで雛形を作っていれば残りの節を埋める。
-3a. **委譲の記録**（DevinのPRをレビューしたときだけ）: `node .claude/scripts/delegation.mjs status`で「PRがマージ／クローズされた」と
+3a. 共有状態のseqと取得日時を`status --json`で確かめる。取得不能は未確認として残し、古い写しで起票・再起動・マージ可を判断しない。unknownと進行中セッションは、共通受付のimport／reconcileで対応を読み直す。自動再起動や予約の解放はしない。
+
+   **委譲の記録**（DevinのPRをレビューしたときだけ）: `node .claude/scripts/delegation.mjs status`で「PRがマージ／クローズされた」と
    出た委譲に`node .claude/scripts/delegation.mjs finalize <Issue>`（IssueなしPRは`pr-<n>`）を実行し、finalizeした記録
    （`outcome`がmerged / closed）を手順6のコミットに含める。進行中の記録はコミットしない（写しで次のセッションに引き継ぐ。
    写しが残らないクラウドのセッションでは進行中の記録もコミットする。理由は`review-devin-pr`の「完了」）。

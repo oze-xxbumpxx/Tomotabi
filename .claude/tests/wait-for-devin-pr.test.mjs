@@ -88,7 +88,7 @@ test('U-15: claude-review の印のコメントがあればレビュー済み（
   assert.equal(hasReviewMarker(null), false);
 });
 
-test('U-16: 印のある PR を除き、コメントの取得に失敗した PR は unchecked に分けて他の PR を捨てない', () => {
+test('U-16: 旧印のあるPRも再確認し、コメントの取得失敗はuncheckedに分ける', () => {
   const comments = {
     90: () => {
       throw new Error('timeout');
@@ -97,6 +97,13 @@ test('U-16: 印のある PR を除き、コメントの取得に失敗した PR 
     92: () => [{ body: '<!-- claude-review round=0 -->' }],
   };
   const { pending, unchecked } = filterUnreviewed([pr(90, 'devin/a'), pr(91, 'devin/b'), pr(92, 'devin/c')], (n) => comments[n]());
-  assert.deepEqual(numbers(pending), [91]);
+  assert.deepEqual(numbers(pending), [91, 92]);
   assert.deepEqual(numbers(unchecked), [90]);
+});
+
+test('I-21: 共有状態のIssue/PRを既知集合へ加え、旧記録より先に照合する', () => {
+  const snapshot = { tasks: { 'feature:task': { issue: 55, pr: 56 }, 'feature:other': { issue: 60, pr: 61 } } };
+  const known = knownFromRecords([{ issue: 55, gh: { pr: 56 } }], snapshot);
+  assert.deepEqual(known, { delegatedIssues: [55, 60], knownPrs: [56, 61] });
+  assert.deepEqual(findUnlinkedDevinPrs([pr(61, 'devin/one'), pr(62, 'devin/two')], known).map((p) => p.number), [62]);
 });

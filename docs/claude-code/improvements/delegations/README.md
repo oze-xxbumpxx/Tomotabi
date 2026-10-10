@@ -4,7 +4,19 @@ Devinに渡したIssueごとに1ファイル（`<Issue 番号>.yml`）を置く�
 （設計は`docs/designs/devin-unlinked-pr-review.md`）。並行PRでも衝突しないよう、1つのファイルに追記しない。
 設計は`docs/designs/devin-delegation-loop.md`、使う手順は`.claude/skills/review-devin-pr/SKILL.md`。
 
-## 作り方
+## 共通受付と履歴
+
+起票・起動・レビュー判定には、管理Issueの検証済み共有履歴を使う。設計は`docs/designs/delegation-review-reliability.md`。YAMLは旧履歴と集計、表示用の写しであり、`init`だけでは起動しない。
+
+- 承認済み計画の登録は`delegation.mjs request --request-file <公開JSON>`。既存Issue／PR／セッションの対応は`import --request-file <公開JSON>`で確認する。
+- 起動は`delegation-launch.mjs <task_key> --runner <local|cloud> --model <model> --prompt-file <非公開ファイル>`。beginの初回受領だけを使い、spentを保存して1回だけspawnする。
+- 同じtask_keyと異なるdigestは内容競合として止める。unknown、期限超過、stallから自動再起動や担当の譲渡をしない。
+- `status --json`は共有状態のseq/hash/取得日時を出す。共有状態が読めないときは履歴だけを未確認表示に使い、起票・起動・成功の代わりにしない。
+- agent-reviewは現在headの完全SHAに対するClaudeとCodexの完了、対象指摘の確認を全件照合する。旧レビューの印・短縮SHA・レビュー数は成功証拠にならない。agent-reviewはCIの待機と初回CIの集計から外す。
+
+初期anchorはActionsがmain限定の`workflow_dispatch operation=initialize`で作る。管理Issueとwriter workflow IDを先に固定し、固定要求作者IDを認証する。POST結果不明では手動で照合し、自動再送しない。Actions作成のanchor IDを設定してから通常要求へ進む。
+
+## 旧履歴の作り方
 
 手で編集せず、`.claude/scripts/delegation.mjs`を使う（形が崩れると集計で読めなくなる）。
 
@@ -23,7 +35,7 @@ Devinに渡したIssueごとに1ファイル（`<Issue 番号>.yml`）を置く�
 
 `init` / `review` / `finalize`は、ここ（正）に書いたあと、ハーネスの状態ディレクトリ
 （`~/.local/state/tomotabi-harness/delegations/`）にも同じ記録を書く。worktreeごとのセッションでも、mainに未マージの
-進行中の記録が見えるようにするため。読むときは正と写しをkeyでまとめ、`reviews`の多い方 → `outcome`のある方 → 正の順で選ぶ。
+進行中の記録が見えるようにするため。読むときは正と写しをkeyでまとめ、共有seqがあれば大きい方を選び、同じseqなら取得日時を比べる。共有seqの無い旧記録同士だけ、`reviews`の多い方 → `outcome`のある方 → リポジトリの順で選ぶ。
 進行中の記録は写しで次のセッションに引き継ぐのでコミットしない（別のworktreeと二重にコミットして衝突させない）。
 写しが残らないクラウドのセッションでは、進行中の記録もコミットする。完了した記録の写しは、完了から30日で`status`が消す。
 `--dir`を指定したとき（テスト）は、`--mirror-dir`を指定しない限り写さない。
@@ -36,7 +48,8 @@ Devinに渡したIssueごとに1ファイル（`<Issue 番号>.yml`）を置く�
 | `pr` / `origin` | init（IssueなしPRだけ） | PR番号と`self`（Devinが自分から出した）。項目が無い記録は`origin: issue`として集計する |
 | `agent` | init | いまは常に`devin` |
 | `model` | init | `swe-2-medium` / `swe-2-high` / `swe-2-max` / `unknown`（記録を始める前の委譲。IssueなしPRの既定） |
-| `runner` | init | Devinを動かした場所。`local`（既定）/ `cloud`。IssueなしPRは作成者から推す（bot → `cloud`）。項目が無い古い記録は集計で`unknown` |
+| `runner` | init | Devinを動かした場所。`local`（既定）/ `cloud`。作成者による推定は旧履歴の表示だけに使う。新規起動では明示する。項目が無い古い記録は集計で`unknown` |
+| `shared_seq` / `shared_fetched_at` | 共有状態の写し（任意） | 共有履歴の版と取得日時。旧記録のreviews数より優先する |
 | `change_level` | init | 0〜3。分からなければ`null` |
 | `follow_up_of` | init（任意） | 前のPRの指摘を直す後続の委譲のとき、前の委譲のkey（Issue番号か`pr-<n>`。複数ならいちばん古いもの）。無い記録は後続ではない |
 | `reviews[]` | review | roundごとの`reviewed_at`（記録した時刻。修正待ちの待機の`--since`に使う。無い古い記録は`delegated_at`で代用）・`reviewed_sha`・`verdict`（merge / fix / escalate）・`posted`（PRに投稿したか）・`findings[]` |

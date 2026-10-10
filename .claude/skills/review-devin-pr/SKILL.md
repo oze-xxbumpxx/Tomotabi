@@ -2,7 +2,7 @@
 name: review-devin-pr
 description: >
   Devinなど他のエージェントがIssueから作ったPRを、Claude Codeがレビューし、
-  指摘 → Devinの修正 → 再レビューのループを上限付きで回す手順。`gh issue create`の後に
+  指摘 → Devinの修正 → 再レビューのループを上限付きで回す手順。共通受付で登録した後に
   wait-for-pr.mjsでPRを待ち、見つかって呼び戻されたとき、またはwait-for-pr-update.mjsで
   呼び戻されたときに使う。「PRができた」「DevinのPRをレビューして」と言われたときにも使う。
   DevinがIssueなしで自分から出したPR（知見・スキル・blueprintなど）も、wait-for-devin-pr.mjsや
@@ -24,65 +24,31 @@ description: >
 ユーザーの今の依頼を優先し、区切りのよいところで、その行のとおりに待機を起動し直す・レビューする・finalizeする。
 記録は写しにも書かれるので、別のworktreeのセッションで作った記録も、そのまま`review` / `finalize`できる。
 
-## 委譲（Issueを渡した直後）
+## 委譲は共通受付から進める
 
-0. Issueの本文は`.github/ISSUE_TEMPLATE/devin-task.md`の節の順に書く。前のPRの指摘を直す後続のIssueなら「元のPR」を、
-   関係する領域の行が下の「既知の指摘」の表にあれば「既知の指摘」を書く。
+設計は`docs/designs/delegation-review-reliability.md`。管理Issueの履歴を確かめてから起票・起動する。ローカルYAMLの`init`は履歴用で、起動許可にはならない。
 
-   **既知の指摘**（昇格した学びのうち、特定の領域に限る予防。どの委譲にも効く予防は`devin-workflow`に置き、ここには書かない。
-   置き場の決め方は`improvement-cycle.md`の「委譲ループの軽量サイクル」）:
+公開計画のタスク本文は`.github/ISSUE_TEMPLATE/devin-task.md`の節に沿って書く。「やること」「やらないこと」「完了条件」「試験項目」「申し送り」を入れ、Devinが依頼範囲を読める形にする。後続の修正は「元のPR」を書く。controllerは承認済み計画の一意な区間をIssue本文へ写し、要求のdigestと照合する。
 
-   | 領域 | 予防の1行（Issueの「既知の指摘」に写す） | 出典 |
-   | --- | --- | --- |
-   | E2E | 日付は今日から数えて作り、年や日を決め打ちしない。要素は役割・見出し・ラベルで探し、クラス名で探さない。APIを模擬したら、外す条件をPRの説明に書く | #100・#128・#152・#158 |
+既知の指摘は、関係する領域だけタスク本文の「既知の指摘」へ写す。すべての委譲に共通する予防は`devin-workflow`へ置く。
 
-1. `gh issue create`の後、フック（suggest-pr-watch）が促したら、まず記録を作る:
-   `node .claude/scripts/delegation.mjs init <Issue> --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud] [--level 0-3] [--follow-up-of <前の委譲>]`。
-   `--follow-up-of`は後続のIssueのとき、前の委譲（Issue番号か`pr-<n>`。複数ならいちばん古いもの）を指す。
-   自分で実装するIssueでは記録も待機もしない。
-2. Devinを起動する（2026-09-26ユーザー指示）。モデルは必ずSWE-2。effortは実装の難しさ・複雑さで選び、依頼時にユーザーへ伝える
-   （目安: L0 / L1 → medium、通常の機能 → high、L3で認証・お金・並行処理 → max）。
-   - **既定はローカル**。専用クローン`/Users/siro/個人開発/devin-work/tomotabi`（Devinで信頼済み）で動かす。
-     worktreeは使わない（`.git`が元のリポジトリ側にあり、Devinの書き込み先が散らばる）。起動の前に次を確かめる:
-     前の`devin`プロセスが終わっている（`pgrep -fl "devin .*-p"`。同じクローンで2つ同時に動かさない。
-     前のPRがマージ・クローズ済みなのに残っているのは §4.5の監視の間隔（5分）の途中なので、
-     自分が起動したバックグラウンドのタスクならTaskStopで止めてよい。それ以外は止めずにユーザーに伝える）、
-     作業ツリーがきれい（`git status --short`が空。残っていたら捨てずにユーザーに伝える）、
-     `git fetch origin && git switch --detach origin/main`で最新のmainから始める。
-     起動（`run_in_background`で。以下「ログ付きの起動」）:
-     `LOG=$(node .claude/scripts/devin-watch.mjs --log-path <Issue>) && cd <クローン> && set -o pipefail && devin --model swe-2-<effort> --permission-mode dangerous -p "<依頼>" 2>&1 | tee -a "$LOG"`。
-     `--log-path`はログの置き場（0700）とファイル（0600）を作ってパスを返す。`pipefail`が無いと、終了コードが`tee`のものになり、
-     Devinの異常終了が成功に見える。直しを頼む2回目以降のセッションも、同じIssue番号のログに追記する。
-     起動したら、ユーザーが実装状況を見られるよう、ターミナル（`run_in_terminal`）に見張り画面を開く:
-     `~/.local/state/tomotabi-harness/bin/devin-watch <Issue>`（タブ名`Devin #<Issue> watch`）。
-     `-p`の出力は発言だけなので、見張り画面はDevinが実行中のコマンド・変更中のファイル・PRとCIを合わせて出す。
-     リンクが無ければ`node .claude/scripts/devin-watch.mjs --install`で作る（ターミナルにはASCIIのコマンドしか渡せないため）。
-     `--sandbox`は付けない（autonomousモードになり、確認が要る操作が拒否されて途中で止まる。#48）。
-     dangerousは確認なしでコマンドを実行するため、Devinに危険操作の確認は効かない（ユーザー了承済みの割り切り）。代わりに:
-     プロンプトに「作業はこのリポジトリのフォルダの中だけで行う。force push・ブランチの削除・履歴の書き換え・mainへのpush・
-     クローン外への書き込みはしない。必要になったら止まって報告する。PRを出したらセッションを終了せず、
-     devin-workflow §4.5に従ってコメントを監視して対応する」を必ず入れる。
-     終了後に、`git -C <クローン> reflog -n 20`と`gh pr view <n> --json commits`で、force pushや想定外のブランチ操作が無いかを確かめる。
-   - **クラウドはユーザーが指示したときだけ**（出先のとき）。`devin --cloud -p "<依頼>"`。`--cloud`では`--model`が無視され、
-     Devin Webの「セッションエージェント」の既定（SWE-2 High）で動く。High以外が要るときは、依頼の前にユーザーに既定の切り替えを頼む。
-     起動はローカルと同じ「ログ付きの起動」にする（`LOG=$(node .claude/scripts/devin-watch.mjs --log-path <Issue>) && set -o pipefail && devin --cloud -p "<依頼>" 2>&1 | tee -a "$LOG"`）。
-     `| tail`に通すと、コマンドが終わるまでDevinの発言が見えず、止まっていても気づけない（#91・#92は約8時間、ブランチも作らずに止まっていた）。
-   - **止まっていないかの見張り（ローカル・クラウドとも）**: 起動の直前にログのバイト数を控え（`OFFSET=$(stat -f%z "$LOG" 2>/dev/null || echo 0)`）、
-     起動の直後に`run_in_background`で`node .claude/scripts/devin-stall-watch.mjs <Issue> --log "$LOG" --offset "$OFFSET"`を起動する。
-     ログは同じIssueのファイルに追記されるので、控えたバイト数より増えたかで今回のセッションの発言を見分ける。
-     終了コード0（ブランチができた）は何もしない。5（5分たっても今回の発言が無い）・6（1時間たってもブランチが無い）なら、
-     Devinを止めて同じ手順で起動し直し、ユーザーに短く伝える。2回続けて止まったらユーザーに渡す。
-3. Bashの`run_in_background`で`node .claude/scripts/wait-for-pr.mjs <Issue>`を起動する。Issueごとに1本。
-   このセッションでまだ起動していなければ、`node .claude/scripts/wait-for-devin-pr.mjs --since <今の UTC 時刻>`も
-   `run_in_background`で起動する（セッションで1本。下の「IssueなしPR」）。
-4. 待機中は`sleep`や`gh`の繰り返しで様子を見ない。終了すると呼び戻される。
-   - 終了コード0: 出力の`{"issue":…}`のJSON行にPR番号がある（最後の行とは限らない）→「レビュー」のround 0へ
-   - 終了コード3: 時間切れ → ユーザーに伝え、再度待つかを聞く
+| 領域 | 予防の1行 | 出典 |
+| --- | --- | --- |
+| E2E | 日付は今日から数えて作り、年や日を決め打ちしない。要素は役割・見出し・ラベルで探し、クラス名で探さない。APIを模擬したら、外す条件をPRの説明に書く | #100・#128・#152・#158 |
+
+1. 承認済みの公開計画に、一意な`delegation-task`区間を置く。公開JSONに`schema_version:1`、`operation:register`、UUIDの`request_id`、`task_key`、`plan_path`、完全な`plan_sha`、`task_digest`を書く。設計承認・先行タスク・作業場所など開始条件を確かめた場合だけ`start_conditions_confirmed:true`を付ける。本文には秘密や非公開の指摘を入れない。
+2. `HARNESS_NAMESPACE=tomotabi-harness node .claude/scripts/delegation.mjs request --request-file <公開JSON>`で登録する。同じ要求は同じIDと内容で照合する。直接`gh issue create`を使って委譲を始めない。
+3. `status --json`でIssueとタスクの対応を確かめる。既存のIssue・PR・セッションは`import --request-file <公開JSON>`で照合する。移行未完了、共有状態の取得失敗、内容競合では起動しない。
+4. 専用クローンに前のプロセスや変更が残っていないか先に確認する。残っていたら捨てずにユーザーへ渡す。非公開prompt fileを0600で作る。SWE-2のeffortは難しさで選び、依頼時にユーザーへ伝える。起動は`HARNESS_NAMESPACE=tomotabi-harness node .claude/scripts/delegation-launch.mjs <task_key> --runner local --model swe-2-<effort> --prompt-file <非公開ファイル> --clone <専用クローン>`。runner/modelは省かない。ローカルを既定の選択とし、Cloudはユーザーが指示したときに`--runner cloud`を使う。Cloudの実モデルは確認できるまで`unknown`とする。
+5. promptにはリポジトリ内での作業、force push・ブランチ削除・履歴改変・mainへのpushの禁止と、PR後の監視を含める。生ログは既存`devin-watch`と同じ非公開ファイルに残る。
+6. 起動ラッパーは新しいactivationでbeginを1回だけ送り、初回受領を照合してからspentを排他的に保存する。spentやactivationを削除・再利用しない。送信・保存・起動結果が不明なら、自動で再送・再起動しない。15分の期限超過やstallの通知も照合の契機に限る。
+7. `wait-for-pr.mjs <Issue>`と、セッション1本の`wait-for-devin-pr.mjs --since <UTC時刻>`でPRを待つ。複数の対応候補から番号の小さいPRを選ばない。PRが見つかったら共通受付の`link-pr`で対応を確かめ、以下のレビューへ進む。
+
+導入前の`migration_complete:false`と`cli_launch_verified:false`は停止する設定である。CLI内部の起動POST再送とセッション形式の実機確認を、stub試験の成功で済ませたことにしない。
 
 ## レビュー（round 0は全体、round 1以降は前回のレビュー以降の差分）
 
-1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。CIが未完了なら、
-   `gh pr checks <n> --watch`を`run_in_background`で待つ（ポーリングしない）。
+1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。quality・build・api-dbなど既存CIの結果を確認する。agent-reviewはCIの待機と集計から外す。現在headへのCodex完了とClaude完了は別に確認する。
    round 1以降は`gh api repos/{owner}/{repo}/compare/<前回の sha>...<今の head>`で差分を見て、
    前回の指摘が直ったかと、新しい変更に問題が無いかを見る。Devinの返信コメントも読む。
 2. **範囲**: 変更ファイルがIssueの「やること」と範囲内か。範囲外のファイル、並行作業中の他PRが作る
@@ -109,7 +75,7 @@ description: >
    待機は見つけると終わるので、見つかったPRの記録を下の2で作ってから、**同じ`--since`** で`run_in_background`で起動し直す
    （同じセッションで後から出るPRを拾うため。記録があるPRは通知しない）。
 2. **記録**: `pr-<n>.yml`が無ければ`node .claude/scripts/delegation.mjs init pr-<n>`（題・作成日時・作成者をghから取る。
-   作成者がbotならクラウド）。分かれば`--model swe-2-high`（クラウドの既定）と`--level`を付ける。
+   作成者によるrunnerの推定は旧履歴の表示だけに使う）。共通受付へimportし、runner/modelは対応を確認して明示する。
    既にあって`reviews`が空なら、前のセッションが中断したレビューなのでinitせずにその記録で続ける
    （セッション開始時の表示では「初回レビュー前」として出る）。
    以降の`review` / `finalize`も`pr-<n>`で指定する。
@@ -153,7 +119,7 @@ description: >
 | 前回投稿した`must`が直っていない | `escalate` | 投稿しない。モデルを上げる／Claudeが直す／Issueを分ける、の案を付けてユーザーに渡す |
 | `must`がある・round 2以降 | `escalate` | 同上（自動投稿の上限2回に達した） |
 | `must`がある・round 0か1 | `fix` | 下の「自動投稿」→ 更新を待つ |
-| `must`なし | `merge` | 下の「レビュー完了のコメント」をPRに付け、「マージ可」をユーザーに伝える（`nit`は後続Issueの案として添える）。PushNotificationを送ってよい |
+| `must`なし | `merge` | 下の「レビュー完了のコメント」を付ける。現在headの両レビューとagent-reviewを確認してから、ユーザーへマージ判断を渡す（`nit`は後続Issueの案として添える） |
 
 どの場合も、記録に追記する:
 `node .claude/scripts/delegation.mjs review <Issue> --round <n> --sha <レビューした head> --verdict <merge|fix|escalate> [--posted] --finding '<severity>:<category>:<summary>' …`。
@@ -167,33 +133,22 @@ description: >
 2. 本文に`(aside)`を入れない（Devinが対応しなくなる）。秘密・環境変数の値・ローカルのパスを書かない。
 3. 範囲外の気づきは投稿しない（ユーザーに渡す）。
 4. `gh pr comment <n> --body-file <file>`で投稿し、投稿時刻（`date -u +%Y-%m-%dT%H:%M:%SZ`）を控える。
-5. **ローカルの委譲でも、通常は起動し直さない**。Devinは`devin-workflow` §4.5でPRのコメントを監視しているので、
-   投稿すれば自分で気づいて直す。投稿しても反応が無いとき（セッションが終了・クラッシュした場合）は、
-   上の「委譲」2と同じ確認をしてから、新しいローカルセッションを「ログ付きの起動」（同じIssue番号のログ）で起動して直させる
-   （`devin -c`の再開は「failed to start ACP agent session」で動かなかった）。依頼は
-   `"PR #<n>（ブランチ <branch>）を直す。gh pr view <n> --comments で claude-review round=<r> のコメントを読み、must を直して同じブランチに push する。force push はしない。"`。
-   クラウドの委譲なら、DevinがPRのコメントに自動で対応するので起動しない。
+5. Devinが監視中なら、投稿に対する修正を待つ。反応が無い場合もセッションを自動再起動しない。共有状態と既存プロセス／セッションを読み取りで照合する。結果不明はユーザーへ渡し、復旧の判断後も共通受付を使う。
 6. `run_in_background`で`node .claude/scripts/wait-for-pr-update.mjs <PR> --since <投稿時刻> --sha <レビューした head>`を起動する。
    - 終了コード0: 更新あり。`ciConclusion`が`failure`なら、DevinがCIを直している途中のことがあるので、
      `--sha <その head>`でもう一度待つ（1回まで。続けて失敗したらユーザーに伝える）。`success` / `none`なら次のroundのレビューへ
    - 終了コード3: 時間切れ（既定4時間）→ ユーザーに伝える。Devinの反応（返信・コミット）が無いときは、監視が止まっている可能性も伝える
    - 終了コード4: PRが閉じた / マージされた → 「完了」へ
 
-## レビュー完了のコメント（`merge`のとき）
+## レビュー完了のコメント
 
-ユーザーがPRを開いたときに、レビューが終わってマージしてよいかを見分けられるようにする（2026-10-09 ユーザーの指示）。
-指摘を投稿しなかった回は、PRだけを見ても「まだレビューしていない」のか「終わった」のかがわからないため。
+現在headへのCodex完了、対象スレッドの解決、行外指摘の確認を全件確かめる。Codexの開始を示す目の反応や、指摘が無いという推測は完了にならない。古い版なら、ユーザーから現在headへのCodex再依頼を行う。botの自動依頼や設定は実機確認まで保証しない。
 
-1. レビューしたheadのCIがすべて成功していなければ、`must`が無くても`merge`にしない（`docs/devin-setup.md`のとおり、DevinのPRはCIが通ってからマージする）。
-   CIが失敗していたらユーザーに伝え、DevinがCIを直したら再レビューする。
-   `merge`になったら、PRに1つコメントを付ける。先頭に`<!-- claude-review round=<n> verdict=merge -->`を入れる。
-2. 本文は「レビュー完了。マージしてよい状態です」と、レビューしたhead（短いsha）・CIの結果・round 0からの回数を書く。
-   `nit`があれば「細かい点はユーザーに渡した」とだけ書き、中身は書かない（後続Issueの案としてユーザーに渡す）。
-3. 本文に`(aside)`を入れる（Devinが対応の要るコメントと取り違えないため）。
-4. `escalate`のときは付けない。`security`の指摘があることも、ほかの指摘の中身も書かない。
-5. 完了のコメントのあとにpushがあったら、再レビューを始める前に、前の完了のコメントを編集して先頭に「このあとにpushがあったため、この完了は<短いsha>までのものです。再レビュー中です」と書く
-   （`gh api -X PATCH repos/{owner}/{repo}/issues/comments/<コメントのid> -f body=<新しい本文>`）。古い完了を見てまだ確かめていないheadをマージしないため。
-   再レビューの判定が`merge`なら、新しい完了のコメントを付ける。
+1. 完全な40桁head SHAと、現在のCodex証拠集合のhash、確認した証拠ID／URLを取得する。指摘本文やsecurityの有無は完了JSONへ複製しない。
+2. `schema_version`、`pr`、`head_sha`、`verdict`、`codex_evidence_hash`、`codex_evidence`（完了証拠ID／URLの配列）、`acknowledged_finding_ids`（確認した行外指摘IDの配列）、`reviewed_at`を公開JSONに書く。`node .claude/scripts/agent-review.mjs completion --input <JSON-file>`の出力をファイルへ保存し、`gh pr comment <PR> --body-file <完了ファイル>`で新規投稿する。固定Claude担当の作者IDと、未編集の投稿だけが採用される。
+3. 間違いの修正やpush後の再レビューでは、前の完了を編集せず、新しい完了を投稿する。短いSHAや旧`claude-review`の印は成功の証拠にしない。`fix`／`escalate`は成功にならない。
+4. 共通受付の`review-refresh`で最新の証拠を照合する。Codex指摘の追加・編集・削除・再開、head更新ではClaudeも再確認する。agent-reviewは同じSHAを使う対象PR全件の証拠が揃うまで成功しない。
+5. マージ前にもう一度`review-refresh`し、未処理通知、既存CI、現在headのagent-reviewを確認する。チェックの成功後も、PRのマージはユーザーが行う。
 
 ## 直ったスレッドを解決済みにする
 
@@ -205,15 +160,13 @@ GitHubは、解決済みにしたスレッドをチェックの印で表示す�
 2. スレッドの一覧（100件を超えても全部取るため`--paginate`で続きを読む）: `gh api graphql --paginate -f query='query($o:String!,$r:String!,$n:Int!,$endCursor:String){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id isResolved comments(first:1){nodes{author{login} path body}}}}}}}' -f o=<owner> -f r=<repo> -F n=<PR> --jq '.data.repository.pullRequest.reviewThreads.nodes[]'`。
 3. 解決: `gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<スレッドのid>`。
 4. 自分（Claude Code）のPRで指摘を直して返信したときも、返信のあとに同じ手順で解決済みにする。
-5. 行に付かない普通のコメント（`gh pr comment`）は解決済みにできないので、何もしない。
+5. 行に付かないCodex指摘は解決済みにできない。確認した証拠IDを完了JSONへ記録し、現在の全件と照合する。
 
 ## セキュリティ指摘
 
 PR・Issue・コメント・記録のどこにも詳細を書かない。`security`の指摘があることも書かない。ユーザーに渡し、経路を決めてもらう。推奨の順:
 
-1. 未マージ（mainに入っていない）なら、Devinの新しいセッションをCLIで起動し、PRには書かずに直させる。
-   ローカルのセッション（上の「委譲」2の「ログ付きの起動」）が既定。PRに書かないので、指摘の中身はプロンプトだけで渡す
-   （依頼は`"<ブランチ名> に push して直す。…"`）。ログは0600で、ほかの利用者からは読めない。
+1. 未マージ（mainに入っていない）なら、ユーザーが復旧を判断した後、共通受付で修正タスクと既存セッションを照合する。指摘の中身は非公開prompt fileだけで渡す。直接CLIを起動しない。ログは0600で残す。
 2. Devinの監視が止まっているか直せないときは、Devinの作業が終わっているのを確かめてから、Claudeが同じブランチにcommitする。
 3. mainに入っている問題なら、GitHubのSecurity Advisory（非公開）で扱う。
 

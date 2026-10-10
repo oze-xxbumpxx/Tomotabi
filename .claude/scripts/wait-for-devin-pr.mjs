@@ -28,7 +28,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readKnownRecords } from './delegation.mjs';
+import { readKnownRecords, readSharedSnapshot } from './delegation.mjs';
 import { findLinkedPr } from './wait-for-pr.mjs';
 
 const DEFAULT_INTERVAL_SEC = 60;
@@ -56,13 +56,17 @@ export function findUnlinkedDevinPrs(prs, { since = null, delegatedIssues = [], 
 }
 
 /** 記録から「委譲したIssue」と「記録があるPR」を取り出す。 */
-export function knownFromRecords(records) {
+export function knownFromRecords(records, snapshot = null) {
   const delegatedIssues = [];
   const knownPrs = [];
   for (const rec of records) {
     if (Number.isInteger(rec.issue)) delegatedIssues.push(rec.issue);
     if (Number.isInteger(rec.pr)) knownPrs.push(rec.pr);
     if (Number.isInteger(rec.gh?.pr)) knownPrs.push(rec.gh.pr);
+  }
+  for (const task of Object.values(snapshot?.tasks ?? {})) {
+    if (Number.isInteger(task.issue) && !delegatedIssues.includes(task.issue)) delegatedIssues.push(task.issue);
+    if (Number.isInteger(task.pr) && !knownPrs.includes(task.pr)) knownPrs.push(task.pr);
   }
   return { delegatedIssues, knownPrs };
 }
@@ -80,7 +84,9 @@ export function filterUnreviewed(prs, commentsOf) {
   const unchecked = [];
   for (const pr of prs) {
     try {
-      if (!hasReviewMarker(commentsOf(pr.number))) pending.push(pr);
+      // 旧レビューの印は現在headの両レビューを証明しない。
+      commentsOf(pr.number);
+      pending.push(pr);
     } catch {
       unchecked.push(pr);
     }
@@ -108,10 +114,12 @@ export const toOutputLine = (pr) =>
 
 /** OPENのDevinのPR。sinceを渡すと作成日時で絞る。 */
 export function listOpenDevinPrs(since = null, timeout = GH_TIMEOUT_MS) {
-  const args = ['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,body,headRefName,url,createdAt,closingIssuesReferences,author'];
+  const args = ['pr', 'list', '--state', 'open', '--limit', '1000', '--json', 'number,title,body,headRefName,url,createdAt,closingIssuesReferences,author,headRefOid,state'];
   if (since !== null) args.push('--search', `created:>=${since}`);
   const out = execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout });
-  return JSON.parse(out).filter((pr) => (pr.headRefName ?? '').startsWith(DEVIN_BRANCH_PREFIX));
+  const prs = JSON.parse(out);
+  if (!Array.isArray(prs) || prs.length >= 1000) throw new Error('PR一覧を全件確認できません');
+  return prs.filter((pr) => (pr.headRefName ?? '').startsWith(DEVIN_BRANCH_PREFIX));
 }
 
 export function parseArgs(argv) {
@@ -148,9 +156,11 @@ async function main() {
   console.log(`${args.since} 以降に作られた、Issue に紐づかない Devin の PR を待っています（${args.interval} 秒ごと）`);
   for (;;) {
     try {
+      let snapshot = null;
+      try { snapshot = await readSharedSnapshot(); } catch { /* 未確認の旧履歴は発見用だけに使う。 */ }
       const candidates = findUnlinkedDevinPrs(listOpenDevinPrs(args.since), {
         since: args.since,
-        ...knownFromRecords(readKnownRecords()),
+        ...knownFromRecords(readKnownRecords(), snapshot),
       });
       const { pending: found, unchecked } = filterUnreviewed(candidates, (n) => prComments(n));
       if (unchecked.length > 0) {

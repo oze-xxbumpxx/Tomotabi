@@ -2,7 +2,7 @@
 
 - task-id / 変更レベル: delegation-review-reliability / L3
 - 作成日: 2026-10-09
-- 状態: draft（設計PRの承認待ち。主要3方針はユーザー選択済み）
+- 状態: confirmed（2026-10-09のチャットで設計に沿う次工程を承認。設計PR #186は2026-10-09にマージ済み）
 
 ## 背景
 
@@ -106,4 +106,4 @@ GitHub Actionsと現在のDevin CLIを使う。新しいDevin APIキーは追加
 
 ## 未決事項
 
-[論点の記録](../discussions/delegation-review-reliability.md)に設計の仮決定が4件ある。高優先度の回答待ちは0件。実機でのCodex設定とCLIの結果取得形式は、設計の決定と区別して移行時に確認する。
+[論点の記録](../discussions/delegation-review-reliability.md)の回答待ち・仮決定は0件。実機でのCodex設定とCLIの結果取得形式は、設計の決定と区別して移行時に確認する。

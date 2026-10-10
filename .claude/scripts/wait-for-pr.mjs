@@ -30,7 +30,7 @@ const DEFAULT_TIMEOUT_SEC = 8 * 60 * 60;
  *   createdAt?:string,closingIssuesReferences?:Array<{number:number}>}>} prs
  * @param {number} issue
  * @param {string | null} since Issueの作成日時（ISO 8601）。これより前に作られたPRは対象外。
- * @returns {object | null} 紐づくPRのうち番号が最小のもの。無ければnull。
+ * @returns {object | null} 一意に紐づくPR。無い、又は複数ある場合はnull。
  */
 export function findLinkedPr(prs, issue, since = null) {
   const n = String(issue);
@@ -43,8 +43,14 @@ export function findLinkedPr(prs, issue, since = null) {
     const text = `${pr.title ?? ''}\n${pr.body ?? ''}`;
     return closes || bodyLink.test(text) || branchSuffix.test(pr.headRefName ?? '');
   });
-  if (linked.length === 0) return null;
-  return linked.sort((a, b) => a.number - b.number)[0];
+  return linked.length === 1 ? linked[0] : null;
+}
+
+export function registeredPrForIssue(snapshot, prs, issue) {
+  const tasks = Object.values(snapshot.tasks ?? {}).filter((task) => task.issue === issue);
+  if (tasks.length === 0) return { known: false, pr: null };
+  if (tasks.length !== 1 || !Number.isSafeInteger(tasks[0].pr)) return { known: true, pr: null };
+  return { known: true, pr: prs.find((pr) => pr.number === tasks[0].pr) ?? null };
 }
 
 function parseArgs(argv) {
@@ -75,13 +81,15 @@ export function listPrs(since) {
   const out = execFileSync(
     'gh',
     [
-      'pr', 'list', '--state', 'all', '--limit', '100',
+      'pr', 'list', '--state', 'all', '--limit', '1000',
       '--search', `created:>=${since}`,
       '--json', 'number,title,body,headRefName,url,createdAt,closingIssuesReferences',
     ],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   );
-  return JSON.parse(out);
+  const prs = JSON.parse(out);
+  if (!Array.isArray(prs) || prs.length >= 1000) throw new Error('PR一覧を全件確認できません');
+  return prs;
 }
 
 const sleep = (sec) => new Promise((resolve) => setTimeout(resolve, sec * 1000));
@@ -98,7 +106,15 @@ async function main() {
   for (;;) {
     try {
       since ??= issueCreatedAt(args.issue);
-      const pr = findLinkedPr(listPrs(since), args.issue, since);
+      const prs = listPrs(since);
+      let registered = { known: false, pr: null };
+      try {
+        const { readSharedSnapshot } = await import('./delegation.mjs');
+        registered = registeredPrForIssue(await readSharedSnapshot(), prs, args.issue);
+      } catch {
+        // 旧経路はPRの発見だけに使う。起動や両レビューの成功証拠にはしない。
+      }
+      const pr = registered.known ? registered.pr : findLinkedPr(prs, args.issue, since);
       if (pr !== null) {
         console.log(`PR #${pr.number} が見つかりました: ${pr.url}`);
         console.log(JSON.stringify({ issue: args.issue, number: pr.number, url: pr.url, title: pr.title, headRefName: pr.headRefName }));

@@ -10,7 +10,7 @@
 //   出す行が無ければ何も出さない。失敗しても常にexit 0。
 
 import { fileURLToPath } from 'node:url';
-import { collectStatus, formatStatus } from '../scripts/delegation-status.mjs';
+import { collectSharedStatus, formatStatus } from '../scripts/delegation-status.mjs';
 
 const GH_TIMEOUT_MS = 8_000;
 
@@ -20,10 +20,10 @@ export function hookOutput(text) {
   return JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: text } });
 }
 
-function main() {
+async function main() {
   let output = null;
   try {
-    output = hookOutput(formatStatus(collectStatus({ timeout: GH_TIMEOUT_MS })));
+    output = hookOutput(formatStatus(await collectSharedStatus({ timeout: GH_TIMEOUT_MS })));
   } catch {
     process.exit(0);
   }
@@ -32,5 +32,5 @@ function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main();
+  await main();
 }

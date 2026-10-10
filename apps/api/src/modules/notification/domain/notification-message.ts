@@ -12,7 +12,7 @@ import type { NotificationEvent } from "./notification-event";
 /** 通知に出すタイトル（アプリの名前）。 */
 export const NOTIFICATION_TITLE = "tomotabi";
 
-/** 末尾の切り詰め記号。 */
+/** 末尾の切り詰め記号。受け手が求める「1文字以上」を満たす最小の名前でもある。 */
 const ELLIPSIS = "…";
 
 /**
@@ -40,20 +40,46 @@ function graphemes(text: string): string[] {
   return [...graphemeSegmenter.segment(text)].map((part) => part.segment);
 }
 
+/** コードポイント数（受け手のcodePointLengthと同じ数え方）。 */
+function codePoints(text: string): number {
+  return Array.from(text).length;
+}
+
 /**
- * 名前をmaxGraphemes文字までに切る。超えるときは絵文字・結合文字を
- * 途中で切らないよう書記素単位で落とし、末尾を「…」にする。
- * 結果はmaxGraphemes文字以内（切ったときは「…」を含む）。
+ * 名前をmaxLengthまでに切る。書記素数とコードポイント数の両方が上限内に
+ * なるよう先頭から書記素を残し、末尾を「…」にする（絵文字・結合文字を
+ * 途中で切らない）。受け手はコードポイント数で上限を調べるため、ここで
+ * 両方を満たす。1書記素も上限に収まらないときは「…」だけを返す
+ * （空の名前は受け手に捨てられるため）。
  */
-function truncateName(name: string, maxGraphemes: number): string {
-  if (maxGraphemes <= 0) {
+function truncateName(name: string, maxLength: number): string {
+  if (maxLength <= 0) {
     return "";
   }
   const parts = graphemes(name);
-  if (parts.length <= maxGraphemes) {
+  if (parts.length <= maxLength && codePoints(name) <= maxLength) {
     return name;
   }
-  return parts.slice(0, maxGraphemes - 1).join("") + ELLIPSIS;
+  // 末尾の「…」の分を引いた上限。
+  const limit = maxLength - 1;
+  let keptCodePoints = 0;
+  const kept: string[] = [];
+  for (const part of parts) {
+    if (kept.length >= limit || keptCodePoints + codePoints(part) > limit) {
+      break;
+    }
+    kept.push(part);
+    keptCodePoints += codePoints(part);
+  }
+  return kept.join("") + ELLIPSIS;
+}
+
+/** 2KBに収めるため名前を1書記素分だけ詰める。空にはせず最小は「…」。 */
+function shrinkName(name: string): string {
+  if (graphemes(name).length <= 1) {
+    return ELLIPSIS;
+  }
+  return truncateName(name, graphemes(name).length - 1);
 }
 
 /** actionとtargetKindの組み合わせが契約の11組のどれか。 */
@@ -78,8 +104,9 @@ export type NotificationMessage = Readonly<{
 
 /**
  * イベントと読んだ名前2つから通知の中身を組み立てる（F-40〜F-44・B-03）。
- * 相手の名前は20文字・旅行の名前は30文字で切り、組み立てたJSONをUTF-8で
- * 測って2KBを超えるときは長い方の名前をさらに短くする。
+ * 相手の名前は20・旅行の名前は30で切る（書記素数・コードポイント数の
+ * 両方が上限内。受け手はコードポイント数で調べる）。組み立てたJSONを
+ * UTF-8で測って2KBを超えるときは長い方の名前をさらに短くする。
  *
  * @throws actionとtargetKindの組み合わせが11組に無いとき。
  */
@@ -108,18 +135,20 @@ export function buildNotificationMessage(
   };
 
   let payload = toPayload();
-  // 2KBを超えるときは長い方の名前を1文字ずつ詰める（書記素単位）。
+  // 2KBを超えるときは長い方の名前を1書記素ずつ詰める。
+  // 名前は「…」までしか詰めない（空の名前は受け手に捨てられるため）。
   while (Buffer.byteLength(payload, "utf8") > PUSH_PAYLOAD_MAX_BYTES) {
-    const actorCount = graphemes(actorName).length;
-    const tripCount = graphemes(tripName).length;
-    if (actorCount >= tripCount && actorCount > 0) {
-      actorName = truncateName(actorName, actorCount - 1);
-    } else if (tripCount > 0) {
-      tripName = truncateName(tripName, tripCount - 1);
-    } else {
-      // 名前が両方空でもJSONの骨格だけで2KBを超えることはない。
+    const actorCount = actorName === ELLIPSIS ? 0 : graphemes(actorName).length;
+    const tripCount = tripName === ELLIPSIS ? 0 : graphemes(tripName).length;
+    if (actorCount === 0 && tripCount === 0) {
+      // 名前を「…」まで詰めてもJSONの骨格だけで2KBを超えることはない。
       // ここに来るのは想定外の入力なので、無限ループを避けて投げる。
       throw new Error("通知の中身を2KB以内に収められません");
+    }
+    if (actorCount >= tripCount) {
+      actorName = shrinkName(actorName);
+    } else {
+      tripName = shrinkName(tripName);
     }
     payload = toPayload();
   }

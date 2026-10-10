@@ -115,7 +115,11 @@ describe("名前の切り詰めと中身の上限（PU-04）", () => {
     );
     const payload = JSON.parse(message.payload) as { actorName: string };
     const parts = graphemes(payload.actorName);
-    expect(parts).toHaveLength(PUSH_ACTOR_NAME_MAX_LENGTH);
+    expect(parts.length).toBeLessThanOrEqual(PUSH_ACTOR_NAME_MAX_LENGTH);
+    expect(Array.from(payload.actorName).length).toBeLessThanOrEqual(
+      PUSH_ACTOR_NAME_MAX_LENGTH,
+    );
+    expect(payload.actorName.endsWith("…")).toBe(true);
     // 末尾は「…」、その1つ前は書記素の途中で切られていない
     // （familyかcombiningのどちらかが丸ごと残るか、両方落ちる）。
     const before = parts.slice(0, -1).join("");
@@ -126,6 +130,50 @@ describe("名前の切り詰めと中身の上限（PU-04）", () => {
     }
     // 半端な結合文字が残っていないか: 濁点単独が末尾近くに無い
     expect(payload.actorName).not.toMatch(/\u3099$/);
+  });
+
+  it("書記素数が上限内でもコードポイント数が上限を超える名前は詰める", () => {
+    // 受け手（apps/webのpayload.ts）はコードポイント数で上限を調べる。
+    // 仮名18+家族絵文字（1書記素・7コードポイント）は書記素19で送り側の
+    // 上限20には収まるが、コードポイント25で受け側の上限を超えるため詰める。
+    const family = "👨‍👩‍👧"; // 1書記素・7コードポイント
+    const actorName = "あ".repeat(18) + family;
+    expect(graphemes(actorName)).toHaveLength(19);
+    const message = buildNotificationMessage(
+      eventOf("plan", "plan_added"),
+      { actorName, tripName: "京都の旅" },
+    );
+    const payload = JSON.parse(message.payload) as { actorName: string };
+    expect(Array.from(payload.actorName).length).toBeLessThanOrEqual(
+      PUSH_ACTOR_NAME_MAX_LENGTH,
+    );
+    expect(Array.from(payload.actorName).length).toBeGreaterThanOrEqual(1);
+    expect(graphemes(payload.actorName).length).toBeLessThanOrEqual(
+      PUSH_ACTOR_NAME_MAX_LENGTH,
+    );
+    expect(payload.actorName.endsWith("…")).toBe(true);
+  });
+
+  it("2KBへの切り詰めで1書記素しか残らない名前も空にしない", () => {
+    // 結合文字を大量に持つ1書記素の名前は書記素数ではこれ以上詰められず、
+    // 上限0を呼ぶと空になって受け手に捨てられる。最小は「…」。
+    const giant = "あ" + "゙".repeat(3_000); // 1書記素・数千コードポイント
+    const message = buildNotificationMessage(
+      eventOf("plan", "plan_added"),
+      { actorName: giant, tripName: "京都の旅" },
+    );
+    expect(Buffer.byteLength(message.payload, "utf8")).toBeLessThanOrEqual(
+      PUSH_PAYLOAD_MAX_BYTES,
+    );
+    const payload = JSON.parse(message.payload) as {
+      actorName: string;
+      tripName: string;
+    };
+    expect(payload.actorName.length).toBeGreaterThanOrEqual(1);
+    expect(Array.from(payload.actorName).length).toBeLessThanOrEqual(
+      PUSH_ACTOR_NAME_MAX_LENGTH,
+    );
+    expect(payload.actorName).toBe("…");
   });
 
   it("旅行の名前100文字でもUTF-8のJSON全体が2KB以内", () => {

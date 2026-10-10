@@ -4,7 +4,7 @@
   "repository_id": 1359576461,
   "default_branch": "main",
   "management_issue": 191,
-  "anchor_comment_id": null,
+  "anchor_comment_id": 6095103226,
   "controller_workflow_id": 380285943,
   "controller_workflow_path": ".github/workflows/delegation-control.yml",
   "listener_workflow_id": 380164771,

@@ -3260,3 +3260,202 @@ a.plan-record-row-link {
 .plan-detail-actions .record-note {
   margin: 0;
 }
+
+/* 通知の設定の画面（v3に無い画面。Issue見本に沿って、白いカード・墨のボタン・
+   白地に墨の枠のボタンで作る） */
+.notify-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.notify-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.notify-head .plan-back {
+  padding: 8px 4px;
+}
+
+.notify-title {
+  margin: 0;
+}
+
+.notify-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.notify-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.notify-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.notify-badge {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.notify-badge-on {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.notify-badge-off {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+}
+
+.notify-card-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.notify-card .btn-ink,
+.notify-card .btn-secondary {
+  align-self: flex-start;
+}
+
+.notify-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.notify-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notify-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px 0;
+}
+
+.notify-row + .notify-row {
+  border-top: 1px solid var(--color-line);
+}
+
+.notify-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.notify-row-label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.notify-row-sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.notify-row-stop {
+  margin-top: 0;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px var(--color-line-strong);
+  flex-shrink: 0;
+}
+
+.notify-note {
+  margin: 0;
+  padding: 0 var(--space-1);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+/* ホームの案内のカード（F-15〜F-18） */
+.home-notify-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.home-notify-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+
+.home-notify-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.home-notify-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.home-notify-actions {
+  margin-top: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.home-notify-enable {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+.home-notify-dismiss {
+  margin-top: 0;
+  padding: 8px;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+/* 精算の履歴で通知から開いた1件を目立たせる（F-52） */
+.settle-row-focused {
+  margin: 0 -8px;
+  padding: 8px;
+  border: 2px solid var(--color-surface-inverse);
+  border-radius: var(--radius-sm);
+}
+
+/* ログインの画面の案内（通知を止められなかったとき） */
+.signin-notice {
+  margin: 0;
+  display: flex;
+  gap: var(--space-2);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}

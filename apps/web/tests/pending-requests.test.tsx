@@ -901,7 +901,7 @@ describe("FW-10: ログアウト", () => {
     expect(result.current.hasPendingRequests).toBe(true);
 
     await act(async () => {
-      expect(await result.current.signOut(USER_ID)).toBe(true);
+      expect((await result.current.signOut(USER_ID)).ok).toBe(true);
     });
     expect(await listPendingRequestsForUser(USER_ID)).toEqual([]);
     // 別の利用者の保留は消さない。
@@ -913,7 +913,7 @@ describe("FW-10: ログアウト", () => {
     );
     signOutMock.mockResolvedValue({ data: null, error: { status: 503 } });
     await act(async () => {
-      expect(await result.current.signOut(USER_ID)).toBe(false);
+      expect((await result.current.signOut(USER_ID)).ok).toBe(false);
     });
     expect(await listPendingRequestsForUser(USER_ID)).toHaveLength(1);
   });

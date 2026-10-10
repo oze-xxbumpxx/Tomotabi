@@ -122,17 +122,24 @@ export function ItineraryScreen({
   const {
     signOut,
     pending: signOutPending,
-    failed: signOutFailed,
+    failure: signOutFailure,
   } = useSignOut();
 
   const handleSignOut = async () => {
-    if (await signOut(userId)) {
+    const result = await signOut(userId);
+    if (result.ok) {
       // 前の利用者の業務データが残らないよう、キャッシュと利用者の表示、
       // 未表示のトーストを消す。
       takePendingToast();
       queryClient.clear();
       clearMe();
-      router.replace("/sign-in");
+      // 通知を止められなかった（X-Push-Stopped: false）ときはログインの
+      // 画面に案内を出す（F-65）。
+      router.replace(
+        result.pushStopped === false
+          ? "/sign-in?notice=push-remaining"
+          : "/sign-in",
+      );
     }
   };
 
@@ -450,7 +457,7 @@ export function ItineraryScreen({
           onSwitch={() => router.push("/trips")}
           onSignOut={() => void handleSignOut()}
           signOutPending={signOutPending}
-          signOutFailed={signOutFailed}
+          signOutFailure={signOutFailure}
           onClose={() => {
             // 拒否のあとに開き直すときは、取り直した最新のETagで送る。
             if (start.state.status === "rejected") {

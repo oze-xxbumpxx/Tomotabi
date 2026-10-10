@@ -58,7 +58,14 @@ function isNotAvailableFailure(error: unknown): boolean {
  * 「受け渡しを確認する」はその時点の対象と金額を固定した確認を作り、
  * 受け渡しの確認の画面へ進む。作成は保留中の要求を通す（ADR-0006）。
  */
-export function SettlementScreen({ tripId }: { tripId: string }) {
+export function SettlementScreen({
+  tripId,
+  focusSettlementId = null,
+}: {
+  tripId: string;
+  /** 通知から開いた精算の1件。履歴にあれば目立たせてスクロールする（F-52）。 */
+  focusSettlementId?: string | null;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { state: meState } = useMe();
@@ -110,6 +117,24 @@ export function SettlementScreen({ tripId }: { tripId: string }) {
       });
     }
   }, [create.state.status, queryClient, tripId]);
+
+  // 通知から開いた精算（focusSettlementId）が、読み込み済みの頁に無い
+  // ときは、見つかるか最後の頁に達するまで続きを取る（F-52）。
+  useEffect(() => {
+    if (focusSettlementId === null) {
+      return;
+    }
+    const found = (settlements.data?.pages ?? []).some((page) =>
+      page.items.some((item) => item.id === focusSettlementId),
+    );
+    if (
+      !found &&
+      settlements.hasNextPage &&
+      !settlements.isFetchingNextPage
+    ) {
+      void settlements.fetchNextPage();
+    }
+  }, [focusSettlementId, settlements]);
 
   if (create.state.status === "session-expired") {
     return (
@@ -318,6 +343,7 @@ export function SettlementScreen({ tripId }: { tripId: string }) {
           <SettlementHistory
             settlements={settlementRows}
             participants={balanceData?.participants ?? []}
+            focusSettlementId={focusSettlementId}
           />
           {settlements.hasNextPage && (
             <button

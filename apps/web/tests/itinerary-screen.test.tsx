@@ -563,7 +563,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     });
     signOutMock.mockResolvedValue({
       data: null,
-      error: { status: 503 },
+      error: { status: 500 },
     });
     renderScreen();
 

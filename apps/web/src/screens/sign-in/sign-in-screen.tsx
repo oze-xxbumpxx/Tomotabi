@@ -11,15 +11,24 @@ import { SignInButton, SignInError } from "@/features/auth";
  * 表示中の文は状態に持つため、クエリを消しても残る。ボタンを押して
  * やり直すときはこの文を消し、同じ文が2つ並ばないようにする。
  */
-export function SignInScreen({ hasError }: { hasError: boolean }) {
+export function SignInScreen({
+  hasError,
+  pushRemaining = false,
+}: {
+  hasError: boolean;
+  /** X-Push-Stopped: falseで移ってきた。通知を止める案内を出す（F-65）。 */
+  pushRemaining?: boolean;
+}) {
   const router = useRouter();
   const [showError, setShowError] = useState(hasError);
+  // クエリを消すとpushRemainingはfalseに戻るので、表示は状態で持つ。
+  const [showNotice] = useState(pushRemaining);
 
   useEffect(() => {
-    if (hasError) {
+    if (hasError || pushRemaining) {
       router.replace("/sign-in");
     }
-  }, [hasError, router]);
+  }, [hasError, pushRemaining, router]);
 
   return (
     <main className="signin">
@@ -29,6 +38,11 @@ export function SignInScreen({ hasError }: { hasError: boolean }) {
         <p className="signin-title">tomotabi</p>
       </div>
       <div className="signin-footer">
+        {showNotice && (
+          <p className="signin-notice">
+            この端末への通知が止まっていない場合は、ログインし直して設定から止めてください
+          </p>
+        )}
         {showError && <SignInError />}
         <SignInButton onSignInStart={() => setShowError(false)} />
       </div>

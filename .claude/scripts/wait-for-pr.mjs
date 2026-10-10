@@ -134,5 +134,10 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  await main();
+  // 最上位でawaitしない。mainの中で読み込むdelegation.mjsがこのファイルを読み込み返すため、
+  // このファイルの評価が終わっていないと読み込みが輪になって互いを待ち、終了コード13で止まる。
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

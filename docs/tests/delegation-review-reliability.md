@@ -189,3 +189,5 @@ Node 22で、リポジトリルートから`HARNESS_NAMESPACE=tomotabi-harness n
 Node 22.23.3で`node --test .claude/tests/*.test.mjs`を実行し、351件すべてPASS（失敗・取消・省略0、終了コード0）。途中停止、同じ要求の再送、同秒編集、全頁・API予算、起票と起動の回数、古いレビューと編集者の照合、YAMLへの写しを含む。構文確認、相対リンク、論点の記録の形と差分の空白検査もPASS。
 
 管理Issue・先頭コメントIDは未設定、migration_completeとcli_launch_verifiedはfalseのまま。statusのJSON表示と停止設定を確認した。アプリ、依存パッケージと既存CI定義は変更していないため、ローカルのアプリlint／type-check／test／buildは省略した。上表の実機確認は未実施で、試験用Devinも起動していない。
+
+固定tree `dce47487ba9fe5354420302eac8badb2505245d7`の広域・権限レビューで、検証済みの未解決BLOCKは0件。広域レビューの関連5試験106件と、権限レビューの独立再確認16件もPASS。実装コミット`28b6fc6a`のGitHub CIはquality／build／harness／api-dbすべて成功した。

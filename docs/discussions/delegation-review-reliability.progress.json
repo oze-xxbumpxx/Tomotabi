@@ -39,15 +39,17 @@
       "reason": "Node22の全ハーネス351件PASS。管理Issue未設定・移行とCLI確認false。実機導入は別途"
     },
     "review": {
-      "state": "active",
-      "reason": "固定tree dce47487 の広域・権限レビューを再確認中"
+      "state": "done",
+      "reason": "固定tree dce47487の広域・権限レビューで検証済みBLOCK0。再確認106件／16件PASS"
     },
     "merge": {
-      "state": "pending"
+      "state": "pending",
+      "reason": "実装PR #187。ユーザーのマージ判断とマージ後の実機導入確認が残る"
     },
     "reflect": {
-      "state": "pending"
+      "state": "skipped",
+      "reason": "AGENTS.mdにより改善3Agentは休眠。実機導入後の知見を別途記録する"
     }
   },
-  "updated_at": "2026-10-10T01:16:10.063Z"
+  "updated_at": "2026-10-10T01:18:54.121Z"
 }

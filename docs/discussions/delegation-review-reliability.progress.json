@@ -44,12 +44,12 @@
     },
     "merge": {
       "state": "pending",
-      "reason": "実装PR187は2026-10-10にマージ済み。通知と警告の追補PRをmain向けに準備。実機導入は未確認"
+      "reason": "実装PR187はマージ済み。追補PR190はユーザーのマージ判断待ち。実機導入は未確認"
     },
     "reflect": {
       "state": "skipped",
       "reason": "AGENTS.mdにより改善3Agentは休眠。実機導入後の知見を別途記録する"
     }
   },
-  "updated_at": "2026-10-10T05:34:45.264Z"
+  "updated_at": "2026-10-10T05:35:29.080Z"
 }

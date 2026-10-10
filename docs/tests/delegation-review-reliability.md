@@ -53,7 +53,7 @@ Node 22で、リポジトリルートから`HARNESS_NAMESPACE=tomotabi-harness n
 | U-22 | Codex証拠集合のhash | 完了と対象指摘の全件 | ID順を変え、本文/編集情報/解決状態/新規/削除/dismissを変える | 順番だけでは不変。意味のある全件と編集情報の変化でhashが変わる | 正常/異常 |
 | U-23 | 古い行と行外の指摘 | 現head/古いheadのスレッドと行外指摘 | outdated、未解決、再開、行外確認IDの不足を与える | outdatedは解決でない。全対象スレッドの解決と行外ID全件の確認が必要 | 正常/異常/境界 |
 | U-24 | 両レビューの成立 | 現headのCodex完了とClaude merge | Claudeのhash/確認済みIDを現在集合に照合する | 完了、解決、Claude SHA/verdict/hashがすべて成立した場合だけsuccess | 正常/異常 |
-| U-25 | 同じSHAのOPEN PR集合 | 同headの対象0/1/2件と対象外PR、異base、Draft | 集合全件を判定する | 対象0件だけ対象外success。対象全件の証拠が必要。Draft対象はin_progress | 正常/異常/境界 |
+| U-25 | 同じSHAのOPEN PR集合 | 同headの対象0/1/2件と対象外PR、異base、Draft | 集合全件を判定する | 対象0件だけ対象外success。対象全件の証拠が必要。Draft対象は共有pendingとGitHubのaction_required | 正常/異常/境界 |
 | U-26 | 公開するデータの制限 | prompt、生ログ、指摘本文、token、security情報の識別文字列 | 要求・状態・Details・CLI公開出力を作る | 公開メタデータと一般的な状態・証拠URLだけ。指摘本文や秘密を含まない | 異常 |
 | U-27 | 純粋処理の副作用 | 入力と返却値に可変配列/オブジェクト | 入力を凍結して遷移し、返却集合を変える | 呼出元の状態を破壊せず、後続の遷移やhashへ変更が漏れない | 正常/異常 |
 | U-28 | JSONとtask数の制限 | 要求8KiB、差分イベント48KiB、task100件まで | 境界と超過、新規task101件目を与える | 境界までの正しい入力は許可、超過は外部操作なしで停止。全stateを毎回追記せず、履歴を自動削除/移動しない | 正常/異常/境界 |
@@ -75,12 +75,12 @@ Node 22で、リポジトリルートから`HARNESS_NAMESPACE=tomotabi-harness n
 | I-11 | 起動未知の照合 | issue_unknown/launch_unknown、期限切れ | session/processを読取照合し、未確認/確認済み結果を返す | 確認済み対応だけ進む。時間経過・通信復旧・ラッパー終了で再起動しない | 正常/異常 |
 | I-12 | ローカルとCloudの起動設定 | runner/model明示、private prompt file、CLIスタブ | local/cloud、引数不足、実model不明、セッション情報不明を返す | 指定値を運ぶ。Cloud実値不明はunknown。raw promptと生ログは手元に留める | 正常/異常 |
 | I-13 | GitHub/MCPへ接続不能 | gh無し/未認証/失敗、接続済みMCPのスタブ | request、status、launch、review-refreshを呼ぶ | 共通JSONだけで受付。状態を照合不能なら起票/起動/成功なし。古い写しは未確認表示だけ | 正常/異常 |
-| I-14 | 判定中の集合・証拠の変化 | 過去success、判定1回目は成立 | 書込直前にPR追加/close/reopen/head移動、証拠編集/削除/dismiss、API失敗 | 先にin_progressへ戻す。全ページと証拠を再取得し、変化/取得失敗でsuccessを書かない | 異常 |
+| I-14 | 判定中の集合・証拠の変化 | 過去success、判定1回目は成立 | 書込直前にPR追加/close/reopen/head移動、証拠編集/削除/dismiss、API失敗 | 先に共有状態をin_progress／nullへ戻し、GitHubをcompleted/action_requiredへ更新する。全ページと証拠を再取得し、変化/取得失敗でsuccessを書かない | 異常 |
 | I-15 | SHAごとのcheckを共有 | 同SHAの対象/対象外/別baseのOPEN PR | 並行refresh、全件成立、片方不足、Draftを試す | SHAごとに1つの明示check IDを更新。external_id別の成功や対象外PRで迂回しない | 正常/異常 |
 | I-16 | headと状態変化を反映 | 保存済みPR番号と前回head | push、close/reopen、対象PR追加/削除、定期refresh | 旧SHAと新SHAの集合を再判定。古いsuccessを新headへ引き継がない | 正常/異常 |
 | I-17 | CIとレビューの独立 | CIのmerge SHA≠PR head、agent-review pending | 既存CI成功/失敗、明示check作成/更新失敗を与える | headに明示check。agent-reviewをCI待機/集計から除外して自己依存なし。書込不能を成功と報告しない | 正常/異常 |
 | I-18 | 特権処理の実行元と権限 | controller/listenerのworkflow定義 | 全event、dispatch非main、PR refのコード/添付/ref指定を検査 | controllerは保護mainの制御コードだけ。PRコード・npm/build・shell入力を実行せず、listenerはcheckout/書込なし | 正常/異常 |
-| I-19 | 通知artifactの検証 | 許可listener/ci/e2e run | repo/workflow偽造、JSON欠落、空PR、8KiB超、zip任意pathを渡す | 通知をデータとして所属PRを再取得。未知は停止。任意展開や通知の判定結果採用なし | 正常/異常/境界 |
+| I-19 | 通知artifactの検証 | 許可listener run（CI/e2eは起動対象外） | repo/workflow偽造、JSON欠落、空PR、8KiB超、zip任意pathを渡す | 通知をデータとして所属PRを再取得。未知は停止。任意展開や通知の判定結果採用なし | 正常/異常/境界 |
 | I-20 | 通知の再帰と自動job check | controller自身のrun、bot表示、check更新 | workflow定義とdispatch出力を調べる | 自身の完了で再起動なし。表示を要求にしない。自動job名はagent-reviewでなく、必須判定は明示Checks APIだけ | 異常 |
 | I-21 | 既存CLI・status・wait・hookの接続 | 旧YAML、共有seq、複数PR候補 | request/import/status、旧CLI、待機、SessionStart/PostToolUseを呼ぶ | 共有状態を優先。曖昧候補を最小番号で選ばない。完全SHAとCodex再依頼を示し、hookは例外時もexit 0 | 正常/異常 |
 | I-22 | 移行前とimportの権限 | migration_complete=false、進行中のIssue/PR/session | register/claim、許可/別作者のimport、未確認対応を試す | 新規登録/起動を止める。固定担当者の確認済み対応だけimport。未登録を未着手と推測しない | 正常/異常 |

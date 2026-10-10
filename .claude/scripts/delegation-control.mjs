@@ -239,9 +239,9 @@ async function ensureCheck(client, config, state, run, headSha) {
   try {
     const current = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
     if (current?.head_sha !== headSha || current.name !== 'agent-review' || current.external_id !== record.external_id) fail('check_unverified');
-    await client.rest('PATCH', `/repos/${config.repository}/check-runs/${record.check_id}`, { status: 'in_progress', output: { title: 'レビューを確認中', summary: '現在の証拠を確認しています。' } });
+    await client.rest('PATCH', `/repos/${config.repository}/check-runs/${record.check_id}`, { status: 'completed', conclusion: 'action_required', output: { title: 'レビューを確認中', summary: '現在の証拠を確認しています。' } });
     const pending = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
-    if (pending?.status !== 'in_progress' || pending.conclusion !== null) fail('check_write_unknown');
+    if (pending?.status !== 'completed' || pending.conclusion !== 'action_required') fail('check_write_unknown');
   } catch (error) {
     const failure = error instanceof DelegationError ? error : new DelegationError('check_write_unknown');
     // GitHub上に前回の成功が残り得ることを共有状態へ記録し、statusが「成功表示は古い」と出せるようにする。古い成功を消す仕組みは作らない。
@@ -288,13 +288,14 @@ export async function refreshSha(client, config, state, run, headSha, review, { 
   const payload = { ...decision.check };
   delete payload.head_sha;
   delete payload.name;
-  if (payload.conclusion === null) delete payload.conclusion;
+  // 完了済みcheckの結論を省略しても消えない。未確認は明示的にマージを止める。
+  if (decision.status !== 'completed') { payload.status = 'completed'; payload.conclusion = 'action_required'; }
   let actual = null;
   try {
     await client.rest('PATCH', `/repos/${config.repository}/check-runs/${record.check_id}`, payload);
     actual = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
   } catch { fail('check_write_unknown'); }
-  if (actual?.status !== decision.status || (actual.conclusion ?? null) !== (decision.conclusion ?? null)) fail('check_write_unknown');
+  if (actual?.status !== payload.status || actual.conclusion !== payload.conclusion) fail('check_write_unknown');
   state = await persistEvent(client, config, state, { checks: { [headSha]: { ...record, state: decision.status, conclusion: decision.conclusion ?? null } } }, meta ?? systemMeta(run, 'review-completed'), { code: 'review_checked', allowed: false });
   return state;
 }

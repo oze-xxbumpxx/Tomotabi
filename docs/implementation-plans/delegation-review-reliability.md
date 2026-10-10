@@ -61,7 +61,7 @@
 - `.claude/scripts/agent-review.mjs`の変更内容: 同じ完全head SHAのOPEN PR全件と対象判定を集める。作者ID・devin/・共有状態／旧委譲登録のORと、finalizedまでの対象保持を使う。Claude、Codexの完了・指摘・編集者を読み、本文はメモリでhashにする。
 - `.claude/scripts/agent-review.mjs`の完了条件: Claudeの未編集の新規完了、現在headのCodex完了、解決済みスレッド、行外指摘IDの確認、現在のcodex_evidence_hash一致をすべて要求する。旧SHA・引用・開始反応・他者編集・取得欠落・集合変化をsuccessにしない。
 - checkの変更内容: agent-reviewは判定結果と公開check payloadを返す。Checks APIの作成／更新はcontrollerだけが行い、共有状態にSHAごとのcheck IDを保存する。完了JSON生成のCLIは公開JSONを返し、コメント投稿を自動では行わない。
-- checkの完了条件: 実行開始時に以前のsuccessをin_progressへ戻す。書き込み直前にOPEN PR集合と全証拠を再取得して照合し、Draft／未確認はin_progress、不足・破損はfailure、全対象成立だけsuccess。旧SHAと新SHAの集合を両方再判定する。
+- checkの完了条件: 実行開始時に共有状態をin_progress／nullへ戻し、GitHubの以前のsuccessをcompleted/action_requiredへ明示更新する。書き込み直前にOPEN PR集合と全証拠を再取得して照合し、Draft／未確認は共有状態in_progress／nullとGitHubのcompleted/action_required、不足・破損はfailure、全対象成立だけsuccess。旧SHAと新SHAの集合を両方再判定する。
 
 ### 起動と設定を担当するファイル
 
@@ -82,7 +82,7 @@
 
 ### workflow・手順・試験を担当するファイル
 
-- `delegation-control.yml`の変更内容／完了条件: issue_comment(created/edited/deleted)、main限定dispatch、毎時schedule、指定したevents/ci/e2eのworkflow_run(completed)を受ける。初期化専用のinitializeは固定担当者の手動dispatchでActions作者の先頭コメントを作る。group=tomotabi-delegation-control、queue=max、cancel-in-progress=false、timeout=5分。contents:read/issues:write/pull-requests:read/checks:write/actions:readだけを与える。mainのコードだけを実行し、PRコード・要求ref・npm scriptを実行しない。
+- `delegation-control.yml`の変更内容／完了条件: issue_comment(created/edited/deleted)、main限定dispatch、毎時schedule、指定したeventsのworkflow_run(completed)を受ける。初期化専用のinitializeは固定担当者の手動dispatchでActions作者の先頭コメントを作る。group=tomotabi-delegation-control、queue=max、cancel-in-progress=false、timeout=5分。contents:read/issues:write/pull-requests:read/checks:write/actions:readだけを与える。mainのコードだけを実行し、PRコード・要求ref・npm scriptを実行しない。
 - `delegation-events.yml`の変更内容／完了条件: 設計のPR/reviewイベントでcheckoutせず、PR番号・event・run IDのみを固定名JSON artifactへ保存する。書き込み権限は与えない。controllerは8KiB以下の指定JSONを検証し、任意zip pathに展開せず現在のGitHub状態を取り直す。
 - skills、AGENTS.md、委譲README、devin-setup.mdの変更内容／完了条件: 共通受付とラッパーを唯一の新規委譲手順にする。停止の見張り後の自動再起動をやめ、結果不明は照合へ渡す。Codexの明示依頼、完全SHAの未編集完了、agent-reviewを除くCI確認、マージ前review-refreshを揃える。未知のCloud既定値とbot依頼を保証しない。
 - 新規6試験と既存6試験の変更内容／完了条件: [試験計画](../tests/delegation-review-reliability.md)の担当範囲を追加する。Node標準testとI/O差し替えを使い、本物のgh書き込み・Devin起動・アプリworkspaceのテスト追加をしない。

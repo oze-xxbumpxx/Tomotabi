@@ -89,7 +89,7 @@ GitHub側の設定。
 
 controllerは保護されたdefault branchの制御コードだけを実行する。PRイベントのlistenerはcheckoutせず、固定artifactの通知JSONだけを渡す。要求に指定されたref・コード・npmスクリプトは実行しない。
 
-必須チェックのquality・build・api-dbを保つ。agent-reviewはChecks APIでPR headに明示作成し、同じSHAを使う対象PR全件の現在headレビューを照合する。Claude完了は固定作者の未編集の新規投稿だけを使う。Codex完了と指摘は作者／編集者のIDと完全SHAを確認する。修正push後は現在headへのCodex再依頼とClaudeの新しい完了が必要である。
+必須チェックのquality・build・api-dbを保つ。agent-reviewはChecks APIでPR headに明示作成し、同じSHAを使う対象PR全件の現在headレビューを照合する。Claude完了は固定作者の未編集の新規投稿だけを使う。Codex完了と指摘は作者／編集者のIDと完全SHAを確認する。修正push後は現在headへのCodex再依頼とClaudeの新しい完了が必要である。CodexはボットのPR（Devin）を自動ではレビューせず、pushのあとも見直さないので、Claude Codeが`.claude/scripts/codex-review.mjs`でユーザーのアカウントから`@codex review`を投稿し、完了を待つ。
 
 次の実機確認は未実施であり、stub試験で代用しない。
 

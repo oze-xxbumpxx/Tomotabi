@@ -377,12 +377,16 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
     ).toBeTruthy();
   });
 
-  it("fromが許した経路なら戻る先はその経路。違えば旅行一覧", () => {
+  it("fromが許した経路なら戻る先はその旅行のホーム。違えば旅行一覧", () => {
     const allowed = `/trips/${tripId}/home`;
     expect(parseFromParam(allowed)).toEqual({
       backHref: allowed,
       tripId,
     });
+    // fromの残りは使わず、戻る先はtripIdから組み立て直す。
+    expect(
+      parseFromParam(`/trips/${tripId}/../../sign-in?x=1`),
+    ).toEqual({ backHref: `/trips/${tripId}/home`, tripId });
     expect(parseFromParam("/trips/not-a-uuid/home")).toEqual({
       backHref: "/trips",
       tripId: null,
@@ -391,10 +395,54 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
       backHref: "/trips",
       tripId: null,
     });
-    expect(parseFromParam(undefined)).toEqual({
+    expect(parseFromParam(null)).toEqual({
       backHref: "/trips",
       tripId: null,
     });
+  });
+
+  it("PW-10: 通知を止められなかった失敗は文を変え、ログアウトは押せるまま", async () => {
+    const trip = {
+      id: tripId,
+      name: "京都旅行",
+      startsOn: "2026-10-03",
+      endsOn: "2026-10-05",
+      status: "traveling" as const,
+      version: 1,
+    };
+    render(
+      <TripMenu
+        trip={trip as never}
+        etag='"1"'
+        displayName="ひなた"
+        start={
+          {
+            state: { status: "editing" },
+            submit: vi.fn(),
+            backToEditing: vi.fn(),
+            confirmRequest: vi.fn(),
+          } as never
+        }
+        startPending={{ check: { status: "none" }, reload: vi.fn() } as never}
+        onEdit={vi.fn()}
+        onRequestFinish={vi.fn()}
+        onSwitch={vi.fn()}
+        onSignOut={vi.fn()}
+        signOutPending={false}
+        signOutFailure="push-stop"
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "通知を止められませんでした。もう一度お試しください。この端末に通知が届かなくなった場合は、設定から有効にし直してください",
+      ),
+    ).toBeInTheDocument();
+    // ログアウトはしていないので、もう一度押せる。
+    expect(
+      screen.getByRole("button", { name: /ログアウト/ }),
+    ).toBeEnabled();
   });
 
   it("画面の「←」は検証済みの戻る先へ行く", async () => {
@@ -721,7 +769,8 @@ describe("PW-06 止める", () => {
 
 describe("PW-07 利用者の切り替え", () => {
   it("覚えた購読の持ち主が違えば、解除してから登録する", async () => {
-    // 前の人（otherUserId）の購読IDが残っている。
+    // 前の人（otherUserId）の購読IDが残っていて、APIにはこの
+    // endpointの有効な行が無い（ブラウザだけの購読）。
     window.localStorage.setItem(
       "tomotabi:push-subscription:" + otherUserId,
       otherSubscriptionId,
@@ -732,10 +781,7 @@ describe("PW-07 利用者の切り替え", () => {
       subscription: oldSubscription,
     });
     const register = vi.fn(() => json({ id: ownSubscriptionId }, 201));
-    stubApi({
-      register,
-      subscriptions: () => json({ items: [subscriptionRow()] }),
-    });
+    stubApi({ register });
     renderScreen();
     await userEvent.click(
       await screen.findByRole("button", { name: "登録し直す" }),
@@ -785,6 +831,42 @@ describe("PW-08・PW-09 ホームの案内のカード", () => {
   it("使えない環境では出さない", async () => {
     stubPushEnv({ hasPushManager: false });
     stubApi({});
+    renderGuideCard();
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/記録を通知で受け取る/),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("この端末が有効なら出さない（記憶が無くても同じ）", async () => {
+    // 記憶を入れないまま、isCurrentSessionの有効な行だけがある状態。
+    const fetchMock = stubApi({
+      subscriptions: () => json({ items: [subscriptionRow()] }),
+    });
+    stubPushEnv({
+      permission: "granted",
+      subscription: browserSubscriptionMock(),
+    });
+    renderGuideCard();
+    // 一覧の取得が済んだあとも出さないことを確かめる。
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          urlOf(input).includes("/api/me/push-subscriptions"),
+        ),
+      ).toBe(true);
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/記録を通知で受け取る/),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("許可を断った端末では出さない", async () => {
+    stubPushEnv({ permission: "denied" });
+    stubApi({ subscriptions: () => json({ items: [] }) });
     renderGuideCard();
     await waitFor(() => {
       expect(

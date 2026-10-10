@@ -77,17 +77,16 @@ export function determineDeviceNotificationState(
   if (input.hasBrowserSubscription && !input.hasCurrentSessionEnabledRow) {
     return "browser-only";
   }
-  if (input.currentRow !== null) {
-    if (
-      input.hasBrowserSubscription &&
-      input.currentRow.enabled &&
-      input.currentRow.vapidKeyState !== "revoked"
-    ) {
-      return "enabled";
-    }
-    if (!input.currentRow.enabled || input.currentRow.vapidKeyState === "revoked") {
-      return "api-disabled";
-    }
+  // 「有効」は一覧に今のendpointの有効な行があること。記憶（「止める」ときに
+  // IDを決めるためのもの）が読めなくても、行があれば「有効」にする。
+  if (input.hasBrowserSubscription && input.hasCurrentSessionEnabledRow) {
+    return "enabled";
+  }
+  if (
+    input.currentRow !== null &&
+    (!input.currentRow.enabled || input.currentRow.vapidKeyState === "revoked")
+  ) {
+    return "api-disabled";
   }
   // 表に無い組み合わせ（許可済みだが購読も記憶も無いなど）は、有効にする
   // 案内を出す「まだ有効にしていない」に寄せる。

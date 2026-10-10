@@ -111,6 +111,25 @@ describe("SignInScreen", () => {
     );
   });
 
+  it("PW-10: X-Push-Stoppedの案内は、クエリを消したあとの再描画でも残る", () => {
+    const { rerender } = render(
+      <SignInScreen hasError={false} pushRemaining />,
+    );
+
+    expect(replaceMock).toHaveBeenCalledWith("/sign-in");
+    expect(
+      screen.getByText(/通知が止まっていない場合は/),
+    ).toBeInTheDocument();
+
+    // router.replace("/sign-in")のあとの再描画（propがfalseに戻る）でも
+    // 案内が残る。
+    rerender(<SignInScreen hasError={false} />);
+
+    expect(
+      screen.getByText(/通知が止まっていない場合は/),
+    ).toBeInTheDocument();
+  });
+
   it("W-06: disables the button while sign-in is in flight", async () => {
     let resolveSignIn: (value: { data: null; error: null }) => void = () => {};
     signInSocial.mockImplementation(

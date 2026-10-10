@@ -4,6 +4,7 @@ import { Bell } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { determineDeviceNotificationState } from "../model/device-state";
+import { isPushConfigUnavailable } from "../model/push-config-unavailable";
 import {
   usePushConfig,
   usePushSubscriptions,
@@ -105,11 +106,7 @@ export function NotificationGuideCard({
     hasPushManager: caps.hasPushManager,
     hasNotification: caps.hasNotification,
     permission: caps.permission,
-    pushConfigUnavailable:
-      config.error !== null &&
-      typeof config.error === "object" &&
-      "status" in config.error &&
-      config.error.status === 503,
+    pushConfigUnavailable: isPushConfigUnavailable(config.error),
     hasBrowserSubscription,
     currentRow:
       rememberedId === null

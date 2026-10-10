@@ -110,7 +110,5 @@ export function useSignOut() {
     hasPendingRequests,
     pending,
     failure,
-    /** 後方互換のため残す（通知の失敗も含め、なんらかの失敗があればtrue）。 */
-    failed: failure !== null,
   };
 }

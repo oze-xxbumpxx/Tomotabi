@@ -44,6 +44,7 @@ export function SettlementHistory({
               hasFocus && settlement.id === focusSettlementId;
             return (
               <li
+                aria-current={focused ? "true" : undefined}
                 className={
                   focused
                     ? "settle-row-static settle-row-focused"

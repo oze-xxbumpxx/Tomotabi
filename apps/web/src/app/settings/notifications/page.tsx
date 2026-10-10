@@ -6,8 +6,13 @@ export default async function Page({
 }: {
   searchParams: Promise<{ from?: string | string[] }>;
 }) {
-  const { from } = await searchParams;
-  const raw = typeof from === "string" ? from : undefined;
-  const { backHref, tripId } = parseFromParam(raw);
+  const { from: raw } = await searchParams;
+  const from =
+    typeof raw === "string" && raw !== ""
+      ? raw
+      : Array.isArray(raw) && typeof raw[0] === "string" && raw[0] !== ""
+        ? raw[0]
+        : null;
+  const { backHref, tripId } = parseFromParam(from);
   return <NotificationSettingsScreen backHref={backHref} tripId={tripId} />;
 }

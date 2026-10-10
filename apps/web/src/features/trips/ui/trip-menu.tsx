@@ -260,7 +260,7 @@ export function TripMenu({
       {signOutFailure !== null && (
         <StatusText tone="error">
           {signOutFailure === "push-stop"
-            ? "通知を止められませんでした。もう一度お試しください"
+            ? "通知を止められませんでした。もう一度お試しください。この端末に通知が届かなくなった場合は、設定から有効にし直してください"
             : "ログアウトできませんでした。もう一度お試しください。"}
         </StatusText>
       )}

@@ -112,13 +112,27 @@ describe("determineDeviceNotificationState", () => {
     ).toBe("enabled");
   });
 
-  it("行はあるがenabled=falseまたはrevokedなら「APIで無効になった」", () => {
+  it("記憶が無くても、一覧にisCurrentSessionの有効な行があれば「有効」", () => {
+    // 記憶は「止める」のIDを決めるためで、有効かどうかの条件ではない。
     expect(
       determineDeviceNotificationState(
         input({
           permission: "granted",
           hasBrowserSubscription: true,
           hasCurrentSessionEnabledRow: true,
+          currentRow: null,
+        }),
+      ),
+    ).toBe("enabled");
+  });
+
+  it("行はあるがenabled=falseまたはrevokedなら「APIで無効になった」", () => {
+    // ブラウザの購読が無い（「ブラウザだけ」に行かない）とき、
+    // 記憶の行がdisabled/revokedなら「APIで無効」。
+    expect(
+      determineDeviceNotificationState(
+        input({
+          permission: "granted",
           currentRow: { enabled: false, vapidKeyState: "current" },
         }),
       ),
@@ -127,8 +141,6 @@ describe("determineDeviceNotificationState", () => {
       determineDeviceNotificationState(
         input({
           permission: "granted",
-          hasBrowserSubscription: true,
-          hasCurrentSessionEnabledRow: true,
           currentRow: { enabled: true, vapidKeyState: "revoked" },
         }),
       ),

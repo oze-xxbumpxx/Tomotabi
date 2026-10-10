@@ -19,6 +19,7 @@ export {
   type DisableOutcome,
   type EnableOutcome,
 } from "./model/push-flow";
+export { isPushConfigUnavailable } from "./model/push-config-unavailable";
 export {
   loadGuideDismissed,
   loadRememberedSubscriptionId,

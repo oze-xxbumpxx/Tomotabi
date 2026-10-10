@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettlementHistory } from "@/features/settlement/ui/settlement-history";
+import { parseFocusSettlementId } from "@/screens/settlement/focus-settlement-id";
 
 /**
  * PW-11: 精算の画面の`settlementId`。履歴にあればその行を目立たせて
@@ -42,6 +43,7 @@ afterEach(() => {
 
 describe("PW-11 精算のsettlementId", () => {
   it("履歴にあればその行に枠を付けてスクロールする", () => {
+    scrollIntoViewMock.mockClear();
     render(
       <SettlementHistory
         settlements={[
@@ -52,14 +54,17 @@ describe("PW-11 精算のsettlementId", () => {
         focusSettlementId={settlementId}
       />,
     );
-    const row = screen.getByText(/10\/7/).closest("li");
-    expect(row?.className).toContain("settle-row-focused");
+    // 行は役割と順番で探し、目立たせた行はaria-currentで確かめる。
+    const rows = screen.getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    const focused = rows.find(
+      (li) => li.getAttribute("aria-current") === "true",
+    );
+    expect(focused).toBe(rows[0]);
+    expect(focused?.className).toContain("settle-row-focused");
     expect(scrollIntoViewMock).toHaveBeenCalled();
     // 別の行は目立たせない。
-    const other = screen
-      .getAllByRole("listitem")
-      .find((li) => li !== row);
-    expect(other?.className).not.toContain("settle-row-focused");
+    expect(rows[1].getAttribute("aria-current")).toBeNull();
   });
 
   it("履歴に無ければふつうに出す（スクロールもしない）", () => {
@@ -72,7 +77,7 @@ describe("PW-11 精算のsettlementId", () => {
       />,
     );
     expect(
-      document.querySelector(".settle-row-focused"),
+      document.querySelector('[aria-current="true"]'),
     ).toBeNull();
     expect(scrollIntoViewMock).not.toHaveBeenCalled();
   });
@@ -85,6 +90,18 @@ describe("PW-11 精算のsettlementId", () => {
         participants={participants}
       />,
     );
-    expect(document.querySelector(".settle-row-focused")).toBeNull();
+    expect(document.querySelector('[aria-current="true"]')).toBeNull();
+  });
+});
+
+describe("PW-11 settlementIdの形の確かめ", () => {
+  it("UUIDの形のときだけ値を返し、形が違えば無視する", () => {
+    expect(parseFocusSettlementId(settlementId)).toBe(settlementId);
+    expect(parseFocusSettlementId([settlementId, "x"])).toBe(settlementId);
+    expect(parseFocusSettlementId("not-a-uuid")).toBeNull();
+    expect(parseFocusSettlementId("../../etc/passwd")).toBeNull();
+    expect(parseFocusSettlementId("")).toBeNull();
+    expect(parseFocusSettlementId([])).toBeNull();
+    expect(parseFocusSettlementId(null)).toBeNull();
   });
 });

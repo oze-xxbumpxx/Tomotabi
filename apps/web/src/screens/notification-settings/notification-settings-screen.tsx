@@ -10,6 +10,7 @@ import {
   disableDeviceNotifications,
   disableOtherDevice,
   enableDeviceNotifications,
+  isPushConfigUnavailable,
   loadRememberedSubscriptionId,
   readPushCapabilities,
   usePushConfig,
@@ -19,7 +20,6 @@ import {
   type PushSubscription,
 } from "@/features/notifications";
 import { useBalance } from "@/features/settlement";
-import { isApiFailure } from "@/shared/api/api-failure";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
@@ -132,10 +132,7 @@ export function NotificationSettingsScreen({
           hasPushManager: caps.hasPushManager,
           hasNotification: caps.hasNotification,
           permission: caps.permission,
-          pushConfigUnavailable:
-            isApiFailure(config.error) &&
-            config.error.kind === "http" &&
-            config.error.status === 503,
+          pushConfigUnavailable: isPushConfigUnavailable(config.error),
           hasBrowserSubscription,
           currentRow,
           hasCurrentSessionEnabledRow: items.some(
@@ -201,12 +198,17 @@ export function NotificationSettingsScreen({
   };
 
   const stopThisDevice = async () => {
-    if (userId === null || currentRow === null) {
+    // 止めるIDは今のendpointの有効な行から決める。記憶が無い・読めない
+    // 端末でも止められるように、記憶はあとの順位にする。
+    const stopId =
+      items.find((item) => item.isCurrentSession && item.enabled)?.id ??
+      rememberedId;
+    if (userId === null || stopId === null) {
       return;
     }
     setBusy(true);
     setFlowMessage(null);
-    const outcome = await disableDeviceNotifications(currentRow.id, userId);
+    const outcome = await disableDeviceNotifications(stopId, userId);
     setBusy(false);
     if (outcome.kind === "disabled") {
       setHasBrowserSubscription(false);

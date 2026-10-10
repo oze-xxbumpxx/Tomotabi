@@ -21,6 +21,8 @@ export function SignInScreen({
 }) {
   const router = useRouter();
   const [showError, setShowError] = useState(hasError);
+  // クエリを消すとpushRemainingはfalseに戻るので、表示は状態で持つ。
+  const [showNotice] = useState(pushRemaining);
 
   useEffect(() => {
     if (hasError || pushRemaining) {
@@ -36,7 +38,7 @@ export function SignInScreen({
         <p className="signin-title">tomotabi</p>
       </div>
       <div className="signin-footer">
-        {pushRemaining && (
+        {showNotice && (
           <p className="signin-notice">
             この端末への通知が止まっていない場合は、ログインし直して設定から止めてください
           </p>

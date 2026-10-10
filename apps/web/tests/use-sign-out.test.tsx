@@ -80,7 +80,7 @@ describe("useSignOut", () => {
     });
 
     expect(ok).toBe(false);
-    expect(result.current.failed).toBe(true);
+    expect(result.current.failure).toBe("push-stop");
     expect(window.localStorage.getItem(selectedKey)).not.toBeNull();
   });
 

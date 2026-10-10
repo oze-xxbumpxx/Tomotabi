@@ -75,7 +75,7 @@ function memoryGitHub({ anchor = true, failure = null } = {}) {
       else if (method === 'PATCH' && path.includes('/check-runs/')) {
         const item = checks.get(Number(path.split('/').at(-1)));
         Object.assign(item, body);
-        if (body.status === 'in_progress') item.conclusion = null;
+        // 結論は明示されたときだけ変わる。status変更で消えるとは仮定しない。
         result = copy(item);
       } else throw new Error(`未実装fixture ${method} ${path}`);
       if (injected && injected.when === 'after') { injected.used = true; issuedFailure = true; throw new Error('SECRET_TRANSPORT_FAILURE'); }
@@ -901,4 +901,28 @@ test('begin以外の同要求の再送は元の確定結果とsource照合情報
   assert.equal(result.event_hash, originalResult.event_hash);
   assert.equal(result.request_comment_id, replay.request_comment_id);
   await assert.rejects(waitForResult(client, config, { requestId: request.request_id, commentId: 999 }), /result_pending/);
+});
+
+ test('完了済みsuccess/failureを再確認しても結論の自動消去に依存しない', async () => {
+  for (const initial of ['success', 'failure']) {
+    const client = memoryGitHub();
+    let state = await refreshSha(client, config, await readSnapshot(client, config), client.run, SHA, emptyReview);
+    client.checks.get(1).conclusion = initial;
+    state = await refreshSha(client, config, state, client.run, SHA, emptyReview);
+    const writes = client.calls.filter((c) => c.method === 'PATCH' && c.path.endsWith('/check-runs/1'));
+    assert.equal(writes.at(-2).body.status, 'completed');
+    assert.equal(writes.at(-2).body.conclusion, 'action_required');
+    assert.equal(client.checks.get(1).conclusion, 'success');
+    assert.equal(state.checks[SHA].conclusion, 'success');
+  }
+});
+
+test('未確認のレビューではlive checkもaction_requiredになり、共有状態はpendingのまま', async () => {
+  const client = memoryGitHub();
+  const review = { ...emptyReview, async collectReviewSnapshot() { return { head_sha: SHA, open_prs: [], prs: [], snapshot_hash: 'b'.repeat(64), unknown: true }; } };
+  const state = await refreshSha(client, config, await readSnapshot(client, config), client.run, SHA, review);
+  assert.equal(state.checks[SHA].state, 'in_progress');
+  assert.equal(state.checks[SHA].conclusion, null);
+  assert.equal(client.checks.get(1).status, 'completed');
+  assert.equal(client.checks.get(1).conclusion, 'action_required');
 });

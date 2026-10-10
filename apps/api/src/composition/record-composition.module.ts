@@ -23,6 +23,8 @@ import { PgPlanEligibilityQuery } from "../modules/record/infrastructure/pg-plan
 import { PgPlanEventUnitOfWork } from "../modules/record/infrastructure/pg-plan-event.unit-of-work";
 import { PgRecordsReadUnitOfWork } from "../modules/record/infrastructure/pg-records-read.unit-of-work";
 import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-finance-unit-of-work";
+import { NOTIFICATION_PUBLISHER } from "../modules/record/adapter/outbound/notification-publisher";
+import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher";
 import { PlanningCompositionModule } from "./planning-composition.module";
 
 function useDatabase(): boolean {
@@ -41,6 +43,10 @@ const missingDatabase = (): Promise<never> =>
 @Module({
   imports: [PlanningCompositionModule],
   providers: [
+    {
+      provide: NOTIFICATION_PUBLISHER,
+      useExisting: AfterResponseNotificationPublisher,
+    },
     {
       provide: FINANCE_UNIT_OF_WORK,
       useFactory: (): UnitOfWork<FinanceWorkContext> =>
@@ -81,6 +87,7 @@ const missingDatabase = (): Promise<never> =>
     FINANCE_UNIT_OF_WORK,
     RECORDS_READ_UNIT_OF_WORK,
     PLAN_EVENT_UNIT_OF_WORK,
+    NOTIFICATION_PUBLISHER,
   ],
 })
 export class RecordCompositionModule {}

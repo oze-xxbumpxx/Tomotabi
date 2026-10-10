@@ -1,5 +1,11 @@
 import { Module } from "@nestjs/common";
+import { PinoLogger } from "nestjs-pino";
+import {
+  AFTER_RESPONSE,
+  type AfterResponse,
+} from "../adapter/after-response/after-response";
 import { CLOCK, type Clock } from "../adapter/clock/clock";
+import { InProcessAfterResponse } from "../infrastructure/after-response/in-process-after-response";
 import { SystemClock } from "../infrastructure/clock/system-clock";
 import { getPool } from "../infrastructure/database/pool";
 import {
@@ -7,16 +13,37 @@ import {
   type ClosePushSessionInputPort,
 } from "../modules/notification/adapter/inbound/close-push-session.input-port";
 import {
+  DISPATCH_LOG,
+  type DispatchLog,
+} from "../modules/notification/adapter/outbound/dispatch-log.port";
+import {
+  NOTIFICATION_DISPATCH_STORE,
+  type NotificationDispatchStore,
+} from "../modules/notification/adapter/outbound/notification-dispatch-store";
+import {
   NOTIFICATION_UNIT_OF_WORK,
   type NotificationUnitOfWork,
 } from "../modules/notification/adapter/outbound/push-subscription.repository";
 import {
+  PUSH_SENDER,
+  type PushSender,
+} from "../modules/notification/adapter/outbound/push-sender";
+import {
+  PUSH_TRANSPORT,
+  type PushTransport,
+} from "../modules/notification/adapter/outbound/push-transport";
+import {
   VAPID_KEYRING,
   type VapidKeyringPort,
 } from "../modules/notification/adapter/outbound/vapid-keyring.port";
+import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher";
 import { EnvVapidKeyring } from "../modules/notification/infrastructure/env-vapid-keyring";
+import { HttpsPushTransport } from "../modules/notification/infrastructure/https-push-transport";
+import { PgNotificationDispatchStore } from "../modules/notification/infrastructure/pg-notification-dispatch-store";
 import { PgNotificationUnitOfWork } from "../modules/notification/infrastructure/pg-notification-unit-of-work";
+import { WebPushSender } from "../modules/notification/infrastructure/web-push-sender";
 import { ClosePushSessionUseCase } from "../modules/notification/usecase/close-push-session.usecase";
+import { DispatchNotificationUseCase } from "../modules/notification/usecase/dispatch-notification.usecase";
 
 function useDatabase(): boolean {
   // planning/recordと同じ判定（未設定と空文字はどちらも「DBなし」）。
@@ -52,6 +79,67 @@ const missingDatabase = (): Promise<never> =>
         new ClosePushSessionUseCase(uow, clock),
       inject: [NOTIFICATION_UNIT_OF_WORK, CLOCK],
     },
+    {
+      provide: NOTIFICATION_DISPATCH_STORE,
+      useFactory: (): NotificationDispatchStore =>
+        useDatabase()
+          ? new PgNotificationDispatchStore(getPool())
+          : {
+              readDispatchContext: missingDatabase,
+              disableIfSameRevision: missingDatabase,
+            },
+    },
+    { provide: PUSH_TRANSPORT, useClass: HttpsPushTransport },
+    {
+      provide: PUSH_SENDER,
+      useFactory: (transport: PushTransport): PushSender =>
+        new WebPushSender(transport),
+      inject: [PUSH_TRANSPORT],
+    },
+    {
+      provide: AFTER_RESPONSE,
+      useFactory: (logger: PinoLogger): AfterResponse =>
+        new InProcessAfterResponse((entry) => logger.warn(entry)),
+      inject: [PinoLogger],
+    },
+    {
+      provide: DISPATCH_LOG,
+      useFactory: (logger: PinoLogger): DispatchLog => ({
+        info: (entry) => logger.info(entry),
+        warn: (entry) => logger.warn(entry),
+      }),
+      inject: [PinoLogger],
+    },
+    {
+      provide: DispatchNotificationUseCase,
+      useFactory: (
+        store: NotificationDispatchStore,
+        keyring: VapidKeyringPort,
+        sender: PushSender,
+        clock: Clock,
+        log: DispatchLog,
+      ): DispatchNotificationUseCase =>
+        new DispatchNotificationUseCase(store, keyring, sender, clock, log),
+      inject: [
+        NOTIFICATION_DISPATCH_STORE,
+        VAPID_KEYRING,
+        PUSH_SENDER,
+        CLOCK,
+        DISPATCH_LOG,
+      ],
+    },
+    {
+      provide: AfterResponseNotificationPublisher,
+      useFactory: (
+        afterResponse: AfterResponse,
+        dispatch: DispatchNotificationUseCase,
+        logger: PinoLogger,
+      ): AfterResponseNotificationPublisher =>
+        new AfterResponseNotificationPublisher(afterResponse, dispatch, (entry) =>
+          logger.warn(entry),
+        ),
+      inject: [AFTER_RESPONSE, DispatchNotificationUseCase, PinoLogger],
+    },
     { provide: CLOCK, useClass: SystemClock },
   ],
   exports: [
@@ -59,6 +147,12 @@ const missingDatabase = (): Promise<never> =>
     VAPID_KEYRING,
     CLOSE_PUSH_SESSION_INPUT_PORT,
     CLOCK,
+    AFTER_RESPONSE,
+    PUSH_SENDER,
+    PUSH_TRANSPORT,
+    NOTIFICATION_DISPATCH_STORE,
+    DispatchNotificationUseCase,
+    AfterResponseNotificationPublisher,
   ],
 })
 export class NotificationCompositionModule {}

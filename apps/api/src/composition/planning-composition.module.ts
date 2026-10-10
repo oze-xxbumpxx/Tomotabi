@@ -48,6 +48,9 @@ import { PgPlanningUnitOfWork } from "../modules/planning/infrastructure/pg-plan
 import { PgHomeRecordsRead } from "../modules/record/infrastructure/pg-home-records-read";
 import { PgRecordHistoryQuery } from "../modules/record/infrastructure/pg-record-history.query";
 import { PgHomeBalanceRead } from "../modules/settlement/infrastructure/pg-home-balance-read";
+import { NOTIFICATION_PUBLISHER } from "../modules/planning/adapter/outbound/notification-publisher";
+import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher";
+import { NotificationCompositionModule } from "./notification-composition.module";
 
 function useDatabase(): boolean {
   // 未設定と空文字はどちらも「DBなし」。foundation・identityと同じ判定に
@@ -64,7 +67,12 @@ const missingDatabase = (): Promise<never> =>
  * infrastructure（時計・receipt・財務guard）の実装を結ぶ組み立て。
  */
 @Module({
+  imports: [NotificationCompositionModule],
   providers: [
+    {
+      provide: NOTIFICATION_PUBLISHER,
+      useExisting: AfterResponseNotificationPublisher,
+    },
     {
       provide: PARTICIPANTS_FACTORY,
       useFactory: (): ParticipantsFactory =>
@@ -142,6 +150,8 @@ const missingDatabase = (): Promise<never> =>
     },
   ],
   exports: [
+    // 送る処理のpublisher実装をrecord・settlementへも届けるため再輸出。
+    NotificationCompositionModule,
     PARTICIPANTS_FACTORY,
     HOME_RECORDS_FACTORY,
     HOME_BALANCE_FACTORY,
@@ -150,6 +160,7 @@ const missingDatabase = (): Promise<never> =>
     PLANNING_READ_PORT,
     CLOCK,
     WRITE_LOG,
+    NOTIFICATION_PUBLISHER,
   ],
 })
 export class PlanningCompositionModule {}

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Plan as PlanContract } from "@tomotabi/contracts";
 import { ApiError } from "../../../common/http/api-error";
 import type { Clock } from "../../../adapter/clock/clock";
@@ -9,6 +10,10 @@ import {
   type CreatePlanInputPort,
 } from "../adapter/inbound/create-plan.input-port";
 import type { PlanWriteResult } from "../adapter/inbound/plan-write.result";
+import {
+  noopNotificationPublisher,
+  type NotificationPublisher,
+} from "../adapter/outbound/notification-publisher";
 import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
 import type { WriteLog } from "../adapter/outbound/write-log.port";
 import { parsePlanDate, parsePlanKind, parsePlanMemo, parsePlanName, parsePlanTime } from "./plan-input";
@@ -29,6 +34,8 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
     private readonly unitOfWork: UnitOfWork<PlanningWorkContext>,
     private readonly clock: Clock,
     private readonly writeLog: WriteLog,
+    private readonly publisher: NotificationPublisher =
+      noopNotificationPublisher,
   ) {}
 
   execute(input: CreatePlanInput): Promise<PlanWriteResult> {
@@ -37,7 +44,22 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
       CREATE_PLAN_OPERATION,
       input.tripId,
       null,
-      () => this.run(input),
+      async () => {
+        const outcome = await this.run(input);
+        if (!outcome.replayed) {
+          // 再送でない新しい予定だけ。COMMITのあとで通知のイベントを渡す。
+          this.publisher.publish({
+            eventId: randomUUID(),
+            action: "plan_added",
+            targetKind: "plan",
+            tripId: input.tripId,
+            targetId: outcome.body.id,
+            actorUserId: input.userId,
+            occurredAt: this.clock.now().toISOString(),
+          });
+        }
+        return outcome;
+      },
     );
   }
 
@@ -61,7 +83,7 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
           input.requestHash,
         );
         if (stored !== null) {
-          return stored;
+          return { ...stored, changed: false };
         }
         if (!TripPeriod.contains(trip.period, date)) {
           throw new ApiError({
@@ -94,7 +116,7 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
           httpStatus: 201,
           responseBody: body,
         });
-        return { httpStatus: 201, body, replayed: false };
+        return { httpStatus: 201, body, replayed: false, changed: true };
       });
     } catch (error) {
       // 同じキーの同時作成はreceiptのPK違反で負ける側が分かる（旅行の
@@ -113,7 +135,7 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
         if (stored === null) {
           throw error;
         }
-        return stored;
+        return { ...stored, changed: false };
       });
     }
   }

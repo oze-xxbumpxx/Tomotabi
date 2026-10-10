@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Cancellation } from "@tomotabi/contracts";
 import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
 import {
@@ -7,6 +8,10 @@ import {
 } from "../adapter/inbound/cancel-payment.input-port";
 import type { PaymentCancellationResult } from "../adapter/inbound/payment-write.result";
 import type { FinanceWorkContext } from "../adapter/outbound/finance-work-context";
+import {
+  noopNotificationPublisher,
+  type NotificationPublisher,
+} from "../adapter/outbound/notification-publisher";
 import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
 import {
   executeFinanceWrite,
@@ -24,6 +29,8 @@ export class CancelPaymentUseCase implements CancelPaymentInputPort {
   constructor(
     private readonly unitOfWork: UnitOfWork<FinanceWorkContext>,
     private readonly writeLog: WriteLog,
+    private readonly publisher: NotificationPublisher =
+      noopNotificationPublisher,
   ) {}
 
   execute(input: CancelPaymentInput): Promise<PaymentCancellationResult> {
@@ -32,7 +39,23 @@ export class CancelPaymentUseCase implements CancelPaymentInputPort {
       CANCEL_PAYMENT_OPERATION,
       input.tripId,
       input.paymentId,
-      () => this.run(input),
+      async () => {
+        const outcome = await this.run(input);
+        if (!outcome.replayed && outcome.httpStatus === 201) {
+          // 再送でなく新しい取り消しが書けたときだけ渡す
+          // （既にあった取り消しの200は渡さない）。targetIdは元の支払い。
+          this.publisher.publish({
+            eventId: randomUUID(),
+            action: "payment_cancelled",
+            targetKind: "payment",
+            tripId: input.tripId,
+            targetId: outcome.resourceId,
+            actorUserId: input.userId,
+            occurredAt: new Date().toISOString(),
+          });
+        }
+        return outcome;
+      },
     );
   }
 

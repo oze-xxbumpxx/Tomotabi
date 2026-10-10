@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { PlanEvent as PlanEventContract } from "@tomotabi/contracts";
 import { ApiError } from "../../../common/http/api-error";
 import { planNotFound } from "../../planning/usecase/plan-write-flow";
@@ -10,6 +11,10 @@ import type {
 import { createPlanEventOperation } from "../adapter/inbound/create-plan-event.input-port";
 import type { PlanEventWriteResult } from "../adapter/inbound/plan-event-write.result";
 import type { PlanEventUnitOfWork } from "../adapter/outbound/plan-event-work-context";
+import {
+  noopNotificationPublisher,
+  type NotificationPublisher,
+} from "../adapter/outbound/notification-publisher";
 import { toPlanEventDto } from "./plan-event-dto";
 import {
   executePlanEventWrite,
@@ -53,6 +58,8 @@ export class CreatePlanEventUseCase implements CreatePlanEventInputPort {
   constructor(
     private readonly unitOfWork: PlanEventUnitOfWork,
     private readonly writeLog: WriteLog,
+    private readonly publisher: NotificationPublisher =
+      noopNotificationPublisher,
   ) {}
 
   execute(input: CreatePlanEventInput): Promise<PlanEventWriteResult> {
@@ -61,7 +68,25 @@ export class CreatePlanEventUseCase implements CreatePlanEventInputPort {
       createPlanEventOperation(input.eventKind),
       input.tripId,
       null,
-      () => this.run(input),
+      async () => {
+        const outcome = await this.run(input);
+        if (!outcome.replayed) {
+          // 再送でない新しい記録だけ。COMMITのあとで通知のイベントを渡す。
+          const base = {
+            eventId: randomUUID(),
+            tripId: input.tripId,
+            targetId: outcome.resourceId,
+            actorUserId: input.userId,
+            occurredAt: new Date().toISOString(),
+          };
+          this.publisher.publish(
+            input.eventKind === "achievement"
+              ? { ...base, targetKind: "achievement", action: "achievement_added" }
+              : { ...base, targetKind: "booking", action: "booking_added" },
+          );
+        }
+        return outcome;
+      },
     );
   }
 

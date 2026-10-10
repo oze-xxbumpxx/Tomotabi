@@ -18,7 +18,12 @@ import {
   type WriteOutcome,
 } from "./trip-write-flow";
 
-export type PlanWriteOutcome = WriteOutcome<PlanContract>;
+/**
+ * 予定の書き込みの結果。WriteOutcomeに加えて、保存が実際に予定を
+ * 変えたか（通知のイベントを渡す判定に使う。再送・変化なしはfalse）。
+ */
+export type PlanWriteOutcome = WriteOutcome<PlanContract> &
+  Readonly<{ changed: boolean }>;
 
 export type PlanWriteCommand = Readonly<{
   userId: UserId;
@@ -72,7 +77,7 @@ export async function runPlanUpdate(
     command.requestHash,
   );
   if (replayed !== null) {
-    return replayed;
+    return { ...replayed, changed: false };
   }
   const plan = await ctx.plans.lockForUpdate(command.tripId, command.planId);
   if (plan === null) {
@@ -124,7 +129,12 @@ export async function runPlanUpdate(
     httpStatus: 200,
     responseBody: body,
   });
-  return { httpStatus: 200, body, replayed: false };
+  return {
+    httpStatus: 200,
+    body,
+    replayed: false,
+    changed: updated !== plan,
+  };
 }
 
 /**

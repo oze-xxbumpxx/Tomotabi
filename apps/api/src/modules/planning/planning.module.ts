@@ -72,6 +72,10 @@ import {
   type PlanningWorkContext,
 } from "./adapter/outbound/planning-work-context";
 import {
+  NOTIFICATION_PUBLISHER,
+  type NotificationPublisher,
+} from "./adapter/outbound/notification-publisher";
+import {
   WRITE_LOG,
   type WriteLog,
 } from "./adapter/outbound/write-log.port";
@@ -99,6 +103,16 @@ type WriteDeps = [
   writeLog: WriteLog,
 ];
 const WRITE_INJECT = [PLANNING_UNIT_OF_WORK, CLOCK, WRITE_LOG];
+
+// 通知のイベントを渡す書き込み（予定の追加・取りやめ・日の移動）は
+// publisherも受け取る。
+type PlanWriteDeps = [...WriteDeps, publisher: NotificationPublisher];
+const PLAN_WRITE_INJECT = [
+  PLANNING_UNIT_OF_WORK,
+  CLOCK,
+  WRITE_LOG,
+  NOTIFICATION_PUBLISHER,
+];
 
 @Module({
   imports: [PlanningCompositionModule],
@@ -166,9 +180,9 @@ const WRITE_INJECT = [PLANNING_UNIT_OF_WORK, CLOCK, WRITE_LOG];
     },
     {
       provide: CREATE_PLAN_INPUT_PORT,
-      useFactory: (...deps: WriteDeps): CreatePlanInputPort =>
+      useFactory: (...deps: PlanWriteDeps): CreatePlanInputPort =>
         new CreatePlanUseCase(...deps),
-      inject: WRITE_INJECT,
+      inject: PLAN_WRITE_INJECT,
     },
     {
       provide: GET_PLAN_INPUT_PORT,
@@ -184,15 +198,15 @@ const WRITE_INJECT = [PLANNING_UNIT_OF_WORK, CLOCK, WRITE_LOG];
     },
     {
       provide: MOVE_PLAN_INPUT_PORT,
-      useFactory: (...deps: WriteDeps): MovePlanInputPort =>
+      useFactory: (...deps: PlanWriteDeps): MovePlanInputPort =>
         new MovePlanUseCase(...deps),
-      inject: WRITE_INJECT,
+      inject: PLAN_WRITE_INJECT,
     },
     {
       provide: CANCEL_PLAN_INPUT_PORT,
-      useFactory: (...deps: WriteDeps): CancelPlanInputPort =>
+      useFactory: (...deps: PlanWriteDeps): CancelPlanInputPort =>
         new CancelPlanUseCase(...deps),
-      inject: WRITE_INJECT,
+      inject: PLAN_WRITE_INJECT,
     },
   ],
 })

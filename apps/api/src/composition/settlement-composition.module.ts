@@ -8,6 +8,8 @@ import {
 } from "../modules/settlement/adapter/outbound/settlement-work-context";
 import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-finance-unit-of-work";
 import { PgSettlementReadUnitOfWork } from "../modules/settlement/infrastructure/pg-settlement-read.unit-of-work";
+import { NOTIFICATION_PUBLISHER } from "../modules/settlement/adapter/outbound/notification-publisher";
+import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher";
 import { RecordCompositionModule } from "./record-composition.module";
 
 function useDatabase(): boolean {
@@ -26,6 +28,10 @@ const missingDatabase = (): Promise<never> =>
 @Module({
   imports: [RecordCompositionModule],
   providers: [
+    {
+      provide: NOTIFICATION_PUBLISHER,
+      useExisting: AfterResponseNotificationPublisher,
+    },
     {
       provide: SETTLEMENT_UNIT_OF_WORK,
       useFactory: (): SettlementUnitOfWork =>
@@ -47,6 +53,7 @@ const missingDatabase = (): Promise<never> =>
     RecordCompositionModule,
     SETTLEMENT_UNIT_OF_WORK,
     SETTLEMENT_READ_UNIT_OF_WORK,
+    NOTIFICATION_PUBLISHER,
   ],
 })
 export class SettlementCompositionModule {}

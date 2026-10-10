@@ -69,7 +69,7 @@ Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは
 - Devin: 本ファイルと`.agents/skills/devin-workflow/SKILL.md`（背景は`docs/devin-setup.md`）を使う。担当はIssue起点のL0 / L1とPRレビュー。L2 / L3は設計承認後だけ。ブランチは`devin/<内容>`を使い、他ツールのブランチにpushしない。Claude Codeのフックは動かないため、Codexと同じく破壊的操作の事前確認を守る。
 - Devinへの委譲は管理Issueの共通受付を使い、承認済み計画のタスクを登録・claim・beginで照合してからdelegation-launchで起動する。直接の起票・CLI起動は使わない。既定の選択はローカルのSWE-2（effortは難易度で選ぶ）とし、runner/modelを明示する。クラウドはユーザーが出先から指示したときだけ使う。移行とCLI内部の再送確認が終わるまでは起動を止める。起動結果不明・期限超過・stallで自動再起動や担当の解放をしない。手順は`.claude/skills/review-devin-pr/SKILL.md`。
 - DevinのPRはClaude Codeがレビューし、`must`の指摘（と同じ回の`nit`）をPRに自動で投稿して、Devinの修正を再レビューする（自動の投稿は2回まで。超えたらユーザーに渡す）。セキュリティ指摘と設計判断が要る指摘は投稿せず、ユーザーに渡す。委譲ごとの記録は`docs/claude-code/improvements/delegations/`。手順は`.claude/skills/review-devin-pr/SKILL.md`。
-- 現在headの完全SHAに対するClaudeとCodexの完了、対象指摘の確認をagent-reviewで照合する。短いSHAや旧レビューの印は成功の証拠にしない。修正push後は現在headへのCodex再依頼とClaudeの新しい完了を確認する。agent-reviewは既存CIの待機から外し、マージはユーザーが行う。
+- 現在headの完全SHAに対するClaudeとCodexの完了、対象指摘の確認をagent-reviewで照合する。短いSHAや旧レビューの印は成功の証拠にしない。修正push後は現在headへのCodex再依頼とClaudeの新しい完了を確認する。DevinのPRへのCodexの依頼は、Claude Codeが`codex-review.mjs`で投稿する（CodexはボットのPRを自動でレビューしないため）。agent-reviewは既存CIの待機から外し、マージはユーザーが行う。
 - Issueに紐づかないDevinのPR（知見・スキル・blueprintを自分から出したもの）も、Claude Codeが見つけて同じ手順でレビューする（`review-devin-pr`の「IssueなしPR」）。
 
 導入元・更新時の注意は`docs/harness-setup.md`を参照。

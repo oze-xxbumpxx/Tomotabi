@@ -49,6 +49,11 @@ description: >
 ## レビュー（round 0は全体、round 1以降は前回のレビュー以降の差分）
 
 1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。quality・build・api-dbなど既存CIの結果を確認する。agent-reviewはCIの待機と集計から外す。現在headへのCodex完了とClaude完了は別に確認する。
+   続けて、今のheadへのCodexのレビューを頼む: `node .claude/scripts/codex-review.mjs request <n>`。
+   CodexはボットのPR（Devin）を自動ではレビューせず、pushのあとも見直さないため、round 0とround 1以降の毎回、Claudeのレビューを始める前に頼む
+   （2026-10-10 ユーザーの指示）。投稿は手元のghの認証（ユーザーのアカウント）で行い、今のheadが完了・実行中のときや、headより後に依頼済みのときは投稿しない。
+   Codexの完了は待たずに自分のレビューを進め、`merge`の判定の前に`run_in_background`で`node .claude/scripts/codex-review.mjs wait <n> --sha <head>`を起動して待つ。
+   Codexの指摘は、自分の指摘と同じ分類（must / nit / security / decision）で扱う。
    round 1以降は`gh api repos/{owner}/{repo}/compare/<前回の sha>...<今の head>`で差分を見て、
    前回の指摘が直ったかと、新しい変更に問題が無いかを見る。Devinの返信コメントも読む。
 2. **範囲**: 変更ファイルがIssueの「やること」と範囲内か。範囲外のファイル、並行作業中の他PRが作る
@@ -142,7 +147,7 @@ description: >
 
 ## レビュー完了のコメント
 
-現在headへのCodex完了、対象スレッドの解決、行外指摘の確認を全件確かめる。Codexの開始を示す目の反応や、指摘が無いという推測は完了にならない。古い版なら、ユーザーから現在headへのCodex再依頼を行う。botの自動依頼や設定は実機確認まで保証しない。
+現在headへのCodex完了、対象スレッドの解決、行外指摘の確認を全件確かめる。Codexの開始を示す目の反応や、指摘が無いという推測は完了にならない。Codexの完了が古い版なら、`codex-review.mjs request`で今のheadへ頼み直し、`codex-review.mjs wait`で完了を待つ（上の「レビュー」の1）。終了コード3（時間切れ）・5（Codexの失敗）はユーザーに伝える。
 
 1. 完全な40桁head SHAと、現在のCodex証拠集合のhash、確認した証拠ID／URLを取得する。指摘本文やsecurityの有無は完了JSONへ複製しない。
 2. `schema_version`、`pr`、`head_sha`、`verdict`、`codex_evidence_hash`、`codex_evidence`（完了証拠ID／URLの配列）、`acknowledged_finding_ids`（確認した行外指摘IDの配列）、`reviewed_at`を公開JSONに書く。`node .claude/scripts/agent-review.mjs completion --input <JSON-file>`の出力をファイルへ保存し、`gh pr comment <PR> --body-file <完了ファイル>`で新規投稿する。固定Claude担当の作者IDと、未編集の投稿だけが採用される。

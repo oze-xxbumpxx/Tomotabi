@@ -39,7 +39,8 @@ export interface NotificationDispatchStore {
    * 送る相手と名前2つを1回の読み取りで返す。
    * 相手は旅行の参加者から操作した人を除き、allowed_google_accountsの
    * enabledが今もtrueの人。その人の購読のうち、enabledで、期限が過ぎて
-   * おらず、登録したセッションが停止の記録に無いものだけ。
+   * おらず、登録したセッションが停止の記録に無く、identity.sessionsに
+   * 残っていてexpires_atが今より後のものだけ。
    */
   readDispatchContext(input: Readonly<{
     tripId: string;

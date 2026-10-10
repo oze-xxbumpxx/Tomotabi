@@ -39,7 +39,7 @@ description: >
 1. 承認済みの公開計画に、一意な`delegation-task`区間を置く。公開JSONに`schema_version:1`、`operation:register`、UUIDの`request_id`、`task_key`、`plan_path`、完全な`plan_sha`、`task_digest`を書く。設計承認・先行タスク・作業場所など開始条件を確かめた場合だけ`start_conditions_confirmed:true`を付ける。本文には秘密や非公開の指摘を入れない。
 2. `HARNESS_NAMESPACE=tomotabi-harness node .claude/scripts/delegation.mjs request --request-file <公開JSON>`で登録する。同じ要求は同じIDと内容で照合する。直接`gh issue create`を使って委譲を始めない。
 3. `status --json`でIssueとタスクの対応を確かめる。既存のIssue・PR・セッションは`import --request-file <公開JSON>`で照合する。移行未完了、共有状態の取得失敗、内容競合では起動しない。
-4. 専用クローンに前のプロセスや変更が残っていないか先に確認する。残っていたら捨てずにユーザーへ渡す。非公開prompt fileを0600で作る。SWE-2のeffortは難しさで選び、依頼時にユーザーへ伝える。起動は`HARNESS_NAMESPACE=tomotabi-harness node .claude/scripts/delegation-launch.mjs <task_key> --runner local --model swe-2-<effort> --prompt-file <非公開ファイル> --clone <専用クローン>`。runner/modelは省かない。ローカルを既定の選択とし、Cloudはユーザーが指示したときに`--runner cloud`を使う。Cloudの実モデルは確認できるまで`unknown`とする。
+4. 専用クローンに前のプロセスや変更が残っていないか先に確認する。残っていたら捨てずにユーザーへ渡す。非公開prompt fileを0600で作る。SWE-2のeffortは難しさで選び、依頼時にユーザーへ伝える。起動は`HARNESS_NAMESPACE=tomotabi-harness node .claude/scripts/delegation-launch.mjs <task_key> --runner cloud --model swe-2-<effort> --prompt-file <非公開ファイル>`。runner/modelは省かない。Devinの無料期間が終わるまではCloudを既定の選択とする（2026-10-10 ユーザーの指示）。ローカルはユーザーが指示したときに`--runner local --clone <専用クローン>`で使う。Cloudの実モデルは確認できるまで`unknown`とする。
 5. promptにはリポジトリ内での作業、force push・ブランチ削除・履歴改変・mainへのpushの禁止と、PR後の監視を含める。生ログは既存`devin-watch`と同じ非公開ファイルに残る。
 6. 起動ラッパーは新しいactivationでbeginを1回だけ送り、初回受領を照合してからspentを排他的に保存する。spentやactivationを削除・再利用しない。送信・保存・起動結果が不明なら、自動で再送・再起動しない。15分の期限超過やstallの通知も照合の契機に限る。
 7. `wait-for-pr.mjs <Issue>`と、セッション1本の`wait-for-devin-pr.mjs --since <UTC時刻>`でPRを待つ。複数の対応候補から番号の小さいPRを選ばない。PRが見つかったら共通受付の`link-pr`で対応を確かめ、以下のレビューへ進む。

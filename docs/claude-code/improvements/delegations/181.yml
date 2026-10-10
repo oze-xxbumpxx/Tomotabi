@@ -1,0 +1,76 @@
+issue: 181
+title: 'feat(notifications): 保存のあとに相手へ通知を送る処理（保存のあとの処理の口、本文、送る部品、11種類のUseCase）'
+agent: 'devin'
+model: 'unknown'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-08T23:18:39Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-10T01:58:18Z'
+    reviewed_sha: 'a6ad868190eb6d727a5af4d7055e38a7d01a0ab5'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '通知の本文の外側にかぎかっこが余る'
+      - severity: 'must'
+        category: 'missing-test'
+        summary: 'PD-18の版が上がったら無効にしない試験が無い'
+      - severity: 'must'
+        category: 'module-boundary'
+        summary: 'notificationがplanningの口をimport'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: 'web-pushの版を固定していない'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '2KBに収める繰り返しが止まらない道'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '名前の読み取りで操作者の参加を見ない'
+      - severity: 'nit'
+        category: 'observability'
+        summary: '送る部品の例外に理由が無い'
+      - severity: 'nit'
+        category: 'test-robustness'
+        summary: 'PD-16の既存取り消しの実DB試験が200を通らない'
+      - severity: 'nit'
+        category: 'test-robustness'
+        summary: 'TLSの検証をプロセス全体で切る'
+  - round: 1
+    reviewed_at: '2026-10-10T02:13:13Z'
+    reviewed_sha: '4f4191e8d179427537fa3738831c1ab1f3850424'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'null-undefined'
+        summary: 'HttpsPushTransportのagentが省略可能でundefined'
+  - round: 2
+    reviewed_at: '2026-10-10T02:16:48Z'
+    reviewed_sha: 'b175beedf1690ab704aac8134cf94cd0171c6f7e'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 184
+  pr_created_at: '2026-10-09T00:13:10Z'
+  merged_at: '2026-10-10T11:26:08Z'
+  closed_at: '2026-10-10T11:26:08Z'
+  commits: 6
+  ci_first_pass: true
+  closes_linked: true
+task_key: 'push-notifications:dispatch'
+shared_seq: 12
+shared_fetched_at: '2026-10-10T07:44:05.364Z'
+shared_state: 'pr_open'
+pr: 184
+requested_model: 'unknown'
+attempt_id: null
+activation_id: null
+session_id: null
+session_url: null

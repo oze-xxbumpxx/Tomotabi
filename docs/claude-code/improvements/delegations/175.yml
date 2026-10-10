@@ -1,0 +1,66 @@
+issue: 175
+title: 'feat(notifications): 購読のAPI（宛先と鍵の決まり、セッションのID、設定・一覧・登録・停止）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-08T13:25:05Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-08T14:11:58Z'
+    reviewed_sha: '6108ee1e64a3dae43769f8798f7c70e90044b233'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'decision'
+        category: 'design-gap'
+        summary: '無効になった他人の購読の行を、同じ宛先で新しい持ち主が引き取れるか（今は永久に409）'
+      - severity: 'decision'
+        category: 'spec-mismatch'
+        summary: '購読の登録の400のcodeがINVALID_REQUESTとVALIDATION_FAILEDの2種類になる（設計書の表はVALIDATION_FAILED、既存の決まりは400がINVALID_REQUEST）'
+      - severity: 'decision'
+        category: 'spec-mismatch'
+        summary: '通知の4つのAPIのCache-Controlがno-store（ほかの11ファイルはprivate, no-store。契約の文もno-store）'
+      - severity: 'must'
+        category: 'robustness'
+        summary: 'deviceLabelの制御文字（NUL）を断らず、DBへの挿入で500になりうる'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'PUTの応答のno-storeと、鍵の束が読めないときのPUTの409に試験が無い'
+      - severity: 'nit'
+        category: 'coding-standard'
+        summary: 'CLOCKの提供がcompositionでなくnotification.module.tsにある。NewPushSubscriptionのJSDocがidをDBに任せると誤って書いている'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: 'Pinoのredactの*.endpointなどが実際のログの深さに届かない（今は出力項目の絞り込みで漏れていない）'
+  - round: 1
+    reviewed_at: '2026-10-08T23:06:56Z'
+    reviewed_sha: '4d3a9dc4d2517a30a5b7a89807cc127b7d958b86'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'robustness'
+        summary: '無効な行の引き取りが同時に来ると負けた側が500になる（takeOver・updateの0件を例外にしている。試験も500を受け入れている）'
+  - round: 2
+    reviewed_at: '2026-10-08T23:14:24Z'
+    reviewed_sha: 'b918d4851ec4869e9edc7e785e23ca5ad01cae5a'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 1
+outcome: 'merged'
+gh:
+  pr: 178
+  pr_created_at: '2026-10-08T14:00:31Z'
+  merged_at: '2026-10-08T23:15:15Z'
+  closed_at: '2026-10-08T23:15:15Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true

@@ -1,0 +1,30 @@
+issue: 170
+title: 'feat(api): 通知のDBの表と権限、契約、VAPIDの鍵の読み込み'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-07T14:47:38Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-07T15:28:12Z'
+    reviewed_sha: '91aebef4454916fe2b40bd007675617fbd867f15'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: 'push-payload.tsのコメントで版の根拠をB-02（購読の期限）と書き、同じeventIdの重なりを「受け手が捨てる」としている（F-46は同じtagでまとめるだけ）'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: 'VAPID_SUBJECTが「mailto:」だけでも通る（接頭辞より長いかの判定が別の接頭辞の長さと比べている）'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 171
+  pr_created_at: '2026-10-07T15:26:53Z'
+  merged_at: '2026-10-08T13:18:34Z'
+  closed_at: '2026-10-08T13:18:34Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

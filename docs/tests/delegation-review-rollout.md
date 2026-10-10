@@ -41,3 +41,32 @@ PRの本文には各Issueを閉じる対応が記載されている。ローカ�
 先頭コメントIDは6095103226、作者IDはActionsの41898282。管理Issueのコメント一覧で該当する先頭コメントが1件だけであることを確認した。last_seqは0、last_event_idはnull、last_hashは64桁の0。runのanchor_initializedの出力と一致する。
 
 先頭コメントIDの設定PRをマージするまで通常要求は送らない。初期化を再dispatchする必要はない。既存委譲のimportと実機レビュー検証は未実施。
+
+## 既存タスクの移行結果
+
+PR193のマージ後、共有履歴をオンラインで取得できた。公開の要求JSONはdelegation-review-imports/に保存した。既存計画には新方式のタスクmarkerがないため、移行時のdigestは各Issue本文の改行をLFへそろえたUTF-8文字列のSHA-256とした。計画markerからの新規登録とは区別し、plan_path／plan_shaとセッション・モデルの申告は送っていない。元の委譲記録は変更していない。
+
+| Issue | task_key | 結果 | 要求コメント | 実行run |
+| --- | --- | --- | --- | --- |
+| 180 | `push-notifications:signout-guard` | `imported` | 6095229736 | 38035359284 |
+| 181 | `push-notifications:dispatch` | `imported` | 6095230011 | 38035359284 |
+| 182 | `push-notifications:settings-screen` | `imported` | 6095230261 | 38035359284 |
+| 188 | `delegation-review-reliability:pr187-followup` | `pr_link_unverified` | 6095230490 | 38035359284 |
+
+3件の通知タスクはverified_issue／verified_prがtrue、stateがpr_open、importedがtrueとなった。start_conditions_confirmedはfalseで、attempt／caller／activation／sessionはnull、requested_model／observed_modelはunknown。起動許可は発行されていない。
+
+Issue188の要求はpr_link_unverifiedで拒否された。PR189の本文にはCloses #188があるが、GraphQLのclosingIssuesReferencesは0件だった。旧実装ブランチ向けのPRであり、本文だけを関連付けの証拠として通さない。再送・PRのbase変更・クローズは行っていない。ユーザーの整理判断後に再照合する。migration_completeとcli_launch_verifiedはfalseを維持する。
+
+## レビュー不足の実機確認
+
+mainのreview-refreshをPR183・184・185へ各1回dispatchした。3つのActionsはsuccessで終了し、各現在headのagent-reviewはcompleted／failureになった。これは制御処理の失敗ではなく、レビュー証拠が不足するPRを成功にしない判定である。
+
+| PR | 制御run | check ID | 判定 |
+| --- | --- | --- | --- |
+| 183 | 38035403582 | 114164782190 | failure |
+| 184 | 38035405243 | 114164886967 | failure |
+| 185 | 38035407156 | 114164994933 | failure |
+
+次はClaude側で各PRの現在headと指摘を実際にレビューし、GitHubのCodex完了証拠と合わせてreview-devin-prの完了JSONを新規投稿する。Codex側のローカルレビューを、GitHubのCodex bot完了やClaude完了に置き換えない。投稿後にreview-refreshし、共有状態とlive checkの成功を照合する。
+
+両レビュー後のsuccess、修正push後の無効化、同じSHAのPR集約、CLI内部の再送設定とセッション形式はまだ実機未確認。必須チェック設定と起動許可を解除しない。

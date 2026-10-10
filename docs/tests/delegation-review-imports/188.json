@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "operation": "import",
+  "request_id": "a8f8d797-46eb-443b-aa44-6b801fe4f3bc",
+  "task_key": "delegation-review-reliability:pr187-followup",
+  "task_digest": "28bce147396022d5889de25502b78ea5afcc6532a8c9f1c1a87b413c4e3d1efc",
+  "issue": 188,
+  "pr": 189
+}

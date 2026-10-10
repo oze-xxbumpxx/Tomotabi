@@ -45,11 +45,11 @@ Devinの作業環境は`.devin/blueprint.yaml`で定める（画面で設定す�
 - `npm run test:api-db`はDocker（Testcontainers）が必要。使えない場合はCIの`api-db`ジョブで確かめる。
 - 規約や作業手順はblueprintに書かず、`AGENTS.md`と`devin-workflow`スキルに置く。blueprintの`knowledge`は環境に結びついた短いコマンドの参照だけにする。
 
-## 実行場所（2026-09-26）
+## 実行場所（2026-10-10）
 
-Devinは、**既定でローカル**（手元のMacのDevin CLI）で動かす。ユーザーが出先から指示したときだけクラウドを使う。起動と修正の手順は`.claude/skills/review-devin-pr/SKILL.md`。
+Devinは、**既定でクラウド**で動かす。Devinの無料期間が終わるまでの決まりで、終わったら既定を決め直す（2026-10-04 と 2026-10-10 のユーザーの指示）。手元のMacのDevin CLIで動かすローカルは、ユーザーが指示したときだけ使う。起動と修正の手順は`.claude/skills/review-devin-pr/SKILL.md`。
 
-| | ローカル（既定） | クラウド（指示時のみ） |
+| | ローカル（指示時のみ） | クラウド（既定） |
 | --- | --- | --- |
 | 起動 | 共通受付で登録し、`delegation-launch.mjs`へ`--runner local --model swe-2-<effort> --prompt-file <非公開ファイル> --clone <専用クローン>`を渡す | 同じラッパーへ`--runner cloud`とrequested_modelを明示する |
 | モデル | `--model`で依頼ごとにSWE-2のeffortを選べる | requested_modelとobserved_modelを分ける。実値が確認できない場合は`unknown` |

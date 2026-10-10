@@ -1,0 +1,33 @@
+issue: 176
+title: 'feat(web): 通知のService Workerとmanifest（中身の確かめ方・開くパス・端末の名前）'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-08T13:25:07Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-08T13:46:44Z'
+    reviewed_sha: 'd7a024e14aed59cea074809c68678638a0f43aa1'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'robustness'
+        summary: 'notificationclickで制御していないウィンドウにnavigateすると失敗し、対象の画面に移らない（includeUncontrolled: trueと、navigateの失敗時にopenWindowへ切り替えない）'
+  - round: 1
+    reviewed_at: '2026-10-08T13:53:12Z'
+    reviewed_sha: 'e70484f4a755c0eb5d565dee475cd2e7d9f55ca5'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 177
+  pr_created_at: '2026-10-08T13:44:45Z'
+  merged_at: '2026-10-08T22:50:25Z'
+  closed_at: '2026-10-08T22:50:25Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

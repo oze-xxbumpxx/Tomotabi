@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findLinkedPr } from '../scripts/wait-for-pr.mjs';
+import { findLinkedPr, registeredPrForIssue } from '../scripts/wait-for-pr.mjs';
 
 const scriptPath = join(dirname(fileURLToPath(import.meta.url)), '../scripts/wait-for-pr.mjs');
 
@@ -38,12 +38,13 @@ test('Issue の作成より前に作られた PR は対象外', () => {
   assert.equal(findLinkedPr([{ number: 41, body: 'Closes #37', headRefName: 'c' }], 37, since), null);
 });
 
-test('複数あれば番号が最小の PR を返す', () => {
+test('複数候補は曖昧として止め、小さい番号を選ばない', () => {
   const prs = [
     { number: 45, body: 'Closes #37', headRefName: 'b' },
     { number: 41, body: 'Fixes #37', headRefName: 'a' },
   ];
-  assert.equal(findLinkedPr(prs, 37)?.number, 41);
+  assert.equal(findLinkedPr(prs, 37), null);
+  assert.deepEqual(prs.map((p) => p.number), [45, 41]);
 });
 
 test('引数が不正なら終了コード 2 で gh を呼ばない', () => {
@@ -56,4 +57,27 @@ test('引数が不正なら終了コード 2 で gh を呼ばない', () => {
     }
     assert.equal(code, 2, JSON.stringify(args));
   }
+});
+
+test('I-21: 共有状態の登録済みPRを優先し、不明・競合を別候補で補わない', () => {
+  const prs = [{ number: 41, body: 'Closes #37' }, { number: 45, body: 'Closes #37' }];
+  assert.deepEqual(registeredPrForIssue({ tasks: {} }, prs, 37), { known: false, pr: null });
+  const snapshot = { tasks: { 'feature:task': { issue: 37, pr: 45 } } };
+  assert.deepEqual(registeredPrForIssue(snapshot, prs, 37), { known: true, pr: prs[1] });
+  assert.deepEqual(registeredPrForIssue(snapshot, prs.slice(0, 1), 37), { known: true, pr: null });
+  assert.deepEqual(registeredPrForIssue({ tasks: { ...snapshot.tasks, 'feature:other': { issue: 37, pr: 41 } } }, prs, 37), { known: true, pr: null });
+});
+
+test('PR未登録の単一タスクは候補を発見でき、link-pr後は登録値を優先する', () => {
+  const prs = [{ number: 45, body: 'Closes #37' }];
+  for (const pr of [null, undefined]) {
+    const snapshot = { tasks: { 'feature:task': { issue: 37, pr } } };
+    const registered = registeredPrForIssue(snapshot, prs, 37);
+    assert.equal(registered.known, false);
+    assert.equal((registered.known ? registered.pr : findLinkedPr(prs, 37)).number, 45);
+    snapshot.tasks['feature:task'].pr = 45;
+    assert.equal(registeredPrForIssue(snapshot, prs, 37).pr.number, 45);
+  }
+  assert.equal(registeredPrForIssue({ tasks: { a: { issue: 37, pr: null }, b: { issue: 37, pr: null } } }, prs, 37).known, true);
+  for (const pr of [0, -1, '45']) assert.equal(registeredPrForIssue({ tasks: { a: { issue: 37, pr } } }, prs, 37).known, true);
 });

@@ -19,8 +19,8 @@
 // - delegation.mjsからは動的に読み込む（こちらがwait-for-devin-pr.mjsを読み、あちらがdelegation.mjsを読むため）。
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_DIR,
@@ -58,7 +58,7 @@ export function prNumberOf(record, prs) {
  * @param {{prs: Array<{number:number,state:string,headRefOid?:string}>, now: number}} context
  *   prsはgh pr list（--state all）の結果。nowはミリ秒。
  */
-export function nextAction(record, { prs, now }) {
+export function nextAction(record, { prs, now, reviewState = null }) {
   if (isDone(record)) return null;
   const key = recordKey(record);
   const number = prNumberOf(record, prs);
@@ -72,7 +72,7 @@ export function nextAction(record, { prs, now }) {
   const reviews = record.reviews ?? [];
   if (reviews.length === 0) return { key, pr: number, state: 'review', round: 0 };
   const last = reviews.at(-1);
-  if (!(pr.headRefOid ?? '').startsWith(last.reviewed_sha)) {
+  if (last.reviewed_sha !== pr.headRefOid || !/^[0-9a-f]{40}$/.test(last.reviewed_sha ?? '')) {
     return { key, pr: number, state: 're-review', round: last.round + 1 };
   }
   if (last.verdict === 'fix') {
@@ -86,7 +86,9 @@ export function nextAction(record, { prs, now }) {
       local: record.runner === 'local',
     };
   }
-  return { key, pr: number, state: 'await-user', round: last.round, verdict: last.verdict };
+  if (last.verdict === 'escalate') return { key, pr: number, state: 'await-user', round: last.round, verdict: last.verdict };
+  if (reviewState?.head_sha === pr.headRefOid && reviewState?.state === 'completed' && reviewState?.conclusion === 'success') return { key, pr: number, state: 'await-user', round: last.round, verdict: 'merge', verified: true };
+  return { key, pr: number, state: 'review-wait', headSha: pr.headRefOid, round: last.round };
 }
 
 /** ghで確かめられないときの、記録上の最後の状態。 */
@@ -129,7 +131,8 @@ export function buildStatus({ records, prs = [], openPrs = [], commentsOf = () =
     const candidates = findUnlinkedDevinPrs(openPrs, knownFromRecords(records));
     ({ pending: unlinked, unchecked } = filterUnreviewed(candidates, commentsOf));
   }
-  return { actions, unlinked, unchecked, promotions: findPromotions(summarize(records), candidateFiles), offline, ghError };
+  const prStates = Object.fromEntries([...prs, ...openPrs].filter((pr) => /^[0-9a-f]{40}$/.test(pr.headRefOid ?? '')).map((pr) => [pr.number, { head_sha: pr.headRefOid, state: pr.state }]));
+  return { actions, unlinked, unchecked, prStates, promotions: findPromotions(summarize(records), candidateFiles), offline, ghError };
 }
 
 /** 外部（Devin）の文字列を1行にして切る。 */
@@ -142,7 +145,7 @@ const keyLabel = (key) => (typeof key === 'number' ? `#${key}` : `PR#${key.slice
 const cmd = (text) => `\`${text}\``;
 
 function subject(action) {
-  if (typeof action.key === 'string') return `PR #${action.key.slice(3)}`;
+  if (typeof action.key === 'string') return action.key.startsWith('pr-') ? `PR #${action.key.slice(3)}` : `タスク ${action.key}`;
   return action.pr === null ? `Issue #${action.key}` : `Issue #${action.key}（PR #${action.pr}）`;
 }
 
@@ -163,9 +166,15 @@ function describe(action) {
       const local = action.local ? '。ローカルの委譲なので、Devin の修正セッションが動いているかも確かめる' : '';
       return `修正待ち（round ${action.round} で指摘を投稿）→ Bash の run_in_background で ${wait} を起動し直す${local}`;
     }
+    case 'review-wait':
+      return `両レビュー待ち（head ${action.headSha ?? '未確認'}）。現在headへのCodex再依頼とClaude完了を確認し、review-refreshで照合する`;
+    case 'shared-unknown':
+      return '起票・起動の結果不明。共有状態と既存セッションを照合する。自動再起動しない';
+    case 'shared-pending':
+      return `共有状態は${action.sharedState}。共通受付で処理結果を確認する`;
     case 'await-user':
       return action.verdict === 'merge'
-        ? `マージ待ち（round ${action.round} でマージ可。マージはユーザー）`
+        ? '両レビューの照合済み。マージ判断はユーザー'
         : `ユーザーの判断待ち（round ${action.round} で引き渡し）`;
     case 'finalize':
       return `PR が ${action.prState === 'MERGED' ? 'マージ' : 'クローズ'}された → ${cmd(`node .claude/scripts/delegation.mjs finalize ${action.key}`)}`;
@@ -183,6 +192,7 @@ const prLine = (pr, note = '') => `- PR #${pr.number}（${oneLine(pr.headRefName
 /** 人向けの表示。出す行が無ければ空文字（ghが失敗しただけなら何も出さない）。 */
 export function formatStatus(status) {
   const out = [];
+  if (status.shared !== undefined) out.push(`共有状態 seq=${status.shared.seq}、取得日時=${status.shared.fetched_at}`);
   if (status.actions.length > 0) {
     out.push('📋 進行中の Devin への委譲（記録から。ユーザーの今の依頼を優先し、区切りのよいところで対応する）:');
     for (const action of status.actions) {
@@ -220,14 +230,16 @@ function listRecordPrs(records, timeout) {
   const times = records.filter((rec) => !isDone(rec)).map((rec) => Date.parse(rec.delegated_at)).filter((t) => !Number.isNaN(t));
   if (times.length === 0) return [];
   const since = new Date(Math.min(...times)).toISOString().replace(/\.\d{3}Z$/, 'Z');
-  return ghJson(
+  const prs = ghJson(
     [
-      'pr', 'list', '--state', 'all', '--limit', '100',
+      'pr', 'list', '--state', 'all', '--limit', '1000',
       '--search', `created:>=${since}`,
       '--json', 'number,title,body,headRefName,createdAt,state,headRefOid,closingIssuesReferences',
     ],
     timeout,
   );
+  if (!Array.isArray(prs) || prs.length >= 1000) throw new Error('PR一覧を全件確認できません');
+  return prs;
 }
 
 function pruneMirror(mirrorDir, mirrorRecords, now) {
@@ -266,12 +278,77 @@ export function collectStatus({
   }
 }
 
-export function runStatusCli(argv) {
-  const opts = parseOptions(argv, { flags: ['json', 'no-gh'] });
-  const status = collectStatus({
+/** 共有履歴が確認できたときだけ、そのseqと状態を表示に使う。 */
+export function statusFromSnapshot(snapshot, legacy) {
+  const tasks = Object.values(snapshot.tasks ?? {});
+  const knownIssues = new Set(tasks.map((t) => t.issue).filter(Number.isInteger));
+  const knownPrs = new Set(tasks.map((t) => t.pr).filter(Number.isInteger));
+  const actions = legacy.actions.filter((a) => !knownIssues.has(a.key) && !knownPrs.has(a.pr));
+  for (const task of tasks) {
+    if (task.state === 'finalized') continue;
+    const prNumber = task.pr ?? null;
+    const pr = snapshot.prs?.[String(prNumber)] ?? null;
+    const live = legacy.prStates?.[prNumber] ?? null;
+    const head = live?.head_sha ?? pr?.head_sha ?? task.head_sha ?? null;
+    const check = head === null ? null : snapshot.checks?.[head] ?? null;
+    const liveCheck = head === null ? null : legacy.checkStates?.[head] ?? null;
+    const base = { key: task.task_key, pr: prNumber, shared_seq: task.updated_seq ?? snapshot.seq };
+    if (['launch_unknown', 'issue_unknown', 'launching'].includes(task.state)) actions.push({ ...base, state: 'shared-unknown' });
+    else if (prNumber !== null) {
+      if (live?.state === 'OPEN' && head !== null && check?.head_sha === head && check?.state === 'completed' && check?.conclusion === 'success'
+        && Number.isSafeInteger(check.check_id) && check.check_id > 0 && typeof check.external_id === 'string'
+        && liveCheck?.id === check.check_id && liveCheck?.head_sha === head && liveCheck?.name === 'agent-review'
+        && liveCheck?.external_id === check.external_id && liveCheck?.status === 'completed' && liveCheck?.conclusion === 'success') actions.push({ ...base, state: 'await-user', verdict: 'merge', round: null, verified: true });
+      else actions.push({ ...base, state: 'review-wait', headSha: head });
+    } else actions.push({ ...base, state: 'shared-pending', sharedState: task.state });
+  }
+  return { ...legacy, actions, unlinked: legacy.unlinked.filter((pr) => !knownPrs.has(pr.number)), unchecked: legacy.unchecked.filter((pr) => !knownPrs.has(pr.number)), offline: false, ghError: null, shared: { seq: snapshot.seq, hash: snapshot.hash, fetched_at: snapshot.fetched_at } };
+}
+
+export async function collectSharedStatus(options = {}, dependencies = {}) {
+  const legacy = collectStatus({ ...options, useGh: options.useGh !== false });
+  try {
+    const config = dependencies.config ?? JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../config/delegation-review.json'), 'utf8'));
+    const shared = dependencies.readSnapshot ? dependencies : await import('./delegation-shared.mjs');
+    const client = dependencies.client ?? (await import('./delegation-github.mjs')).createGitHubClient({ repo: config.repository, maxApiCalls: config.limits.api_calls, timeoutMs: config.limits.timeout_ms, jobTimeoutMs: config.limits.job_timeout_ms });
+    if (options.refresh === true) {
+      const { randomUUID } = await import('node:crypto');
+      const sent = await shared.submitRequest(client, config, { schema_version: 1, operation: 'reconcile', request_id: randomUUID() });
+      await shared.waitForResult(client, config, { requestId: sent.request_id, commentId: sent.request_comment_id });
+    }
+    const snapshot = await shared.readSnapshot(client, config);
+    try {
+      const { cacheSharedSnapshot } = await import('./delegation.mjs');
+      cacheSharedSnapshot(snapshot, { dir: options.dir ?? DEFAULT_DIR, mirrorDir: options.mirrorDir === undefined ? defaultMirrorDir() : options.mirrorDir });
+    } catch {
+      // 履歴の写しに失敗しても、取得した共有状態は表示する。
+    }
+    for (const task of Object.values(snapshot.tasks ?? {})) {
+      if (!Number.isSafeInteger(task.pr) || legacy.prStates?.[task.pr]) continue;
+      const pr = await client.rest('GET', `/repos/${config.repository}/pulls/${task.pr}`);
+      if (pr?.number !== task.pr || pr.base?.repo?.id !== config.repository_id || !/^[0-9a-f]{40}$/.test(pr.head?.sha ?? '')) throw new Error('PR対応を確認できません');
+      legacy.prStates[task.pr] = { head_sha: pr.head.sha, state: pr.state === 'open' ? 'OPEN' : 'CLOSED' };
+    }
+    legacy.checkStates = {};
+    for (const head of new Set(Object.values(legacy.prStates).map((pr) => pr.head_sha))) {
+      const check = snapshot.checks?.[head];
+      if (check?.state !== 'completed' || check?.conclusion !== 'success' || !Number.isSafeInteger(check.check_id) || check.check_id <= 0) continue;
+      legacy.checkStates[head] = await client.rest('GET', `/repos/${config.repository}/check-runs/${check.check_id}`);
+    }
+    return statusFromSnapshot(snapshot, legacy);
+  } catch {
+    return { ...legacy, offline: true, ghError: '共有状態を確認できません。履歴だけを表示します' };
+  }
+}
+
+export async function runStatusCli(argv) {
+  const opts = parseOptions(argv, { flags: ['json', 'no-gh', 'refresh'] });
+  const collect = opts['no-gh'] === true ? collectStatus : collectSharedStatus;
+  const status = await collect({
     dir: opts.dir ?? DEFAULT_DIR,
     mirrorDir: opts['mirror-dir'] ?? (opts.dir === undefined ? defaultMirrorDir() : null),
     useGh: opts['no-gh'] !== true,
+    refresh: opts.refresh === true,
   });
   if (opts.json === true) {
     console.log(JSON.stringify(status, null, 2));
@@ -283,7 +360,7 @@ export function runStatusCli(argv) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    runStatusCli(process.argv.slice(2));
+    await runStatusCli(process.argv.slice(2));
   } catch (error) {
     console.error(error.message);
     process.exit(error instanceof UsageError ? 2 : 1);

@@ -46,19 +46,14 @@ export function createdIssues(input) {
 const isoSeconds = (date) => date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 export function buildContext(issues, now = new Date()) {
-  const lines = issues.map(
-    (n) =>
-      `- Issue #${n}: \`node .claude/scripts/delegation.mjs init ${n} --model <swe-2-medium|swe-2-high|swe-2-max> [--runner cloud] [--follow-up-of <前の委譲>]\` で記録を作り` +
-      '（既定はローカル実行。前の PR の指摘を直す後続の Issue なら --follow-up-of で前の委譲を指す）、' +
-      `Bash の run_in_background で \`node .claude/scripts/wait-for-pr.mjs ${n}\` を起動する`,
-  );
+  const lines = issues.map((n) => `- Issue #${n}: 公開メタデータを照合し、\`node .claude/scripts/delegation.mjs import --request-file <公開JSON>\`で共通受付へ登録する。起動前に共有状態を確かめる。\`node .claude/scripts/wait-for-pr.mjs ${n}\`はPRの確認に使う`);
   return [
-    '📌 Issue を作成しました。この Issue を他のエージェント（Devin など）に渡す場合は、PR を待って自動レビューします。',
+    '委譲は共通受付を使う。直接作ったIssueを起動許可にはしない。',
     ...lines,
-    `- このセッションでまだ起動していなければ、Bash の run_in_background で \`node .claude/scripts/wait-for-devin-pr.mjs --since ${isoSeconds(now)}\` も起動する` +
-      '（Devin が Issue に紐づかない PR を自分から出すことがある。セッションで 1 本）',
-    '終了して呼び戻されたら review-devin-pr スキルの手順でレビューする（Issue に紐づかない PR は「Issue なし PR」の節）。',
-    'この Issue を自分（Claude Code）で実装する場合は待機しない。',
+    '承認済み計画のタスクはdelegation.mjs request --request-file <公開JSON>で登録し、delegation-launch.mjsでrunner/modelと非公開prompt fileを明示する。',
+    `IssueなしPRは\`node .claude/scripts/wait-for-devin-pr.mjs --since ${isoSeconds(now)}\`で確認する。`,
+    'このIssueを自分で実装する場合は、委譲の登録も待機もしない。',
+    'PRが見つかったらreview-devin-prの手順で現在headの両レビューを照合する。unknownを自動再起動で解除しない。',
   ].join('\n');
 }
 

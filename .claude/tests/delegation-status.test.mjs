@@ -11,6 +11,8 @@ import { addReview, newRecord, newSelfRecord, parseFinding, summarize, writeReco
 import {
   buildStatus,
   collectStatus,
+  collectSharedStatus,
+  statusFromSnapshot,
   findPromotions,
   formatStatus,
   nextAction,
@@ -25,15 +27,15 @@ const delegationCli = join(here, '../scripts/delegation.mjs');
 const hookPath = join(here, '../hooks/delegation-status.mjs');
 
 const NOW = Date.parse('2026-09-27T12:00:00Z');
-const HEAD = 'aaaaaaa1111111111111111111111111111111111';
-const NEW_HEAD = 'bbbbbbb2222222222222222222222222222222222';
+const HEAD = 'aaaaaaa' + '1'.repeat(33);
+const NEW_HEAD = 'bbbbbbb' + '2'.repeat(33);
 
 const issueRec = (issue, extra = {}) => ({
   ...newRecord({ issue, title: `Issue ${issue}`, model: 'swe-2-medium', delegatedAt: '2026-09-27T09:00:00Z' }),
   ...extra,
 });
 const reviewed = (rec, verdict, extra = {}) =>
-  addReview(rec, { round: rec.reviews.length, sha: HEAD.slice(0, 10), verdict, posted: verdict === 'fix', at: '2026-09-27T10:00:00Z', ...extra });
+  addReview(rec, { round: rec.reviews.length, sha: HEAD, verdict, posted: verdict === 'fix', at: '2026-09-27T10:00:00Z', ...extra });
 const ghPr = (number, extra = {}) => ({
   number,
   state: 'OPEN',
@@ -97,21 +99,21 @@ test('S-11: head が最後の reviewed_sha と違えば再レビュー（round n
   assert.equal(nextAction(reviewed(issueRec(62, { gh: { pr: 66 } }), 'merge'), { prs: [ghPr(66, { headRefOid: NEW_HEAD })], now: NOW }).state, 're-review');
 });
 
-test('S-12: fix で head が同じなら修正待ち、escalate / merge ならユーザー待ち', () => {
+test('S-12: 完全SHAが同じfixは修正待ち。mergeは両レビュー待ち', () => {
   const rec = reviewed(issueRec(61, { gh: { pr: 65 } }), 'fix');
   const a = nextAction(rec, { prs: [ghPr(65)], now: NOW });
-  assert.deepEqual([a.state, a.since, a.sha, a.local], ['wait-update', '2026-09-27T10:00:00Z', HEAD.slice(0, 10), true]);
+  assert.deepEqual([a.state, a.since, a.sha, a.local], ['wait-update', '2026-09-27T10:00:00Z', HEAD, true]);
   // reviewed_atの無い古い記録はdelegated_atを使う。クラウドは注記しない
-  const legacy = addReview(issueRec(62, { gh: { pr: 66 }, runner: 'cloud' }), { round: 0, sha: HEAD.slice(0, 10), verdict: 'fix', posted: true });
+  const legacy = addReview(issueRec(62, { gh: { pr: 66 }, runner: 'cloud' }), { round: 0, sha: HEAD, verdict: 'fix', posted: true });
   const b = nextAction(legacy, { prs: [ghPr(66)], now: NOW });
   assert.deepEqual([b.since, b.local], ['2026-09-27T09:00:00Z', false]);
   const text = formatStatus(buildStatus({ records: [rec, legacy], prs: [ghPr(65), ghPr(66)], now: NOW }));
-  assert.match(text, /Issue #61（PR #65）修正待ち（round 0 で指摘を投稿）→ .*`node \.claude\/scripts\/wait-for-pr-update\.mjs 65 --since 2026-09-27T10:00:00Z --sha aaaaaaa111` を起動し直す。ローカルの委譲なので/);
+  assert.match(text, /Issue #61（PR #65）修正待ち（round 0 で指摘を投稿）→ .*`node \.claude\/scripts\/wait-for-pr-update\.mjs 65 --since 2026-09-27T10:00:00Z --sha aaaaaaa111111111111111111111111111111111` を起動し直す。ローカルの委譲なので/);
   assert.doesNotMatch(text.split('\n').find((l) => l.includes('#62')), /ローカル/);
   const esc = nextAction(reviewed(issueRec(63, { gh: { pr: 67 } }), 'escalate'), { prs: [ghPr(67)], now: NOW });
   assert.deepEqual([esc.state, esc.verdict], ['await-user', 'escalate']);
   const ok = reviewed(issueRec(64, { gh: { pr: 68 } }), 'merge');
-  assert.match(formatStatus(buildStatus({ records: [ok], prs: [ghPr(68)], now: NOW })), /マージ待ち（round 0 でマージ可。マージはユーザー）/);
+  assert.match(formatStatus(buildStatus({ records: [ok], prs: [ghPr(68)], now: NOW })), /両レビュー待ち.*Codex再依頼/);
 });
 
 test('S-13: PR の特定は pr・gh.pr・Issue への紐づけの順。番号が分かっても一覧に無ければ確かめられない', () => {
@@ -178,7 +180,7 @@ test('S-16: 表示は 1 委譲 1 行。タイトルは改行を落として切�
   const text = formatStatus(unlinked);
   assert.match(text, /- PR #70（devin\/update-skills-1790414398）docs: 知見 2 行目\n/);
   assert.match(text, /- PR #71（devin\/x-71）PR 71 ※コメントを取得できず/);
-  assert.doesNotMatch(text, /#72/);
+  assert.match(text, /#72/);
   assert.match(text, /delegation\.mjs init pr-<番号>/);
   const fixing = reviewed(issueRec(61, { gh: { pr: 65 } }), 'fix');
   const offline = buildStatus({ records: [fixing, issueRec(62)], now: NOW, offline: true, ghError: 'spawnSync gh ENOENT' });
@@ -265,4 +267,89 @@ test('S-20: gh が無い環境でもフックは exit 0（出すなら SessionSt
     assert.equal(res.status, 0);
     if (res.stdout !== '') assert.equal(JSON.parse(res.stdout).hookSpecificOutput.hookEventName, 'SessionStart');
   });
+});
+
+test('I-21: 旧短縮SHAはhead一致としてマージ可を表示しない', () => {
+  const rec = addReview(issueRec(11, { gh: { pr: 12 } }), { round: 0, sha: HEAD.slice(0, 10), verdict: 'merge' });
+  const action = nextAction(rec, { prs: [ghPr(12)], now: NOW });
+  assert.equal(action.state, 're-review');
+  const text = formatStatus(buildStatus({ records: [rec], prs: [ghPr(12)], now: NOW }));
+  assert.doesNotMatch(text, /マージ可|マージ待ち/);
+});
+
+test('I-21: 共有seqを表示し、旧mergeやunknownから成功・再起動を推測しない', () => {
+  const rec = reviewed(issueRec(11, { gh: { pr: 12 } }), 'merge');
+  const legacy = { ...buildStatus({ records: [rec], prs: [ghPr(12)], now: NOW }), checkStates: { [HEAD]: { id: 55, head_sha: HEAD, name: 'agent-review', external_id: 'review-55', status: 'completed', conclusion: 'success' } } };
+  const snapshot = { seq: 4, hash: 'a'.repeat(64), fetched_at: '2026-10-09T10:00:00Z', tasks: {
+    'feature:one': { task_key: 'feature:one', issue: 11, pr: 12, state: 'pr_open', updated_seq: 4 },
+    'feature:two': { task_key: 'feature:two', issue: 13, pr: null, state: 'launch_unknown' },
+  }, prs: { 12: { head_sha: HEAD } }, checks: {} };
+  const status = statusFromSnapshot(snapshot, legacy);
+  assert.deepEqual(status.actions.map((a) => [a.key, a.state]), [['feature:one', 'review-wait'], ['feature:two', 'shared-unknown']]);
+  const text = formatStatus(status);
+  assert.match(text, /共有状態 seq=4、取得日時=2026-10-09T10:00:00Z/);
+  assert.match(text, /両レビュー待ち.*Codex再依頼/);
+  assert.match(text, /自動再起動しない/);
+  assert.doesNotMatch(text, /マージ可|マージ待ち/);
+  const verified = { ...snapshot, checks: { [HEAD]: { head_sha: HEAD, check_id: 55, external_id: 'review-55', state: 'completed', conclusion: 'success' } } };
+  assert.equal(statusFromSnapshot(verified, legacy).actions[0].state, 'await-user');
+  const verifiedText = formatStatus(statusFromSnapshot(verified, legacy));
+  assert.match(verifiedText, /両レビューの照合済み。マージ判断はユーザー/);
+  assert.doesNotMatch(verifiedText, /round null|マージ可/);
+  const moved = { ...legacy, prStates: { 12: { head_sha: NEW_HEAD, state: 'OPEN' } } };
+  assert.equal(statusFromSnapshot(verified, moved).actions[0].state, 'review-wait');
+  const pending = { ...verified, checks: { [HEAD]: { head_sha: HEAD, state: 'in_progress', conclusion: 'success' } } };
+  assert.equal(statusFromSnapshot(pending, legacy).actions[0].state, 'review-wait');
+  const old = { ...verified, checks: { [HEAD]: { head_sha: NEW_HEAD, state: 'completed', conclusion: 'success' } } };
+  assert.equal(statusFromSnapshot(old, legacy).actions[0].state, 'review-wait');
+  assert.equal(statusFromSnapshot(verified, { ...legacy, checkStates: {} }).actions[0].state, 'review-wait');
+  for (const change of [{ id: 56 }, { head_sha: NEW_HEAD }, { name: 'other' }, { external_id: 'other' }, { status: 'in_progress' }, { conclusion: 'failure' }]) {
+    const mismatched = { ...legacy, checkStates: { [HEAD]: { ...legacy.checkStates[HEAD], ...change } } };
+    assert.equal(statusFromSnapshot(verified, mismatched).actions[0].state, 'review-wait');
+  }
+});
+
+test('I-13: 共有読取失敗は古い履歴を未確認表示だけに使う', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shared-status-'));
+  try {
+    writeRecord(dir, reviewed(issueRec(11, { gh: { pr: 12 } }), 'merge'));
+    const status = await collectSharedStatus({ dir, mirrorDir: null, useGh: false }, { client: {}, config: {}, readSnapshot: async () => { throw new Error('PRIVATE TOKEN'); } });
+    assert.equal(status.offline, true);
+    assert.match(formatStatus(status), /共有状態を確認できません/);
+    assert.doesNotMatch(JSON.stringify(status), /PRIVATE TOKEN/);
+    assert.equal(status.actions[0].state, 'offline');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('マージ前の表示は共有状態とGitHub checkの両方を読み、片方だけの成功では照合済みにしない', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shared-check-status-'));
+  const snapshot = { seq: 4, fetched_at: '2026-10-10T03:00:00Z', tasks: { 'feature:task': { task_key: 'feature:task', issue: 11, pr: 12, state: 'pr_open' } }, prs: { 12: { head_sha: HEAD } }, checks: { [HEAD]: { head_sha: HEAD, check_id: 55, external_id: 'review-55', state: 'completed', conclusion: 'success' } } };
+  let apiCheck = { id: 55, head_sha: HEAD, name: 'agent-review', external_id: 'review-55', status: 'completed', conclusion: 'success' };
+  let rejectCheck = false;
+  let reads = 0;
+  const dependencies = { config: { repository: 'owner/repo', repository_id: 999 }, readSnapshot: async () => snapshot, client: { rest: async (_method, path) => {
+    if (path.endsWith('/pulls/12')) return { number: 12, base: { repo: { id: 999 } }, head: { sha: HEAD }, state: 'open' };
+    assert.equal(path, '/repos/owner/repo/check-runs/55');
+    reads += 1;
+    if (rejectCheck) throw new Error('API UNAVAILABLE');
+    return apiCheck;
+  } } };
+  const collect = () => collectSharedStatus({ dir, mirrorDir: null, useGh: false }, dependencies);
+  try {
+    assert.equal((await collect()).actions[0].state, 'await-user');
+    assert.equal(reads, 1);
+    apiCheck = { ...apiCheck, conclusion: 'failure' };
+    assert.equal((await collect()).actions[0].state, 'review-wait');
+    apiCheck = { ...apiCheck, conclusion: 'success' };
+    snapshot.checks[HEAD].state = 'in_progress';
+    const before = reads;
+    assert.equal((await collect()).actions[0].state, 'review-wait');
+    assert.equal(reads, before);
+    snapshot.checks[HEAD].state = 'completed';
+    rejectCheck = true;
+    const unknown = await collect();
+    assert.equal(unknown.offline, true);
+    assert.match(unknown.ghError, /共有状態を確認できません/);
+    assert.equal(unknown.actions.some((action) => action.verified), false);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

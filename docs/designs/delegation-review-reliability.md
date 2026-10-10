@@ -1,6 +1,6 @@
 # 設計書: delegation-review-reliability
 
-- ステータス: draft（設計PRの承認待ち）
+- ステータス: confirmed（2026-10-09のチャットで次工程を承認。設計PR #186は2026-10-09にマージ済み）
 - レベル: L3 / ユーザー承認: 必要
 - 関連: [要件](../requirements/delegation-review-reliability.md) / [ADR-0007](../decisions/ADR-0007-github-delegation-and-review-state.md) / [論点の記録](../discussions/delegation-review-reliability.md)
 
@@ -69,6 +69,10 @@ flowchart LR
 
 固定の管理Issue番号と先頭位置コメントIDを設定に保存する。Issue本文は説明用で、状態判定には使わない。要求は認証した担当者のコメント、状態は制御workflowが追記するbotコメントに分ける。各タスクIssueの表示は写しであり、表示更新の失敗で共有状態を戻さない。
 
+管理コメントはGraphQLで本文とauthor／editor／lastEditedAtを同時に取得する。要求と追記した履歴は未編集だけを採用する。更新する先頭位置はActions作者かつ未編集、又は最終editorが同じActionsの場合だけ採用する。RESTの作成・更新時刻が同じでも未編集の証拠にはしない。未許可作者の印は解析前に除外し、許可作者の不正要求は拒否結果を保存して後続の処理枠を塞がない。
+
+管理Issueを人が作った後、管理Issue番号とcontrollerのworkflow IDを設定PRで固定する。main限定の手動dispatch `initialize`が固定担当者を確認し、Actions作者の初期先頭コメントを作る。人が作ったコメントをActionsが更新しても元作者は変わらないため、先頭コメントを人が代わりに作らない。既存の先頭コメントは全件照合し、1件なら再利用し、複数や作成結果不明なら再POSTせず手動照合する。得られたコメントIDを設定PRに保存してから通常の受付を始める。
+
 状態コメントは`schema_version=1`のJSONを1つだけ持つ。`seq`、`prev_hash`、`hash`、`source_run_id`、`source_run_attempt`、`request_comment_id`、`request_id`、`operation`、変更したタスク／レビュー状態、処理結果を含める。hashはhash自身を除くJSONのUTF-8をSHA-256で計算する。オブジェクトのキーは再帰的に辞書順、配列は仕様で定める順にし、整数以外の数値を許可しない。
 
 先頭位置コメントは`last_seq`・`last_event_id`・`last_hash`を持つ。writerは履歴を検証し、イベントを追記してから先頭位置を更新し、双方を読み直す。外部の起票・起動許可はこの確認後だけ行う。途中で止まった場合は、次のwriterが連続した末尾イベントを検証して先頭位置を進める。欠落・分岐・同じseqの異なるhash・先頭位置の不一致では自動復旧しない。
@@ -131,16 +135,18 @@ stateDiagram-v2
 
 | 操作 | 入力と契約 |
 | --- | --- |
-| register | request_id（UUID）、task_key、plan_path、plan_sha（40桁）、task_digest（64桁）、wave（任意）。移行完了前の新規登録は禁止 |
+| register | request_id（UUID）、task_key、plan_path、plan_sha（40桁）、task_digest（64桁）、wave（任意）、start_conditions_confirmed（既定false）。移行完了前の新規登録は禁止 |
 | claim | request_id、task_key、caller_id（UUID）、runner（local/cloud）、requested_model、task_digest。既存Issueと開始条件を確認し、attempt_idを1つ確保 |
 | begin | request_id、attempt_id、caller_id、新activation_id（UUID）。reservedの担当と一致する初回だけlaunchingにし、初回許可を発行 |
 | started | request_id、attempt_id、activation_id、session_id／session_url、observed_model又はunknown。勝った担当の照合済み報告だけ反映 |
 | link-pr | request_id、task_key、pr。Issueとの対応をGitHubから確認。候補が複数なら勝手に最小番号を選ばない |
-| import | request_id、既存Issue／PR／セッションの対応。固定担当者だけが公開メタデータを登録する |
+| import | request_id、既存Issue／PR／セッションの対応。固定担当者だけが公開メタデータを登録する。APIで確認したIssue／PRと申告したセッション・状態は分け、起動許可や予約を作らない。既存タスクへの別要求による上書きは拒否する |
 | reconcile | 起票・起動結果、未処理要求を読み直す。unknownを単なる時間経過で解除しない |
 | review-refresh | PR番号。現在の証拠を読み直し、agent-reviewを再判定する |
 
 状態にはtask_key、digest、plan参照、Issue番号、attempt_id、caller_id、activation_id、runner、requested_model、observed_model、セッションとPRのID／URL、状態、予約日時、最終更新のseqを持つ。予約の目安は15分で、超過は照合待ちへの変更だけ。新しい担当への自動譲渡には使わない。
+
+開始条件は、初回は固定担当者が公開計画を確認し、start_conditions_confirmedで明示する。falseのタスクはclaimできない。任意の計画本文から依存関係を自動推測せず、GitHubのIssue依存関係による実行制御は後続で設計する。
 
 CLI案は`delegation.mjs request --request-file <公開JSON>`、`status [--json] [--refresh]`、`import --request-file <JSON>`と、`delegation-launch.mjs <task_key> --runner <local|cloud> --model <model> --prompt-file <非公開ファイル>`。終了コードは0=確認済み、2=入力／内容競合、3=未処理、4=結果不明、5=通信／状態破損。既存init/review/finalizeの終了コードは維持する。
 
@@ -190,6 +196,8 @@ codex_evidence_hashは、現在headのCodex完了ID／SHA／本文hashと、Code
 
 checkはChecks APIで明示作成し、head_shaはPRの完全headにする。controllerの単一writerがSHAごとに1つの`agent-review`のcheck IDを共有状態で保持して更新する。自動job名は`agent-review`にしない。未確認時はstatus=in_progress、成功はcompleted/success、不足・破損はcompleted/failureを使う。実行開始時に同じSHAの以前の成功をin_progressに戻し、全証拠を取得してから書き込む。書き込み直前にOPEN PR全ページを再取得し、同じSHAのPR番号／head／対象判定の集合と、各対象PRのClaude完了・Codex証拠集合を再確認する。変化・取得失敗ならsuccessを出さない。証拠の編集・削除・dismissも再判定する。
 
+チェック更新のPATCHが失敗すると、共有状態は確認中でもGitHubに以前の成功が残り得る。書き込み不能時に古い成功を物理的に失効させる保証はできない。controllerのI/O中断は非ゼロ終了で表示し、不正要求の予定どおりの拒否とは分ける。マージ前はreview-refreshの完了後にstatusを再取得し、共有状態と同じcheck ID／external ID／headのChecks APIがともに成功している場合だけ照合済みとする。GitHubの成功表示だけでマージ判断をしない。
+
 workflow_dispatch等の自動job checkが必須チェックを満たすとは扱わない。明示作成したcheckが実PRに結び付き、head更新とfailureでルールセットがマージを止めることを実機で検証する。未確認なら必須化しない。同名check／commit statusを重ねて作らず、Checks APIで成立しない場合は設計を見直す。別workflowの同名checkは必須設定だけでは区別できず、Actions appの指定もその真正性の保証にはならない。
 
 quality・build・api-dbは独立した既存必須チェックとして維持する。agent-reviewはCI全部成功を待たず、既存スキルでCIを確認する際もagent-reviewを除外する。CIはPRに対応するmerge commitの検証として扱い、workflowのGITHUB_SHAとPR headの単純一致を要求しない。E2Eのpaths条件も変えない。
@@ -210,6 +218,8 @@ controllerのpermissionsはcontents:read、issues:write、pull-requests:read、c
 | --- | --- |
 | `.claude/config/delegation-review.json` | 管理Issue／先頭コメント／repo／writer workflow／作者ID、上限、移行状態の設定 |
 | `.claude/scripts/delegation-shared.mjs` | 純粋な要求・状態遷移、hash、履歴検証とGitHub I/O |
+| `.claude/scripts/delegation-github.mjs` | 共通のREST・GraphQL通信、ページ送り、タイムアウト、読み取りの再試行と呼び出し上限 |
+| `.claude/scripts/delegation-control.mjs` | Actionsの単一writer。受付・起票・状態履歴・check更新を順に処理する |
 | `.claude/scripts/delegation-launch.mjs` | claim/begin/startedと1回のCLI起動。raw promptと生ログは手元だけ |
 | `.claude/scripts/agent-review.mjs` | 証拠集合、対象判定、完了JSON作成、check更新 |
 | `.claude/scripts/delegation.mjs`・`delegation-status.mjs` | 共有状態優先、request/import、既存YAMLの互換・写し・履歴 |
@@ -217,6 +227,7 @@ controllerのpermissionsはcontents:read、issues:write、pull-requests:read、c
 | `.github/workflows/delegation-control.yml` | 共通受付、直列更新、再判定、再配送 |
 | `.github/workflows/delegation-events.yml` | PR/reviewイベントの読み取り専用通知。writerとPRの実行refを分ける |
 | `.claude/tests/delegation-shared.test.mjs`・`delegation-launch.test.mjs`・`agent-review.test.mjs` | 境界・競合・途中失敗の試験。既存試験も必要な差分を更新 |
+| `.claude/tests/delegation-github.test.mjs`・`delegation-control.test.mjs` | 通信・ページ送り・唯一のwriterの多段処理と途中失敗を検証する |
 | `review-devin-pr`・`close-session`のSKILL、`.agents/skills/devin-workflow/SKILL.md`、委譲README、AGENTS.md | 共通受付、完全SHAの証拠、Codex再依頼、履歴の運用を一致させる |
 
 既存のreviews配列を消さない。共有状態の版を優先し、review数による選択は旧記録同士の互換処理に限る。旧initは履歴作成に残しても、未登録タスクの起票・起動を許可する操作にはしない。
@@ -233,7 +244,7 @@ controllerのpermissionsはcontents:read、issues:write、pull-requests:read、c
 
 管理Issueには要求ID、task_key、digest、状態、証拠ID／URL、制御run、版を残す。CLIは未配送／未処理／結果不明と次の照合操作を出す。ローカルの生ログは既存devin-watchの場所で保持し、共有のコメントや日次ログに秘密を写さない。
 
-statusは共有状態の取得日時とseqを出す。締めのPRには既存どおり完了したYAMLと日次ログを入れる。共有状態から作った写しの変更を、別worktreeの記録へ無条件で上書きしない。
+statusは共有状態の取得日時とseqを出す。締めのPRには既存どおり完了したYAMLと日次ログを入れる。共有状態から作った写しの変更を、別worktreeの記録へ無条件で上書きしない。共有フィールドは新しいseqから読み、別途追記したreviews・follow_up_of・escalations・完了履歴は両記録から残す。同じroundの内容や対応タスク、後続の対応・完了状態が競合する場合は写しを更新せず、手動で照合する。
 
 ## セキュリティ
 
@@ -271,7 +282,7 @@ publicの管理Issueに保存するのは公開計画参照と必要なメタデ
 ## 移行とリリース
 
 1. ユーザーが設計PRを承認する。実装PRでコードと手順を揃え、ハーネス試験を通す。実装PRのマージもユーザーが行う。
-2. 管理Issueと先頭コメントを初期化し、writer workflow ID等を実環境で固定する。最初はagent-reviewを必須にしない。
+2. 管理Issueを作り、writer workflow ID等を実環境で固定する。手動dispatchのinitializeでActions作者の先頭コメントを作り、コメントIDを設定PRに保存する。最初はagent-reviewを必須にしない。
 3. 進行中の計画、Issue、PR、Cloud／Localセッションを照合してimportする。未確認はunknownのまま残し、migration_completeを確認後に設定する。
 4. 既存の直接起票・直接起動の手順を止め、共通窓口へ移す。runner/modelは明示し、Cloudの実値が不明ならunknownにする。
 5. 確認PRで明示checkのPRへの関連付け、成功・不足証拠・head更新・同じSHAのPR集約、編集者の照合、必須設定によるマージ停止を確認する。controller全イベントのmain実行元とlistenerの通知、CLI内部の起動POST再試行設定も確認する。Codexの設定はユーザーがAll PRsとpushイベントを確認するまで、ユーザーからの明示的な依頼を使う。
@@ -293,4 +304,4 @@ GitHubイベントは非同期。同じheadに新しいレビューが付いて�
 
 ## 未決事項
 
-論点の記録の仮決定4件（信頼する作者、安定したキー、結果不明時の停止、既存CLIとの接続）を設計承認の対象にする。高優先度の回答待ちは0件。Codex設定、Cloud CLIのセッションID取得形式、MCPの接続と特権workflowの実行ポリシーは導入時の確認事項で、未確認を保証として扱わない。
+論点の記録の回答待ち・仮決定は0件。Codex設定、Cloud CLIのセッションID取得形式、MCPの接続と特権workflowの実行ポリシーは導入時の確認事項で、未確認を保証として扱わない。

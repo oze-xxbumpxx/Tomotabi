@@ -11,9 +11,13 @@ import {
   PRIVATE_SUMMARY,
   UsageError,
   addReview,
+  cacheSharedSnapshot,
   mergeRecords,
   preferRecord,
   readKnownRecords,
+  readRecord,
+  readSharedSnapshot,
+  runSharedRequestCli,
   readRecordMerged,
   writeRecord,
   buildGhSection,
@@ -33,6 +37,32 @@ import {
 } from '../scripts/delegation.mjs';
 
 const scriptPath = join(dirname(fileURLToPath(import.meta.url)), '../scripts/delegation.mjs');
+
+test('共有状態の写しから旧reviewを続け、再取得してもレビュー履歴を保持する', () => {
+  const temp = mkdtempSync(join(tmpdir(), 'delegation-cache-'));
+  const dir = join(temp, 'repo');
+  const mirrorDir = join(temp, 'mirror');
+  const snapshot = { seq: 7, fetched_at: '2026-10-10T01:00:00Z', tasks: {
+    'feature:task': { task_key: 'feature:task', issue: 90, pr: 91, state: 'pr_open', runner: 'cloud', requested_model: 'swe-2-high', observed_model: 'unknown', raw_prompt: 'SECRET' },
+    'feature:self': { task_key: 'feature:self', issue: null, pr: 92, state: 'pr_open' },
+  } };
+  try {
+    assert.equal(cacheSharedSnapshot(snapshot, { dir, mirrorDir }), true);
+    assert.equal(existsSync(join(dir, '90.yml')), false);
+    assert.equal(readRecordMerged(dir, 90, mirrorDir).shared_seq, 7);
+    assert.equal(readRecordMerged(dir, 'pr-92', mirrorDir).runner, 'unknown');
+    assert.doesNotMatch(readFileSync(join(mirrorDir, '90.yml'), 'utf8'), /SECRET/);
+    const reviewed = spawnSync(process.execPath, [scriptPath, 'review', '90', '--round', '0', '--sha', 'a'.repeat(40), '--verdict', 'merge', '--dir', dir, '--mirror-dir', mirrorDir], { encoding: 'utf8' });
+    assert.equal(reviewed.status, 0, reviewed.stderr);
+    cacheSharedSnapshot({ ...snapshot, seq: 8 }, { dir, mirrorDir });
+    cacheSharedSnapshot({ ...snapshot, seq: 6 }, { dir, mirrorDir });
+    const record = readRecordMerged(dir, 90, mirrorDir);
+    assert.equal(record.shared_seq, 8);
+    assert.equal(record.reviews.length, 1);
+    assert.equal(record.reviews[0].verdict, 'merge');
+    assert.equal(cacheSharedSnapshot(snapshot, { dir, mirrorDir: null }), false);
+  } finally { rmSync(temp, { recursive: true, force: true }); }
+});
 
 const base = (issue, model = 'swe-2-medium') =>
   newRecord({ issue, title: `Issue ${issue}`, model, level: 1, delegatedAt: '2026-09-26T00:00:00Z' });
@@ -528,4 +558,117 @@ test('S-06: 「後続の委譲」の行は後続があるときだけ出す', ()
   const s = summarize([merged(37, 'unknown'), { ...merged(43, 'unknown'), follow_up_of: 37 }, { ...merged(48, 'unknown'), follow_up_of: 'pr-54' }]);
   assert.match(formatSummary(s), /後続の委譲（前の PR の指摘を直す委譲）: 2\/3（#43←#37 #48←PR#54）/);
   assert.doesNotMatch(formatSummary(summarize([merged(1, 'unknown')])), /後続の委譲/);
+});
+
+test('I-21: 共有seqと取得日時を優先し、旧記録のレビューは独立して残す', () => {
+  const primary = { ...base(81), shared_seq: 4, shared_fetched_at: '2026-10-09T10:00:00Z' };
+  const legacy = addReview(base(81), { round: 0, sha: 'abc1234', verdict: 'merge' });
+  const combined = preferRecord(primary, legacy);
+  assert.equal(combined.shared_seq, 4);
+  assert.deepEqual(combined.reviews, legacy.reviews);
+  const newer = { ...primary, shared_seq: 5 };
+  assert.equal(preferRecord(primary, newer), newer);
+  const later = { ...primary, shared_fetched_at: '2026-10-09T10:01:00Z' };
+  assert.equal(preferRecord(primary, later), later);
+  assert.deepEqual(parseYaml(toYaml(later)), later);
+});
+
+test('共有seqが新しい記録と古い写しの追加履歴を統合し、競合時は写しを更新しない', () => {
+  const temp = mkdtempSync(join(tmpdir(), 'delegation-merge-'));
+  const dir = join(temp, 'repo');
+  const mirrorDir = join(temp, 'mirror');
+  const primary = { ...base(81), task_key: 'feature:task', shared_seq: 5, shared_fetched_at: '2026-10-10T02:00:00Z' };
+  const mirror = { ...addReview(base(81), { round: 0, sha: 'a'.repeat(40), verdict: 'escalate' }), task_key: 'feature:task', shared_seq: 4, follow_up_of: 37 };
+  try {
+    writeRecord(dir, primary);
+    writeRecord(mirrorDir, mirror);
+    const combined = readRecordMerged(dir, 81, mirrorDir);
+    assert.equal(combined.shared_seq, 5);
+    assert.deepEqual(combined.reviews, mirror.reviews);
+    assert.equal(combined.follow_up_of, 37);
+    assert.equal(combined.escalations, 1);
+    const snapshot = { seq: 6, fetched_at: '2026-10-10T03:00:00Z', tasks: { 'feature:task': { task_key: 'feature:task', issue: 81, pr: 82, state: 'pr_open' } } };
+    cacheSharedSnapshot(snapshot, { dir, mirrorDir });
+    const cached = readRecord(mirrorDir, 81);
+    assert.equal(cached.shared_seq, 6);
+    assert.deepEqual(cached.reviews, mirror.reviews);
+    assert.equal(cached.follow_up_of, 37);
+    assert.deepEqual(readKnownRecords({ dir, mirrorDir })[0].reviews, mirror.reviews);
+    const revised = { ...addReview(base(81), { round: 0, sha: 'b'.repeat(40), verdict: 'merge' }), shared_seq: 7 };
+    writeRecord(dir, revised);
+    const before = readFileSync(join(mirrorDir, '81.yml'), 'utf8');
+    assert.throws(() => readRecordMerged(dir, 81, mirrorDir), /レビュー履歴が競合/);
+    assert.throws(() => cacheSharedSnapshot({ ...snapshot, seq: 8 }, { dir, mirrorDir }), /レビュー履歴が競合/);
+    assert.equal(readFileSync(join(mirrorDir, '81.yml'), 'utf8'), before);
+    assert.throws(() => preferRecord({ ...primary, follow_up_of: 38 }, mirror), /履歴が競合/);
+    assert.throws(() => preferRecord({ ...primary, task_key: 'different:task' }, mirror), /タスクを確認/);
+    const finalized = { ...mirror, outcome: 'merged', gh: { pr: 82 } };
+    assert.equal(preferRecord(primary, finalized).outcome, 'merged');
+    assert.deepEqual(preferRecord(primary, finalized).gh, { pr: 82 });
+    assert.throws(() => preferRecord({ ...primary, outcome: 'closed' }, finalized), /履歴が競合/);
+    const another = { ...addReview(base(81), { round: 1, sha: 'b'.repeat(40), verdict: 'escalate' }), shared_seq: 5 };
+    const parallel = preferRecord(another, mirror);
+    assert.deepEqual(parallel.reviews.map((review) => review.round), [0, 1]);
+    assert.equal(parallel.escalations, 2);
+  } finally { rmSync(temp, { recursive: true, force: true }); }
+});
+
+test('I-17: 初回CIの集計からagent-reviewを外す', () => {
+  const pr = { number: 82, state: 'OPEN', commits: [], closingIssuesReferences: [] };
+  assert.equal(buildGhSection(pr, 81, [{ name: 'agent-review', status: 'in_progress', conclusion: null }, { name: 'quality', status: 'completed', conclusion: 'success' }]).gh.ci_first_pass, true);
+  assert.equal(buildGhSection(pr, 81, [{ name: 'agent-review', status: 'completed', conclusion: 'failure' }]).gh.ci_first_pass, null);
+});
+
+test('I-13/I-21: 新受付CLIは公開JSONを検証し、同じ共有transportで処理結果を返す', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shared-request-'));
+  try {
+    const file = join(dir, 'request.json');
+    const request = { schema_version: 1, operation: 'review-refresh', request_id: '00000000-0000-4000-8000-000000000001', pr: 82 };
+    writeFileSync(file, JSON.stringify(request));
+    const config = { repository: 'oze-xxbumpxx/Tomotabi', migration_complete: true, limits: { api_calls: 200, timeout_ms: 10000, job_timeout_ms: 300000, request_bytes: 8192 } };
+    let reads = 0;
+    let submits = 0;
+    let code = 'review_refreshed';
+    const dependencies = {
+      config,
+      readSnapshot: async (client) => { assert.equal(client.repo, config.repository); reads += 1; return { seq: 1, tasks: {} }; },
+      submitRequest: async (client, _config, actual) => { assert.equal(client.repo, config.repository); submits += 1; assert.deepEqual(actual, request); return { request_id: request.request_id, request_comment_id: 90 }; },
+      waitForResult: async (_client, _config, actual) => { assert.deepEqual(actual, { requestId: request.request_id, commentId: 90 }); return { code, seq: 2 }; },
+    };
+    const result = await runSharedRequestCli(['request', '--request-file', file], dependencies);
+    assert.deepEqual(result, { exitCode: 0, code: 'review_refreshed', request_id: request.request_id, request_comment_id: 90, seq: 2 });
+    assert.equal(reads, 2);
+    assert.equal(submits, 1);
+    assert.equal((await readSharedSnapshot(dependencies)).seq, 1);
+    for (const [state, expected] of [['pending', 3], ['content_conflict', 2], ['launch_unknown', 4], ['unexpected', 4]]) {
+      code = state;
+      assert.equal((await runSharedRequestCli(['request', '--request-file', file], dependencies)).exitCode, expected);
+    }
+    const previous = submits;
+    writeFileSync(file, JSON.stringify({ ...request, raw_prompt: 'PRIVATE TOKEN' }));
+    assert.deepEqual(await runSharedRequestCli(['request', '--request-file', file], dependencies), { exitCode: 2, code: 'invalid_request' });
+    assert.equal(submits, previous);
+    writeFileSync(file, '{'.repeat(8193));
+    await assert.rejects(runSharedRequestCli(['request', '--request-file', file], dependencies), UsageError);
+    writeFileSync(file, JSON.stringify(request));
+    dependencies.readSnapshot = async () => { throw new Error('PRIVATE TOKEN'); };
+    assert.deepEqual(await runSharedRequestCli(['request', '--request-file', file], dependencies), { exitCode: 5, code: 'shared_unavailable' });
+    await assert.rejects(runSharedRequestCli(['request'], dependencies), UsageError);
+    await assert.rejects(runSharedRequestCli(['import', '--request-file', file], dependencies), UsageError);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('I-22: 移行前の新規登録は外部操作なしで止まり、旧initは履歴として残る', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'migration-request-'));
+  try {
+    const file = join(dir, 'request.json');
+    writeFileSync(file, JSON.stringify({ schema_version: 1, operation: 'register', request_id: '00000000-0000-4000-8000-000000000001', task_key: 'feature:task', task_digest: 'a'.repeat(64), plan_path: 'docs/implementation-plans/feature.md', plan_sha: 'b'.repeat(40) }));
+    let called = 0;
+    const result = await runSharedRequestCli(['request', '--request-file', file], { config: { migration_complete: false, limits: { request_bytes: 8192 } }, readSnapshot: async () => { called += 1; } });
+    assert.deepEqual(result, { exitCode: 4, code: 'migration_required' });
+    assert.equal(called, 0);
+    const legacy = base(81);
+    writeRecord(dir, legacy);
+    assert.deepEqual(readKnownRecords({ dir, mirrorDir: null }), [legacy]);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

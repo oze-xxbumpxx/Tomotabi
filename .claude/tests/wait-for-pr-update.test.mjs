@@ -121,3 +121,13 @@ test('W-08: 引数の誤りは null、CLI は exit 2', () => {
   assert.equal(res.status, 2);
   assert.match(res.stderr, /usage/);
 });
+
+test('I-17: agent-reviewはCI完了と結論の集計から除外する', () => {
+  const pendingReview = { __typename: 'CheckRun', name: 'agent-review', status: 'IN_PROGRESS', conclusion: null };
+  const passing = { __typename: 'CheckRun', name: 'quality', status: 'COMPLETED', conclusion: 'SUCCESS' };
+  assert.equal(checksComplete([pendingReview, passing]), true);
+  assert.equal(ciConclusion([pendingReview, passing]), 'success');
+  assert.equal(ciConclusion([pendingReview]), 'none');
+  assert.equal(checksComplete([{ __typename: 'StatusContext', context: 'agent-review', state: 'PENDING' }, passing]), true);
+  assert.equal(ciConclusion([{ ...pendingReview, status: 'COMPLETED', conclusion: 'FAILURE' }, passing]), 'success');
+});

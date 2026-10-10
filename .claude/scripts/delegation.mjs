@@ -39,6 +39,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { resolveStateDir } from '../lib/harness-paths.mjs';
 import { findLinkedPr, listPrs } from './wait-for-pr.mjs';
 
@@ -279,8 +280,9 @@ export function firstCiCommit(commits, prCreatedAt) {
  */
 export function buildGhSection(pr, issue, firstCommitRuns) {
   let ciFirstPass = null;
-  if (firstCommitRuns !== null && firstCommitRuns.length > 0) {
-    ciFirstPass = firstCommitRuns.every((r) => r.status === 'completed' && PASSING.has(r.conclusion));
+  const ciRuns = firstCommitRuns === null ? null : firstCommitRuns.filter((r) => r.name !== 'agent-review');
+  if (ciRuns !== null && ciRuns.length > 0) {
+    ciFirstPass = ciRuns.every((r) => r.status === 'completed' && PASSING.has(r.conclusion));
   }
   return {
     outcome: { MERGED: 'merged', CLOSED: 'closed', OPEN: 'open' }[pr.state] ?? null,
@@ -534,10 +536,39 @@ export function defaultMirrorDir(env = process.env) {
   }
 }
 
-/** 同じkeyの正（primary）と写し（mirror）から使う方を選ぶ。reviewsの多い方 → outcomeのある方 → 正。 */
+/** 共有フィールドは新しいseqから読み、独立して追記される履歴は両記録を照合して残す。 */
 export function preferRecord(primary, mirror) {
   if (primary === null) return mirror;
   if (mirror === null) return primary;
+  const seq = (rec) => Number.isSafeInteger(rec.shared_seq) && rec.shared_seq >= 0 ? rec.shared_seq : -1;
+  if (seq(primary) >= 0 || seq(mirror) >= 0) {
+    const at = (rec) => Date.parse(rec.shared_fetched_at ?? '') || 0;
+    const shared = seq(primary) !== seq(mirror) ? (seq(primary) > seq(mirror) ? primary : mirror)
+      : at(mirror) > at(primary) ? mirror : primary;
+    if (recordKey(primary) !== recordKey(mirror) || (primary.task_key && mirror.task_key && primary.task_key !== mirror.task_key)) {
+      throw new UsageError('委譲の記録が競合しています（対応するタスクを確認してください）');
+    }
+    const a = primary.reviews ?? [];
+    const b = mirror.reviews ?? [];
+    const byRound = new Map();
+    for (const review of [...a, ...b]) {
+      if (!Number.isSafeInteger(review.round) || review.round < 0) throw new UsageError('レビュー履歴が不正です（写しは更新しません）');
+      if (byRound.has(review.round) && !isDeepStrictEqual(byRound.get(review.round), review)) throw new UsageError('レビュー履歴が競合しています（写しは更新しません）');
+      byRound.set(review.round, review);
+    }
+    const reviews = [...byRound.values()].sort((left, right) => left.round - right.round);
+    const merged = { ...shared, reviews,
+      escalations: Math.max(primary.escalations ?? 0, mirror.escalations ?? 0, reviews.filter((review) => review.verdict === 'escalate').length) };
+    for (const field of ['follow_up_of', 'outcome']) {
+      const left = primary[field] ?? null;
+      const right = mirror[field] ?? null;
+      if (left !== null && right !== null && left !== right) throw new UsageError('委譲の履歴が競合しています（写しは更新しません）');
+      if (left !== null || right !== null) merged[field] = left ?? right;
+    }
+    if (primary.gh?.pr && mirror.gh?.pr && primary.gh.pr !== mirror.gh.pr) throw new UsageError('PRの記録が競合しています（写しは更新しません）');
+    merged.gh = shared.gh ?? primary.gh ?? mirror.gh ?? null;
+    return isDeepStrictEqual(merged, shared) ? shared : merged;
+  }
   const reviews = (rec) => (rec.reviews ?? []).length;
   if (reviews(primary) !== reviews(mirror)) return reviews(primary) > reviews(mirror) ? primary : mirror;
   const decided = (rec) => (rec.outcome ?? null) !== null;
@@ -602,7 +633,7 @@ function fetchFinalize(record, prNumber) {
   const first = firstCiCommit(pr.commits ?? [], pr.createdAt);
   let runs = null;
   if (first) {
-    const res = JSON.parse(gh(['api', `repos/{owner}/{repo}/commits/${first}/check-runs`, '--jq', '{check_runs: [.check_runs[] | {status, conclusion}]}']));
+    const res = JSON.parse(gh(['api', `repos/{owner}/{repo}/commits/${first}/check-runs`, '--jq', '{check_runs: [.check_runs[] | {name, status, conclusion}]}']));
     runs = res.check_runs;
   }
   return buildGhSection(pr, record.issue, runs);
@@ -758,13 +789,87 @@ function initSelf(pr, optArgs) {
   console.log(writeRecord(dir, newSelfRecord({ pr, title, model: opts.model ?? 'unknown', runner, level, createdAt }), { mirrorDir }));
 }
 
+export async function readSharedSnapshot(dependencies = {}) {
+  const config = dependencies.config ?? JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../config/delegation-review.json'), 'utf8'));
+  const shared = dependencies.readSnapshot ? dependencies : await import('./delegation-shared.mjs');
+  const client = dependencies.client ?? (await import('./delegation-github.mjs')).createGitHubClient({ repo: config.repository, maxApiCalls: config.limits.api_calls, timeoutMs: config.limits.timeout_ms, jobTimeoutMs: config.limits.job_timeout_ms });
+  return shared.readSnapshot(client, config);
+}
+
+/** 共有状態を履歴用の写しへ保存する。レビュー記録を消さず、起動許可には使わない。 */
+export function cacheSharedSnapshot(snapshot, { dir = DEFAULT_DIR, mirrorDir = defaultMirrorDir() } = {}) {
+  if (mirrorDir === null) return false;
+  if (!Number.isSafeInteger(snapshot.seq) || snapshot.seq < 0 || Number.isNaN(Date.parse(snapshot.fetched_at))) throw new UsageError('共有状態の取得情報を確認できません');
+  for (const task of Object.values(snapshot.tasks ?? {})) {
+    const issue = Number.isSafeInteger(task.issue) && task.issue > 0 ? task.issue : null;
+    const pr = Number.isSafeInteger(task.pr) && task.pr > 0 ? task.pr : null;
+    if (issue === null && pr === null) continue;
+    const key = issue ?? `pr-${pr}`;
+    const previous = existingRecordPath(dir, key, mirrorDir) === null ? null : readRecordMerged(dir, key, mirrorDir);
+    if (previous && Number.isSafeInteger(previous.shared_seq) && previous.shared_seq > snapshot.seq) continue;
+    const base = previous ?? (issue === null
+      ? newSelfRecord({ pr, title: `委譲 ${task.task_key}`, runner: 'local', createdAt: snapshot.fetched_at })
+      : newRecord({ issue, title: `委譲 ${task.task_key}`, model: 'unknown', delegatedAt: snapshot.fetched_at }));
+    const record = { ...base, task_key: task.task_key, shared_seq: snapshot.seq, shared_fetched_at: snapshot.fetched_at,
+      shared_state: task.state, pr, runner: task.runner ?? previous?.runner ?? 'unknown',
+      model: task.observed_model ?? previous?.model ?? 'unknown', requested_model: task.requested_model ?? 'unknown',
+      attempt_id: task.attempt_id ?? null, activation_id: task.activation_id ?? null,
+      session_id: task.session_id ?? null, session_url: task.session_url ?? null };
+    writeAtomic(mirrorDir, record, 0o700);
+  }
+  return true;
+}
+
+export async function runSharedRequestCli(argv, dependencies = {}) {
+  const [command, ...args] = argv;
+  if (!['request', 'import'].includes(command)) throw new UsageError('request又はimportを指定してください');
+  const opts = parseOptions(args, { values: ['request-file'] });
+  if (!opts['request-file']) throw new UsageError('--request-fileが必要です');
+  const config = dependencies.config ?? JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../config/delegation-review.json'), 'utf8'));
+  let request;
+  try {
+    const text = readFileSync(opts['request-file'], 'utf8');
+    if (Buffer.byteLength(text, 'utf8') > (config.limits?.request_bytes ?? 8192)) throw new UsageError('要求JSONが上限を超えています');
+    request = JSON.parse(text);
+    if (request === null || typeof request !== 'object' || Array.isArray(request)) throw new UsageError('要求JSONを確認してください');
+    if (command === 'import' && request.operation !== 'import') throw new UsageError('import要求が必要です');
+  } catch (error) {
+    if (error instanceof UsageError) throw error;
+    throw new UsageError('公開要求JSONを確認してください');
+  }
+  try { (await import('./delegation-shared.mjs')).validateRequest(request, { maxBytes: config.limits?.request_bytes ?? 8192 }); } catch { return { exitCode: 2, code: 'invalid_request' }; }
+  if (config.migration_complete !== true && ['register', 'claim', 'begin'].includes(request.operation)) return { exitCode: 4, code: 'migration_required' };
+  try {
+    const shared = dependencies.readSnapshot && dependencies.submitRequest && dependencies.waitForResult ? dependencies : await import('./delegation-shared.mjs');
+    const client = dependencies.client ?? (await import('./delegation-github.mjs')).createGitHubClient({ repo: config.repository, maxApiCalls: config.limits.api_calls, timeoutMs: config.limits.timeout_ms, jobTimeoutMs: config.limits.job_timeout_ms });
+    await shared.readSnapshot(client, config);
+    const sent = await shared.submitRequest(client, config, request);
+    const result = await shared.waitForResult(client, config, { requestId: sent.request_id, commentId: sent.request_comment_id });
+    try { cacheSharedSnapshot(await shared.readSnapshot(client, config), { dir: opts.dir ?? DEFAULT_DIR, mirrorDir: mirrorOf(opts) }); } catch {
+      // 写しの失敗で、共有側の確定済み要求を送り直さない。
+    }
+    const code = result.code ?? 'unknown';
+    const confirmed = new Set(['confirmed', 'issue_ready', 'already_registered', 'reserved', 'already_reserved', 'running', 'linked', 'imported', 'reconciled', 'review_refreshed']);
+    const exitCode = ['pending', 'unprocessed', 'registered', 'issue_creating', 'review_pending'].includes(code) ? 3
+      : /conflict|invalid|denied/.test(code) ? 2
+      : confirmed.has(code) ? 0 : 4;
+    return { exitCode, code, request_id: sent.request_id, request_comment_id: sent.request_comment_id, ...(Number.isSafeInteger(result.seq) ? { seq: result.seq } : {}) };
+  } catch (error) {
+    if (error?.code === 'result_pending') return { exitCode: 3, code: 'pending' };
+    if (/^(?:invalid_|request_limit|content_conflict|request_conflict)/.test(error?.code ?? '')) return { exitCode: 2, code: 'invalid_request' };
+    return { exitCode: 5, code: 'shared_unavailable' };
+  }
+}
+
 function exitWith(error) {
   console.error(error.message);
   process.exit(error instanceof UsageError ? 2 : error instanceof GhError ? 3 : 1);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (process.argv[2] === 'status') {
+  if (['request', 'import'].includes(process.argv[2])) {
+    runSharedRequestCli(process.argv.slice(2)).then((result) => { console.log(JSON.stringify(result)); process.exitCode = result.exitCode; }).catch(exitWith);
+  } else if (process.argv[2] === 'status') {
     // statusはwait-for-devin-pr.mjsを使い、あちらがこのファイルを読むため、静的に読み込むと循環する。
     // ここでawaitすると、このファイルの評価が終わらないまま相手の読み込みを待ち、止まってしまう。
     // 評価を終えてからthenで実行する。

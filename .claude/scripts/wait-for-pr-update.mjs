@@ -36,17 +36,20 @@ const GH_TIMEOUT_MS = 30_000;
 const PASSING_CHECK_RUN = new Set(['SUCCESS', 'SKIPPED', 'NEUTRAL']);
 const PENDING_STATUS = new Set(['PENDING', 'EXPECTED']);
 
+const ciChecks = (rollup) => rollup.filter((item) => (item.name ?? item.context) !== 'agent-review');
+
 const isCheckRun = (item) => item.__typename === 'CheckRun' || 'conclusion' in item;
 
 /** statusCheckRollupのすべてが完了しているか。CheckRunとStatusContext（commit status）が混在する。 */
 export function checksComplete(rollup) {
-  return rollup.every((item) => (isCheckRun(item) ? item.status === 'COMPLETED' : !PENDING_STATUS.has(item.state)));
+  return ciChecks(rollup).every((item) => (isCheckRun(item) ? item.status === 'COMPLETED' : !PENDING_STATUS.has(item.state)));
 }
 
 /** 完了済みのstatusCheckRollupの結論。0件ならnone。 */
 export function ciConclusion(rollup) {
-  if (rollup.length === 0) return 'none';
-  const failed = rollup.some((item) =>
+  const checks = ciChecks(rollup);
+  if (checks.length === 0) return 'none';
+  const failed = checks.some((item) =>
     isCheckRun(item) ? !PASSING_CHECK_RUN.has(item.conclusion) : item.state !== 'SUCCESS',
   );
   return failed ? 'failure' : 'success';
@@ -85,7 +88,7 @@ export function detectUpdate(pr, { since, sha = null, headSeenAtMs = null, nowMs
     sha !== null ? !pr.headRefOid.startsWith(sha) : head !== undefined && Date.parse(head.committedDate) > sinceMs;
   if (!moved) return { status: 'waiting', ciConclusion: null, ...base };
 
-  const rollup = pr.statusCheckRollup ?? [];
+  const rollup = ciChecks(pr.statusCheckRollup ?? []);
   if (rollup.length === 0) {
     const seenAt = headSeenAtMs ?? nowMs;
     if (nowMs - seenAt < graceSec * 1000) return { status: 'waiting', ciConclusion: null, ...base };

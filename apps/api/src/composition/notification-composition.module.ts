@@ -9,6 +9,10 @@ import { InProcessAfterResponse } from "../infrastructure/after-response/in-proc
 import { SystemClock } from "../infrastructure/clock/system-clock";
 import { getPool } from "../infrastructure/database/pool";
 import {
+  CLOSE_PUSH_SESSION_INPUT_PORT,
+  type ClosePushSessionInputPort,
+} from "../modules/notification/adapter/inbound/close-push-session.input-port";
+import {
   DISPATCH_LOG,
   type DispatchLog,
 } from "../modules/notification/adapter/outbound/dispatch-log.port";
@@ -38,6 +42,7 @@ import { HttpsPushTransport } from "../modules/notification/infrastructure/https
 import { PgNotificationDispatchStore } from "../modules/notification/infrastructure/pg-notification-dispatch-store";
 import { PgNotificationUnitOfWork } from "../modules/notification/infrastructure/pg-notification-unit-of-work";
 import { WebPushSender } from "../modules/notification/infrastructure/web-push-sender";
+import { ClosePushSessionUseCase } from "../modules/notification/usecase/close-push-session.usecase";
 import { DispatchNotificationUseCase } from "../modules/notification/usecase/dispatch-notification.usecase";
 
 function useDatabase(): boolean {
@@ -64,6 +69,15 @@ const missingDatabase = (): Promise<never> =>
     {
       provide: VAPID_KEYRING,
       useFactory: (): VapidKeyringPort => EnvVapidKeyring.fromEnv(),
+    },
+    {
+      provide: CLOSE_PUSH_SESSION_INPUT_PORT,
+      useFactory: (
+        uow: NotificationUnitOfWork,
+        clock: Clock,
+      ): ClosePushSessionInputPort =>
+        new ClosePushSessionUseCase(uow, clock),
+      inject: [NOTIFICATION_UNIT_OF_WORK, CLOCK],
     },
     {
       provide: NOTIFICATION_DISPATCH_STORE,
@@ -131,6 +145,7 @@ const missingDatabase = (): Promise<never> =>
   exports: [
     NOTIFICATION_UNIT_OF_WORK,
     VAPID_KEYRING,
+    CLOSE_PUSH_SESSION_INPUT_PORT,
     CLOCK,
     AFTER_RESPONSE,
     PUSH_SENDER,

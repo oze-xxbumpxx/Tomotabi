@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "operation": "import",
+  "request_id": "a5a23c62-da02-4151-a2b2-c6b4e5809617",
+  "task_key": "push-notifications:signout-guard",
+  "task_digest": "57ec3f6c835abbf9a4847157b898a4c5290a3ad22a7d8de8b19d0ac7c2d45fb9",
+  "issue": 180,
+  "pr": 183
+}

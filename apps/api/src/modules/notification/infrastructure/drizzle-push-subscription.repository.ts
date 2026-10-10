@@ -59,6 +59,38 @@ export class DrizzlePushSubscriptionRepository
     return rows.length > 0;
   }
 
+  async closeSession(
+    sessionId: string,
+    userId: UserId,
+    closedAt: Date,
+  ): Promise<void> {
+    await this.db
+      .insert(closedPushSessions)
+      .values({ sessionId, userId, closedAt })
+      .onConflictDoNothing();
+  }
+
+  async disableByRegistrationSession(
+    userId: UserId,
+    sessionId: string,
+    now: Date,
+  ): Promise<void> {
+    await this.db
+      .update(pushSubscriptions)
+      .set({
+        enabled: false,
+        revision: sql`${pushSubscriptions.revision} + 1`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(pushSubscriptions.userId, userId),
+          eq(pushSubscriptions.registrationSessionId, sessionId),
+          eq(pushSubscriptions.enabled, true),
+        ),
+      );
+  }
+
   async disableExpired(userId: UserId, now: Date): Promise<number> {
     const rows = await this.db
       .update(pushSubscriptions)

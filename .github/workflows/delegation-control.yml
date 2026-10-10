@@ -1,0 +1,63 @@
+name: delegation-control
+
+on:
+  issue_comment:
+    types: [created, edited, deleted]
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [initialize, reconcile, review-refresh]
+        default: reconcile
+      pr:
+        type: string
+        required: false
+  schedule:
+    - cron: '0 * * * *'
+  workflow_run:
+    workflows: [delegation-events]
+    types: [completed]
+
+concurrency:
+  group: tomotabi-delegation-control
+  queue: max
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  checks: write
+  actions: read
+
+jobs:
+  control:
+    name: delegation-control-writer
+    if: >-
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      (github.event_name != 'issue_comment' ||
+       (github.event.issue.number == 191 &&
+        (startsWith(github.event.comment.body, '<!-- tomotabi-delegation-request -->') ||
+         startsWith(github.event.changes.body.from, '<!-- tomotabi-delegation-request -->'))) ||
+       (github.event.issue.pull_request &&
+        (github.event.action == 'deleted' ||
+         github.event.comment.user.id == 199175422 ||
+         startsWith(github.event.comment.body, '<!-- tomotabi-claude-review -->') ||
+         startsWith(github.event.changes.body.from, '<!-- tomotabi-claude-review -->') ||
+         startsWith(github.event.comment.body, '<!-- codex-pull-request-review-summary -->') ||
+         startsWith(github.event.changes.body.from, '<!-- codex-pull-request-review-summary -->'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Process public requests and refresh reviews
+        run: node .claude/scripts/delegation-control.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HARNESS_NAMESPACE: tomotabi-harness

@@ -31,9 +31,10 @@ test('gh issue create の出力に Issue の URL があれば、待機コマン�
   assert.match(out.hookSpecificOutput.additionalContext, /wait-for-pr\.mjs 37/);
   assert.match(out.hookSpecificOutput.additionalContext, /review-devin-pr/);
   // H-01: 委譲の記録（docs/designs/devin-delegation-loop.md）
-  assert.match(out.hookSpecificOutput.additionalContext, /delegation\.mjs init 37 --model/);
-  // 後続のIssueなら前の委譲を結ぶ（docs/designs/devin-delegation-status.md）
-  assert.match(out.hookSpecificOutput.additionalContext, /--follow-up-of <前の委譲>/);
+  assert.match(out.hookSpecificOutput.additionalContext, /delegation\.mjs import --request-file/);
+  // 直接起票を起動許可にせず、承認済み計画の共通受付へ案内する
+  assert.match(out.hookSpecificOutput.additionalContext, /delegation\.mjs request --request-file/);
+  assert.doesNotMatch(out.hookSpecificOutput.additionalContext, /delegation\.mjs init|devin --cloud|devin --model/);
   // U-10: Issueに紐づかないDevinのPRの待機（docs/designs/devin-unlinked-pr-review.md）
   assert.match(out.hookSpecificOutput.additionalContext, /wait-for-devin-pr\.mjs --since \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/);
 });

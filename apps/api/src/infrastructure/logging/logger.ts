@@ -14,6 +14,7 @@ const KNOWN_LOG_CODES: ReadonlySet<string> = new Set([
   "FORBIDDEN_ORIGIN",
   "UNSUPPORTED_MEDIA_TYPE",
   "AUTH_UNAVAILABLE",
+  "PUSH_STOP_FAILED",
   "NOT_FOUND",
 ]);
 

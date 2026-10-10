@@ -198,9 +198,19 @@ export function NotificationSettingsScreen({
   };
 
   const stopThisDevice = async () => {
-    // 止めるIDは今のendpointの有効な行から決める。記憶が無い・読めない
-    // 端末でも止められるように、記憶はあとの順位にする。
+    // 止めるIDは、記憶している今のendpointの有効な行を優先する。
+    // 同じセッションで購読を作り直すとisCurrentSessionの有効な行が
+    // 新旧で並ぶことがあり、一覧は作成の昇順なので先頭のfindだと
+    // 古い行を止めてしまう。記憶が無い・読めない端末では
+    // isCurrentSessionの有効な行、それも無ければ記憶のIDを使う。
+    const rememberedRow =
+      rememberedId === null
+        ? null
+        : (items.find(
+            (item) => item.id === rememberedId && item.enabled,
+          ) ?? null);
     const stopId =
+      rememberedRow?.id ??
       items.find((item) => item.isCurrentSession && item.enabled)?.id ??
       rememberedId;
     if (userId === null || stopId === null) {

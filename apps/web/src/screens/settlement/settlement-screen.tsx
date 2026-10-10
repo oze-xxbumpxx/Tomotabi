@@ -118,6 +118,24 @@ export function SettlementScreen({
     }
   }, [create.state.status, queryClient, tripId]);
 
+  // 通知から開いた精算（focusSettlementId）が、読み込み済みの頁に無い
+  // ときは、見つかるか最後の頁に達するまで続きを取る（F-52）。
+  useEffect(() => {
+    if (focusSettlementId === null) {
+      return;
+    }
+    const found = (settlements.data?.pages ?? []).some((page) =>
+      page.items.some((item) => item.id === focusSettlementId),
+    );
+    if (
+      !found &&
+      settlements.hasNextPage &&
+      !settlements.isFetchingNextPage
+    ) {
+      void settlements.fetchNextPage();
+    }
+  }, [focusSettlementId, settlements]);
+
   if (create.state.status === "session-expired") {
     return (
       <main>

@@ -83,7 +83,10 @@ function urlOf(input: RequestInfo | URL): string {
       : input.url;
 }
 
-type Handler = (init?: RequestInit) => Response | Promise<Response>;
+type Handler = (
+  init?: RequestInit,
+  url?: string,
+) => Response | Promise<Response>;
 
 function stubApi(handlers: {
   me?: Handler;
@@ -128,7 +131,7 @@ function stubApi(handlers: {
     ) {
       return Promise.resolve(
         handlers.disable !== undefined
-          ? handlers.disable(init)
+          ? handlers.disable(init, url)
           : new Response(null, { status: 204 }),
       );
     }
@@ -764,6 +767,43 @@ describe("PW-06 止める", () => {
         "tomotabi:push-subscription:" + userId,
       ),
     ).toBeNull();
+  });
+
+  it("同じセッションに有効な行が新旧並ぶときは、記憶した購読の行を止める", async () => {
+    const subscription = browserSubscriptionMock();
+    stubPushEnv({ permission: "granted", subscription });
+    // 購読を作り直したあとの状態: APIの一覧には新旧どちらも
+    // isCurrentSessionの有効な行（作成の昇順で古い行が先頭）。
+    // 記憶は新しい行を指す。
+    const oldRowId = "22222222-3333-4444-8555-666666666666";
+    window.localStorage.setItem(
+      "tomotabi:push-subscription:" + userId,
+      ownSubscriptionId,
+    );
+    const disabledUrls: string[] = [];
+    stubApi({
+      subscriptions: () =>
+        json({
+          items: [
+            subscriptionRow({ id: oldRowId }),
+            subscriptionRow({ id: ownSubscriptionId }),
+          ],
+        }),
+      disable: (_init, url) => {
+        disabledUrls.push(url ?? "");
+        return new Response(null, { status: 204 });
+      },
+    });
+    renderScreen();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "この端末の通知を止める" }),
+    );
+    // 先頭の古い行ではなく、記憶した新しい購読の行を止める。
+    await waitFor(() => {
+      expect(disabledUrls).toEqual([
+        `/api/me/push-subscriptions/${ownSubscriptionId}`,
+      ]);
+    });
   });
 });
 

@@ -264,7 +264,10 @@ function urlOf(input: RequestInfo | URL): string {
       : input.url;
 }
 
-type Handler = (init?: RequestInit) => Response | Promise<Response>;
+type Handler = (
+  init?: RequestInit,
+  url?: string,
+) => Response | Promise<Response>;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
@@ -337,7 +340,7 @@ function stubApi(handlers: {
     ) {
       return Promise.resolve(
         handlers.settlements !== undefined
-          ? handlers.settlements(init)
+          ? handlers.settlements(init, url)
           : json({ items: [], nextCursor: null }),
       );
     }
@@ -678,6 +681,50 @@ describe("精算の画面（14・14f・14g・14i）", () => {
 
     expect(screen.getByText("精算の履歴")).toBeInTheDocument();
     expect(screen.getByText("取り消し済み")).toBeInTheDocument();
+  });
+
+  it("通知から開いた精算が読み込み済みの頁に無ければ、見つかるまで続きを取る", async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    const oldSettlementId = "99999999-8888-4777-8666-555555555555";
+    const requestedCursors: (string | null)[] = [];
+    stubApi({
+      settlements: (_init, url) => {
+        const cursor = new URL(url ?? "", "http://localhost").searchParams.get(
+          "cursor",
+        );
+        requestedCursors.push(cursor);
+        if (cursor === "c2") {
+          return json({
+            items: [settlementBody({ id: oldSettlementId })],
+            nextCursor: null,
+          });
+        }
+        return json({ items: [settlementBody()], nextCursor: "c2" });
+      },
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <SettlementScreen
+          tripId={tripId}
+          focusSettlementId={oldSettlementId}
+        />
+      </QueryClientProvider>,
+    );
+
+    // 1頁目に無いので2頁目（cursor=c2）が自動で取られ、
+    // 見つかった行にaria-currentが付く。
+    await waitFor(() => {
+      expect(requestedCursors).toContain("c2");
+    });
+    await waitFor(() => {
+      const section = screen
+        .getByText("精算の履歴")
+        .closest("section") as HTMLElement;
+      const rows = within(section).getAllByRole("listitem");
+      expect(rows).toHaveLength(2);
+      expect(rows[1].getAttribute("aria-current")).toBe("true");
+      expect(rows[0].getAttribute("aria-current")).toBeNull();
+    });
   });
 
   it("下部のタブに「精算」を出し、しおりのタブからも辿れる", async () => {

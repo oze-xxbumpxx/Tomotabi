@@ -199,3 +199,7 @@ Devin／Codexの5件を反例として追加し、修正後の全ハーネス361
 既存successをChecks APIへPATCHできない反例では、GitHubに古いsuccessが残ることも試験で固定した。共有pendingとcontroller失敗、マージ前のrefresh完了＋statusの両照合を要求する。API障害中の古い成功の物理的失効は保証の対象外。
 
 修正後の固定tree `ed204cebd9a042192c2d68ce688466bcd3e77c07`を独立再レビューし、広域114件・権限11件の試験がPASS。検証済みの未解決BLOCKは0件。
+
+追加の再レビューでは、mainへのpushなどPRを伴わないci／e2e完了を正常な通知対象外として扱う試験と、古い成功表示の警告・再照合後の解除を追加した。PR #189の該当4ファイルを検証して反映し、全ハーネス365件がPASS。`queue: max`は[現行のGitHub公式構文](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency)に記載されているため維持し、PR #189の削除案は採用していない。
+
+追加変更の固定tree `26292f840a36d29dfe0fc190087cf1af27fa319b`を独立確認し、広域69件・権限7件がPASS、検証済みの未解決BLOCKは0件。

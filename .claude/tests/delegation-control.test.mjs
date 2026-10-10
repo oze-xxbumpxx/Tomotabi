@@ -7,6 +7,7 @@ import {
 } from '../scripts/delegation-shared.mjs';
 import { runController, runControllerMain, persistEvent, verifyPlan, findCreatedIssue, refreshSha, initializeAnchor, decodeNotificationZip } from '../scripts/delegation-control.mjs';
 import { createGitHubClient } from '../scripts/delegation-github.mjs';
+import { buildStatus, formatStatus, statusFromSnapshot } from '../scripts/delegation-status.mjs';
 
 const REPO = 'oze-xxbumpxx/Tomotabi';
 const SHA = 'a'.repeat(40);
@@ -810,6 +811,77 @@ test('待機期限と受領ID違いで許可を返さない', async () => {
   await assert.rejects(waitForResult(client, config, { requestId: randomUUID(), commentId: 3, timeoutMs: 0 }), /result_pending/);
   await assert.rejects(waitForResult(client, config, { requestId: 'invalid', commentId: 3 }), /invalid_receipt/);
   await assert.rejects(submitRequest(client, { ...config, anchor_comment_id: null }, { schema_version: 1, request_id: randomUUID(), operation: 'reconcile' }), /uninitialized/);
+});
+
+test('PRを伴わないworkflow_runは通知を何もせず正常に終え、PR同伴は従来どおり処理する', async () => {
+  const client = memoryGitHub();
+  const rest = client.rest.bind(client);
+  // ci.ymlがmainへのpushで完了したrun。pull_requestsは空。
+  const pushRun = { ...makeRun(9), workflow_id: 99, event: 'push', pull_requests: [] };
+  client.rest = async (method, path, body) => {
+    if (method === 'GET' && path.endsWith('/actions/runs/9')) return copy(pushRun);
+    if (method === 'GET' && path.endsWith('/actions/workflows/99')) return { path: '.github/workflows/ci.yml' };
+    return rest(method, path, body);
+  };
+  const before = await readSnapshot(client, config);
+  const empty = await control(client, { event: { workflow_run: { id: 9 } } });
+  assert.equal(empty.interrupted, false);
+  assert.deepEqual(empty.errors, []);
+  const after = await readSnapshot(client, config);
+  assert.equal(after.seq, before.seq);
+  assert.equal(after.hash, before.hash);
+  assert.equal(client.comments.filter((comment) => comment.body.startsWith(EVENT_MARKER)).length, 0);
+
+  // PRを伴う完了は従来どおり通知として処理する。
+  const prRun = { ...makeRun(10), workflow_id: 99, event: 'pull_request', pull_requests: [{ number: 20 }] };
+  client.rest = async (method, path, body) => {
+    if (method === 'GET' && path.endsWith('/actions/runs/10')) return copy(prRun);
+    if (method === 'GET' && path.endsWith('/actions/workflows/99')) return { path: '.github/workflows/e2e.yml' };
+    return rest(method, path, body);
+  };
+  const linked = await control(client, { event: { workflow_run: { id: 10 } } });
+  assert.equal(linked.state.prs[20].head_sha, SHA);
+  assert.equal(linked.state.checks[SHA].conclusion, 'success');
+
+  // PRを伴うのに番号が正しくない場合は従来どおり失敗にする。
+  const badRun = { ...makeRun(11), workflow_id: 99, event: 'pull_request', pull_requests: [{ number: 0 }] };
+  client.rest = async (method, path, body) => {
+    if (method === 'GET' && path.endsWith('/actions/runs/11')) return copy(badRun);
+    if (method === 'GET' && path.endsWith('/actions/workflows/99')) return { path: '.github/workflows/ci.yml' };
+    return rest(method, path, body);
+  };
+  await assert.rejects(control(client, { event: { workflow_run: { id: 11 } } }), /notification_unknown/);
+});
+
+test('成功checkのPATCH失敗を共有状態へ記録し、statusがそのheadの古い成功を警告する', async () => {
+  const client = memoryGitHub();
+  let state = await refreshSha(client, config, await readSnapshot(client, config), client.run, SHA, emptyReview);
+  assert.equal(state.checks[SHA].conclusion, 'success');
+  client.failures.push({ method: 'PATCH', path: '/check-runs/1', when: 'before' });
+  await assert.rejects(refreshSha(client, config, state, client.run, SHA, emptyReview), /check_write_unknown/);
+  state = await readSnapshot(client, config);
+  assert.equal(state.checks[SHA].state, 'in_progress');
+  assert.equal(state.checks[SHA].conclusion, null);
+  assert.equal(state.checks[SHA].stale_success, true);
+  // 共有状態だけが確認中でも、statusはGitHubに残った古い成功表示を警告する。
+  const legacy = { ...buildStatus({ records: [], now: Date.parse(NOW) }), checkStates: { [SHA]: client.checks.get(1) } };
+  const snapshot = { ...state, fetched_at: NOW, tasks: { 'feature:task': { task_key: 'feature:task', issue: 11, pr: 12, state: 'pr_open', updated_seq: state.seq } }, prs: { 12: { head_sha: SHA } } };
+  const status = statusFromSnapshot(snapshot, legacy);
+  const action = status.actions.find((item) => item.key === 'feature:task');
+  assert.equal(action.state, 'stale-success');
+  assert.match(formatStatus(status), /GitHubの成功表示は古い。マージしない/);
+  // 次の再照合が成功すれば印は消える。
+  state = await refreshSha(client, config, state, client.run, SHA, emptyReview);
+  assert.equal(state.checks[SHA].conclusion, 'success');
+  assert.equal(state.checks[SHA].stale_success, false);
+});
+
+test('以前の成功が無いcheck書き込み失敗はstale_successを立てない', async () => {
+  const client = memoryGitHub({ failure: { method: 'PATCH', path: '/check-runs/1', when: 'before' } });
+  await assert.rejects(refreshSha(client, config, await readSnapshot(client, config), client.run, SHA, emptyReview), /check_write_unknown/);
+  const state = await readSnapshot(client, config);
+  assert.equal(state.checks[SHA].state, 'in_progress');
+  assert.equal(state.checks[SHA].stale_success, undefined);
 });
 
 test('begin以外の同要求の再送は元の確定結果とsource照合情報を返す', async () => {

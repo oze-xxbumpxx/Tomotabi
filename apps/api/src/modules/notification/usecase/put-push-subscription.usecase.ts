@@ -40,8 +40,9 @@ const invalidRequest = (message: string): ApiError =>
  * ハッシュ・比較する（生の入力とは違い得る）。
  *
  * 1トランザクションで: 自分のusers行をFOR UPDATEで取り、
- * 停止の記録に今のセッションがあれば409、期限切れの自分の購読を
- * 無効にし、同じ宛先を他人が有効で持てば409（他人の無効な行は
+ * 停止の記録に今のセッションがあれば409、期限切れ・登録した
+ * ログインが消えた自分の購読を無効にし（上限の数から外す）、
+ * 同じ宛先を他人が有効で持てば409（他人の無効な行は
  * 持ち主を書き換えて引き取る）、この登録で有効な数が増えるなら
  * 上限を確かめ、あとは挿入または更新する。中身が同じ再登録は
  * 版を上げない。
@@ -115,6 +116,9 @@ export class PutPushSubscriptionUseCase
         });
       }
       await repo.disableExpired(userId, now);
+      // 登録したログインが消えた・期限切れの購読も上限に数えない
+      // （同じ行ロックの中で、登録・停止・ログアウトと一列に並ぶ）。
+      await repo.disableExpiredSessions(userId, now);
       const existing = await repo.findByEndpointHash(endpointHash);
       const takeOver =
         existing !== null && existing.userId !== userId && !existing.enabled;

@@ -1,8 +1,22 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, isNotNull, lte, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  exists,
+  getTableColumns,
+  gt,
+  isNotNull,
+  lte,
+  notExists,
+  sql,
+} from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { UserId } from "../../../common/domain/user-id";
-import { users } from "../../../infrastructure/database/schema/identity";
+import {
+  sessions,
+  users,
+} from "../../../infrastructure/database/schema/identity";
 import {
   closedPushSessions,
   pushSubscriptions,
@@ -105,6 +119,40 @@ export class DrizzlePushSubscriptionRepository
           eq(pushSubscriptions.enabled, true),
           isNotNull(pushSubscriptions.expirationTime),
           lte(pushSubscriptions.expirationTime, now),
+        ),
+      )
+      .returning({ id: pushSubscriptions.id });
+    return rows.length;
+  }
+
+  async disableExpiredSessions(
+    userId: UserId,
+    now: Date,
+  ): Promise<number> {
+    const rows = await this.db
+      .update(pushSubscriptions)
+      .set({
+        enabled: false,
+        revision: sql`${pushSubscriptions.revision} + 1`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(pushSubscriptions.userId, userId),
+          eq(pushSubscriptions.enabled, true),
+          // 登録したセッションが残っていて期限が来ていない、以外。
+          // 送る相手の条件と同じ判定（sessions.id::textで比べる）。
+          notExists(
+            this.db
+              .select({ _: sql`1` })
+              .from(sessions)
+              .where(
+                and(
+                  sql`${sessions.id}::text = ${pushSubscriptions.registrationSessionId}`,
+                  gt(sessions.expiresAt, now),
+                ),
+              ),
+          ),
         ),
       )
       .returning({ id: pushSubscriptions.id });
@@ -246,8 +294,25 @@ export class DrizzlePushSubscriptionRepository
   }
 
   async listByUser(userId: UserId): Promise<readonly PushSubscriptionRow[]> {
+    // 登録したログインが消えた・期限切れの購読は届かないため、一覧では
+    // 無効として返す（読み取りで行は書き換えない。判定は送る相手の
+    // 条件と同じ）。
+    const sessionAlive = exists(
+      this.db
+        .select({ _: sql`1` })
+        .from(sessions)
+        .where(
+          and(
+            sql`${sessions.id}::text = ${pushSubscriptions.registrationSessionId}`,
+            gt(sessions.expiresAt, sql`now()`),
+          ),
+        ),
+    );
     const rows = await this.db
-      .select()
+      .select({
+        ...getTableColumns(pushSubscriptions),
+        enabled: sql<boolean>`${pushSubscriptions.enabled} and ${sessionAlive}`,
+      })
       .from(pushSubscriptions)
       .where(eq(pushSubscriptions.userId, userId))
       .orderBy(asc(pushSubscriptions.createdAt), asc(pushSubscriptions.id));

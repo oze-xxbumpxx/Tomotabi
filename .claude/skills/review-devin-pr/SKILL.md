@@ -51,8 +51,8 @@ description: >
 1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。quality・build・api-dbなど既存CIの結果を確認する。agent-reviewはCIの待機と集計から外す。現在headへのCodex完了とClaude完了は別に確認する。
    続けて、今のheadへのCodexのレビューを頼む: `node .claude/scripts/codex-review.mjs request <n>`。
    CodexはボットのPR（Devin）を自動ではレビューせず、pushのあとも見直さないため、round 0とround 1以降の毎回、Claudeのレビューを始める前に頼む
-   （2026-10-10 ユーザーの指示）。投稿は手元のghの認証（ユーザーのアカウント）で行い、今のheadが完了・実行中のときや、headより後に依頼済みのときは投稿しない。
-   Codexの完了は待たずに自分のレビューを進め、`merge`の判定の前に`run_in_background`で`node .claude/scripts/codex-review.mjs wait <n> --sha <head>`を起動して待つ。
+   （2026-10-10 ユーザーの指示）。投稿は手元のghの認証（ユーザーのアカウント）で行う。依頼には対象のheadの印を付け、今のheadが完了・実行中のときや、自分がそのheadへ依頼済みのときは投稿しない。
+   Codexの完了は待たずに自分のレビューを進め、`merge`の判定の前に`run_in_background`で`node .claude/scripts/codex-review.mjs wait <n> --sha <head> [--since <requestの出力のrequestedAt>]`を起動して待つ（頼み直したときに、前の試行の失敗で終えないため）。
    Codexの指摘は、自分の指摘と同じ分類（must / nit / security / decision）で扱う。
    round 1以降は`gh api repos/{owner}/{repo}/compare/<前回の sha>...<今の head>`で差分を見て、
    前回の指摘が直ったかと、新しい変更に問題が無いかを見る。Devinの返信コメントも読む。

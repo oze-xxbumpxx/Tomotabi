@@ -19,7 +19,7 @@ reviews:
         category: 'missing-test'
         summary: 'PD-18の版が上がったら無効にしない試験が無い'
       - severity: 'must'
-        category: 'module-boundary'
+        category: 'spec-mismatch'
         summary: 'notificationがplanningの口をimport'
       - severity: 'must'
         category: 'spec-mismatch'
@@ -31,7 +31,7 @@ reviews:
         category: 'robustness'
         summary: '名前の読み取りで操作者の参加を見ない'
       - severity: 'nit'
-        category: 'observability'
+        category: 'logging-gap'
         summary: '送る部品の例外に理由が無い'
       - severity: 'nit'
         category: 'test-robustness'
@@ -46,7 +46,7 @@ reviews:
     posted: true
     findings:
       - severity: 'must'
-        category: 'null-undefined'
+        category: 'coding-standard'
         summary: 'HttpsPushTransportのagentが省略可能でundefined'
   - round: 2
     reviewed_at: '2026-10-10T02:16:48Z'

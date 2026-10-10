@@ -215,6 +215,7 @@ async function reconcileTasks(client, config, state, run, now, uuid) {
 }
 
 async function ensureCheck(client, config, state, run, headSha) {
+  const prior = state.checks[headSha] ?? null;
   let record = state.checks[headSha];
   if (!record) {
     record = { head_sha: headSha, check_id: null, state: 'creating', external_id: `tomotabi-agent-review:${headSha}:${randomUUID()}` };
@@ -235,15 +236,20 @@ async function ensureCheck(client, config, state, run, headSha) {
   }
   if (state.checks[headSha]?.check_id !== record.check_id) state = await persistEvent(client, config, state, { checks: { [headSha]: record } }, systemMeta(run, 'check-linked'), { code: 'check_pending', allowed: false });
   state = await persistEvent(client, config, state, { checks: { [headSha]: { ...record, state: 'in_progress', conclusion: null } } }, systemMeta(run, 'review-started'), { code: 'review_pending', allowed: false });
-  let current = null;
-  try { current = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`); } catch { fail('check_write_unknown'); }
-  if (current?.head_sha !== headSha || current.name !== 'agent-review' || current.external_id !== record.external_id) fail('check_unverified');
-  let pending = null;
   try {
+    const current = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
+    if (current?.head_sha !== headSha || current.name !== 'agent-review' || current.external_id !== record.external_id) fail('check_unverified');
     await client.rest('PATCH', `/repos/${config.repository}/check-runs/${record.check_id}`, { status: 'in_progress', output: { title: 'レビューを確認中', summary: '現在の証拠を確認しています。' } });
-    pending = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
-  } catch { fail('check_write_unknown'); }
-  if (pending?.status !== 'in_progress' || pending.conclusion !== null) fail('check_write_unknown');
+    const pending = await client.rest('GET', `/repos/${config.repository}/check-runs/${record.check_id}`);
+    if (pending?.status !== 'in_progress' || pending.conclusion !== null) fail('check_write_unknown');
+  } catch (error) {
+    const failure = error instanceof DelegationError ? error : new DelegationError('check_write_unknown');
+    // GitHub上に前回の成功が残り得ることを共有状態へ記録し、statusが「成功表示は古い」と出せるようにする。古い成功を消す仕組みは作らない。
+    if (prior?.state === 'completed' && prior?.conclusion === 'success') {
+      state = await persistEvent(client, config, state, { checks: { [headSha]: { ...record, state: 'in_progress', conclusion: null, stale_success: true } } }, systemMeta(run, 'check-stale-success'), { code: failure.code, allowed: false });
+    }
+    throw failure;
+  }
   return state;
 }
 
@@ -273,7 +279,7 @@ export async function refreshSha(client, config, state, run, headSha, review, { 
     const currentSha = pr.head_sha ?? pr.head?.sha;
     if (target || previous || currentSha === headSha) changes.prs[number] = { ...previous, pr: number, head_sha: currentSha, target, state: 'OPEN' };
   }
-  const record = { ...state.checks[headSha], state: 'in_progress', conclusion: null, snapshot_hash: second.snapshot_hash ?? null };
+  const record = { ...state.checks[headSha], state: 'in_progress', conclusion: null, stale_success: false, snapshot_hash: second.snapshot_hash ?? null };
   changes.checks[headSha] = record;
   state = await persistEvent(client, config, state, changes, systemMeta(run, 'review-evaluated'), { code: 'review_checked', allowed: false });
   // 保存の間の変化も確認し、成功を古い証拠で書かない。
@@ -334,8 +340,9 @@ async function notificationPrs(client, config, event) {
       return [parsed.pr];
     }
     if (!['.github/workflows/ci.yml', '.github/workflows/e2e.yml'].includes(workflow?.path)) fail('notification_unverified');
+    // PRを伴わない完了（mainへのpush起点など）は通知の対象外として何もしない。PRを伴うのに番号が不正な場合だけ失敗にする。
     const prs = incoming.pull_requests?.map((pr) => pr.number) ?? [];
-    if (prs.length === 0 || !prs.every(positive)) fail('notification_unknown');
+    if (prs.length > 0 && !prs.every(positive)) fail('notification_unknown');
     return prs;
   }
   if (positive(event?.issue?.number) && event.issue.pull_request) return [event.issue.number];

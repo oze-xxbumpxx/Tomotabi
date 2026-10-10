@@ -56,15 +56,17 @@ test('controllerはCI完了と通常コメントを除外し、証拠の編集�
 test('writerの実際のif式は通常コメントを省略し、要求と完了証拠の編集・削除は処理する', () => {
   const expression = control.match(/    if: >-\n([\s\S]*?)    runs-on:/)[1].trim();
   const evaluate = new Function('github', 'startsWith', 'format', `return (${expression});`);
-  const check = ({ number = 1, pr = false, author = 1, body = '', previous = '', ref = 'refs/heads/main', eventName = 'issue_comment' } = {}) => evaluate({
-    ref, event_name: eventName, event: { repository: { default_branch: 'main' }, issue: { number, pull_request: pr },
+  const check = ({ number = 1, pr = false, author = 1, body = '', previous = '', ref = 'refs/heads/main', eventName = 'issue_comment', action = 'created' } = {}) => evaluate({
+    ref, event_name: eventName, event: { action, repository: { default_branch: 'main' }, issue: { number, pull_request: pr },
       comment: { user: { id: author }, body }, changes: { body: { from: previous } } },
-  }, (value, prefix) => value.startsWith(prefix), (pattern, value) => pattern.replace('{0}', value));
+  }, (value, prefix) => String(value ?? '').startsWith(prefix), (pattern, value) => pattern.replace('{0}', value));
   assert.equal(Boolean(check({ body: '通常コメント' })), false);
   assert.equal(Boolean(check({ number: 191, body: '<!-- tomotabi-delegation-event -->\n{}' })), false);
   assert.equal(Boolean(check({ number: 191, body: '<!-- tomotabi-delegation-request -->\n{}' })), true);
   assert.equal(Boolean(check({ number: 191, previous: '<!-- tomotabi-delegation-request -->\n{}' })), true);
   assert.equal(Boolean(check({ pr: true, body: '通常コメント' })), false);
+  assert.equal(Boolean(check({ pr: true, action: 'deleted', body: '', previous: '' })), true);
+  assert.equal(Boolean(check({ pr: true, action: 'deleted', body: null, previous: '' })), true);
   assert.equal(Boolean(check({ pr: true, author: 199175422, body: '行外の指摘' })), true);
   for (const marker of ['tomotabi-claude-review', 'codex-pull-request-review-summary']) {
     assert.equal(Boolean(check({ pr: true, body: `<!-- ${marker} -->\n{}` })), true);

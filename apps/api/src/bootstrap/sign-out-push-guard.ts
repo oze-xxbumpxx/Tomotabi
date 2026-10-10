@@ -20,6 +20,14 @@ function sendPushStopFailed(req: Request, res: Response): void {
   res.status(503).json(body);
 }
 
+// 例外のmessageは接続先やトークンを含みうるため、既存の仕組みで種類だけを残す。
+// res.errは1要求1行のcode判定（res.locals.codeが先）に、res.logの{err}行は
+// serializeLoggedErrorで{type, errorCode}になる。messageはどちらにも出ない。
+function logExceptionType(res: Response, error: unknown): void {
+  res.err = error instanceof Error ? error : new Error(String(error));
+  res.log?.error({ err: error });
+}
+
 /**
  * POST /api/auth/sign-outの手前に置くガード（設計書「ログアウト」）。
  * SessionVerifierの4つの結果で分ける。
@@ -33,14 +41,15 @@ export function signOutPushGuard(
   sessionVerifier: SessionVerifier,
   closePushSession: ClosePushSessionInputPort,
 ): RequestHandler {
-  return async (req, res, next) => {
+  const guard: RequestHandler = async (req, res, next) => {
     try {
       const result = await sessionVerifier.verify(req.headers);
       switch (result.kind) {
         case "authenticated": {
           try {
             await closePushSession.execute(result.userId, result.sessionId);
-          } catch {
+          } catch (error) {
+            logExceptionType(res, error);
             sendPushStopFailed(req, res);
             return;
           }
@@ -58,9 +67,31 @@ export function signOutPushGuard(
           next();
           return;
         }
+        default: {
+          // kindが増えたときはここがneverへの代入で型エラーになる。
+          // 実行時に到達した場合も閉じる側（ログアウトさせない）に倒す。
+          const _exhaustive: never = result;
+          sendPushStopFailed(req, res);
+          return;
+        }
       }
-    } catch {
+    } catch (error) {
+      logExceptionType(res, error);
       sendPushStopFailed(req, res);
     }
+  };
+  // Expressのmountは大文字小文字を区別しないため、/api/AUTH/sign-outにも
+  // 載ってしまう。一方Better Authは/api/auth/*の完全一致でしか処理しない。
+  // 経路制限と同じ完全一致（baseUrl＋method＋mount後のreq.path）で対象を
+  // 判定しないと、Better Authが404の経路でガードだけ動き通知だけ止まる。
+  return (req, res, next) => {
+    if (
+      req.baseUrl === "/api/auth" &&
+      req.method === "POST" &&
+      req.path === "/sign-out"
+    ) {
+      return guard(req, res, next);
+    }
+    next();
   };
 }

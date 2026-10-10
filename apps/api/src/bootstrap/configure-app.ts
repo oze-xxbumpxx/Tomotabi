@@ -21,7 +21,8 @@ import { signOutPushGuard } from "./sign-out-push-guard";
  *   0. pino-httpの要求ログを先頭に載せる（認証経路も1要求1行に乗せる。
  *      Nestのnestjs-pinoはuseExistingでこのreq.logを使う）
  *   1. bodyParser: falseで生成されたアプリに認証経路の制限を先に載せる
- *   2. POST /api/auth/sign-outだけに通知を止めるガードを置き、
+ *   2. /api/authのmountに通知を止めるガードを置く（ガードの中で
+ *      POST /api/auth/sign-outの完全一致のときだけ動く）。その後ろに
  *      Better Authの公式Node handlerを /api/auth/*splatに載せる
  *      （authがあるときだけ。ほかの/api/auth/*の経路は変えない）
  *   3. その後ろでNest用のJSON parserを有効化する（認証経路のbodyはライブラリが読む）
@@ -37,8 +38,8 @@ export function configureApp(
   http.use(requestLogger);
   http.use("/api/auth", authRouteAllowlist(publicOrigin, auth !== null));
   if (auth !== null) {
-    http.post(
-      "/api/auth/sign-out",
+    http.use(
+      "/api/auth",
       signOutPushGuard(
         app.get<SessionVerifier>(SESSION_VERIFIER),
         app.get<ClosePushSessionInputPort>(CLOSE_PUSH_SESSION_INPUT_PORT),

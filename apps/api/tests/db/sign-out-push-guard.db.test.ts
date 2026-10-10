@@ -327,8 +327,45 @@ describe("ログアウトで通知を止める（PD-11）", () => {
     );
     await closeSession.execute(user.userId, sessionId);
     expect(await isSessionClosed(sessionId)).toBe(true);
-    expect(await subRow(own.id)).toMatchObject({ enabled: false });
-    expect(await subRow(otherDevice)).toMatchObject({ enabled: true });
+    expect(await subRow(own.id)).toMatchObject({
+      enabled: false,
+      revision: "2",
+    });
+    expect(await subRow(otherDevice)).toMatchObject({
+      enabled: true,
+      revision: "1",
+    });
+  });
+});
+
+describe("ログアウトの経路の照合", () => {
+  it("POST /api/AUTH/sign-outでは停止の記録が入らず購読が有効のまま、セッションも残る", async () => {
+    const user = await newUser("pd11case");
+    const sessionId = await latestSessionId(user.userId);
+    const own = await register(user.cookie);
+
+    // Expressの経路照合は大文字小文字を区別しないため、ガードがmountの
+    // 照合に任せるとこの要求にも載ってしまう。Better Authは/api/authの
+    // 完全一致で処理するので404になり、ログアウトは起きない。ガードも
+    // 同じ完全一致で判定するなら動かず、停止の記録・購読・セッションは
+    // そのまま残る。
+    const response = await http()
+      .post("/api/AUTH/sign-out")
+      .set("Origin", ORIGIN)
+      .set("Cookie", user.cookie)
+      .set("Content-Type", "application/json")
+      .send({});
+
+    expect(response.status).toBe(404);
+    expect(response.headers["x-push-stopped"]).toBeUndefined();
+    expect(await isSessionClosed(sessionId)).toBe(false);
+    expect(await subRow(own.id)).toMatchObject({
+      enabled: true,
+      revision: "1",
+    });
+    expect(await sessionCount(user.userId)).toBe(1);
+    const me = await authed(http().get("/api/me"), user.cookie);
+    expect(me.status).toBe(200);
   });
 });
 
@@ -366,6 +403,8 @@ describe("ログアウトの失敗（PD-12）", () => {
 
   it("認証の基盤の障害（unavailable）でも503 PUSH_STOP_FAILED", async () => {
     const user = await newUser("pd12u");
+    const sessionId = await latestSessionId(user.userId);
+    const own = await register(user.cookie);
     const brokenRef = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -383,7 +422,11 @@ describe("ログアウトの失敗（PD-12）", () => {
       expect(response.status).toBe(503);
       expect(response.body.code).toBe("PUSH_STOP_FAILED");
       expect(response.body.retryable).toBe(true);
+      // Better Authへは渡さないので、停止の記録は入らず、
+      // セッションと購読はそのまま残る。
       expect(await sessionCount(user.userId)).toBe(1);
+      expect(await isSessionClosed(sessionId)).toBe(false);
+      expect(await subRow(own.id)).toMatchObject({ enabled: true });
     } finally {
       await brokenApp.close();
     }

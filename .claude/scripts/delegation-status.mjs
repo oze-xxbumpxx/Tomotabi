@@ -168,6 +168,8 @@ function describe(action) {
     }
     case 'review-wait':
       return `両レビュー待ち（head ${action.headSha ?? '未確認'}）。現在headへのCodex再依頼とClaude完了を確認し、review-refreshで照合する`;
+    case 'stale-success':
+      return 'GitHubの成功表示は古い。マージしない → review-refreshで再照合し、共有状態と実際のcheckが一致するまで成功扱いしない';
     case 'shared-unknown':
       return '起票・起動の結果不明。共有状態と既存セッションを照合する。自動再起動しない';
     case 'shared-pending':
@@ -295,7 +297,8 @@ export function statusFromSnapshot(snapshot, legacy) {
     const base = { key: task.task_key, pr: prNumber, shared_seq: task.updated_seq ?? snapshot.seq };
     if (['launch_unknown', 'issue_unknown', 'launching'].includes(task.state)) actions.push({ ...base, state: 'shared-unknown' });
     else if (prNumber !== null) {
-      if (live?.state === 'OPEN' && head !== null && check?.head_sha === head && check?.state === 'completed' && check?.conclusion === 'success'
+      if (check?.stale_success === true) actions.push({ ...base, state: 'stale-success', headSha: head });
+      else if (live?.state === 'OPEN' && head !== null && check?.head_sha === head && check?.state === 'completed' && check?.conclusion === 'success'
         && Number.isSafeInteger(check.check_id) && check.check_id > 0 && typeof check.external_id === 'string'
         && liveCheck?.id === check.check_id && liveCheck?.head_sha === head && liveCheck?.name === 'agent-review'
         && liveCheck?.external_id === check.external_id && liveCheck?.status === 'completed' && liveCheck?.conclusion === 'success') actions.push({ ...base, state: 'await-user', verdict: 'merge', round: null, verified: true });

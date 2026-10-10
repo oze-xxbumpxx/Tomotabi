@@ -309,6 +309,21 @@ test('I-21: 共有seqを表示し、旧mergeやunknownから成功・再起動�
   }
 });
 
+test('共有状態のstale_successは「GitHubの成功表示は古い。マージしない」と出す', () => {
+  const rec = reviewed(issueRec(11, { gh: { pr: 12 } }), 'merge');
+  const legacy = { ...buildStatus({ records: [rec], prs: [ghPr(12)], now: NOW }), checkStates: { [HEAD]: { id: 55, head_sha: HEAD, name: 'agent-review', external_id: 'review-55', status: 'completed', conclusion: 'success' } } };
+  const snapshot = { seq: 5, hash: 'a'.repeat(64), fetched_at: '2026-10-10T10:00:00Z', tasks: {
+    'feature:one': { task_key: 'feature:one', issue: 11, pr: 12, state: 'pr_open', updated_seq: 5 },
+  }, prs: { 12: { head_sha: HEAD } }, checks: { [HEAD]: { head_sha: HEAD, check_id: 55, external_id: 'review-55', state: 'in_progress', conclusion: null, stale_success: true } } };
+  const status = statusFromSnapshot(snapshot, legacy);
+  assert.equal(status.actions[0].state, 'stale-success');
+  const text = formatStatus(status);
+  assert.match(text, /GitHubの成功表示は古い。マージしない/);
+  assert.doesNotMatch(text, /両レビューの照合済み|マージ判断はユーザー/);
+  const cleared = { ...snapshot, checks: { [HEAD]: { ...snapshot.checks[HEAD], stale_success: false } } };
+  assert.equal(statusFromSnapshot(cleared, legacy).actions[0].state, 'review-wait');
+});
+
 test('I-13: 共有読取失敗は古い履歴を未確認表示だけに使う', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'shared-status-'));
   try {

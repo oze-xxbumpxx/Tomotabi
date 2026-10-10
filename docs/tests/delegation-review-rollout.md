@@ -9,7 +9,7 @@
 3. 成功したrunの結果とActions作者の先頭コメントを照合し、anchor_comment_idを別の設定PRへ保存する。POST結果不明なら再送せず、管理Issueとrunを読む。
 4. 既存タスクの対応をimport要求として用意し、初期化済みの共通受付へ送る。実行元・モデル・セッションは確認できたものだけ記録する。
 
-管理Issueの作成時点ではdispatch履歴は0件。先頭コメントは未作成で、migration_completeとcli_launch_verifiedはfalseを維持する。初期化をPRブランチや手作業のコメントで代用しない。
+管理Issueの作成時点ではdispatch履歴は0件。初期化後もmigration_completeとcli_launch_verifiedはfalseを維持する。初期化をPRブランチや手作業のコメントで代用しない。
 
 ## 既存タスクの照合
 
@@ -33,3 +33,11 @@ PRの本文には各Issueを閉じる対応が記載されている。ローカ�
 - API障害時に未確認と表示し、古い成功表示だけでマージしないこと。
 
 試験目的のDevin起動は行わない。Rulesetの必須チェック追加と停止設定の解除は、実機確認後にユーザーが判断する。
+
+## Actionsでの初期化結果
+
+設定PR192はmainへマージ済み。2026-10-10にinitializeを1回dispatchし、[run38034392026](https://github.com/oze-xxbumpxx/Tomotabi/actions/runs/38034392026)が成功した。実行SHAは12a0d1abb7fd8327abb71282045c1c9c3678b8f9で、マージ済みmainと一致する。
+
+先頭コメントIDは6095103226、作者IDはActionsの41898282。管理Issueのコメント一覧で該当する先頭コメントが1件だけであることを確認した。last_seqは0、last_event_idはnull、last_hashは64桁の0。runのanchor_initializedの出力と一致する。
+
+先頭コメントIDの設定PRをマージするまで通常要求は送らない。初期化を再dispatchする必要はない。既存委譲のimportと実機レビュー検証は未実施。

@@ -15,7 +15,11 @@ test('I-18/I-20: writerはmainのrun SHAで動き、PRコードやnpmを実行�
   assert.match(control, /if: github\.ref == format\('refs\/heads\/\{0\}', github\.event\.repository\.default_branch\)/);
   assert.match(control, /ref: \$\{\{ github\.sha \}\}/);
   assert.doesNotMatch(control, /pull_request\.head|workflow_run\.head_sha|npm|npx|body\s*\}\}|run:\s*\$\{\{/);
-  assert.match(control, /group: tomotabi-delegation-control\s+queue: max\s+cancel-in-progress: false/);
+  const concurrency = control.match(/concurrency:\n((?:  [^\n]*\n)+)/)?.[1] ?? '';
+  assert.match(concurrency, /group: tomotabi-delegation-control/);
+  assert.match(concurrency, /cancel-in-progress: false/);
+  const keys = [...concurrency.matchAll(/^  ([a-z-]+):/gm)].map((match) => match[1]).sort();
+  assert.deepEqual(keys, ['cancel-in-progress', 'group']);
   assert.match(control, /name: delegation-control-writer/);
   assert.doesNotMatch(control, /name: agent-review/);
   assert.match(control, /contents: read\s+issues: write\s+pull-requests: read\s+checks: write\s+actions: read/);

@@ -81,3 +81,36 @@ test('PR未登録の単一タスクは候補を発見でき、link-pr後は登�
   assert.equal(registeredPrForIssue({ tasks: { a: { issue: 37, pr: null }, b: { issue: 37, pr: null } } }, prs, 37).known, true);
   for (const pr of [0, -1, '45']) assert.equal(registeredPrForIssue({ tasks: { a: { issue: 37, pr } } }, prs, 37).known, true);
 });
+
+test('W-CLI: CLIとして起動してもdelegation.mjsとの読み込みの輪で止まらず、PRを見つけて0で終わる', async () => {
+  const { mkdtempSync, writeFileSync, chmodSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { spawnSync } = await import('node:child_process');
+  const dir = mkdtempSync(join(tmpdir(), 'wait-for-pr-cli-'));
+  try {
+    // 偽のgh。Issueの作成日時とPR一覧だけ返し、ほかの呼び出し（共有状態の読み取りなど）は失敗させる。
+    const gh = join(dir, 'gh');
+    writeFileSync(
+      gh,
+      [
+        '#!/bin/sh',
+        'case "$1 $2" in',
+        '  "issue view") echo "2026-10-10T00:00:00Z" ;;',
+        `  "pr list") echo '[{"number":201,"title":"t","body":"Closes #198","headRefName":"devin/x-198","url":"https://example.test/pr/201","createdAt":"2026-10-10T01:00:00Z","closingIssuesReferences":[{"number":198}]}]' ;;`,
+        '  *) exit 1 ;;',
+        'esac',
+      ].join('\n'),
+    );
+    chmodSync(gh, 0o755);
+    const script = join(dirname(fileURLToPath(import.meta.url)), '../scripts/wait-for-pr.mjs');
+    const result = spawnSync(process.execPath, [script, '198', '--interval', '1', '--timeout', '5'], {
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, HARNESS_STATE_DIR: dir },
+      timeout: 20_000,
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /"number":201/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

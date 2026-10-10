@@ -147,14 +147,15 @@ export class DispatchNotificationUseCase {
         payload,
       });
     } catch {
-      // 通信の失敗・時間切れは届かない（dropped）。例外のmessageには
-      // 宛先や鍵が入り得るため、ログに出さない。
+      // 通信の失敗・時間切れ・署名の前の失敗は届かない（dropped）。
+      // 例外のmessageには宛先や鍵が入り得るため、ログには固定の語だけ出す。
       this.log.info({
         eventId: event.eventId,
         subscriptionId: target.subscriptionId,
         result: "dropped",
         status: null,
         durationMs: Date.now() - startedAt,
+        reason: "send_failed",
       });
       return;
     }

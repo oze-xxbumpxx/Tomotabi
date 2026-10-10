@@ -63,7 +63,8 @@ describe("通知の本文（PU-03）", () => {
     const message = buildNotificationMessage(eventOf(kind, action), NAMES);
     expect(message.title).toBe(NOTIFICATION_TITLE);
     expect(message.title).toBe("tomotabi");
-    expect(message.body).toBe(`「はなが「京都の旅」で${EXPECTED[action]}」`);
+    // F-40の形: 外側にかぎかっこは付けない。
+    expect(message.body).toBe(`はなが「京都の旅」で${EXPECTED[action]}`);
   });
 
   it("許可された11組以外の組み合わせは組み立てない", () => {

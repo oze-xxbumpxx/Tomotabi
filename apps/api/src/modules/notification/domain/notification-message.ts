@@ -17,7 +17,8 @@ const ELLIPSIS = "…";
 
 /**
  * 操作の言葉（F-41・要件の11種類の写し）。
- * 本文の形は「{相手の名前}が「{旅行の名前}」で{操作}」。
+ * 本文の形は「{相手の名前}が「{旅行の名前}」で{操作}」
+ * （外側にかぎかっこは付けない。F-40）。
  */
 const ACTION_TEXTS: Readonly<Record<PushAction, string>> = {
   plan_added: "予定を追加しました",
@@ -45,6 +46,9 @@ function graphemes(text: string): string[] {
  * 結果はmaxGraphemes文字以内（切ったときは「…」を含む）。
  */
 function truncateName(name: string, maxGraphemes: number): string {
+  if (maxGraphemes <= 0) {
+    return "";
+  }
   const parts = graphemes(name);
   if (parts.length <= maxGraphemes) {
     return name;
@@ -62,8 +66,9 @@ function isAllowedAction(
 }
 
 /**
- * 通知の中身。titleは通知のタイトル、bodyは「{相手}が「{旅行}」で{操作}」、
- * payloadはWeb Pushで送るUTF-8のJSON（PushPayload。2KB以内）。
+ * 通知の中身。titleは通知のタイトル、bodyは「{相手}が「{旅行}」で{操作}」
+ * （外側にかぎかっこは付けない）、payloadはWeb Pushで送るUTF-8のJSON
+ * （PushPayload。2KB以内）。
  */
 export type NotificationMessage = Readonly<{
   title: string;
@@ -121,7 +126,7 @@ export function buildNotificationMessage(
 
   return {
     title: NOTIFICATION_TITLE,
-    body: `「${actorName}が「${tripName}」で${ACTION_TEXTS[event.action]}」`,
+    body: `${actorName}が「${tripName}」で${ACTION_TEXTS[event.action]}`,
     payload,
   };
 }

@@ -43,10 +43,19 @@ export class PgNotificationDispatchStore implements NotificationDispatchStore {
       await client.query(`SET LOCAL lock_timeout = '${QUERY_TIMEOUT}'`);
       const db = drizzle(client);
 
+      // 操作した人がその旅行の参加者のときだけ名前を返す
+      // （参加者でない人の操作には通知を出さない）。
       const names = await db
         .select({ actorName: users.name, tripName: trips.name })
         .from(trips)
         .innerJoin(users, eq(users.id, input.actorUserId))
+        .innerJoin(
+          tripParticipants,
+          and(
+            eq(tripParticipants.tripId, input.tripId),
+            eq(tripParticipants.userId, input.actorUserId),
+          ),
+        )
         .where(eq(trips.id, input.tripId));
       const nameRow = names[0];
       if (nameRow === undefined) {

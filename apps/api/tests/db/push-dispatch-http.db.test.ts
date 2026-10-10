@@ -59,8 +59,13 @@ class RecordingTransport implements PushTransport {
   calls: PushRequestDetails[] = [];
   status = 201;
   throwError: string | null = null;
+  /** 応答を返す直前に走らせる仕掛け（送っている間の版上げの再現など）。 */
+  beforeSend: ((request: PushRequestDetails) => Promise<void>) | null = null;
   async send(request: PushRequestDetails): Promise<{ status: number }> {
     this.calls.push(request);
+    if (this.beforeSend !== null) {
+      await this.beforeSend(request);
+    }
     if (this.throwError !== null) {
       throw new Error(`send failed to ${request.endpoint}`);
     }
@@ -290,6 +295,7 @@ beforeEach(() => {
   transport.calls = [];
   transport.status = 201;
   transport.throwError = null;
+  transport.beforeSend = null;
   dispatchLog.entries = [];
 });
 
@@ -522,26 +528,49 @@ describe("11種の操作の届け先（PD-16）", () => {
       .set("If-Match", '"1"')
       .send({ name: "銀閣寺", memo: "メモ" });
     expect(renamed.status).toBe(200);
-    // 予定を取りやめる → 二度目の取りやめは届かない
+    // 予定を取りやめる（届く操作。PATCHで版が上がっているのでIf-Matchは"2"）
     const cancel = await authed(
       http().post(`/api/trips/${tripId}/plans/${planId}/cancel`),
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
       .set("If-Match", '"2"');
-    expect([200, 409]).toContain(cancel.status);
-    const cancelAgain = await authed(
-      http().post(`/api/trips/${tripId}/plans/${planId}/cancel`),
+    expect(cancel.status).toBe(200);
+
+    // 既にあった取り消しは200を返すが送らない（支払いで確かめる。
+    // 予定の二度目の取りやめは409で、200を返す経路を通らないため）。
+    const payment = await authed(
+      http().post(`/api/trips/${tripId}/payments`),
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"3"');
-    expect([200, 409]).toContain(cancelAgain.status);
+      .send({
+        amountYen: "1200",
+        payerUserId: actor.userId,
+        allocations: [
+          { userId: actor.userId, percent: 50 },
+          { userId: partner.userId, percent: 50 },
+        ],
+      });
+    expect(payment.status).toBe(201);
+    const payId = payment.body.id as string;
+    const payCancel1 = await authed(
+      http().post(`/api/trips/${tripId}/payments/${payId}/cancel`),
+      actor.cookie,
+    ).set("Idempotency-Key", newKey());
+    expect(payCancel1.status).toBe(201);
+    // 別のキーで同じ支払いの取り消し → 200で、取り消しの状態は厳密に同じ
+    const payCancel2 = await authed(
+      http().post(`/api/trips/${tripId}/payments/${payId}/cancel`),
+      actor.cookie,
+    ).set("Idempotency-Key", newKey());
+    expect(payCancel2.status).toBe(200);
+    expect(payCancel2.body).toEqual(payCancel1.body);
 
     await afterResponse.drain();
-    // 届くのは「予定の追加」1回だけ（取りやめ成功時は+1）。
-    const expectedCount = cancel.status === 200 ? 2 : 1;
-    expect(transport.calls.length).toBe(expectedCount);
+    // 届くのは「予定の追加」「予定の取りやめ」「支払いの記録」
+    // 「支払いの記録の取り消し」の4回だけ。
+    expect(transport.calls.length).toBe(4);
 
     // 旅行の開始・終了は届かない操作
     transport.calls = [];
@@ -587,17 +616,44 @@ describe("送り損ねても保存は終わる（PD-17）", () => {
 });
 
 describe("消えた宛先の無効化（PD-18・PD-19）", () => {
-  it("PD-18: 404/410のときだけ購読を無効にする（同じ版のときだけ）", async () => {
-    const actor = await newUser("actor6");
-    const partner = await newUser("partner6");
+  it.each([404, 410])(
+    "PD-18: %iのとき購読を無効にする（同じ版のときだけ）",
+    async (status) => {
+      const actor = await newUser(`actor6-${status}`);
+      const partner = await newUser(`partner6-${status}`);
+      const tripId = await createTrip(actor.cookie);
+      const gone = await seedSub(partner.userId);
+
+      transport.status = status;
+      await triggerPlanAdded(actor.cookie, tripId);
+      expect(transport.calls).toHaveLength(1);
+      expect(await subEnabled(gone.id)).toBe(false);
+      expect(dispatchLog.entries[0]?.result).toBe("gone");
+    },
+  );
+
+  it("PD-18: 送っている間に購読が登録し直され版が上がっていたら無効にしない", async () => {
+    const actor = await newUser("actor6r");
+    const partner = await newUser("partner6r");
     const tripId = await createTrip(actor.cookie);
     const gone = await seedSub(partner.userId);
 
+    // 読み取りのあと・410が返る直前に、その購読の版を1上げる
+    // （登録し直しの再現）。
     transport.status = 410;
+    transport.beforeSend = async () => {
+      await db.admin.query(
+        `UPDATE notification.push_subscriptions
+         SET revision = revision + 1 WHERE id = $1`,
+        [gone.id],
+      );
+    };
     await triggerPlanAdded(actor.cookie, tripId);
+
     expect(transport.calls).toHaveLength(1);
-    expect(await subEnabled(gone.id)).toBe(false);
     expect(dispatchLog.entries[0]?.result).toBe("gone");
+    // 版が違うので無効化しない（登録し直した購読を壊さない）。
+    expect(await subEnabled(gone.id)).toBe(true);
   });
 
   it.each([400, 401, 403, 429, 500])(

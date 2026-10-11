@@ -5,7 +5,7 @@
 
 - **task-id**: delegation-logging-gap
 - **作成日**: 2026-10-11
-- **対象タスク概要**: Devinへの委譲のレビューで出た`logging-gap`の指摘（異なるIssueで4件。must 1・nit 3）。2026-10-10に、委譲の記録の分類を語彙表にそろえたとき（`observability`を`logging-gap`に付け直した）、#180・#181が加わって閾値（3件）を超えた
+- **対象タスク概要**: Devinへの委譲のレビューで出た`logging-gap`の指摘（異なるIssueで4件。4件ともnit）。2026-10-10に、委譲の記録の分類を語彙表にそろえたとき（`observability`を`logging-gap`に付け直した）、#180・#181が加わって閾値（3件）を超えた
 - **関連成果物**: `delegations/`の37・43・180・181
 
 ## 観測した事象

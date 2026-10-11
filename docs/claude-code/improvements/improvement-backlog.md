@@ -14,6 +14,6 @@
 | IMP-2026-007 | 委譲のui-glitch指摘（開けば分かる崩れ）の予防として、画面のPRで375幅で開いてv3と見比べさせる | accepted | `candidates/delegation-ui-glitch.md`（#76・#130・#142）。2026-10-08にユーザーが採用し、同じブランチで適用 | 2026-10-08 |
 | IMP-2026-008 | 委譲のtest-robustness指摘（日付の決め打ち・クラス名・残った模擬）の予防を「既知の指摘」のE2Eの行にする | accepted | `candidates/delegation-test-robustness.md`（#100・#128・#152・#158）。2026-10-08にユーザーが採用し、同じブランチで適用 | 2026-10-08 |
 | IMP-2026-009 | 委譲のdesign-gap・duplication・error-feedback・pr-metadata・scope-creepは、閾値に届いたがハーネスを変えず再発を見る | proposal | `candidates/delegation-design-gap.md`ほか4つ | 2026-10-08 |
-| IMP-2026-010 | 委譲のlogging-gap指摘（失敗の`catch`で原因を捨てる・認証の経路のログ漏れ）の予防として、`devin-workflow`に例外の種類だけを残す1行を足す | proposal | `candidates/delegation-logging-gap.md`（#37・#43・#180・#181）。2026-10-10に分類を付け直して閾値を超えた | 2026-10-11 |
+| IMP-2026-010 | 委譲のlogging-gapは閾値に届いたが型が2つ（認証の経路のログ漏れ2件・`catch`で原因を捨てる2件）に分かれるので、ハーネスを変えず再発を見る。`catch`の型が3件目になったら、`devin-workflow`に例外の種類だけを残す1行を足す | proposal | `candidates/delegation-logging-gap.md`（#37・#43・#180・#181）。2026-10-10に分類を付け直して閾値を超えた | 2026-10-11 |
 
 accepted / rejected以外の行がsession-briefing / sprint-summaryの「未決定IMP」になる。

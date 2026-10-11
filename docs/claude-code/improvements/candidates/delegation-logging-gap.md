@@ -1,0 +1,39 @@
+# 改善候補: delegation-logging-gap
+
+> 委譲ループの軽量サイクル（`docs/claude-code/improvement-cycle.md`）で起票。
+> `delegation.mjs summary`の昇格候補から作った。reflection-agentは通していない。
+
+- **task-id**: delegation-logging-gap
+- **作成日**: 2026-10-11
+- **対象タスク概要**: Devinへの委譲のレビューで出た`logging-gap`の指摘（異なるIssueで4件。must 1・nit 3）。2026-10-10に、委譲の記録の分類を語彙表にそろえたとき（`observability`を`logging-gap`に付け直した）、#180・#181が加わって閾値（3件）を超えた
+- **関連成果物**: `delegations/`の37・43・180・181
+
+## 観測した事象
+
+- #37: `/api/auth/*`の要求が、1要求1行のログに出ない。
+- #43: Better Auth自身が返す400・415に、ログの`code`が付かない。
+- #180（PR #183）: ログアウトの前に通知を止める処理が失敗したとき、`catch`で例外を捨て、原因がログに残らない（nit。round 1で直った）。
+- #181（PR #184）: 通知を送る部品の例外が、理由なしの「届かない」になり、署名の前の失敗（鍵の設定の誤り）が見分けられない（nit。round 1で直った）。
+
+- **発生回数**: 異なる委譲で4件。前の2件は認証の経路のログ、後の2件は失敗の`catch`で原因を捨てる形。
+- **原因仮説**: 「例外の中身（message）をログに出さない」決まり（IMP-2026-001）を守ろうとして、種類まで捨てている。どこまで残してよいか（種類・固定の語・`errorCode`）が手順に書かれていない。
+- **改善案**: `devin-workflow`の「やってはいけないこと」の近くに、「失敗を受け止めた`catch`では、例外の本文は出さず、種類（`error.constructor.name`か固定の語）だけをログに残す。HTTPの経路では既存の`serializeLoggedError`の仕組みに乗せる」を1行足す。
+- **変更対象**: Skill（`.agents/skills/devin-workflow/SKILL.md`）
+- **想定される副作用**: ログの行が少し増える。本文を出さないので、秘密が漏れる危険は増えない。
+- **評価方法**: 適用後の、失敗の処理を含む委譲3つで`logging-gap`が0件か。
+- **昇格判定**: 昇格条件を満たす（異なるIssueで3件以上）。適用はユーザーの採用を待つ。
+
+## 変更差分（案）
+
+```diff
++- 失敗を受け止めた`catch`で、例外を黙って捨てない。本文（message）は出さず、種類（`error.constructor.name`か固定の語）だけをログに残す。HTTPの経路では`res.err`に載せ、既存の`serializeLoggedError`で`{type, errorCode}`にする。
+```
+
+## ロールバック方法
+
+足した1行を消す。
+
+## まとめ
+
+- 改善候補として起票したもの（→ backlogに追記したID）: IMP-2026-010
+- Memoryに留めたもの（昇格せず・再発監視）: なし

@@ -1,0 +1,37 @@
+issue: 198
+title: 'fix(notifications): ログインが期限切れになった端末には通知を送らない'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 2
+follow_up_of: 180
+delegated_at: '2026-10-10T12:16:21Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-10T12:55:39Z'
+    reviewed_sha: '0e6e7dddeca19eab3863f610c77d12d5d628bdf1'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '期限切れのログインの購読が上限に数えられ一覧に有効と出る（Codex指摘・ユーザー決定）'
+  - round: 1
+    reviewed_at: '2026-10-10T13:12:13Z'
+    reviewed_sha: 'a151274fee15862941e7214121378b14d897b46d'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '一覧の判定はDBの時刻、送るときはアプリの時刻'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 201
+  pr_created_at: '2026-10-10T12:24:24Z'
+  merged_at: '2026-10-11T08:16:19Z'
+  closed_at: '2026-10-11T08:16:19Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

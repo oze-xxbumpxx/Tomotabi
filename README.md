@@ -54,6 +54,7 @@ npm run test:api-db
 npm run build
 npm run test:harness
 npm run test:e2e   # Playwright E2E（Docker が必要。DB・API・web を起動して M-01 を流す）
+npm run manual:push  # 通知の手動確認（Docker・本物のChrome が必要。DB・API・web を起動してひなた・あおいの画面を開く。Ctrl-C で全部止める）
 npm run api:generate  # OpenAPI から web の API クライアントを再生成
 npm run api:check     # 再生成して差分が無いことを確認（CI でも実行）
 ```

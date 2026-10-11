@@ -5,6 +5,8 @@ import {
   AUTH_SECRET,
   RUNTIME_DATABASE_URL,
   SKIP_BUILD,
+  VAPID_KEYS,
+  VAPID_SUBJECT,
   WEB_ORIGIN,
   WEB_PORT,
 } from "./support/env";
@@ -52,6 +54,8 @@ export default defineConfig({
         BETTER_AUTH_SECRET: AUTH_SECRET,
         GOOGLE_CLIENT_ID: "e2e-unused",
         GOOGLE_CLIENT_SECRET: "e2e-unused",
+        VAPID_KEYS,
+        VAPID_SUBJECT,
       },
     },
     {

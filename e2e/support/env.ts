@@ -22,6 +22,9 @@ export const API_ORIGIN = `http://localhost:${API_PORT}`;
 export const RUNTIME_DATABASE_URL = required("E2E_DATABASE_URL_RUNTIME");
 export const MIGRATOR_DATABASE_URL = required("E2E_DATABASE_URL_MIGRATOR");
 export const AUTH_SECRET = required("E2E_AUTH_SECRET");
+// 通知の購読（Issue #205）。実行ごとにrun.mjsが新しい鍵を作って渡す。
+export const VAPID_KEYS = required("E2E_VAPID_KEYS");
+export const VAPID_SUBJECT = required("E2E_VAPID_SUBJECT");
 export const HINATA_USER_ID = required("E2E_HINATA_USER_ID");
 export const AOI_USER_ID = required("E2E_AOI_USER_ID");
 

@@ -9,7 +9,8 @@ import { MIGRATOR_DATABASE_URL } from "./env";
 const TRUNCATE_BUSINESS_TABLES = `TRUNCATE
   planning.plans, planning.trip_participants, planning.trips,
   record.active_plan_events, record.plan_event_cancellations, record.plan_events,
-  infra.command_receipts, infra.trip_finance_guards
+  infra.command_receipts, infra.trip_finance_guards,
+  notification.push_subscriptions, notification.closed_push_sessions
   RESTART IDENTITY CASCADE`;
 
 let pool: Pool | null = null;

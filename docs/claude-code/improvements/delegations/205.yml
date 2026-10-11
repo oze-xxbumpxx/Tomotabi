@@ -1,0 +1,57 @@
+issue: 205
+title: 'test(e2e): 通知のE2E（PE-01〜PE-04）と手動確認の起動スクリプト'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-10-11T09:19:40Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-11T10:13:42Z'
+    reviewed_sha: 'e49cb7c7b6a428757be26e1eede7beb78f3a2c7d'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '手動確認のChromeでPlaywrightの既定の引数が購読を止める見込み'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: 'ポートの説明の食い違い'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: 'PM-03の回した日'
+  - round: 1
+    reviewed_at: '2026-10-11T10:37:36Z'
+    reviewed_sha: 'e279953f3b88c2569704656750d50b9a022e6b75'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'robustness'
+        summary: '手動確認のwebのbuildでAPI_ORIGINを固定していない（Codex指摘）'
+  - round: 2
+    reviewed_at: '2026-10-11T10:59:12Z'
+    reviewed_sha: 'e66648c0307e425fefb8014c3cc5dd94e671f1b0'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'missing-test'
+        summary: 'PE-02がカードの後からの表示を見逃す（Codex指摘・ユーザーの了承で3回目を投稿）'
+  - round: 3
+    reviewed_at: '2026-10-11T11:08:24Z'
+    reviewed_sha: '444d878ca8990bf9e67b9668020a422182f9491f'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 206
+  pr_created_at: '2026-10-11T10:06:48Z'
+  merged_at: '2026-10-11T11:08:59Z'
+  closed_at: '2026-10-11T11:08:59Z'
+  commits: 5
+  ci_first_pass: true
+  closes_linked: true

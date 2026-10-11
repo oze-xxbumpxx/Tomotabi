@@ -48,10 +48,10 @@ description: >
 
 ## レビュー（round 0は全体、round 1以降は前回のレビュー以降の差分）
 
-1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。quality・build・api-dbなど既存CIの結果を確認する。agent-reviewはCIの待機と集計から外す。現在headへのCodex完了とClaude完了は別に確認する。
-   続けて、今のheadへのCodexのレビューを頼む: `node .claude/scripts/codex-review.mjs request <n>`。
-   CodexはボットのPR（Devin）を自動ではレビューせず、pushのあとも見直さないため、round 0とround 1以降の毎回、Claudeのレビューを始める前に頼む
-   （2026-10-10 ユーザーの指示）。投稿は手元のghの認証（ユーザーのアカウント）で行う。依頼には対象のheadの印を付け、今のheadが完了・実行中のときや、自分がそのheadへ依頼済みのときは投稿しない。
+1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。quality・build・api-dbなど既存CIの結果を確認する。agent-reviewはCIの待機と集計から外す。Codex完了（PR内のどれかのコミット）と現在headのClaude完了は別に確認する。
+   round 0では、Codexのレビューを頼む: `node .claude/scripts/codex-review.mjs request <n>`。
+   CodexはボットのPR（Devin）を自動ではレビューしないため、Claudeのレビューを始める前に頼む（2026-10-10 ユーザーの指示）。
+   Codexのレビューは最初の1回で足りる。round 1以降の修正のたびには頼まない（2026-10-11 ユーザーの指示）。投稿は手元のghの認証（ユーザーのアカウント）で行う。依頼には対象のheadの印を付け、PRのどれかのコミットで完了済みのとき、今のheadで実行中のとき、自分がそのheadへ依頼済みのときは投稿しない。
    Codexの完了は待たずに自分のレビューを進め、`merge`の判定の前に`run_in_background`で`node .claude/scripts/codex-review.mjs wait <n> --sha <head> [--since <requestの出力のrequestedAt>]`を起動して待つ（頼み直したときに、前の試行の失敗で終えないため）。
    Codexの指摘は、自分の指摘と同じ分類（must / nit / security / decision）で扱う。
    round 1以降は`gh api repos/{owner}/{repo}/compare/<前回の sha>...<今の head>`で差分を見て、
@@ -147,12 +147,12 @@ description: >
 
 ## レビュー完了のコメント
 
-現在headへのCodex完了、対象スレッドの解決、行外指摘の確認を全件確かめる。Codexの開始を示す目の反応や、指摘が無いという推測は完了にならない。Codexの完了が古い版なら、`codex-review.mjs request`で今のheadへ頼み直し、`codex-review.mjs wait`で完了を待つ（上の「レビュー」の1）。終了コード3（時間切れ）・5（Codexの失敗）はユーザーに伝える。
+PR内のコミットへのCodex完了、対象スレッドの解決、行外指摘の確認を全件確かめる。Codexの開始を示す目の反応や、指摘が無いという推測は完了にならない。Codexの完了は古い版へのものでよく、頼み直さない。まだ1回も完了していなければ`codex-review.mjs wait`で完了を待つ（上の「レビュー」の1）。終了コード3（時間切れ）・5（Codexの失敗）はユーザーに伝える。
 
 1. 完全な40桁head SHAと、現在のCodex証拠集合のhash、確認した証拠ID／URLを取得する。指摘本文やsecurityの有無は完了JSONへ複製しない。
 2. `schema_version`、`pr`、`head_sha`、`verdict`、`codex_evidence_hash`、`codex_evidence`（完了証拠ID／URLの配列）、`acknowledged_finding_ids`（確認した行外指摘IDの配列）、`reviewed_at`を公開JSONに書く。`node .claude/scripts/agent-review.mjs completion --input <JSON-file>`の出力をファイルへ保存し、`gh pr comment <PR> --body-file <完了ファイル>`で新規投稿する。固定Claude担当の作者IDと、未編集の投稿だけが採用される。
 3. 間違いの修正やpush後の再レビューでは、前の完了を編集せず、新しい完了を投稿する。短いSHAや旧`claude-review`の印は成功の証拠にしない。`fix`／`escalate`は成功にならない。
-4. 共通受付の`review-refresh`で最新の証拠を照合する。Codex指摘の追加・編集・削除・再開、head更新ではClaudeも再確認する。agent-reviewは同じSHAを使う対象PR全件の証拠が揃うまで成功しない。
+4. 共通受付の`review-refresh`で最新の証拠を照合する。Codex指摘の追加・編集・削除・再開、head更新ではClaudeも再確認する（Codexへの再依頼は要らない）。agent-reviewは同じSHAを使う対象PR全件の証拠が揃うまで成功しない。
 5. マージ前にもう一度`review-refresh`の完了を確認し、`delegation.mjs status --json`で共有状態とChecks APIの両方を読み直す。未処理通知、controllerのI/O中断、既存CI、現在headのagent-reviewを確認する。check更新に失敗するとGitHubに古い成功が残り得るため、成功表示だけでマージ判断を渡さない。チェックの成功後も、PRのマージはユーザーが行う。
 
 ## 直ったスレッドを解決済みにする

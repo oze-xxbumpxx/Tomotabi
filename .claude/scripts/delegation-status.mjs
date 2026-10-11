@@ -167,7 +167,7 @@ function describe(action) {
       return `修正待ち（round ${action.round} で指摘を投稿）→ Bash の run_in_background で ${wait} を起動し直す${local}`;
     }
     case 'review-wait':
-      return `両レビュー待ち（head ${action.headSha ?? '未確認'}）。現在headへのCodex再依頼とClaude完了を確認し、review-refreshで照合する`;
+      return `両レビュー待ち（head ${action.headSha ?? '未確認'}）。Codex完了（最初の1回）と現在headのClaude完了を確認し、review-refreshで照合する`;
     case 'stale-success':
       return 'GitHubの成功表示は古い。マージしない → review-refreshで再照合し、共有状態と実際のcheckが一致するまで成功扱いしない';
     case 'shared-unknown':

@@ -195,8 +195,8 @@ test('summary形式変更と未知の状態を成功にせず、認識したpend
   assert.equal(result.snapshot.prs[0].codex_completions.length, 0);
 });
 
-test('古いheadの完了、dismiss済みformal review、偽作者だけでは現在headを完了にしない', async () => {
-  for (const review of [formal('old', { commit: { oid: OLD } }), formal('dismissed', { state: 'DISMISSED' }), formal('fake', { author: 77 })]) {
+test('dismiss済みformal review、偽作者だけではCodexの完了にしない', async () => {
+  for (const review of [formal('dismissed', { state: 'DISMISSED' }), formal('fake', { author: 77 })]) {
     const result = await collect({ details: { 1: { reviews: [review] } } });
     assert.equal(result.snapshot.prs[0].codex_completions.length, 0);
     assert.equal(result.decision.conclusion, 'failure');
@@ -432,4 +432,33 @@ test('completion CLIはstdoutへの生成だけで、引数/不正入力はexit 
     assert.equal(invalid.status, 2);
     assert.doesNotMatch(invalid.stderr, /private invalid/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('Codexの完了は最初の1回で足り、修正push後の現在headには求めない', async () => {
+  for (const details of [
+    { 1: { reviews: [formal('old-review', { commit: { oid: OLD } })] } },
+    { 1: { reviews: [], comments: [evidence('summary', { body: summary(OLD.slice(0, 7)) })] } },
+  ]) {
+    const result = await approved({ details });
+    assert.equal(result.decision.conclusion, 'success');
+    assert.equal(result.snapshot.prs[0].codex_completions[0].commit_sha, OLD);
+  }
+});
+
+test('Codexの完了が1回も無ければ、Claudeの完了があっても成功しない', async () => {
+  const result = await approved({ details: { 1: { reviews: [formal('dismissed', { state: 'DISMISSED' })] } } }).catch((error) => error);
+  assert.ok(result instanceof Error);
+  const claude = createClaudeCompletion({ pr: 1, headSha: HEAD, codexEvidenceHash: 'd'.repeat(64), codexEvidence: [{ id: 'x', url: url(1, 'x') }], reviewedAt: LATER });
+  const none = await collect({ details: { 1: { reviews: [], comments: [evidence('claude-1', { author: CONFIG.actor_ids.claude[0], body: claude, createdAt: LATER, updatedAt: LATER })] } } });
+  assert.deepEqual(none.snapshot.prs[0].codex_completions, []);
+  assert.equal(none.decision.conclusion, 'failure');
+});
+
+test('Claudeの完了は現在headに対するものだけを使う', async () => {
+  const good = await approved({ details: { 1: { reviews: [formal('old-review', { commit: { oid: OLD } })] } } });
+  const details = structuredClone(good.details);
+  const body = details[1].comments[0].body.replace(HEAD, OLD);
+  details[1].comments = [evidence('claude-1', { author: CONFIG.actor_ids.claude[0], body, createdAt: LATER, updatedAt: LATER })];
+  const stale = await collect({ details });
+  assert.equal(stale.decision.conclusion, 'failure');
 });

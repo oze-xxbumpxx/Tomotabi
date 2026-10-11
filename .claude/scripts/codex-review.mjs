@@ -5,7 +5,8 @@
 //
 // 使い方:
 //   node .claude/scripts/codex-review.mjs request <PR番号>
-//     今のheadにCodexのレビューが完了・実行中でなく、自分がそのheadへ依頼していなければ投稿する。
+//     PRのどのコミットにもCodexのレビューが完了しておらず、今のheadで実行中でも、自分がそのheadへ依頼済みでもなければ投稿する。
+//     Codexのレビューは最初の1回で足りる。修正のpushのたびには頼まない（2026-10-11 ユーザーの指示）。
 //     投稿は手元のghの認証（ユーザーのアカウント）で行う。Codexは書き込み権限のある人のコメントにだけ反応する。
 //     依頼のコメントには対象のheadを印で書き、二重の依頼はその印と作者（自分）で見分ける。
 //   node .claude/scripts/codex-review.mjs wait <PR番号> --sha <head> [--since <依頼の時刻>] [--interval 秒] [--timeout 秒]
@@ -60,16 +61,25 @@ export function codexState(summaryBody, headSha) {
   return state;
 }
 
+/** 要約コメントに、どれかのコミットへの完了の行があるか。 */
+export function completedOnAnyCommit(summaryBody) {
+  if (typeof summaryBody !== 'string' || !summaryBody.includes(SUMMARY_MARKER)) return false;
+  return summaryBody.split('\n').some((line) => {
+    const cells = line.split('|').map((cell) => cell.trim());
+    return cells.length >= 5 && cells[1].includes('Review') && /Completed/i.test(cells[2]) && /`[0-9a-f]{7,40}`/.test(cells[3]);
+  });
+}
+
 /**
- * 投稿するかを決める。依頼済みと数えるのは、自分（viewer）が今のheadの印を付けて投稿したコメントだけ。
+ * 投稿するかを決める。PRのどれかのコミットで完了していれば、今のheadが新しくても頼まない。依頼済みと数えるのは、自分（viewer）が今のheadの印を付けて投稿したコメントだけ。
  * コミットの日時はpushの時刻と一致しないので使わない。権限の無い人のコメントにはCodexが反応しないので数えない。
  * @param {{headSha:string, viewer:string, summaryBody:string|null,
  *   requests:Array<{body:string, author:string}>}} input
  * @returns {{action:'posted'|'skipped', reason:string}}
  */
 export function requestDecision({ headSha, viewer, summaryBody, requests }) {
+  if (completedOnAnyCommit(summaryBody)) return { action: 'skipped', reason: 'completed' };
   const state = codexState(summaryBody, headSha);
-  if (state === 'completed') return { action: 'skipped', reason: 'completed' };
   if (state === 'running') return { action: 'skipped', reason: 'running' };
   const requested = requests.some(
     (comment) => comment.author === viewer && REQUEST_MARKER.exec(comment.body)?.[1] === headSha,

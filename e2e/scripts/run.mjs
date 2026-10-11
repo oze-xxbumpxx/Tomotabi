@@ -17,6 +17,7 @@ import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
+import { generateVapidKeyElement } from "./vapid-keys.mjs";
 
 const E2E_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = join(E2E_DIR, "..");
@@ -39,7 +40,8 @@ const API_PORT = 3101;
 const TRUNCATE_BUSINESS_TABLES = `TRUNCATE
   planning.plans, planning.trip_participants, planning.trips,
   record.active_plan_events, record.plan_event_cancellations, record.plan_events,
-  infra.command_receipts, infra.trip_finance_guards
+  infra.command_receipts, infra.trip_finance_guards,
+  notification.push_subscriptions, notification.closed_push_sessions
   RESTART IDENTITY CASCADE`;
 
 const run = (command, args, options = {}) =>
@@ -133,7 +135,9 @@ async function main() {
       }
     }
 
-    const child = spawn("npx", ["playwright", "test"], {
+    // `npm run e2e -w @tomotabi/e2e -- tests/foo.spec.ts` のように、
+    // 追加の引数はplaywrightへそのまま渡す。
+    const child = spawn("npx", ["playwright", "test", ...process.argv.slice(2)], {
       cwd: E2E_DIR,
       stdio: "inherit",
       env: {
@@ -145,6 +149,11 @@ async function main() {
         E2E_AUTH_SECRET: randomBytes(32).toString("hex"),
         E2E_HINATA_USER_ID: hinataUserId,
         E2E_AOI_USER_ID: aoiUserId,
+        // 通知の購読（Issue #205）。実行ごとに新しい鍵を作り、
+        // ファイルやリポジトリには残さない（make-vapid-dev-keyの
+        // 一時資材とは別物。こちらはメモリ上だけにする）。
+        E2E_VAPID_KEYS: JSON.stringify([generateVapidKeyElement("e2e")]),
+        E2E_VAPID_SUBJECT: "mailto:e2e@tomotabi.invalid",
       },
     });
     for (const signal of ["SIGINT", "SIGTERM"]) {

@@ -120,13 +120,33 @@ test("PE-02: ホームの通知カードを閉じると、開き直しても出�
   await card.getByRole("button", { name: "閉じる" }).click();
   await expect(card).toHaveCount(0);
 
-  // 開き直しても出ない（「閉じる」の保存がlocalStorageに残る。
-  // 閉じたあとは保存値がtrue固定で、描画を待たなくてもカードは
-  // 出ないことが決まっている）。
+  // 閉じた印（tomotabi:push-guide-dismissed:<利用者のID>）が
+  // この人のlocalStorageに入る。
+  await expect
+    .poll(() =>
+      page.evaluate(
+        `localStorage.getItem(${JSON.stringify(`tomotabi:push-guide-dismissed:${HINATA_USER_ID}`)})`,
+      ),
+    )
+    .toBe("1");
+
+  // 開き直しても出ない。カードは描画の最初はdismissed=trueで出ず、
+  // localStorageとAPI（設定・一覧）の読み込みが終わってから出すか
+  // 決まる。読み込みが終わるまで待ってから、出ないことを確かめる
+  // （終わる前に見ると、カードがあとから出る壊れ方を見逃す）。
+  const configResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/me/push-config"),
+  );
+  const subscriptionsResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/me/push-subscriptions"),
+  );
   await page.reload();
   await expect(
     page.getByRole("heading", { name: TRIP.name }),
   ).toBeVisible();
+  await Promise.all([configResponse, subscriptionsResponse]);
+  // 応答が返ってからカードの表示の判定まで少し待つ。
+  await page.waitForTimeout(500);
   await expect(card).toHaveCount(0);
 });
 

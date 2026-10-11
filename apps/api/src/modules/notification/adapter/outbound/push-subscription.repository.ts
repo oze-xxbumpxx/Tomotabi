@@ -54,8 +54,8 @@ export type PushSubscriptionUpdate = Readonly<{
 
 /**
  * 購読の永続化。設計書「購読の登録」で、lockOwner→isSessionClosed→
- * disableExpired→findByEndpointHash→countEnabled→insert/updateの順を
- * 1トランザクションで行う限定集合。
+ * disableExpired→disableExpiredSessions→findByEndpointHash→countEnabled→
+ * insert/updateの順を1トランザクションで行う限定集合。
  */
 export interface PushSubscriptionRepository {
   /**
@@ -92,6 +92,14 @@ export interface PushSubscriptionRepository {
    * 戻り値は無効にした件数。
    */
   disableExpired(userId: UserId, now: Date): Promise<number>;
+
+  /**
+   * 登録したログインがidentity.sessionsに無いか期限切れの、自分の有効
+   * 購読を無効にする（上限を数える前の整理。送る相手の条件と同じ判定。
+   * 今のログインは有効なので、その購読は外れない）。
+   * 戻り値は無効にした件数。
+   */
+  disableExpiredSessions(userId: UserId, now: Date): Promise<number>;
 
   /** endpoint_hashの一意な行を読む。無いときはnull。 */
   findByEndpointHash(
@@ -140,7 +148,11 @@ export interface PushSubscriptionRepository {
    */
   disable(userId: UserId, id: string, now: Date): Promise<void>;
 
-  /** 自分の購読を登録日時の順で全部読む（有効・無効の両方）。 */
+  /**
+   * 自分の購読を登録日時の順で全部読む（有効・無効の両方）。
+   * enabledは届く状態で返す（登録したログインが消えた・期限切れの行は
+   * false。行自体は書き換えない）。
+   */
   listByUser(userId: UserId): Promise<readonly PushSubscriptionRow[]>;
 }
 

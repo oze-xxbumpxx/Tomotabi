@@ -139,12 +139,18 @@ async function newUser(name: string): Promise<{
      ON CONFLICT (slot) DO UPDATE SET user_id = $2, google_sub = $3, enabled = TRUE`,
     [nextSlot++ % 2, userId, sub],
   );
+  const cookie = await loginCookie(userId);
+  return { userId, cookie };
+}
+
+/** 同じ利用者の新しいログインのcookie（別セッションの購読を作る用）。 */
+async function loginCookie(userId: string): Promise<string> {
   const login = await testHelpers.login({ userId });
   const cookie = login.headers.get("cookie");
   if (cookie === null) {
     throw new Error("login did not produce a cookie header");
   }
-  return { userId, cookie };
+  return cookie;
 }
 
 async function latestSessionId(userId: string): Promise<string> {
@@ -390,8 +396,10 @@ describe("有効な購読の上限と期限切れの整理（PD-03）", () => {
     await register(user.cookie);
     await register(user.cookie);
     // 期限切れの行を種して有効3台に見せる（うち1台は期限切れ）。
+    // ログインは生きている実セッションにし、「期限切れ」だけを試す。
     await seedSub(user.userId, {
       expirationTime: new Date(Date.now() - 60_000),
+      sessionId: await latestSessionId(user.userId),
     });
     expect(await enabledCount(user.userId)).toBe(3);
 
@@ -399,6 +407,59 @@ describe("有効な購読の上限と期限切れの整理（PD-03）", () => {
     const response = await putSubscription(user.cookie, registrationBody());
     expect(response.status).toBe(200);
     expect(await enabledCount(user.userId)).toBe(3);
+  });
+
+  it("登録したログインが期限切れ・消えた購読は上限に数えず、一覧で無効に見える", async () => {
+    const user = await newUser("pd03c");
+    // 3台を別々のログインで登録する（ログインごとに別のセッションができる）。
+    const session1 = await latestSessionId(user.userId);
+    const sub1 = await register(user.cookie);
+    const cookie2 = await loginCookie(user.userId);
+    const session2 = await latestSessionId(user.userId);
+    const sub2 = await register(cookie2);
+    const cookie3 = await loginCookie(user.userId);
+    const session3 = await latestSessionId(user.userId);
+    const sub3 = await register(cookie3);
+    expect(new Set([session1, session2, session3]).size).toBe(3);
+    expect(await enabledCount(user.userId)).toBe(3);
+
+    // 1台目のログインを期限切れにし、2台目のログインの行を消す。
+    await db.admin.query(
+      "UPDATE identity.sessions SET expires_at = $1 WHERE id = $2",
+      [new Date(Date.now() - 60_000), session1],
+    );
+    await db.admin.query("DELETE FROM identity.sessions WHERE id = $1", [
+      session2,
+    ]);
+
+    // 届かない購読は一覧でenabled: falseに見える（行はまだ変わらない）。
+    const list = await authed(
+      http().get("/api/me/push-subscriptions"),
+      cookie3,
+    );
+    expect(list.status).toBe(200);
+    const byId = new Map(
+      (list.body.items as Record<string, unknown>[]).map((item) => [
+        item.id as string,
+        item,
+      ]),
+    );
+    expect(byId.get(sub1.id)).toMatchObject({ enabled: false });
+    expect(byId.get(sub2.id)).toMatchObject({ enabled: false });
+    expect(byId.get(sub3.id)).toMatchObject({
+      enabled: true,
+      isCurrentSession: true,
+    });
+    expect((await subRow(sub1.id))?.enabled).toBe(true);
+
+    // 上限に数えないため4台目の登録は200。外れた2台は実際に無効化される。
+    const fourth = await putSubscription(cookie3, registrationBody());
+    expect(fourth.status).toBe(200);
+    expect(await enabledCount(user.userId)).toBe(2);
+    expect((await subRow(sub1.id))?.enabled).toBe(false);
+    expect((await subRow(sub2.id))?.enabled).toBe(false);
+    // 今のログインの購読は有効のまま。
+    expect((await subRow(sub3.id))?.enabled).toBe(true);
   });
 });
 
@@ -676,8 +737,11 @@ describe("購読の一覧（PD-07）", () => {
 
     const mine1 = await register(user.cookie);
     const mine2 = await register(user.cookie);
+    // 退いた鍵の有効な購読は、別のログインで登録した端末に見せる。
+    await loginCookie(user.userId);
     const retiredId = await seedSub(user.userId, {
       vapidKeyId: "retired-key",
+      sessionId: await latestSessionId(user.userId),
     });
     const revokedId = await seedSub(user.userId, {
       vapidKeyId: "revoked-key",

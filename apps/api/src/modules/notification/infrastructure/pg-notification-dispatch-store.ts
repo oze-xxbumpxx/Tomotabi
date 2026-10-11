@@ -1,9 +1,10 @@
-import { and, eq, ne, notExists, sql } from "drizzle-orm";
+import { and, eq, exists, gt, ne, notExists, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool, PoolClient } from "pg";
 import type { UserId } from "../../../common/domain/user-id";
 import {
   allowedGoogleAccounts,
+  sessions,
   users,
 } from "../../../infrastructure/database/schema/identity";
 import {
@@ -103,6 +104,21 @@ export class PgNotificationDispatchStore implements NotificationDispatchStore {
                   eq(
                     closedPushSessions.sessionId,
                     pushSubscriptions.registrationSessionId,
+                  ),
+                ),
+            ),
+            // 登録したセッションが残っていて期限が来ていない
+            // （ログアウトを押さずにログインが切れた端末には送らない）。
+            // sessions.idはuuid、registration_session_idはtextなので、
+            // textにそろえて比べる。
+            exists(
+              db
+                .select({ _: sql`1` })
+                .from(sessions)
+                .where(
+                  and(
+                    sql`${sessions.id}::text = ${pushSubscriptions.registrationSessionId}`,
+                    gt(sessions.expiresAt, now),
                   ),
                 ),
             ),

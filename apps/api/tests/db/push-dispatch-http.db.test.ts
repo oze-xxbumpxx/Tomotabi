@@ -168,7 +168,9 @@ async function seedSub(
 ): Promise<{ id: string; endpoint: string }> {
   const sub: SeededSub = {
     endpoint: newEndpoint("seeded"),
-    sessionId: `seeded-session-${randomUUID()}`,
+    // 送る相手の条件は登録したセッションがidentity.sessionsに残って
+    // いることを確かめるため、既定は本人の有効なセッションにする。
+    sessionId: await latestSessionId(userId),
     vapidKeyId: "current-key",
     enabled: true,
     expirationTime: null,
@@ -320,12 +322,19 @@ describe("届ける相手の選び方（PD-15）", () => {
     // 無効・期限切れ・閉じた画面・失効した鍵・相手以外（自分自身）の購読。
     await seedSub(partner.userId, { enabled: false });
     await seedSub(partner.userId, { expirationTime: new Date("2020-01-01") });
-    const partnerSession = await latestSessionId(partner.userId);
-    await seedSub(partner.userId, { sessionId: partnerSession });
+    // 停止の記録だけで外れることを確かめるため、閉じるセッションは
+    // 生きている別のセッションにする。
+    const closedSessionId = randomUUID();
+    await db.admin.query(
+      `INSERT INTO identity.sessions (id, expires_at, token, user_id)
+       VALUES ($1, NOW() + INTERVAL '7 days', $2, $3)`,
+      [closedSessionId, `closed-session-${randomUUID()}`, partner.userId],
+    );
+    await seedSub(partner.userId, { sessionId: closedSessionId });
     await db.admin.query(
       `INSERT INTO notification.closed_push_sessions (session_id, user_id, closed_at)
        VALUES ($1, $2, NOW())`,
-      [partnerSession, partner.userId],
+      [closedSessionId, partner.userId],
     );
     await seedSub(partner.userId, { vapidKeyId: "revoked-key" });
     await seedSub(partner.userId, { vapidKeyId: "no-such-key" });
@@ -351,6 +360,36 @@ describe("届ける相手の選び方（PD-15）", () => {
 
     await triggerPlanAdded(actor.cookie, tripId);
     expect(transport.calls).toHaveLength(0);
+  });
+
+  it("登録したセッションが消えた・期限切れの購読には送らない", async () => {
+    const actor = await newUser("actor-expired");
+    const partner = await newUser("partner-expired");
+    const tripId = await createTrip(actor.cookie);
+
+    // 有効なセッションで登録した購読（送る）と、登録したセッションの
+    // 行が無い購読（送らない）。
+    const good = await seedSub(partner.userId);
+    await seedSub(partner.userId, { sessionId: randomUUID() });
+    // 登録したセッションのexpires_atが過去の購読（送らない）。
+    const expiredSessionId = randomUUID();
+    await db.admin.query(
+      `INSERT INTO identity.sessions (id, expires_at, token, user_id)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        expiredSessionId,
+        new Date("2020-01-01"),
+        `expired-session-${randomUUID()}`,
+        partner.userId,
+      ],
+    );
+    await seedSub(partner.userId, { sessionId: expiredSessionId });
+
+    await triggerPlanAdded(actor.cookie, tripId);
+
+    // 有効なセッションで登録した購読1件だけへ送る。
+    expect(transport.calls).toHaveLength(1);
+    expect(transport.calls[0]?.endpoint).toBe(good.endpoint);
   });
 });
 

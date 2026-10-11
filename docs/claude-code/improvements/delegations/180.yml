@@ -19,7 +19,7 @@ reviews:
         category: 'design-gap'
         summary: '期限切れのセッションの購読に送り続ける'
       - severity: 'nit'
-        category: 'observability'
+        category: 'logging-gap'
         summary: '止める処理の失敗の原因がログに残らない'
       - severity: 'nit'
         category: 'missing-test'

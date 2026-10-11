@@ -19,7 +19,7 @@ reviews:
         category: 'spec-mismatch'
         summary: '記憶が無いと有効な端末が未有効になる'
       - severity: 'must'
-        category: 'null-undefined'
+        category: 'coding-standard'
         summary: '値なしにundefinedを使う'
       - severity: 'must'
         category: 'missing-test'

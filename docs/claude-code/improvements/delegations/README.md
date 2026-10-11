@@ -79,6 +79,8 @@ Devinに渡したIssueごとに1ファイル（`<Issue 番号>.yml`）を置く�
 | `test-robustness` | 書いた時点では通るが、日付が進む・見た目が変わる・模擬を外すと落ちる試験（#158年の決め打ち、#128クラス名で探す）。今すでに不安定なものは`test-flakiness` |
 | `test-flakiness` | 同じコードでも、実行の順序やタイミングで結果が変わる試験（#117・#125ロック待ちに入ったのを確かめずに進める） |
 | `coding-standard` | `.claude/rules/coding-standards.md`の違反 |
+| `doc-accuracy` | コードのコメント・JSDocの根拠や説明が設計書・要件と違う（#171 版の根拠を別の要件で書いた） |
+| `simplification` | 動きは正しいが、同じ判定の二重定義・使われない公開API・同じ取得の二重呼び出しなど、減らせる書き方（#185） |
 | `security` | セキュリティの指摘（severityも`security`。`review`は片方だけが`security`の指摘をエラーにする） |
 | `design-gap` | 設計書・試験計画の側の穴で、実装どおりでも期待の動きにならない（#51ログイン失敗時の戻り先） |
 | `error-feedback` | 失敗したときに利用者への表示・反応が無い（#51サインインの失敗） |

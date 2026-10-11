@@ -34,7 +34,8 @@ const ROLE_PASSWORDS = {
   app_runtime: "test-app-runtime",
 };
 
-// devと同じポート（手動確認なので、普段のdevと重ならない値にする）。
+// devと同じポートを使う。npm run dev:api・dev:webを動かしているときは
+// 止めてから起動する。
 const WEB_PORT = 3000;
 const API_PORT = 3001;
 const WEB_ORIGIN = `http://localhost:${WEB_PORT}`;
@@ -282,6 +283,10 @@ async function main() {
           : { executablePath: chromeExecutable }),
         headless: false,
         viewport: { width: 430, height: 920 },
+        // Playwrightの既定の引数 --disable-background-networking は、
+        // Chromeが配信サービス（FCM）へ登録する通信も止めるので外す。
+        // 外さないと「通知を有効にする」で購読の作成に失敗する。
+        ignoreDefaultArgs: ["--disable-background-networking"],
       });
       contexts.push(context);
       await context.addCookies(cookies);

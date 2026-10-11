@@ -187,13 +187,19 @@ async function main() {
     const { hinataUserId, aoiUserId } = await seedUsers(admin);
 
     // 2. build（APIはdistを動かし、webは本番buildを配る）。
+    // webのbuildは/apiの転送先をAPI_ORIGINで決める（next.config.ts）。
+    // シェルに残った値（E2Eの3101など）に流されないよう、この
+    // スクリプトが起動するAPIに固定する。
     console.log("buildしています（contracts → api → web）…");
     for (const args of [
       ["run", "build", "-w", "@tomotabi/contracts"],
       ["run", "build", "-w", "@tomotabi/api"],
       ["run", "build", "-w", "@tomotabi/web"],
     ]) {
-      const result = run("npm", args, { cwd: REPO_ROOT });
+      const result = run("npm", args, {
+        cwd: REPO_ROOT,
+        env: { ...process.env, API_ORIGIN },
+      });
       if (result.status !== 0) {
         throw new Error(`npm ${args.join(" ")} が失敗しました`);
       }

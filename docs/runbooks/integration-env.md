@@ -27,6 +27,14 @@ Googleの戻り先にVercelの画面のURLが要るので、Vercelのプロジ�
 - このリポジトリの最新のmainと`npm ci`
 - 秘密情報を一時的に書いておく場所（パスワード管理ソフトなど）。リポジトリの中や`.env`には書かない
 
+この手順のコマンドは、リポジトリのルートで動かす。接続文字列やシークレットはコマンドに直接書かず、`read -rs`で端末の変数に入れてから使う。直接書くと、シェルの履歴に残るため。変数は、作業を終えたら端末を閉じれば消える。
+
+```bash
+read -rs "ADMIN_URL?管理者の接続: "; echo
+```
+
+`read -rs`は入力を画面に出さず、履歴にも残さない（上はzshの書き方）。以下、`<...>`の代わりに変数を使う。
+
 ## 1. Neonに検証用のプロジェクトを作る
 
 1. Neonの管理画面で新しいプロジェクトを作る。名前は`tomotabi-test`、PostgreSQLの版は16（手元とCIと同じ）、地域は**AWS Asia Pacific (Singapore)**。作ったあとは地域を変えられない。
@@ -34,18 +42,23 @@ Googleの戻り先にVercelの画面のURLが要るので、Vercelのプロジ�
 
 ## 2. ロールを作り、migrationを適用する
 
-管理者の端末で行う。パスワードは2つとも新しく作る（例: `openssl rand -base64 32`）。
+管理者の端末で行う。パスワードは2つとも新しく作り、パスワード管理ソフトに控える。接続文字列にそのまま入れられるよう、英数字だけのものにする（`openssl rand -hex 32`）。`base64`は`/`や`+`を含み、接続文字列が壊れるので使わない。
 
 ```bash
-cd apps/api/db/admin
-psql "<管理者の接続>" -v ON_ERROR_STOP=1 -v migrator_password="<migratorのパスワード>" -v app_runtime_password="<app_runtimeのパスワード>" -f create-roles.sql
-psql "<管理者の接続>" -v ON_ERROR_STOP=1 -f grant-database.sql
+MIGRATOR_PASSWORD="$(openssl rand -hex 32)"
+APP_RUNTIME_PASSWORD="$(openssl rand -hex 32)"
+psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v migrator_password="$MIGRATOR_PASSWORD" -v app_runtime_password="$APP_RUNTIME_PASSWORD" -f apps/api/db/admin/create-roles.sql
+psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/grant-database.sql
 ```
+
+2つのパスワードは、`echo "$MIGRATOR_PASSWORD"`のように表示してパスワード管理ソフトへ写す。
 
 続けて、migratorのロールでmigrationを適用する。接続文字列は、管理者の接続のユーザー名とパスワードを`migrator`のものに替えた**直接の接続**。
 
 ```bash
-MIGRATION_DATABASE_URL="<migratorの直接の接続>" npm run db:migrate -w @tomotabi/api
+read -rs "MIGRATION_DATABASE_URL?migratorの直接の接続: "; echo
+export MIGRATION_DATABASE_URL
+npm run db:migrate -w @tomotabi/api
 ```
 
 最後に、実行用の接続文字列を作る。Neonの管理画面で**pooled**の接続文字列を取り、ユーザー名とパスワードを`app_runtime`のものに替える。末尾に`sslmode=require`があることを確かめる。これが6章の`DATABASE_URL`になる。
@@ -77,10 +90,10 @@ Google Cloudの管理画面で、検証用のプロジェクト（無ければ�
 ## 5. VAPIDの鍵を作る
 
 ```bash
-npm run cli:generate-vapid-key -w @tomotabi/api
+npm run cli:generate-vapid-key -w @tomotabi/api -- "$HOME/tomotabi-vapid-test.json"
 ```
 
-書き出されたファイル（権限は0600）の中身は、鍵の束の1要素。6章で`VAPID_KEYS`に`[<その1要素>]`として入れる。ファイルは登録が済んだら消す。
+出力先はリポジトリの外にする（npmは`apps/api`で動かすので、相対パスだとリポジトリの中にできる）。同じ名前のファイルがあると上書きせずに止まる。書き出されたファイル（権限は0600）の中身は、鍵の束の1要素。6章で`VAPID_KEYS`に`[<その1要素>]`として入れる。ファイルは登録が済んだら消す。
 
 ## 6. Vercelの環境変数を登録する
 
@@ -118,8 +131,13 @@ web-testには登録しない。画面の`/api`の転送先（`API_ORIGIN`）は
 管理者の端末で、slot 0と1に一人ずつ登録する。ブラウザでGoogleのログインが開くので、登録する人のアカウントで許可する。
 
 ```bash
-MIGRATION_DATABASE_URL="<migratorの直接の接続>" ENROLL_GOOGLE_CLIENT_ID="<初期登録用のクライアントID>" ENROLL_GOOGLE_CLIENT_SECRET="<初期登録用のシークレット>" npm run cli:enroll -w @tomotabi/api -- --slot 0
+read -rs "ENROLL_GOOGLE_CLIENT_ID?初期登録用のクライアントID: "; echo
+read -rs "ENROLL_GOOGLE_CLIENT_SECRET?初期登録用のシークレット: "; echo
+export MIGRATION_DATABASE_URL ENROLL_GOOGLE_CLIENT_ID ENROLL_GOOGLE_CLIENT_SECRET
+npm run cli:enroll -w @tomotabi/api -- --slot 0
 ```
+
+`MIGRATION_DATABASE_URL`は2章で入れたもの。端末を閉じていたら、2章と同じく`read -rs`で入れ直す。
 
 slot 1も同じように、もう一人のアカウントで行う。
 

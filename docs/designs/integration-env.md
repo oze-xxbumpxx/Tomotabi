@@ -122,7 +122,7 @@ sequenceDiagram
 
 ## フロントエンド設計
 
-変更なし。`apps/web/next.config.ts`の外部rewrite（`/api/:path*`を`API_ORIGIN`へ）は、Vercelでもそのまま動く。`API_ORIGIN`はビルドのときに決まるので、デプロイのワークフローで検証用のAPIのURLを渡してビルドする（R-05）。画面のHTMLには個人の情報が入らず、業務のデータはブラウザから`/api`で取る（詳細設計08の4節）ので、画面のHTMLのキャッシュの設定は変えない。
+変更なし。`apps/web/next.config.ts`の外部rewrite（`/api/:path*`を`API_ORIGIN`へ）は、Vercelでもそのまま動く。`API_ORIGIN`はビルドのときに決まるので、デプロイのワークフローが、GitHubのEnvironment「integration」の変数`API_ORIGIN`（APIの固定のURL）を渡してビルドする（R-05）。`vercel deploy`の出力はデプロイごとのURLで、Deployment Protectionがかかるので使わない。画面のHTMLには個人の情報が入らず、業務のデータはブラウザから`/api`で取る（詳細設計08の4節）ので、画面のHTMLのキャッシュの設定は変えない。
 
 ## バックエンド設計
 
@@ -151,6 +151,8 @@ sequenceDiagram
 ### 関数の設定
 
 `apps/api/vercel.json`で、関数の実行場所を`sin1`、時間の上限（`maxDuration`）を60秒にする。`apps/web/vercel.json`も`sin1`にする（画面の関数もシンガポール）。Nodeは22.x（`package.json`の`engines`と、Vercelのプロジェクトの設定）。
+
+デプロイのワークフローはリポジトリのルートから`vercel deploy`を動かすので、`apps/*/vercel.json`のトップレベルの`regions`はVercelに送られない（Vercel CLI 62.4.0で、deployの地域は`--regions`かカレントディレクトリの`vercel.json`からだけ決まる）。そこで、関数の実行場所はVercelのプロジェクトの設定（Function Region）でも`sin1`にする（手順書3章）。`maxDuration`はビルドがRoot Directoryの`vercel.json`を読むので効く。最初のデプロイ（IE-01）で、関数の実行場所を確かめる。
 
 ### デプロイのワークフロー（`.github/workflows/deploy-integration.yml`）
 

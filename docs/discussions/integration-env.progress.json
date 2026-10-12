@@ -6,7 +6,10 @@
   "round": 1,
   "stages": {
     "requirements": {
-      "state": "waiting"
+      "state": "approval",
+      "docs": [
+        "docs/requirements/integration-env.md"
+      ]
     },
     "design": {
       "state": "pending"
@@ -27,5 +30,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-12T03:25:42.574Z"
+  "updated_at": "2026-10-12T07:59:45.746Z"
 }

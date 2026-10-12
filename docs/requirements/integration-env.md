@@ -25,10 +25,10 @@
 | R-02 | APIを、Vercelの公式のNestJSの入口で1つのNode.jsの関数として動かす。Nodeは22.x、`maxDuration`は60秒、`pg.Pool`は最大2で、関数が休むときに使っていない接続を手放す（`attachDatabasePool`） |
 | R-03 | 保存のあとの通知の送信を、Vercelの`waitUntil`で応答のあとに動かす（通知の設計書で、この段階に回した「保存のあとの処理の口」のVercelの実装）。手元とCIでは今の`InProcessAfterResponse`のまま |
 | R-04 | 画面の`/api/...`を、APIの固定のURLへ転送する（Vercelの外部rewrite）。`/api`の応答と、Cookieに依存する画面は、共有のキャッシュに載せない（`Cache-Control: private, no-store`など） |
-| R-05 | 検証用の環境の設定（環境変数）を、`運用設定と公開チェック.md`の1節の表のとおりに置く。`APP_ENV`は`staging`。通知を確かめる間だけ`PUSH_ENABLED`相当を有効にする |
-| R-06 | NeonのDBに、管理用（migrator）と実行用（app_runtime）のロールを作り、migrationを管理者の端末から1回だけ適用する。利用を許す二人に、二人の普段のGoogleアカウントを登録する |
-| R-07 | 検証用のGoogleのOAuthのクライアントを作り、戻り先（redirect URI）を検証用の画面のURLの`/api/auth/callback/google`に完全一致で登録する |
-| R-08 | 検証用のVAPIDの鍵を1組作る（`npm run cli:generate-vapid-key -w @tomotabi/api`）。運用者の連絡先（VAPIDのsubject）は、このリポジトリのGitHubのURL（`https:`）にする |
+| R-05 | 検証用の環境の設定（環境変数）を、`運用設定と公開チェック.md`の1節の表のとおりに置く。ただし通知の鍵は、表の`VAPID_KEY_ID`・`VAPID_PUBLIC_KEY`・`VAPID_PRIVATE_KEY`ではなく、今のコード（`apps/api/src/modules/notification/infrastructure/env-vapid-keyring.ts`）が読む`VAPID_KEYS`（鍵の束のJSONの配列）と`VAPID_SUBJECT`で置く。表は今のコードに合わせて直す。`APP_ENV`は`staging`。通知を確かめる間だけ`PUSH_ENABLED`相当を有効にする |
+| R-06 | NeonのDBに、管理用（migrator）と実行用（app_runtime）のロールを作り、migrationを管理者の端末から1回だけ適用する。利用を許す二人に、二人の普段のGoogleアカウントを、初期登録のCLI（`npm run cli:enroll -w @tomotabi/api -- --slot <0か1>`）で登録する |
+| R-07 | 検証用のGoogleのOAuthのクライアントを2つ作る。1つはログイン用（ウェブアプリ型）で、戻り先（redirect URI）を検証用の画面のURLの`/api/auth/callback/google`に完全一致で登録する。もう1つは初期登録のCLI用（デスクトップ型。ADR-0002）で、`ENROLL_GOOGLE_CLIENT_ID`・`ENROLL_GOOGLE_CLIENT_SECRET`として管理者の端末にだけ置く |
+| R-08 | 検証用のVAPIDの鍵を1組作る（`npm run cli:generate-vapid-key -w @tomotabi/api`。出力の1要素を`VAPID_KEYS`の配列に入れる）。運用者の連絡先（`VAPID_SUBJECT`）は、このリポジトリのGitHubのURL（`https:`）にする |
 | R-09 | 検証用の環境へのデプロイは、確かめたいときに手動で行う（CIが通ったcommitを指定する）。mainへのマージで自動にはデプロイしない |
 | R-10 | 下の「確かめること」を検証用の環境で確かめ、日付・環境・結果を検証の記録に残す |
 | R-11 | 確かめたあと、無料枠の消費（CPU・メモリ・関数の呼び出し・DBの容量とCU時間・転送量）を記録する |
@@ -57,7 +57,7 @@
 ## 非機能要件
 
 - 費用: Vercel Hobby・Neon Free・GitHub Freeの範囲にとどめる。無料枠の7割で原因を確かめ、9割で検証を止める（詳細設計08の2節）。課金に進まない。
-- セキュリティ: 秘密情報（DBの接続URL、Better Authの鍵、Googleのsecret、VAPIDの秘密鍵）は、ユーザーが管理画面で登録する。Claude Codeは値を見ない。`NEXT_PUBLIC_*`や公開の設定に秘密を入れない。`trustedOrigins`は検証用の画面のURLだけで、`*.vercel.app`を許さない。ログにCookie・Googleのtoken・通知の宛先と鍵・本文・SQLの引数を出さない。
+- セキュリティ: 秘密情報（DBの接続URL、Better Authの鍵、ログイン用と初期登録用のGoogleのsecret、VAPIDの秘密鍵）は、ユーザーが管理画面で登録する。Claude Codeは値を見ない。`NEXT_PUBLIC_*`や公開の設定に秘密を入れない。`trustedOrigins`は検証用の画面のURLだけで、`*.vercel.app`を許さない。ログにCookie・Googleのtoken・通知の宛先と鍵・本文・SQLの引数を出さない。
 - データ: 架空の旅行・予定・金額だけを入れる。本番のデータや、実際の金銭の受け渡しは使わない。
 - 可用性: 検証用の環境は、常に動いている必要はない。keep-aliveや定期のDBへの接続は置かない。
 

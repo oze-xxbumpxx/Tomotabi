@@ -1,0 +1,24 @@
+issue: 210
+title: 'test(web): 旅行の作成のシートのフォーカスの試験を、フォーカスを待つ形にする'
+agent: 'devin'
+model: 'swe-2-max'
+runner: 'cloud'
+change_level: 0
+delegated_at: '2026-10-12T03:11:34Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-12T03:21:19Z'
+    reviewed_sha: '34d2dca3090f3912faf70f1a75b1eb58d5339b3d'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 212
+  pr_created_at: '2026-10-12T03:16:52Z'
+  merged_at: '2026-10-12T07:51:30Z'
+  closed_at: '2026-10-12T07:51:30Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true

@@ -48,6 +48,8 @@
 | IW-02 | 出す前に、指定のcommitの`ci.yml`が成功しているかを確かめ、成功していなければ止める | 異常 |
 | IW-03 | `vercel build`のあと`--prebuilt`で出し、apiを出してからwebを出す。トークンは`--token`で渡し、`set -x`を使わない | 正常・セキュリティ |
 | IW-04 | 出すcommitが`origin/main`の履歴に含まれるかを確かめ、含まれなければ止める（未マージのブランチのcommitを出さない） | セキュリティ |
+| IW-03b | `vercel deploy`の失敗で手順が止まる（URLを変数に受けてから書く）。webのビルドの`API_ORIGIN`はEnvironmentの変数の固定のURLで、デプロイごとのURLを使わない | 異常 |
+| IW-05 | 入力のSHAは空か40桁の16進数だけを受け付け、変数`API_ORIGIN`が`https://`で始まらなければVercelの手順より前に止まる。checkoutの認証情報を残さない | 異常・セキュリティ |
 
 ## 検証用の環境で確かめること
 

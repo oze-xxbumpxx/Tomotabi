@@ -17,3 +17,13 @@
 | IMP-2026-010 | 委譲のlogging-gapは閾値に届いたが型が2つ（認証の経路のログ漏れ2件・`catch`で原因を捨てる2件）に分かれるので、ハーネスを変えず再発を見る。`catch`の型が3件目になったら、`devin-workflow`に例外の種類だけを残す1行を足す | proposal | `candidates/delegation-logging-gap.md`（#37・#43・#180・#181）。2026-10-10に分類を付け直して閾値を超えた | 2026-10-11 |
 
 accepted / rejected以外の行がsession-briefing / sprint-summaryの「未決定IMP」になる。
+
+## 留め置き（昇格せず、再発を見る）
+
+振り返りで昇格条件を満たさなかった知見。同じ型が再び起きたら発生回数を足し、条件を満たしたら上の表に起票する。
+
+| 知見 | 発生回数 | 出典 | 更新日 |
+| --- | --- | --- | --- |
+| L3の初回レビューを自分・reviewer・security-reviewerで並行させると、自分だけでは見落とすmustが出る（試行中） | 3本（#183・#184・#185） | `candidates/push-notifications.md`の事象1 | 2026-10-12 |
+| 自分のPRに直しを足している間にユーザーがマージし、直しがmainに入らない | 2回（#196・#200） | `candidates/push-notifications.md`の事象3。Auto Memory`merge-race-own-prs` | 2026-10-12 |
+

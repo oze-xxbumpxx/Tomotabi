@@ -14,12 +14,12 @@
 
 | PR | 中身 | 担当 | 観点 | effort | 始める条件 |
 | --- | --- | --- | --- | --- | --- |
-| Vercelで動かす作り | `VercelAfterResponse`、`attachDatabasePool`、`Server-Timing`、全体のキャッシュの設定、`vercel.json`（api・web）、`@vercel/functions`の追加 | Devin（クラウド） | IU-01〜IU-06、IH-01〜IH-03、ID-01 | 通常（SWE-2の既定） | 設計の承認 |
-| 手動のデプロイ | `.github/workflows/deploy-integration.yml`と、その形を確かめる試験 | Devin（クラウド） | IW-01〜IW-04 | 通常 | 設計の承認（上と並行してよい） |
+| Vercelで動かす作り | `VercelAfterResponse`、`attachDatabasePool`、`Server-Timing`、全体のキャッシュの設定、`vercel.json`（api・web）、`@vercel/functions`の追加 | Devin（ローカル） | IU-01〜IU-06、IH-01〜IH-03、ID-01 | SWE-2 high（L3の通常の機能） | 設計の承認 |
+| 手動のデプロイ | `.github/workflows/deploy-integration.yml`と、その形を確かめる試験 | Devin（ローカル） | IW-01〜IW-04 | SWE-2 high（秘密情報を扱うワークフロー） | 「Vercelで動かす作り」のマージ（同じ専用クローンで2つ同時に動かさないため） |
 | 手順書と記録 | `docs/runbooks/integration-env.md`、試験計画の記録の表、設計資料の環境変数の表の直し | Claude Code | IE-01〜IE-15の手順 | ― | 上の2つのPRのマージ（手順書は実際のファイル名・コマンドに合わせる） |
 | 確かめた結果 | 試験計画の記録の表を埋める、PERF-01の結果と地域の判断の材料 | Claude Code（ユーザーの確認を写す） | IE-01〜IE-15 | ― | 検証用の環境ができたあと |
 
-2つのDevinのPRは触るファイルが重ならないので、並行して委譲する。
+2つのDevinのPRは触るファイルが重ならないが、ローカルのDevinは専用クローン1つで動かすので、1つずつ順に委譲する。
 
 ## 変更対象ファイル
 
@@ -64,13 +64,13 @@
 
 ## 依存関係
 
-- 「Vercelで動かす作り」と「手動のデプロイ」は互いに依存しない（並行）。
+- 「Vercelで動かす作り」と「手動のデプロイ」は、触るファイルは重ならないが、ローカルのDevinの専用クローンが1つなので順に進める。
 - 手順書は2つのPRに依存する（ファイル名・コマンド・環境変数を合わせる）。
 - 確かめるのは、手順書とユーザーの準備に依存する。
 
 ## 委譲の仕方
 
-- クラウドのDevin（無料期間が終わるまで）。Issueの「既知の指摘」には、値なしの`undefined`（コーディング規約）を写す。
+- ローカルのDevin（専用クローン`/Users/siro/個人開発/devin-work/tomotabi`。2026-10-12にクラウドの無料期間が終わったため）。モデルはSWE-2で、effortは表のとおり。同じクローンで2つ同時に動かさない。Issueの「既知の指摘」には、値なしの`undefined`（コーディング規約）を写す。
 - DevinのPRは、Claude Codeがレビューし、Codexのレビューを1回頼む。L3なので、最初のレビューでreviewerとsecurity-reviewerを並行して動かす（試行中のやり方）。
 - 委譲を始めるときに、共通受付（`AGENTS.md`）の移行が終わっていれば共通受付で登録・claim・beginしてから起動する。終わっていなければ、委譲ごとにユーザーの了承をチャットでもらってから、手元の記録を作って直接起動する（2026-10-10〜12の#198・#205・#210・#211と同じ）。了承なしに直接起動しない。
 

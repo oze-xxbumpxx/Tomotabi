@@ -337,6 +337,24 @@ describe("H: 実 HTTP と Better Auth の配線", () => {
     });
   });
 
+  it("IH-02: Better Authを通った応答にもキャッシュを止める3つとServer-Timingが付き、Set-Cookieは消えない", async () => {
+    const response = await http()
+      .post("/api/auth/sign-in/social")
+      .set("Origin", ORIGIN)
+      .set("Content-Type", "application/json")
+      .send({ provider: "google", callbackURL: "/" });
+
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(response.headers["cdn-cache-control"]).toBe("no-store");
+    expect(response.headers["vercel-cdn-cache-control"]).toBe("no-store");
+    expect(response.headers["server-timing"]).toMatch(
+      /^app;dur=\d+(\.\d+)?, db;dur=\d+(\.\d+)?, cold;desc="(true|false)"(, boot;dur=\d+(\.\d+)?)?$/,
+    );
+    // stateのCookieなど、Better Authが返すSet-Cookieを消さない。
+    expect(response.headers["set-cookie"]).toBeDefined();
+  });
+
   it("H-02: 不正な state の callback は /sign-in?error=… へリダイレクトする", async () => {
     const response = await http().get(
       "/api/auth/callback/google?state=bogus-state&code=bogus-code",

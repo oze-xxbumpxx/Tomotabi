@@ -1,0 +1,8 @@
+{
+  "regions": ["sin1"],
+  "functions": {
+    "src/main.ts": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -6,6 +6,7 @@ import {
 } from "../adapter/after-response/after-response";
 import { CLOCK, type Clock } from "../adapter/clock/clock";
 import { InProcessAfterResponse } from "../infrastructure/after-response/in-process-after-response";
+import { VercelAfterResponse } from "../infrastructure/after-response/vercel-after-response";
 import { SystemClock } from "../infrastructure/clock/system-clock";
 import { getPool } from "../infrastructure/database/pool";
 import {
@@ -98,8 +99,18 @@ const missingDatabase = (): Promise<never> =>
     },
     {
       provide: AFTER_RESPONSE,
-      useFactory: (logger: PinoLogger): AfterResponse =>
-        new InProcessAfterResponse((entry) => logger.warn(entry)),
+      useFactory: (logger: PinoLogger): AfterResponse => {
+        const logFailure = (entry: {
+          task: string;
+          errorType: string;
+        }): void => {
+          logger.warn(entry);
+        };
+        // Vercelのときだけ差し替える部品（設計書「Vercelのときに差し替える部品」）。
+        return process.env.VERCEL === "1"
+          ? new VercelAfterResponse(logFailure)
+          : new InProcessAfterResponse(logFailure);
+      },
       inject: [PinoLogger],
     },
     {

@@ -29,18 +29,12 @@ import {
   type TestDatabase,
 } from "../support/database";
 import { createHttpTestApp } from "../support/nest-app";
+import { generateTestVapidKey } from "../support/vapid-keys";
 
 const ORIGIN = "http://localhost:3000";
 
-const vapidCurrent = createECDH("prime256v1");
-vapidCurrent.generateKeys();
 const VAPID_KEYS_JSON = JSON.stringify([
-  {
-    keyId: "current-key",
-    state: "current",
-    publicKey: vapidCurrent.getPublicKey().toString("base64url"),
-    privateKey: vapidCurrent.getPrivateKey().toString("base64url"),
-  },
+  generateTestVapidKey("current-key"),
   { keyId: "revoked-key", state: "revoked" },
 ]);
 

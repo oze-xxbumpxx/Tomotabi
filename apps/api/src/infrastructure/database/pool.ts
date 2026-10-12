@@ -2,7 +2,7 @@ import { attachDatabasePool } from "@vercel/functions";
 import { performance } from "node:perf_hooks";
 import type { PoolClient } from "pg";
 import { Pool } from "pg";
-import { addDbMs } from "../../bootstrap/server-timing";
+import { requestTiming } from "../../bootstrap/server-timing";
 
 let pool: Pool | undefined;
 
@@ -10,7 +10,7 @@ let pool: Pool | undefined;
  * pgのclient.queryがコールバック型で呼ばれたとき、応答時に時間を計る
  * コールバックに差し替える。差し替えるのはpgが応答のコールバックとして
  * 使う引数: 3番目のcallback、textとcbだけの形の2番目、configオブジェクトの
- * callbackプロパティ（pg自身もconfigを書き換えるので、ここでも書き換える）。
+ * callbackプロパティ。
  */
 function timeCallbackArgs(args: unknown[], onDone: () => void): unknown[] {
   const wrap = (fn: unknown): unknown =>
@@ -29,9 +29,20 @@ function timeCallbackArgs(args: unknown[], onDone: () => void): unknown[] {
     config !== null &&
     typeof (config as { callback?: unknown }).callback === "function"
   ) {
-    (config as { callback: unknown }).callback = wrap(
-      (config as { callback: unknown }).callback,
-    );
+    if (typeof (config as { submit?: unknown }).submit === "function") {
+      // Submittableはpg自身がcallbackを書き換えるので、同じく差し替える。
+      // 再実行はpgが止めるので、包みが重なることはない。
+      (config as { callback: unknown }).callback = wrap(
+        (config as { callback: unknown }).callback,
+      );
+    } else {
+      // 設定のオブジェクトを使い回しても包みが重ならないよう、
+      // callbackだけを包んだ複製を渡す。
+      timed[0] = {
+        ...(config as Record<string, unknown>),
+        callback: wrap((config as { callback: unknown }).callback),
+      };
+    }
   }
   return timed;
 }
@@ -44,17 +55,22 @@ function timeCallbackArgs(args: unknown[], onDone: () => void): unknown[] {
 function wrapClientQueryForTiming(client: PoolClient): void {
   const original = client.query;
   client.query = function (this: PoolClient, ...args: unknown[]): unknown {
+    // 応答は接続のソケット由来の文脈で通知されるため、その時点の文脈が
+    // 問い合わせを始めた要求とは限らない。開始時点の入れ物を捕まえて、
+    // その入れ物にだけ足す。要求の文脈の外（入れ物が無い）では数えない。
+    const store = requestTiming.getStore();
     const started = performance.now();
+    const onDone = (): void => {
+      if (store !== undefined) {
+        store.dbMs += performance.now() - started;
+      }
+    };
     const result = (original as (...a: unknown[]) => unknown).apply(
       this,
-      timeCallbackArgs(args, () => {
-        addDbMs(performance.now() - started);
-      }),
+      timeCallbackArgs(args, onDone),
     );
     if (result instanceof Promise) {
-      return result.finally(() => {
-        addDbMs(performance.now() - started);
-      });
+      return result.finally(onDone);
     }
     return result;
   } as PoolClient["query"];

@@ -12,8 +12,8 @@ permissions:
   contents: read
   actions: read
 
-# 2つのデプロイが同時に走らないようにする。途中で止めるとapiだけ出た
-# 状態になるので、実行中は止めずに並べて待つ。
+# 2つのデプロイが同時に走らないようにする（実行中は止めない）。
+# 待てる実行は1件までで、さらに起動すると前の待機は消えるので、その分は押し直す。
 concurrency:
   group: deploy-integration
   cancel-in-progress: false
@@ -65,19 +65,24 @@ jobs:
         run: |
           npx --yes vercel@62.4.0 pull --yes --environment=production --token "$VERCEL_TOKEN"
           npx --yes vercel@62.4.0 build --prod --token "$VERCEL_TOKEN"
-          echo "url=$(npx --yes vercel@62.4.0 deploy --prebuilt --prod --token "$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
+          # コマンド置換の失敗は代入行の終了コードに出るので、先に受けてから書く。
+          # echoの引数に直接置くと、deployが失敗してもechoが成功して空のurlが残る。
+          API_URL="$(npx --yes vercel@62.4.0 deploy --prebuilt --prod --token "$VERCEL_TOKEN")"
+          echo "url=$API_URL" >> "$GITHUB_OUTPUT"
       - name: Deploy web to Vercel
         id: deploy-web
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_WEB }}
-          # 画面の/apiの転送先はビルドのときに決まるので、直前に出したapiのURLを渡す。
-          API_ORIGIN: ${{ steps.deploy-api.outputs.url }}
+          # 画面の/apiの転送先はビルドのときに決まる。固有のデプロイURLではなく、
+          # 公開する固定のURL（Deployment Protectionを外す方）をEnvironmentの変数から渡す。
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
         run: |
           npx --yes vercel@62.4.0 pull --yes --environment=production --token "$VERCEL_TOKEN"
           npx --yes vercel@62.4.0 build --prod --token "$VERCEL_TOKEN"
-          echo "url=$(npx --yes vercel@62.4.0 deploy --prebuilt --prod --token "$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
+          WEB_URL="$(npx --yes vercel@62.4.0 deploy --prebuilt --prod --token "$VERCEL_TOKEN")"
+          echo "url=$WEB_URL" >> "$GITHUB_OUTPUT"
       - name: Write deployed URLs to summary
         env:
           SHA: ${{ steps.target.outputs.sha }}

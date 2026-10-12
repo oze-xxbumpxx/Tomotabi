@@ -32,6 +32,17 @@ test('IW-03: vercel buildのあと--prebuiltで出し、apiがwebより前。ト
   assert.doesNotMatch(workflow, /set -x/);
 });
 
+test('IW-03b: deployのURLは先に変数へ受け、webのAPI_ORIGINはvarsの固定URL', () => {
+  // echoの引数に直接コマンド置換を置くと、deployが失敗してもechoが成功して空のurlが残る。
+  // 変数への代入は置換の終了コードを引き継ぐので、失敗で手順が止まる。
+  for (const name of ['API_URL', 'WEB_URL']) {
+    assert.match(workflow, new RegExp(`${name}="\\$\\(npx --yes vercel@\\d+\\.\\d+\\.\\d+ deploy --prebuilt --prod --token "\\$VERCEL_TOKEN"\\)"`));
+    assert.match(workflow, new RegExp(`echo "url=\\$${name}" >> "\\$GITHUB_OUTPUT"`));
+  }
+  assert.match(workflow, /API_ORIGIN: \$\{\{ vars\.API_ORIGIN \}\}/);
+  assert.doesNotMatch(workflow, /API_ORIGIN: \$\{\{ steps\./);
+});
+
 test('IW-04: 対象commitがorigin/mainの履歴に含まれるかを確かめ、含まれなければ止める', () => {
   assert.match(workflow, /git merge-base --is-ancestor "\$SHA" origin\/main/);
   assert.match(workflow, /exit 1/);

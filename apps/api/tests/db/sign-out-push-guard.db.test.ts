@@ -16,8 +16,6 @@ import {
   CLOSE_PUSH_SESSION_INPUT_PORT,
   type ClosePushSessionInputPort,
 } from "../../src/modules/notification/adapter/inbound/close-push-session.input-port";
-import { VAPID_KEYRING } from "../../src/modules/notification/adapter/outbound/vapid-keyring.port";
-import { EnvVapidKeyring } from "../../src/modules/notification/infrastructure/env-vapid-keyring";
 import {
   createRoles,
   migrateAsMigrator,
@@ -25,20 +23,12 @@ import {
   type TestDatabase,
 } from "../support/database";
 import { createHttpTestApp } from "../support/nest-app";
+import { generateTestVapidKey } from "../support/vapid-keys";
 
 const ORIGIN = "http://localhost:3000";
 const SESSION_COOKIE = "travel.session_token";
 
-const vapidCurrent = createECDH("prime256v1");
-vapidCurrent.generateKeys();
-const VAPID_KEYS_JSON = JSON.stringify([
-  {
-    keyId: "current-key",
-    state: "current",
-    publicKey: vapidCurrent.getPublicKey().toString("base64url"),
-    privateKey: vapidCurrent.getPrivateKey().toString("base64url"),
-  },
-]);
+const VAPID_KEYS_JSON = JSON.stringify([generateTestVapidKey("current-key")]);
 
 const TEST_ENV: Record<string, string> = {
   DATABASE_URL: "",
@@ -270,10 +260,6 @@ beforeAll(async () => {
   moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   })
-    // CIのapi-dbで環境変数の読み取りがまれに失敗して鍵の束がunavailableになる
-    // 障害が出たため、経路の環境変数ではなくこの試験が持つ値から明示的に注入する。
-    .overrideProvider(VAPID_KEYRING)
-    .useValue(EnvVapidKeyring.fromEnv(TEST_ENV))
     .compile();
   app = await createHttpTestApp(moduleRef, auth);
 });

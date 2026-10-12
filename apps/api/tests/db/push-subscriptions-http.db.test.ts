@@ -20,27 +20,15 @@ import {
   type TestDatabase,
 } from "../support/database";
 import { createHttpTestApp } from "../support/nest-app";
+import { generateTestVapidKey } from "../support/vapid-keys";
 
 const ORIGIN = "http://localhost:3000";
 
 /** VAPIDの鍵の検証用ペア（現在の鍵・退いた鍵・失効した鍵）。 */
-const vapidCurrent = createECDH("prime256v1");
-vapidCurrent.generateKeys();
-const vapidRetired = createECDH("prime256v1");
-vapidRetired.generateKeys();
+const vapidCurrent = generateTestVapidKey("current-key");
 const VAPID_KEYS_JSON = JSON.stringify([
-  {
-    keyId: "current-key",
-    state: "current",
-    publicKey: vapidCurrent.getPublicKey().toString("base64url"),
-    privateKey: vapidCurrent.getPrivateKey().toString("base64url"),
-  },
-  {
-    keyId: "retired-key",
-    state: "retired",
-    publicKey: vapidRetired.getPublicKey().toString("base64url"),
-    privateKey: vapidRetired.getPrivateKey().toString("base64url"),
-  },
+  vapidCurrent,
+  generateTestVapidKey("retired-key", "retired"),
   { keyId: "revoked-key", state: "revoked" },
 ]);
 
@@ -273,10 +261,6 @@ beforeAll(async () => {
   moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   })
-    // CIのapi-dbで環境変数の読み取りがまれに失敗して鍵の束がunavailableになる
-    // 障害が出たため、経路の環境変数ではなくこの試験が持つ値から明示的に注入する。
-    .overrideProvider(VAPID_KEYRING)
-    .useValue(EnvVapidKeyring.fromEnv(TEST_ENV))
     .compile();
   app = await createHttpTestApp(moduleRef, auth);
 });
@@ -832,7 +816,7 @@ describe("購読の設定（PD-09）", () => {
     expect(response.status).toBe(200);
     expect(response.headers["cache-control"]).toBe("private, no-store");
     expect(response.body).toEqual({
-      publicVapidKey: vapidCurrent.getPublicKey().toString("base64url"),
+      publicVapidKey: vapidCurrent.publicKey,
       keyId: "current-key",
       maxActiveSubscriptions: 3,
     });

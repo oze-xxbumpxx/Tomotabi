@@ -18,8 +18,6 @@ import type {
   DispatchLogEntry,
 } from "../../src/modules/notification/adapter/outbound/dispatch-log.port";
 import { PUSH_TRANSPORT } from "../../src/modules/notification/adapter/outbound/push-transport";
-import { VAPID_KEYRING } from "../../src/modules/notification/adapter/outbound/vapid-keyring.port";
-import { EnvVapidKeyring } from "../../src/modules/notification/infrastructure/env-vapid-keyring";
 import type {
   PushRequestDetails,
   PushTransport,
@@ -31,18 +29,12 @@ import {
   type TestDatabase,
 } from "../support/database";
 import { createHttpTestApp } from "../support/nest-app";
+import { generateTestVapidKey } from "../support/vapid-keys";
 
 const ORIGIN = "http://localhost:3000";
 
-const vapidCurrent = createECDH("prime256v1");
-vapidCurrent.generateKeys();
 const VAPID_KEYS_JSON = JSON.stringify([
-  {
-    keyId: "current-key",
-    state: "current",
-    publicKey: vapidCurrent.getPublicKey().toString("base64url"),
-    privateKey: vapidCurrent.getPrivateKey().toString("base64url"),
-  },
+  generateTestVapidKey("current-key"),
   { keyId: "revoked-key", state: "revoked" },
 ]);
 
@@ -285,10 +277,6 @@ beforeAll(async () => {
   moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   })
-    // CIのapi-dbで環境変数の読み取りがまれに失敗して鍵の束がunavailableになる
-    // 障害が出たため、経路の環境変数ではなくこの試験が持つ値から明示的に注入する。
-    .overrideProvider(VAPID_KEYRING)
-    .useValue(EnvVapidKeyring.fromEnv(TEST_ENV))
     .overrideProvider(PUSH_TRANSPORT)
     .useValue(transport)
     .overrideProvider(DISPATCH_LOG)

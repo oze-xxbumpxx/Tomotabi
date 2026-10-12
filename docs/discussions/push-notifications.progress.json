@@ -36,17 +36,32 @@
       }
     },
     "implement": {
-      "state": "active"
+      "state": "done",
+      "approved": {
+        "pr": 206,
+        "at": "2026-10-12"
+      }
     },
     "review": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 206,
+        "at": "2026-10-12"
+      }
     },
     "merge": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 207,
+        "at": "2026-10-12"
+      }
     },
     "reflect": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/claude-code/improvements/candidates/push-notifications.md"
+      ]
     }
   },
-  "updated_at": "2026-10-07T23:44:42.005Z"
+  "updated_at": "2026-10-12T03:03:41.722Z"
 }

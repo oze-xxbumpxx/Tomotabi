@@ -1,0 +1,54 @@
+issue: 219
+title: 'ci: 結合検証環境への手動のデプロイのワークフロー（承認つき・mainだけ・Actionsでビルド）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-10-12T09:43:03Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-12T10:24:36Z'
+    reviewed_sha: 'ff2c8cb222399ce3b43ce2432d2a16852901dd01'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: 'vars.API_ORIGINが空でもデプロイが成功する'
+      - severity: 'must'
+        category: 'test-gap'
+        summary: 'IW-02とIW-04のexit 1の確かめが全文一致で、止める処理を確かめていない'
+      - severity: 'must'
+        category: 'security-hardening'
+        summary: 'checkoutの認証情報が残る（persist-credentials）'
+      - severity: 'nit'
+        category: 'observability'
+        summary: '要約の手順にif always()が無い'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: 'ci.ymlの問い合わせをstatus=successで絞る'
+      - severity: 'nit'
+        category: 'input-validation'
+        summary: 'shaの形を確かめる'
+      - severity: 'nit'
+        category: 'security-hardening'
+        summary: 'buildの行のトークン'
+      - severity: 'nit'
+        category: 'doc-drift'
+        summary: 'PRの説明が直す前の形のまま'
+  - round: 1
+    reviewed_at: '2026-10-12T10:31:15Z'
+    reviewed_sha: '88d4b8f27b91ec86802722a3e1fc74cc7cd08e29'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 220
+  pr_created_at: '2026-10-12T10:10:14Z'
+  merged_at: '2026-10-12T10:41:02Z'
+  closed_at: '2026-10-12T10:41:02Z'
+  commits: 4
+  ci_first_pass: true
+  closes_linked: true

@@ -1,0 +1,42 @@
+issue: 217
+title: 'feat(api): 結合検証環境のためにVercelで動かす作り（waitUntil・接続の後片付け・Server-Timing・キャッシュ）'
+agent: 'devin'
+model: 'swe-2-high'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-10-12T08:53:20Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-12T09:29:05Z'
+    reviewed_sha: 'd10c9f47b5e38cd5ec507c21d214d24cfb40f56d'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'robustness'
+        summary: 'コールバックの形の問い合わせでDBの時間が別の要求に数えられる（自分・reviewer・security-reviewer・Devin Reviewが発見）'
+      - severity: 'must'
+        category: 'robustness'
+        summary: '設定オブジェクトの書き換えで時間が重複する（Devin Reviewが発見）'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: '認証の経路のヘッダーをauthありで確かめていない'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: 'shutdownのタイマーをclearTimeoutしない'
+  - round: 1
+    reviewed_at: '2026-10-12T09:39:37Z'
+    reviewed_sha: '637b9293bdaaf07b4cea81cfa07e39fc26ef5786'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 218
+  pr_created_at: '2026-10-12T09:17:31Z'
+  merged_at: '2026-10-12T09:41:47Z'
+  closed_at: '2026-10-12T09:41:47Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true

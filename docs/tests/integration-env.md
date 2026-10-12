@@ -19,11 +19,12 @@
 
 | ID | 観点 | 種類 |
 | --- | --- | --- |
-| IU-01 | `VercelAfterResponse.schedule`は仕事を`waitUntil`に渡し、すぐに戻る（応答を待たせない）。`drain`は渡した仕事が全部終わるまで待つ | 正常 |
+| IU-01 | `VercelAfterResponse.schedule`は仕事を`waitUntil`に渡し、すぐに戻る。仕事は`schedule`の中では始まらず、次の順番（`setImmediate`）で始まる（応答を待たせない）。`drain`は渡した仕事が全部終わるまで待つ | 正常 |
 | IU-02 | 仕事が例外・拒否になっても、`schedule`の呼び出し側には伝わらず、ログには例外の型名だけが出る（messageは出ない） | 異常・セキュリティ |
 | IU-03 | `VERCEL=1`のときだけ`AFTER_RESPONSE`が`VercelAfterResponse`になり、それ以外は`InProcessAfterResponse`のまま | 境界 |
-| IU-04 | `Server-Timing`は`app;dur=<数>`・`db;dur=<数>`・`cold;desc="true|false"`の形で、最初の要求だけ`cold`が`true`。数値と真偽以外を含まない | 正常・セキュリティ |
+| IU-04 | `Server-Timing`は`app;dur=<数>`・`db;dur=<数>`・`cold;desc="true|false"`の形で、最初の要求だけ`cold`が`true`で`boot;dur=<数>`が付く。数値と真偽以外を含まない | 正常・セキュリティ |
 | IU-05 | Vercelのときだけ`attachDatabasePool`が1回だけ呼ばれる。手元・CIでは呼ばれない | 境界 |
+| IU-06 | `pool.query`で1回問い合わせると、`db`の時間は1回分だけ足される（`pool.query`と接続の`query`で二重に数えない） | 境界 |
 
 ## HTTP
 
@@ -46,6 +47,7 @@
 | IW-01 | きっかけは`workflow_dispatch`だけで、`environment: integration`を使う。`push`や`pull_request`では動かない | セキュリティ |
 | IW-02 | 出す前に、指定のcommitの`ci.yml`が成功しているかを確かめ、成功していなければ止める | 異常 |
 | IW-03 | `vercel build`のあと`--prebuilt`で出し、apiを出してからwebを出す。トークンは`--token`で渡し、`set -x`を使わない | 正常・セキュリティ |
+| IW-04 | 出すcommitが`origin/main`の履歴に含まれるかを確かめ、含まれなければ止める（未マージのブランチのcommitを出さない） | セキュリティ |
 
 ## 検証用の環境で確かめること
 
@@ -65,9 +67,9 @@
 | IE-10 | OPS-11 | 保存のあとに通知が届く。Vercelの関数のログに、送る処理の1行（結果の種類）が出る。`waitUntil`の仕事が応答のあとに動いている |
 | IE-11 | PM-03 | iPhone（ホーム画面に追加したアプリ）とAndroid（Chrome）の両方で、相手の予定・支払い・精算の通知が届き、押すと対象が開く |
 | IE-12 | OPS-17 | 主な使い方の流れ（旅行を作る、予定、支払い、精算）、ほかのアプリから戻ったときの表示、結果が分からない操作のやり直し |
-| IE-13 | PERF-01 | 日本の実機から、ホームを開く・予定を足す・支払いを記録するの応答の時間を、休止のあと最初の1回と続けての3回で測る。ブラウザの開発者ツールの全体の時間と`Server-Timing`から、距離・Neonの休止・関数の起動に分けて書く |
+| IE-13 | PERF-01 | 日本の実機から、ホームを開く・予定を足す・支払いを記録するの応答の時間を、休止のあと最初の1回と続けての3回で測る。ブラウザの開発者ツールの全体の時間と`Server-Timing`（`app`・`db`・起動直後の`boot`）から、距離・Neonの休止・関数の起動に分けて書く。起動直後と続けての要求の全体の時間の差でも、起動の時間を確かめる |
 | IE-14 | OPS-18 | 確かめたあと、VercelとNeonの管理画面で、CPU・メモリ・関数の呼び出し・DBの容量・CU時間・転送量を読む |
-| IE-15 | R-09 | Actionsのデプロイが、承認なしでは動かず、main以外のブランチからは動かない。CIが失敗したcommitは出せない |
+| IE-15 | R-09 | Actionsのデプロイが、承認なしでは動かず、main以外のブランチからは動かない。mainに入っていないcommitとCIが失敗したcommitは出せない |
 
 ## 記録
 

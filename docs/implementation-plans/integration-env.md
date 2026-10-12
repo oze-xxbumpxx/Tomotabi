@@ -14,8 +14,8 @@
 
 | PR | 中身 | 担当 | 観点 | effort | 始める条件 |
 | --- | --- | --- | --- | --- | --- |
-| Vercelで動かす作り | `VercelAfterResponse`、`attachDatabasePool`、`Server-Timing`、全体のキャッシュの設定、`vercel.json`（api・web）、`@vercel/functions`の追加 | Devin（クラウド） | IU-01〜IU-05、IH-01〜IH-03、ID-01 | 通常（SWE-2の既定） | 設計の承認 |
-| 手動のデプロイ | `.github/workflows/deploy-integration.yml`と、その形を確かめる試験 | Devin（クラウド） | IW-01〜IW-03 | 通常 | 設計の承認（上と並行してよい） |
+| Vercelで動かす作り | `VercelAfterResponse`、`attachDatabasePool`、`Server-Timing`、全体のキャッシュの設定、`vercel.json`（api・web）、`@vercel/functions`の追加 | Devin（クラウド） | IU-01〜IU-06、IH-01〜IH-03、ID-01 | 通常（SWE-2の既定） | 設計の承認 |
+| 手動のデプロイ | `.github/workflows/deploy-integration.yml`と、その形を確かめる試験 | Devin（クラウド） | IW-01〜IW-04 | 通常 | 設計の承認（上と並行してよい） |
 | 手順書と記録 | `docs/runbooks/integration-env.md`、試験計画の記録の表、設計資料の環境変数の表の直し | Claude Code | IE-01〜IE-15の手順 | ― | 上の2つのPRのマージ（手順書は実際のファイル名・コマンドに合わせる） |
 | 確かめた結果 | 試験計画の記録の表を埋める、PERF-01の結果と地域の判断の材料 | Claude Code（ユーザーの確認を写す） | IE-01〜IE-15 | ― | 検証用の環境ができたあと |
 
@@ -45,16 +45,16 @@
 
 ### Vercelで動かす作り
 
-1. `@vercel/functions`を足し、`VercelAfterResponse`を作る。`schedule(name, task)`は、仕事を包んで例外をログ（型名だけ）に変え、その約束を`waitUntil`に渡し、手元にも持っておく。`drain()`は持っている約束を全部待つ。IU-01・IU-02。
+1. `@vercel/functions`を足し、`VercelAfterResponse`を作る。`schedule(name, task)`は、今の`InProcessAfterResponse`と同じく`setImmediate`で応答のあとに仕事を始め、例外をログ（型名だけ）に変える約束を作り、それを`waitUntil`に渡して手元にも持っておく（`schedule`の中で`task()`を直接呼ばない）。`drain()`は持っている約束を全部待つ。IU-01・IU-02。
 2. `AFTER_RESPONSE`の組み立てを、`VERCEL`で切り替える。IU-03。
-3. `server-timing.ts`を作る。`AsyncLocalStorage`で要求ごとに`{ start, dbMs }`を持ち、ヘッダーを書く直前に`Server-Timing: app;dur=…, db;dur=…, cold;desc="…"`を付ける。`cold`はモジュールの読み込みで`true`、最初の要求で`false`。IU-04。
-4. `pool.ts`で、問い合わせの前後の時間を入れ物に足す（`pool.query`と、取り出した接続の`query`の両方）。Vercelのときだけ`attachDatabasePool`を呼ぶ。IU-05・ID-01。
+3. `server-timing.ts`を作る。`AsyncLocalStorage`で要求ごとに`{ start, dbMs }`を持ち、ヘッダーを書く直前に`Server-Timing: app;dur=…, db;dur=…, cold;desc="…"`を付ける。`cold`はモジュールの読み込みで`true`、最初の要求で`false`。最初の要求にだけ、`process.uptime()`から`boot;dur=…`を付ける。IU-04。
+4. `pool.ts`で、プールが新しい接続を作ったとき（`pool.on("connect")`）に、その接続の`query`を包んで時間を入れ物に足す。`pool.query`は内部で接続の`query`を呼ぶので包まない（二重に数えない）。Vercelのときだけ`attachDatabasePool`を呼ぶ。IU-05・IU-06・ID-01。
 5. `configure-app.ts`の先頭に、手順3のミドルウェアと、キャッシュを止める3つのヘッダーを全部の`/api`の応答に付けるミドルウェアを置く。IH-01〜IH-03。
 6. `apps/api/vercel.json`と`apps/web/vercel.json`を足す。
 
 ### 手動のデプロイ
 
-7. `deploy-integration.yml`を書く（設計書「デプロイのワークフロー」のとおり）。IW-01〜IW-03。
+7. `deploy-integration.yml`を書く（設計書「デプロイのワークフロー」のとおり。出すcommitが`origin/main`の履歴に含まれるかを確かめる手順を含める）。IW-01〜IW-04。
 8. ワークフローの形を確かめる試験を、`.claude/tests/`の既存のワークフローの試験（`delegation-workflows.test.mjs`）と同じやり方で足す。
 
 ### 手順書と記録（Claude Code）
@@ -72,7 +72,7 @@
 
 - クラウドのDevin（無料期間が終わるまで）。Issueの「既知の指摘」には、値なしの`undefined`（コーディング規約）を写す。
 - DevinのPRは、Claude Codeがレビューし、Codexのレビューを1回頼む。L3なので、最初のレビューでreviewerとsecurity-reviewerを並行して動かす（試行中のやり方）。
-- 委譲の共通受付は移行中なので、今までどおり手元の記録を作って直接起動する。
+- 委譲を始めるときに、共通受付（`AGENTS.md`）の移行が終わっていれば共通受付で登録・claim・beginしてから起動する。終わっていなければ、委譲ごとにユーザーの了承をチャットでもらってから、手元の記録を作って直接起動する（2026-10-10〜12の#198・#205・#210・#211と同じ）。了承なしに直接起動しない。
 
 ## テスト計画
 

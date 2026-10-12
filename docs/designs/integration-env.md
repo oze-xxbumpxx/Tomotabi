@@ -112,7 +112,7 @@ sequenceDiagram
 業務のAPIの形は変更なし。全部の`/api`の応答に、次の2つを足す。
 
 - キャッシュ: `Cache-Control: private, no-store`、`CDN-Cache-Control: no-store`、`Vercel-CDN-Cache-Control: no-store`。認証の経路（Better Auth）、経路の制限の404・403・503、エラーの応答も含める。今はコントローラーごとに付けている`private, no-store`は、そのまま残す（二重になっても同じ値）。
-- 時間の内訳: `Server-Timing: app;dur=<ミリ秒>, db;dur=<ミリ秒>, cold;desc="<true|false>"`。`app`は要求を受けてから応答を返すまで、`db`はその要求でDBの問い合わせにかかった時間の合計、`cold`は関数の実行の単位（インスタンス）が起動して最初の要求かどうか。数値と真偽だけを入れ、SQLや中身は入れない。手元とCIでも同じヘッダーを付ける（試験で確かめられるように）。
+- 時間の内訳: `Server-Timing: app;dur=<ミリ秒>, db;dur=<ミリ秒>, cold;desc="<true|false>"`。起動直後の要求にだけ`boot;dur=<ミリ秒>`も付ける。`app`は要求を受けてから応答を返すまで、`db`はその要求でDBの問い合わせにかかった時間の合計、`cold`は関数の実行の単位（インスタンス）が起動して最初の要求かどうか、`boot`はプロセスが起動してからその最初の要求がアプリに届くまで（NestJSの組み立てを含む）。数値と真偽だけを入れ、SQLや中身は入れない。手元とCIでも同じヘッダーを付ける（試験で確かめられるように）。
 
 ## DB 設計
 
@@ -132,7 +132,7 @@ sequenceDiagram
 
 | 部品 | 手元・CI | Vercel | 置き場所 |
 | --- | --- | --- | --- |
-| 保存のあとの処理の口（`AFTER_RESPONSE`） | `InProcessAfterResponse`（今のまま） | `VercelAfterResponse`（新規。`schedule`で仕事を`waitUntil`に渡し、例外はログに出す。`drain`は渡した仕事を待つ） | `apps/api/src/infrastructure/after-response/` |
+| 保存のあとの処理の口（`AFTER_RESPONSE`） | `InProcessAfterResponse`（今のまま） | `VercelAfterResponse`（新規。今の実装と同じく`setImmediate`で応答のあとに仕事を始め、その約束を`waitUntil`に渡す。例外はログに出す。`drain`は渡した仕事を待つ） | `apps/api/src/infrastructure/after-response/` |
 | DBの接続 | `getPool()`（今のまま） | `getPool()`のあとに`attachDatabasePool`を1回だけ呼ぶ | `apps/api/src/infrastructure/database/pool.ts` |
 | 時間の内訳 | 同じ（両方で付ける） | 同じ | `apps/api/src/bootstrap/server-timing.ts`（新規） |
 
@@ -145,8 +145,8 @@ sequenceDiagram
 ### 時間の内訳の測り方
 
 - `app`: `configureApp`の最初のミドルウェアで要求の受け取りの時刻を取り、応答のヘッダーを書く直前に差を出す（`on-headers`の形で、`res.writeHead`の前に足す）。
-- `db`: 要求ごとの入れ物（`AsyncLocalStorage`）に合計の時間を持ち、`pg.Pool`の問い合わせの前後で足す。業務のコードは変えない。
-- `cold`: モジュールの最初の読み込みで`true`にし、最初の要求で`false`に変える。
+- `db`: 要求ごとの入れ物（`AsyncLocalStorage`）に合計の時間を持ち、接続（`pg.Client`）の`query`の前後で足す。プールが新しい接続を作ったとき（`pool.on("connect")`）にその接続の`query`を包む。`pool.query`は内部で接続の`query`を呼ぶので、`pool.query`は包まない（二重に数えないため）。業務のコードは変えない。
+- `cold`と`boot`: モジュールの最初の読み込みで`true`にし、最初の要求で`false`に変える。最初の要求では、`process.uptime()`から、プロセスの起動から要求が届くまでの時間を`boot`として付ける。
 
 ### 関数の設定
 
@@ -156,7 +156,7 @@ sequenceDiagram
 
 - きっかけは`workflow_dispatch`だけ。入力は出すcommit（既定はmainの最新）。
 - `environment: integration`。Environmentの設定で、承認者をユーザー、動かせるブランチをmainだけにする（手順書）。
-- 手順: 指定のcommitをcheckout → そのcommitの`ci.yml`が成功しているかを`gh api`で確かめる（成功していなければ止める）→ `npm ci` → `vercel pull --environment=production`（api・webそれぞれ）→ `vercel build --prod` → `vercel deploy --prebuilt --prod`（apiを出してからweb）→ 出したURLとcommitを実行の要約（`$GITHUB_STEP_SUMMARY`）に書く。
+- 手順: 指定のcommitをcheckout → そのcommitが`origin/main`の履歴に含まれるか（`git merge-base --is-ancestor`）を確かめる（含まれなければ止める。mainに入っていないcommitを出さないため）→ そのcommitの`ci.yml`が成功しているかを`gh api`で確かめる（成功していなければ止める）→ `npm ci` → `vercel pull --environment=production`（api・webそれぞれ）→ `vercel build --prod` → `vercel deploy --prebuilt --prod`（apiを出してからweb）→ 出したURLとcommitを実行の要約（`$GITHUB_STEP_SUMMARY`）に書く。
 - 秘密情報は`VERCEL_TOKEN`だけ（Environmentの秘密情報）。`VERCEL_ORG_ID`・`VERCEL_PROJECT_ID_API`・`VERCEL_PROJECT_ID_WEB`は秘密ではないのでEnvironmentの変数に置く。
 - ログにトークンや設定の値を出さない（`vercel`のコマンドに`--token`で渡し、`set -x`を使わない）。
 - 本番の環境への出し方は、公開準備で同じワークフローを`environment`だけ変えて足す。
@@ -173,7 +173,7 @@ sequenceDiagram
 外部のI/O（Neon、配信サービス、Vercel、GitHub）を含むので、5つの項目を決める。
 
 - (a) 再試行: アプリは今のまま、DBのエラーにも通知の送信にも自動で再試行しない（詳細設計08の5節、通知の設計書）。デプロイのワークフローも自動で再試行しない。失敗したらユーザーがもう一度押す。
-- (b) 時間切れ: 関数は60秒、DBのロック待ち3秒・SQLは10秒・接続10秒（今のまま）、通知は購読あたり3秒（今のまま）。`waitUntil`に渡した仕事も関数の60秒の中で終わる。デプロイのワークフローは全体で20分。
+- (b) 時間切れ: 関数は60秒、DBのロック待ち3秒・SQLは5秒（実行用のロールの既定）・接続10秒（今のまま）、通知の送る処理の読み取りは2秒・送るのは購読あたり3秒（今のまま）。`waitUntil`に渡した仕事も関数の60秒の中で終わる。デプロイのワークフローは全体で20分。
 - (c) 冪等性: 業務の書き込みは今の受領票（`Idempotency-Key`）のまま。デプロイは同じcommitを何度出しても同じものになる。
 - (d) 部分失敗: apiだけ出てwebが失敗したときは、webをもう一度出す（apiは後方互換を保つので、古いwebのままでも動く）。通知の送信が失敗しても保存は成功のまま（今のまま）。
 - (e) 縮退: Neonが休止から戻るあいだは、画面の読み込み中の表示のまま待つ。DBにつながらないときは今のエラーの表示（「保存結果が不明な操作は、復旧後に確認してください」）。
@@ -194,13 +194,13 @@ sequenceDiagram
 
 ## 性能
 
-PERF-01で測る。`Server-Timing`の`app`から`db`を引いたものがアプリの処理、ブラウザで見た全体の時間から`app`を引いたものが距離と転送の時間になる。`cold`が`true`の要求で`app`が大きければ関数の起動、`db`が最初だけ大きければNeonの休止からの復帰と読む。
+PERF-01で測る。`Server-Timing`の`app`から`db`を引いたものがアプリの処理、ブラウザで見た全体の時間から`app`を引き、起動直後の要求ならさらに`boot`を引いたものが距離と転送の時間になる。`boot`が関数の起動、`db`が休止のあと最初だけ大きければNeonの休止からの復帰と読む。起動直後と続けての要求の全体の時間の差でも、起動の時間を確かめる。
 
 ## テスト方針
 
 | 層 | 確かめること |
 | --- | --- |
-| 単体 | `VercelAfterResponse`（仕事を`waitUntil`に渡す、例外を外に出さない、型名だけをログに出す）。部品の差し替え（`VERCEL=1`のときだけVercelの部品になる）。`Server-Timing`の形（`app`・`db`・`cold`、数値と真偽だけ） |
+| 単体 | `VercelAfterResponse`（仕事を応答のあとに始めて`waitUntil`に渡す、例外を外に出さない、型名だけをログに出す）。部品の差し替え（`VERCEL=1`のときだけVercelの部品になる）。`Server-Timing`の形（`app`・`db`・`cold`、起動直後だけ`boot`、数値と真偽だけ）。DBの時間が二重に数えられない |
 | HTTP | 全部の`/api`の応答（業務・認証の経路・404・エラー）に、キャッシュを止めるヘッダー3つと`Server-Timing`が付く |
 | 実DB | `db`の時間が、DBに問い合わせた要求で0より大きく、問い合わせない要求で0 |
 | ワークフロー | `deploy-integration.yml`の形（`workflow_dispatch`だけ、`environment: integration`、CIの成功を確かめる手順、`--prebuilt`、秘密を`--token`で渡す、`set -x`が無い）をハーネスの試験のように静的に確かめる |

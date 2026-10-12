@@ -89,13 +89,13 @@ GitHub側の設定。
 
 controllerは保護されたdefault branchの制御コードだけを実行する。PRイベントのlistenerはcheckoutせず、固定artifactの通知JSONだけを渡す。要求に指定されたref・コード・npmスクリプトは実行しない。
 
-必須チェックのquality・build・api-dbを保つ。agent-reviewはChecks APIでPR headに明示作成し、同じSHAを使う対象PR全件の現在headレビューを照合する。Claude完了は固定作者の未編集の新規投稿だけを使う。Codex完了と指摘は作者／編集者のIDと完全SHAを確認する。修正push後は現在headへのCodex再依頼とClaudeの新しい完了が必要である。CodexはボットのPR（Devin）を自動ではレビューせず、pushのあとも見直さないので、Claude Codeが`.claude/scripts/codex-review.mjs`でユーザーのアカウントから`@codex review`を投稿し、完了を待つ。
+必須チェックのquality・build・api-dbを保つ。agent-reviewはChecks APIでPR headに明示作成し、同じSHAを使う対象PR全件のレビューを照合する。Claude完了は固定作者の未編集の新規投稿で、現在headに対するものだけを使う。Codex完了と指摘は作者／編集者のIDと完全SHAを確認し、完了はPR内のどのコミットへのものでもよい。修正push後に要るのはClaudeの新しい完了だけで、Codexには頼み直さない（2026-10-11 ユーザーの指示）。CodexはボットのPR（Devin）を自動ではレビューしないので、最初のレビューでClaude Codeが`.claude/scripts/codex-review.mjs`でユーザーのアカウントから`@codex review`を投稿し、完了を待つ。
 
 次の実機確認は未実施であり、stub試験で代用しない。
 
 - CLIのsession ID／URL形式、内部の起動POST再送設定。結果不明で自動再起動しないこと。
 - controller各イベントのmain実行元、固定workflow ID、通知artifactの対応。
 - 確認PRで明示checkの関連付け、両レビュー後のsuccess、不足failure、head更新と同じSHAの全件判定。
-- CodexのAll PRs／push設定と、指摘なし完了・修正push後の再依頼。
+- CodexのAll PRs／push設定と、指摘なし完了。
 
 実機確認が済むまでagent-reviewの必須化と移行完了を宣言しない。設定変更とPRのマージはユーザーが判断する。マージ前にはreview-refreshで最新の証拠と未処理通知を確かめる。

@@ -113,7 +113,7 @@ test('S-12: 完全SHAが同じfixは修正待ち。mergeは両レビュー待ち
   const esc = nextAction(reviewed(issueRec(63, { gh: { pr: 67 } }), 'escalate'), { prs: [ghPr(67)], now: NOW });
   assert.deepEqual([esc.state, esc.verdict], ['await-user', 'escalate']);
   const ok = reviewed(issueRec(64, { gh: { pr: 68 } }), 'merge');
-  assert.match(formatStatus(buildStatus({ records: [ok], prs: [ghPr(68)], now: NOW })), /両レビュー待ち.*Codex再依頼/);
+  assert.match(formatStatus(buildStatus({ records: [ok], prs: [ghPr(68)], now: NOW })), /両レビュー待ち.*Codex完了（最初の1回）/);
 });
 
 test('S-13: PR の特定は pr・gh.pr・Issue への紐づけの順。番号が分かっても一覧に無ければ確かめられない', () => {
@@ -288,7 +288,7 @@ test('I-21: 共有seqを表示し、旧mergeやunknownから成功・再起動�
   assert.deepEqual(status.actions.map((a) => [a.key, a.state]), [['feature:one', 'review-wait'], ['feature:two', 'shared-unknown']]);
   const text = formatStatus(status);
   assert.match(text, /共有状態 seq=4、取得日時=2026-10-09T10:00:00Z/);
-  assert.match(text, /両レビュー待ち.*Codex再依頼/);
+  assert.match(text, /両レビュー待ち.*Codex完了（最初の1回）/);
   assert.match(text, /自動再起動しない/);
   assert.doesNotMatch(text, /マージ可|マージ待ち/);
   const verified = { ...snapshot, checks: { [HEAD]: { head_sha: HEAD, check_id: 55, external_id: 'review-55', state: 'completed', conclusion: 'success' } } };

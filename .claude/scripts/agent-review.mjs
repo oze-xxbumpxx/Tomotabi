@@ -191,14 +191,14 @@ async function collectPr(client, config, pr) {
       if (kind === 'comment' && node.body.startsWith(CODEX_MARKER)) {
         for (const short of summaryCommits(node.body)) {
           const sha = await resolveSummarySha(short);
-          if (sha === pr.head_sha) completions.push({ ...meta, id: `${meta.id}:${sha}`, evidence_id: meta.id, commit_sha: sha });
+          completions.push({ ...meta, id: `${meta.id}:${sha}`, evidence_id: meta.id, commit_sha: sha });
         }
         continue;
       }
       if (kind === 'review') {
         if (node.state === 'PENDING' || node.submittedAt === null) continue;
         if (!['COMMENTED', 'APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(node.state) || !iso(node.submittedAt) || !FULL_SHA.test(node.commit?.oid ?? '')) fail('review_unknown');
-        if (node.state !== 'DISMISSED' && node.commit.oid === pr.head_sha) completions.push({ ...meta, evidence_id: meta.id, commit_sha: node.commit.oid, submitted_at: node.submittedAt, state: node.state });
+        if (node.state !== 'DISMISSED') completions.push({ ...meta, evidence_id: meta.id, commit_sha: node.commit.oid, submitted_at: node.submittedAt, state: node.state });
       }
       if (node.body.trim().length > 0) findings.push({ ...meta, thread_id: null, resolved: false });
     }
@@ -244,7 +244,7 @@ export async function collectReviewSnapshot(client, config, headSha, { registere
 
 function prReady(pr, config) {
   if (!Array.isArray(pr.codex_completions) || !Array.isArray(pr.codex_findings) || !Array.isArray(pr.codex_review_evidence) || !Array.isArray(pr.claude_completions) || pr.codex_completions.length === 0) return false;
-  if (!pr.codex_completions.every((item) => trustedCodex(item, config) && item.commit_sha === pr.head_sha && evidenceUrl(item.url, config, pr.pr)) || !pr.codex_findings.every((item) => trustedCodex(item, config) && evidenceUrl(item.url, config, pr.pr))) return false;
+  if (!pr.codex_completions.every((item) => trustedCodex(item, config) && FULL_SHA.test(item.commit_sha ?? '') && evidenceUrl(item.url, config, pr.pr)) || !pr.codex_findings.every((item) => trustedCodex(item, config) && evidenceUrl(item.url, config, pr.pr))) return false;
   const currentHash = evidenceHash(pr.codex_completions, pr.codex_findings, pr.codex_review_evidence);
   if (pr.codex_evidence_hash !== currentHash) return false;
   const latest = [...pr.claude_completions].filter((item) => item.completion === null || item.completion.head_sha === pr.head_sha).sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at) || compare(a.id, b.id)).at(-1);
@@ -257,7 +257,11 @@ function prReady(pr, config) {
   return pr.codex_findings.every((finding) => finding.thread_id === null ? acknowledged.has(finding.id) : finding.resolved === true);
 }
 
-/** 同じheadの対象PR全件に固有の証拠を要求し、GitHubには書かない。 */
+/**
+ * 同じheadの対象PR全件に固有の証拠を要求し、GitHubには書かない。
+ * Codexの完了はPR内のどのコミットへのものでもよい（最初の1回で足り、修正のたびには求めない。2026-10-11 ユーザーの指示）。
+ * Claudeの完了は現在headに対するものだけを使う。
+ */
 export function evaluateSha(snapshot, config) {
   let status = 'completed';
   let conclusion = 'failure';

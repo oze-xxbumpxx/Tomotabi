@@ -1,7 +1,7 @@
 // codex-review.mjsの「Codexのレビューの状態」「投稿するか」の判定と引数検査のテスト。ghは呼ばない。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { codexState, parseArgs, requestBody, requestDecision, waitOutcome } from '../scripts/codex-review.mjs';
+import { codexState, completedOnAnyCommit, parseArgs, requestBody, requestDecision, waitOutcome } from '../scripts/codex-review.mjs';
 
 const HEAD = '3141acad12f325db2012b60bd3615c633fbd8136';
 const OLD = '1cc6c46ab83c7fbd0f3d5f3a716a60124d20a7fc';
@@ -48,7 +48,7 @@ test('CR-05: 完了・実行中なら投稿しない', () => {
 });
 
 test('CR-06: 自分が今のheadの印を付けた依頼だけを依頼済みと数える', () => {
-  const base = { headSha: HEAD, viewer: 'me', summaryBody: summary(row('✅ **Completed**', OLD)) };
+  const base = { headSha: HEAD, viewer: 'me', summaryBody: null };
   const mine = { body: requestBody(HEAD), author: 'me' };
   assert.deepEqual(requestDecision({ ...base, requests: [mine] }), { action: 'skipped', reason: 'requested' });
   // 古いheadへの依頼（日時がどうであれ）は数えない
@@ -95,4 +95,15 @@ test('CR-08: 引数の検査', () => {
   assert.equal(parseArgs(['wait', '183', '--sha', 'XYZ']), null);
   assert.equal(parseArgs(['wait', '183', '--sha', HEAD, '--since', '2026-10-10T02:00:00Z']).since, '2026-10-10T02:00:00Z');
   assert.equal(parseArgs(['wait', '183', '--sha', HEAD, '--since', 'x']), null);
+});
+
+test('CR-10: 前のコミットで一度完了していれば、今のheadが新しくても頼み直さない', () => {
+  const base = { headSha: HEAD, viewer: 'me', requests: [] };
+  assert.deepEqual(requestDecision({ ...base, summaryBody: summary(row('✅ **Completed**', OLD)) }), {
+    action: 'skipped',
+    reason: 'completed',
+  });
+  assert.equal(requestDecision({ ...base, summaryBody: summary(row('❌ **Failed**', OLD)) }).action, 'posted');
+  assert.equal(completedOnAnyCommit(summary(row('⏳ **Running**', OLD))), false);
+  assert.equal(completedOnAnyCommit(null), false);
 });

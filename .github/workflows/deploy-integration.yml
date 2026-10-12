@@ -1,0 +1,118 @@
+name: deploy-integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "出すcommitのSHA。空ならmainの最新"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+# 2つのデプロイが同時に走らないようにする。実行中は止めず、続けて起動したものは
+# queue: maxで順に待つ（既定のsingleは待機1件だけで、さらに起動すると前の待機が消える）。
+concurrency:
+  group: deploy-integration
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: integration
+    steps:
+      - name: Verify sha input shape
+        env:
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          if [ -n "$INPUT_SHA" ] && ! echo "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "sha input must be a full 40-hex commit SHA. Aborting." >&2
+            exit 1
+          fi
+      - name: Verify API_ORIGIN is set
+        env:
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
+        run: |
+          case "${API_ORIGIN:-}" in
+            https://*) ;;
+            *) echo "vars.API_ORIGIN must be an https URL. Aborting." >&2; exit 1 ;;
+          esac
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve target commit
+        id: target
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Verify commit is on main
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "commit $SHA is not on the history of main. Aborting." >&2
+            exit 1
+          fi
+      - name: Verify ci.yml succeeded on the commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.target.outputs.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          SUCCEEDED="$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&status=success&per_page=1" --jq '.workflow_runs | length')"
+          if [ "$SUCCEEDED" -eq 0 ]; then
+            echo "ci.yml has not succeeded on $SHA. Aborting." >&2
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Deploy api to Vercel
+        id: deploy-api
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_API }}
+        run: |
+          npx --yes vercel@62.4.0 pull --yes --environment=production --token "$VERCEL_TOKEN"
+          npx --yes vercel@62.4.0 build --prod --token "$VERCEL_TOKEN"
+          # コマンド置換の失敗は代入行の終了コードに出るので、先に受けてから書く。
+          # echoの引数に直接置くと、deployが失敗してもechoが成功して空のurlが残る。
+          API_URL="$(npx --yes vercel@62.4.0 deploy --prebuilt --prod --token "$VERCEL_TOKEN")"
+          echo "url=$API_URL" >> "$GITHUB_OUTPUT"
+      - name: Deploy web to Vercel
+        id: deploy-web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_WEB }}
+          # 画面の/apiの転送先はビルドのときに決まる。固有のデプロイURLではなく、
+          # 公開する固定のURL（Deployment Protectionを外す方）をEnvironmentの変数から渡す。
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
+        run: |
+          npx --yes vercel@62.4.0 pull --yes --environment=production --token "$VERCEL_TOKEN"
+          npx --yes vercel@62.4.0 build --prod --token "$VERCEL_TOKEN"
+          WEB_URL="$(npx --yes vercel@62.4.0 deploy --prebuilt --prod --token "$VERCEL_TOKEN")"
+          echo "url=$WEB_URL" >> "$GITHUB_OUTPUT"
+      - name: Write deployed URLs to summary
+        # webで失敗したときも、どのcommitとapiのURLが出たかを記録に残す。
+        if: always()
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
+          API_URL: ${{ steps.deploy-api.outputs.url }}
+          WEB_URL: ${{ steps.deploy-web.outputs.url }}
+        run: |
+          {
+            echo "## integration環境へのデプロイ"
+            echo ""
+            echo "- commit: \`$SHA\`"
+            echo "- api: $API_URL"
+            echo "- web: $WEB_URL"
+          } >> "$GITHUB_STEP_SUMMARY"

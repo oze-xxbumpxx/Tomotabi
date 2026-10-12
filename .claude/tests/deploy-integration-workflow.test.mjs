@@ -54,4 +54,6 @@ test('実行の条件: 権限は最小、全体20分、結果を要約に書く'
   assert.match(workflow, /timeout-minutes: 20/);
   assert.match(workflow, /fetch-depth: 0/);
   assert.match(workflow, /\$GITHUB_STEP_SUMMARY/);
+  // 既定のsingleは待機1件だけなので、続けて起動した実行が消えないようmaxにする。
+  assert.match(workflow, /queue: max/);
 });

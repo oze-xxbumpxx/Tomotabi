@@ -12,10 +12,11 @@ permissions:
   contents: read
   actions: read
 
-# 2つのデプロイが同時に走らないようにする（実行中は止めない）。
-# 待てる実行は1件までで、さらに起動すると前の待機は消えるので、その分は押し直す。
+# 2つのデプロイが同時に走らないようにする。実行中は止めず、続けて起動したものは
+# queue: maxで順に待つ（既定のsingleは待機1件だけで、さらに起動すると前の待機が消える）。
 concurrency:
   group: deploy-integration
+  queue: max
   cancel-in-progress: false
 
 jobs:

@@ -889,10 +889,12 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     ).toBeInTheDocument();
     expect(writeCalls(fetchMock)).toHaveLength(0);
     // 種類の欄（Segmentedのfieldset）にフォーカスする。
-    expect(
-      document.activeElement instanceof HTMLElement &&
-        document.activeElement.classList.contains("segmented"),
-    ).toBe(true);
+    await waitFor(() =>
+      expect(
+        document.activeElement instanceof HTMLElement &&
+          document.activeElement.classList.contains("segmented"),
+      ).toBe(true),
+    );
   });
 
   it("必須の名前が空なら欄のエラーにして送らない", async () => {

@@ -156,7 +156,9 @@ describe("TripNewScreen (/trips/new)", () => {
     expect(
       await screen.findByText("旅行名を入力してください"),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("旅行名")).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByLabelText("旅行名")).toHaveFocus(),
+    );
     expect(
       screen.queryByText(/開始日を入力|終了日を入力|実在する/),
     ).not.toBeInTheDocument();
@@ -333,7 +335,9 @@ describe("TripNewScreen (/trips/new)", () => {
     // シートの後ろに元の画面（旅行一覧）が透けて見える。
     expect(await screen.findByText("沖縄")).toBeInTheDocument();
     // 開いたときのフォーカスは「×」ではなく最初の欄。
-    expect(await screen.findByLabelText("旅行名")).toHaveFocus();
+    // シートの<dialog>はuseEffectで開いてから欄にフォーカスするので、欄が見えた直後ではなくフォーカスを待つ。
+    const nameInput = await screen.findByLabelText("旅行名");
+    await waitFor(() => expect(nameInput).toHaveFocus());
   });
 
   it("右上の×（閉じる）は送らず旅行一覧へ戻る。下に「やめる」は無い（v3のシート）", async () => {

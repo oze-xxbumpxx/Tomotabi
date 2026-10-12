@@ -34,7 +34,7 @@ quality:
 process:
   requirement_rework: 0
   design_rework: 2 
-  implementation_rework: 0
+  implementation_rework: unknown # 委譲ごとの直しの回数はdelegations/の各記録のreviewsにある
   missing_documents: 0
   unresolved_items: 0
   # セッション時間に占めるメタ作業（改善サイクル・棚卸し・承認待ち・ハーネス議論）の割合。

@@ -83,5 +83,16 @@ describe("実DBでのdbの時間（ID-01）", () => {
     );
     expect(probes.status).toBe(200);
     expect(dbDur(probes)).toBeGreaterThan(0);
+
+    // 同じ接続を使い回す2回目・3回目の要求でも、その要求のdbに時間が入る
+    // （応答は接続のソケット由来の文脈で通知されるため、始めた要求の入れ物に
+    // 足す必要がある）。
+    for (const _ of [1, 2]) {
+      const again = await request(app.getHttpServer()).get(
+        "/api/foundation/probes",
+      );
+      expect(again.status).toBe(200);
+      expect(dbDur(again)).toBeGreaterThan(0);
+    }
   });
 });

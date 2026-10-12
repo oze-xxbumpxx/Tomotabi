@@ -62,4 +62,15 @@ describe("VercelAfterResponse（IU-01・IU-02）", () => {
     ]);
     expect(JSON.stringify(failures)).not.toContain("secret");
   });
+
+  it("終了のときは走っている仕事を待つ（drainが先に終わればタイマーを残さない）", async () => {
+    const { afterResponse } = setup();
+    const order: string[] = [];
+    afterResponse.schedule("task-c", async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      order.push("c");
+    });
+    await afterResponse.onApplicationShutdown();
+    expect(order).toEqual(["c"]);
+  });
 });

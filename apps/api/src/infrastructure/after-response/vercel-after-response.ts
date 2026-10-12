@@ -61,13 +61,17 @@ export class VercelAfterResponse
   }
 
   async onApplicationShutdown(): Promise<void> {
-    await Promise.race([this.drain(), this.shutdownTimeout()]);
-  }
-
-  private shutdownTimeout(): Promise<void> {
-    return new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, SHUTDOWN_DRAIN_TIMEOUT_MS);
-      timer.unref();
-    });
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        this.drain(),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, SHUTDOWN_DRAIN_TIMEOUT_MS);
+          timer.unref();
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }

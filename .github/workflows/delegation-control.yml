@@ -55,7 +55,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Process public requests and refresh reviews
         run: node .claude/scripts/delegation-control.mjs
         env:

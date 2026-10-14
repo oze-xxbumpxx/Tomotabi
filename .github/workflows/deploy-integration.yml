@@ -71,7 +71,7 @@ jobs:
           fi
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
       - run: npm ci
       - name: Deploy api to Vercel

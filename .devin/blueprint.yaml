@@ -1,32 +1,32 @@
 # Devin environment blueprint — https://docs.devin.ai/onboard-devin/environment/blueprint-reference
 # 作業手順とルールはAGENTS.mdと .agents/skills/devin-workflow/SKILL.md。背景はdocs/devin-setup.md。
 
-# Node 22.xに揃える（.nvmrc / package.jsonのenginesと同じ）。ベースイメージのNodeは22と限らない。
-# 22が無ければnodejs.orgの公式配布物をチェックサムで確かめて入れる。最後に22でなければ失敗させる。
+# Node 24.xに揃える（.nvmrc / package.jsonのenginesと同じ）。ベースイメージのNodeは24と限らない。
+# 24が無ければnodejs.orgの公式配布物をチェックサムで確かめて入れる。最後に24でなければ失敗させる。
 initialize: |
   set -eu
-  if ! node --version 2>/dev/null | grep -q '^v22\.'; then
+  if ! node --version 2>/dev/null | grep -q '^v24\.'; then
     case "$(uname -m)" in
       x86_64) arch=x64 ;;
       aarch64 | arm64) arch=arm64 ;;
       *) echo "未対応のCPU: $(uname -m)" >&2; exit 1 ;;
     esac
-    base=https://nodejs.org/dist/latest-v22.x
+    base=https://nodejs.org/dist/latest-v24.x
     tmp=$(mktemp -d)
     curl -fsSL -o "$tmp/SHASUMS256.txt" "$base/SHASUMS256.txt"
-    file=$(grep -o "node-v22\.[0-9.]*-linux-$arch\.tar\.xz" "$tmp/SHASUMS256.txt" | head -n 1)
+    file=$(grep -o "node-v24\.[0-9.]*-linux-$arch\.tar\.xz" "$tmp/SHASUMS256.txt" | head -n 1)
     curl -fsSL -o "$tmp/$file" "$base/$file"
     (cd "$tmp" && grep " $file\$" SHASUMS256.txt | sha256sum --check --strict -)
-    mkdir -p "$HOME/.local/node22"
-    tar -xJf "$tmp/$file" -C "$HOME/.local/node22" --strip-components=1
-    export PATH="$HOME/.local/node22/bin:$PATH"
+    mkdir -p "$HOME/.local/node24"
+    tar -xJf "$tmp/$file" -C "$HOME/.local/node24" --strip-components=1
+    export PATH="$HOME/.local/node24/bin:$PATH"
     if [ -n "${ENVRC:-}" ]; then echo "PATH=$PATH" >> "$ENVRC"; fi
   fi
-  node --version | grep -q '^v22\.' || { echo "Node 22 が必要です: $(node --version)" >&2; exit 1; }
+  node --version | grep -q '^v24\.' || { echo "Node 24 が必要です: $(node --version)" >&2; exit 1; }
 
-# lockfileどおりに入れる。CI（.github/workflows/ci.yml）と同じ。Node 22以外では入れない。
+# lockfileどおりに入れる。CI（.github/workflows/ci.yml）と同じ。Node 24以外では入れない。
 maintenance: |
-  node --version | grep -q '^v22\.' || { echo "Node 22 が必要です: $(node --version)" >&2; exit 1; }
+  node --version | grep -q '^v24\.' || { echo "Node 24 が必要です: $(node --version)" >&2; exit 1; }
   npm ci
 
 knowledge:

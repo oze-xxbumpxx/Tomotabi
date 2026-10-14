@@ -1,8 +1,3 @@
 {
-  "regions": ["sin1"],
-  "functions": {
-    "src/main.ts": {
-      "maxDuration": 60
-    }
-  }
+  "regions": ["sin1"]
 }

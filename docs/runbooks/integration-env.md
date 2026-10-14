@@ -73,7 +73,7 @@ npm run db:migrate -w @tomotabi/api
    - 「Include source files outside of the Root Directory」を有効にする（npm workspacesと`packages/contracts`のため）
 3. どちらも、Settings > GitでGit連携を切る（Disconnect）。mainへのpushで検証用の環境が変わらないようにするため。デプロイは9章のボタンで行う。
 4. どちらも、Settings > Deployment Protectionで、Production（固定のURL）にVercelのログインを求めない設定にする。パートナーにVercelのアカウントを求めないため。
-5. どちらも、Settings > Functionsで、関数の地域（Function Region）を**Singapore (sin1)**にする。デプロイのワークフローはリポジトリのルートから出すので、`apps/*/vercel.json`の`regions`が送られない。地域はプロジェクトの設定で決める。
+5. どちらも、Settings > Functionsで、関数の地域（Function Region）を**Singapore (sin1)**にする。デプロイのワークフローはリポジトリのルートから出すので、`apps/*/vercel.json`の`regions`が送られない。地域はプロジェクトの設定で決める。api-testは、同じ画面で関数の時間の上限（Max Duration）を**60秒**にする。
 6. それぞれの固定のURL（`https://<プロジェクト名>.vercel.app`）を控える。以下、画面のURLを「webのURL」、APIのURLを「apiのURL」と呼ぶ。末尾にスラッシュを付けない。
 
 ## 4. GoogleのOAuthのクライアントを2つ作る

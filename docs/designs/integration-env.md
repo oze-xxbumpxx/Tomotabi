@@ -150,7 +150,7 @@ sequenceDiagram
 
 ### 関数の設定
 
-`apps/api/vercel.json`で、関数の実行場所を`sin1`にする。時間の上限（`maxDuration`）の60秒は、Vercelのプロジェクトの設定（Functions > Max Duration）で決める。`vercel.json`の`functions`に`src/main.ts`を書くと、NestJSの自動の対応ではその名前の関数ができないため、「`src/main.ts`に合う関数が無い」というエラーでデプロイが止まった（2026-10-13、プロジェクトを作ったときの最初のデプロイ）。`apps/web/vercel.json`も`sin1`にする（画面の関数もシンガポール）。Nodeは22.x（`package.json`の`engines`と、Vercelのプロジェクトの設定）。
+`apps/api/vercel.json`で、関数の実行場所を`sin1`にする。時間の上限（`maxDuration`）の60秒は、Vercelのプロジェクトの設定（Functions > Max Duration）で決める。`vercel.json`の`functions`に`src/main.ts`を書くと、NestJSの自動の対応ではその名前の関数ができないため、「`src/main.ts`に合う関数が無い」というエラーでデプロイが止まった（2026-10-13、プロジェクトを作ったときの最初のデプロイ）。`apps/web/vercel.json`も`sin1`にする（画面の関数もシンガポール）。Nodeは24.x（`package.json`の`engines`と、Vercelのプロジェクトの設定）。VercelのNode 22の実行環境では`require()`でESMを読めず、ESMだけの`better-auth`の読み込みで関数が落ちたため、24.xにした（ADR-0008）。
 
 デプロイのワークフローはリポジトリのルートから`vercel deploy`を動かすので、`apps/*/vercel.json`のトップレベルの`regions`はVercelに送られない（Vercel CLI 62.4.0で、deployの地域は`--regions`かカレントディレクトリの`vercel.json`からだけ決まる）。そこで、関数の実行場所はVercelのプロジェクトの設定（Function Region）でも`sin1`にする（手順書3章）。最初のデプロイ（IE-01）で、関数の実行場所を確かめる。
 

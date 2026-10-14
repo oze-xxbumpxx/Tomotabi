@@ -22,7 +22,7 @@
 | ID | 要件 |
 | --- | --- |
 | R-01 | 検証用の環境として、Vercelに画面とAPIの2プロジェクト（web-test・api-test）、Neonに検証用のプロジェクト（test）を作る。地域は、Vercelの関数の実行場所をsin1（シンガポール）、NeonをAWS Singapore（ap-southeast-1）にそろえる。Vercelの関数は設定しないとアメリカ東部（iad1）で動くので、sin1を明示する。本番の地域は、PERF-01で測ってから決める |
-| R-02 | APIを、Vercelの公式のNestJSの入口で1つのNode.jsの関数として動かす。Nodeは22.x、`maxDuration`は60秒、`pg.Pool`は最大2で、関数が休むときに使っていない接続を手放す（`attachDatabasePool`） |
+| R-02 | APIを、Vercelの公式のNestJSの入口で1つのNode.jsの関数として動かす。Nodeは24.x（ADR-0008）、`maxDuration`は60秒、`pg.Pool`は最大2で、関数が休むときに使っていない接続を手放す（`attachDatabasePool`） |
 | R-03 | 保存のあとの通知の送信を、Vercelの`waitUntil`で応答のあとに動かす（通知の設計書で、この段階に回した「保存のあとの処理の口」のVercelの実装）。手元とCIでは今の`InProcessAfterResponse`のまま |
 | R-04 | 画面の`/api/...`を、APIの固定のURLへ転送する（Vercelの外部rewrite）。`/api`の応答と、Cookieに依存する画面は、共有のキャッシュに載せない（`Cache-Control: private, no-store`など） |
 | R-05 | 検証用の環境の設定（環境変数）を、`運用設定と公開チェック.md`の1節の表のとおりに置く。ただし通知の鍵は、表の`VAPID_KEY_ID`・`VAPID_PUBLIC_KEY`・`VAPID_PRIVATE_KEY`ではなく、今のコード（`apps/api/src/modules/notification/infrastructure/env-vapid-keyring.ts`）が読む`VAPID_KEYS`（鍵の束のJSONの配列）と`VAPID_SUBJECT`で置く。表は今のコードに合わせて直す。`APP_ENV`は`staging`。通知を確かめる間だけ`PUSH_ENABLED`相当を有効にする |

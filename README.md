@@ -6,7 +6,7 @@
 
 | 領域 | 内容 |
 |---|---|
-| 言語 | TypeScript / Node 22.x |
+| 言語 | TypeScript / Node 24.x |
 | web | Next.js App Router。`app` → `screens` → `features` → `shared`。機能内は`ui` / `model` / `api` |
 | api | NestJSモジュラーモノリス。業務モジュール内はController / UseCase / Service / Domain / Infrastructure / Adapter |
 | 契約 | `packages/contracts`に公開APIの型とOpenAPIだけを置く |
@@ -36,7 +36,7 @@ packages/contracts/    wire 型と foundation OpenAPI
 
 ## 前提
 
-- Node 22.18以上の22.x（orvalの要件。リポジトリは22.23.2で確認）
+- Node 24.x（ADR-0008。リポジトリは24.22.0で確認）
 - Docker Desktopが動いていること（`npm run test:api-db`と`npm run test:e2e`。単体テストとbuildには不要）
 - E2Eを初めて動かす前に`npx playwright install chromium`（ブラウザの取得。以後は不要）
 
@@ -125,7 +125,7 @@ allowlistを`enabled = false`にして、そのユーザーの全セッション
 
 ## 確認した依存バージョン
 
-確認環境: Node 22.23.2 / npm 10.9.8（2026-09-11）。lockfileで固定。
+確認環境: Node 22.23.2 / npm 10.9.8（2026-09-11）。lockfileで固定。2026-10-15にNode 24.22.0 / npm 11.19.1でも、lint・型・試験・ビルドが通ることを確かめた。
 
 | パッケージ | 実測 |
 |---|---|

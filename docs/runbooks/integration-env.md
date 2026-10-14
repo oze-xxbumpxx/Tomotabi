@@ -69,7 +69,7 @@ npm run db:migrate -w @tomotabi/api
    - `tomotabi-api-test`: Root Directoryを`apps/api`
    - `tomotabi-web-test`: Root Directoryを`apps/web`
 2. どちらも、Settings > Generalで次を確かめる。
-   - Node.jsの版: 22.x
+   - Node.jsの版: 24.x
    - 「Include source files outside of the Root Directory」を有効にする（npm workspacesと`packages/contracts`のため）
 3. どちらも、Settings > GitでGit連携を切る（Disconnect）。mainへのpushで検証用の環境が変わらないようにするため。デプロイは9章のボタンで行う。
 4. どちらも、Settings > Deployment Protectionで、Production（固定のURL）にVercelのログインを求めない設定にする。パートナーにVercelのアカウントを求めないため。

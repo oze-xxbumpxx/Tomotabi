@@ -1,4 +1,4 @@
-import type { NotificationEvent } from "../../../notification/domain/notification-event";
+import type { NotificationEvent } from "../../../notification/domain/notification-event.js";
 
 export const NOTIFICATION_PUBLISHER = Symbol("NOTIFICATION_PUBLISHER");
 

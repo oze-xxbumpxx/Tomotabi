@@ -1,6 +1,6 @@
 # ADR-0008: Node.jsを24.xにする
 
-- Status: Accepted（2026-10-15のチャットでユーザーが選んだ）
+- Status: Accepted（2026-10-15のチャットでユーザーが選んだ）。ただしNodeを上げても、VercelでのAPIの落ち方は直らなかった。直す方法はADR-0009で決めた
 - Date: 2026-10-15
 - 関連feature: integration-env
 - 置き換えるもの: ADR-0001の「Node 22.xを`.nvmrc`と`engines`とCIで指定する」
@@ -14,7 +14,7 @@ APIはCommonJSで組み立てている。Node 22.12からは`require()`でESMを
 ## Decision（採用した決定）
 
 - Node.jsを24.xにする。`.nvmrc`・`.node-version`・ルートの`package.json`の`engines`（`>=24.0.0 <25`）・GitHub Actionsの`setup-node`・Devinのblueprintをそろえる。
-- APIはCommonJSのまま変えない。Node 24では`require()`でESMを読むのが標準になっている。
+- APIはCommonJSのまま変えない。Node 24では`require()`でESMを読むのが標準になっている。（この行は、直らなかったためADR-0009で置き換えた。Node 24にしたことは、そのまま残す）
 - `@types/node`は今回は22のまま残す。型の差で困ったときに上げる。
 
 VercelのNode 24の実行環境で、この読み込みが使えるかは資料からは分からない。最初のデプロイ（結合検証環境のIE-01）で確かめる。使えなかったときは、下の非採用案のどちらかに戻って決め直す。

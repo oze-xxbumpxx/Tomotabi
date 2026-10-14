@@ -1,5 +1,5 @@
 import type { Trip } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const GET_TRIP_INPUT_PORT = Symbol("GET_TRIP_INPUT_PORT");
 

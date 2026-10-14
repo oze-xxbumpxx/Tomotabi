@@ -1,7 +1,7 @@
-import type { UserId } from "../../../../common/domain/user-id";
-import type { SignedYen } from "../../../../common/domain/yen";
-import type { ClaimHistory } from "../../domain/fingerprint";
-import type { ActiveClaim, ClaimKind } from "../../domain/settlement-target";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { SignedYen } from "../../../../common/domain/yen.js";
+import type { ClaimHistory } from "../../domain/fingerprint.js";
+import type { ActiveClaim, ClaimKind } from "../../domain/settlement-target.js";
 
 /** 確認の行（settlement.previews）。 */
 export type PreviewRecord = Readonly<{

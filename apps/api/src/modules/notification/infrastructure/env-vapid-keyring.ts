@@ -15,7 +15,7 @@ import type {
   VapidKey,
   VapidKeyring,
   VapidKeyState,
-} from "../domain/vapid-keyring";
+} from "../domain/vapid-keyring.js";
 
 // 型の定義はdomain側（adapter/domainから実装を参照しない区分のため）。
 export type { VapidKey, VapidKeyring, VapidKeyState };

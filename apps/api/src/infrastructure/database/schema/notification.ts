@@ -10,7 +10,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { users } from "./identity";
+import { users } from "./identity.js";
 
 // Reference spec: docs/旅行アプリ設計3/詳細設計/sql/05_push_notifications.sql
 // registration_session_id はセッションを消しても購読の行を連鎖で消さないため、

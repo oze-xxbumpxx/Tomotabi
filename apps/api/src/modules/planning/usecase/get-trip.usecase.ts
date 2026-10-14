@@ -1,8 +1,8 @@
 import type { Trip } from "@tomotabi/contracts";
-import type { GetTripInput, GetTripInputPort } from "../adapter/inbound/get-trip.input-port";
-import type { PlanningReadPort } from "../adapter/outbound/planning-read.port";
-import { toTripDto } from "./trip-dto";
-import { tripNotAccessible } from "./trip-write-flow";
+import type { GetTripInput, GetTripInputPort } from "../adapter/inbound/get-trip.input-port.js";
+import type { PlanningReadPort } from "../adapter/outbound/planning-read.port.js";
+import { toTripDto } from "./trip-dto.js";
+import { tripNotAccessible } from "./trip-write-flow.js";
 
 export class GetTripUseCase implements GetTripInputPort {
   constructor(private readonly read: PlanningReadPort) {}

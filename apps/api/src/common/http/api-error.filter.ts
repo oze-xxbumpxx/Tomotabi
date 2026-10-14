@@ -8,12 +8,12 @@ import {
 import type { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 import type { ApiErrorBody } from "@tomotabi/contracts";
-import { someInCauseChain } from "../errors/find-in-cause-chain";
+import { someInCauseChain } from "../errors/find-in-cause-chain.js";
 import {
   ApiError,
   type ApiErrorCode,
   type ApiErrorDetails,
-} from "./api-error";
+} from "./api-error.js";
 
 /**
  * 想定外の例外に返す固定文。例外のmessage（DBのURL・接続情報を含み得る）を

@@ -2,8 +2,8 @@ import {
   EMPTY_CLAIM_HISTORY,
   fingerprintOf,
   type ClaimHistory,
-} from "../domain/fingerprint";
-import type { CurrentClaimState } from "../domain/preview-validation";
+} from "../domain/fingerprint.js";
+import type { CurrentClaimState } from "../domain/preview-validation.js";
 
 /**
  * 確認の明細の支払いそれぞれについて、今の検証の材料（指紋と取り消し

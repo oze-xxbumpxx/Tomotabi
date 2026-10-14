@@ -1,9 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import type { RecordsReadContext } from "../adapter/outbound/records-read.port";
-import { PgTripRosterQuery } from "../../settlement/infrastructure/pg-finance-unit-of-work";
-import { PgRecordsRead } from "./pg-records-read";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import type { RecordsReadContext } from "../adapter/outbound/records-read.port.js";
+import { PgTripRosterQuery } from "../../settlement/infrastructure/pg-finance-unit-of-work.js";
+import { PgRecordsRead } from "./pg-records-read.js";
 
 /**
  * 記録の一覧の読み取りをREPEATABLE READの短い読み取りトランザクションに

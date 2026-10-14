@@ -2,11 +2,11 @@ import type {
   Cancellation,
   Payment as PaymentContract,
 } from "@tomotabi/contracts";
-import type { ParticipantSlot } from "../../../common/domain/participant-slot";
-import type { UserId } from "../../../common/domain/user-id";
-import { PaymentYen, SignedYen } from "../../../common/domain/yen";
-import type { TripRosterEntry } from "../adapter/outbound/finance-work-context";
-import type { Payment, PaymentCancellation } from "../domain/payment";
+import type { ParticipantSlot } from "../../../common/domain/participant-slot.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { PaymentYen, SignedYen } from "../../../common/domain/yen.js";
+import type { TripRosterEntry } from "../adapter/outbound/finance-work-context.js";
+import type { Payment, PaymentCancellation } from "../domain/payment.js";
 
 export function toCancellationDto(
   cancellation: PaymentCancellation,

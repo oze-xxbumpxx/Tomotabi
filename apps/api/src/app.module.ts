@@ -1,16 +1,16 @@
 import { Module } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { LoggerModule } from "nestjs-pino";
-import { ALLOWED_ORIGINS, OriginGuard } from "./common/guard/origin.guard";
-import { ApiErrorFilter } from "./common/http/api-error.filter";
-import { SessionGuard } from "./common/guard/session.guard";
-import { createPinoHttpOptions } from "./infrastructure/logging/logger";
-import { FoundationModule } from "./modules/foundation/foundation.module";
-import { IdentityModule } from "./modules/identity/identity.module";
-import { NotificationModule } from "./modules/notification/notification.module";
-import { PlanningModule } from "./modules/planning/planning.module";
-import { RecordModule } from "./modules/record/record.module";
-import { SettlementModule } from "./modules/settlement/settlement.module";
+import { ALLOWED_ORIGINS, OriginGuard } from "./common/guard/origin.guard.js";
+import { ApiErrorFilter } from "./common/http/api-error.filter.js";
+import { SessionGuard } from "./common/guard/session.guard.js";
+import { createPinoHttpOptions } from "./infrastructure/logging/logger.js";
+import { FoundationModule } from "./modules/foundation/foundation.module.js";
+import { IdentityModule } from "./modules/identity/identity.module.js";
+import { NotificationModule } from "./modules/notification/notification.module.js";
+import { PlanningModule } from "./modules/planning/planning.module.js";
+import { RecordModule } from "./modules/record/record.module.js";
+import { SettlementModule } from "./modules/settlement/settlement.module.js";
 
 @Module({
   imports: [

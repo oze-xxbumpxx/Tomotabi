@@ -1,14 +1,14 @@
 import type { Preview } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import { tripNotAccessible } from "../../planning/usecase/trip-write-flow";
-import { validatePreview } from "../domain/preview-validation";
+import { ApiError } from "../../../common/http/api-error.js";
+import { tripNotAccessible } from "../../planning/usecase/trip-write-flow.js";
+import { validatePreview } from "../domain/preview-validation.js";
 import type {
   GetPreviewInput,
   GetPreviewInputPort,
-} from "../adapter/inbound/get-preview.input-port";
-import type { SettlementReadUnitOfWork } from "../adapter/outbound/settlement-work-context";
-import { currentClaimStates } from "./current-claims";
-import { joinPreviewItems, toPreviewDto } from "./settlement-dto";
+} from "../adapter/inbound/get-preview.input-port.js";
+import type { SettlementReadUnitOfWork } from "../adapter/outbound/settlement-work-context.js";
+import { currentClaimStates } from "./current-claims.js";
+import { joinPreviewItems, toPreviewDto } from "./settlement-dto.js";
 
 /**
  * 確認の取得（F-23）。固定した明細と、取得時点の検証結果を返す。

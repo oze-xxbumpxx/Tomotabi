@@ -1,4 +1,4 @@
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const DISABLE_PUSH_SUBSCRIPTION_INPUT_PORT = Symbol(
   "DISABLE_PUSH_SUBSCRIPTION_INPUT_PORT",

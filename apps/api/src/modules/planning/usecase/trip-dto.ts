@@ -1,5 +1,5 @@
 import type { Trip as TripContract } from "@tomotabi/contracts";
-import type { Trip } from "../domain/trip";
+import type { Trip } from "../domain/trip.js";
 
 /**
  * Domainの旅行を公開契約の形にする。versionは10進の文字列（ETagの中身）。

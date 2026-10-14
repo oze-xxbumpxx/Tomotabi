@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
-import type { UserId } from "../../../common/domain/user-id";
-import type { IdentityReader } from "../adapter/outbound/identity-reader";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { IdentityReader } from "../adapter/outbound/identity-reader.js";
 
 export class PgIdentityReader implements IdentityReader {
   constructor(private readonly pool: Pool) {}

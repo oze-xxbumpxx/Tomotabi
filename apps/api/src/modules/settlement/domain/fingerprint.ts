@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { ClaimKind } from "./settlement-target";
+import type { ClaimKind } from "./settlement-target.js";
 
 export type ClaimFingerprint = string & {
   readonly __brand: "ClaimFingerprint";

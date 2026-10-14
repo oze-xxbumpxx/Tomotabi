@@ -2,14 +2,14 @@ import { Controller, Get, Inject, Param, Res } from "@nestjs/common";
 import type { Home } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
-import { GetHomeParams } from "../../../generated/trips.zod";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
+import { GetHomeParams } from "../../../generated/trips.zod.js";
 import {
   GET_HOME_INPUT_PORT,
   type GetHomeInputPort,
-} from "../adapter/inbound/get-home.input-port";
+} from "../adapter/inbound/get-home.input-port.js";
 
 type HomeParams = zod.infer<typeof GetHomeParams>;
 

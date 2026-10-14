@@ -1,5 +1,5 @@
-import type { ClaimFingerprint } from "./fingerprint";
-import type { ClaimKind } from "./settlement-target";
+import type { ClaimFingerprint } from "./fingerprint.js";
+import type { ClaimKind } from "./settlement-target.js";
 
 /**
  * 確認の明細1件が期待する、その支払いの状態（確認を作った時点の値）。

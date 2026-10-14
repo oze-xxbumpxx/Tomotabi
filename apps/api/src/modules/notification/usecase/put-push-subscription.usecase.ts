@@ -1,25 +1,25 @@
 import { createHash } from "node:crypto";
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UserId } from "../../../common/domain/user-id";
-import { ApiError } from "../../../common/http/api-error";
-import { isUniqueViolation } from "../../planning/usecase/trip-write-flow";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { ApiError } from "../../../common/http/api-error.js";
+import { isUniqueViolation } from "../../planning/usecase/trip-write-flow.js";
 import type {
   PushRegistrationInput,
   PutPushSubscriptionInputPort,
-} from "../adapter/inbound/put-push-subscription.input-port";
+} from "../adapter/inbound/put-push-subscription.input-port.js";
 import type {
   NotificationUnitOfWork,
   PushSubscriptionRow,
   PushSubscriptionUpdate,
-} from "../adapter/outbound/push-subscription.repository";
-import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port";
-import { checkPushEndpoint } from "../domain/push-endpoint";
-import { parsePushKeys } from "../domain/push-keys";
+} from "../adapter/outbound/push-subscription.repository.js";
+import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port.js";
+import { checkPushEndpoint } from "../domain/push-endpoint.js";
+import { parsePushKeys } from "../domain/push-keys.js";
 import {
   MAX_ACTIVE_PUSH_SUBSCRIPTIONS,
   type PushSubscriptionItem,
-} from "../domain/push-subscription";
-import { toPushSubscriptionItem } from "./push-subscription-item";
+} from "../domain/push-subscription.js";
+import { toPushSubscriptionItem } from "./push-subscription-item.js";
 
 const ENDPOINT_MAX_LENGTH = 4096;
 const DEVICE_LABEL_MAX_LENGTH = 60;

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import type { IdempotencyKey } from "../http/idempotency-key";
-import type { UserId } from "../domain/user-id";
+import type { IdempotencyKey } from "../http/idempotency-key.js";
+import type { UserId } from "../domain/user-id.js";
 
 /**
  * 書き込みの結果を記録するreceipt（infra.command_receipts行の値）。

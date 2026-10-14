@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Request, RequestHandler, Response } from "express";
 import type { ApiErrorBody } from "@tomotabi/contracts";
-import type { SessionVerifier } from "../modules/identity/adapter/outbound/session-verifier";
-import type { ClosePushSessionInputPort } from "../modules/notification/adapter/inbound/close-push-session.input-port";
+import type { SessionVerifier } from "../modules/identity/adapter/outbound/session-verifier.js";
+import type { ClosePushSessionInputPort } from "../modules/notification/adapter/inbound/close-push-session.input-port.js";
 
 function requestIdOf(request: Request): string {
   const id = (request as { id?: unknown }).id;

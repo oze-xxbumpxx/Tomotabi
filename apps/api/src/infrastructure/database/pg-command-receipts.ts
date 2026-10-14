@@ -1,10 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { UserId } from "../../common/domain/user-id";
-import type { IdempotencyKey } from "../../common/http/idempotency-key";
-import type { CommandReceipt } from "../../common/idempotency/command-receipt";
-import type { CommandReceiptStore } from "../../modules/planning/adapter/outbound/planning-work-context";
-import { commandReceipts } from "./schema/infra";
+import { UserId } from "../../common/domain/user-id.js";
+import type { IdempotencyKey } from "../../common/http/idempotency-key.js";
+import type { CommandReceipt } from "../../common/idempotency/command-receipt.js";
+import type { CommandReceiptStore } from "../../modules/planning/adapter/outbound/planning-work-context.js";
+import { commandReceipts } from "./schema/infra.js";
 
 /**
  * infra.command_receiptsの読み書き。planningのUnitOfWorkの文脈に束ねて使う

@@ -4,23 +4,23 @@ import type {
   HomeSection,
   Schedule,
 } from "@tomotabi/contracts";
-import type { Clock } from "../../../adapter/clock/clock";
-import { LocalDate } from "../../../common/domain/local-date";
-import type { Trip, TripStatus } from "../domain/trip";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import { LocalDate } from "../../../common/domain/local-date.js";
+import type { Trip, TripStatus } from "../domain/trip.js";
 import type {
   GetHomeInput,
   GetHomeInputPort,
-} from "../adapter/inbound/get-home.input-port";
+} from "../adapter/inbound/get-home.input-port.js";
 import type {
   HomeLog,
   HomeReadUnitOfWork,
   HomeSectionName,
   HomeSectionResult,
-} from "../adapter/outbound/home-read.port";
-import type { PlanView } from "../adapter/outbound/planning-read.port";
-import { toPlanDto } from "./plan-dto";
-import { toTripDto } from "./trip-dto";
-import { tripNotAccessible } from "./trip-write-flow";
+} from "../adapter/outbound/home-read.port.js";
+import type { PlanView } from "../adapter/outbound/planning-read.port.js";
+import { toPlanDto } from "./plan-dto.js";
+import { toTripDto } from "./trip-dto.js";
+import { tripNotAccessible } from "./trip-write-flow.js";
 
 /**
  * ホーム（F-40）。1つのトランザクションの同じスナップショットから、

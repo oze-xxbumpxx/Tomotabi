@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { LocalDate } from "../../common/domain/local-date";
-import type { Clock } from "../../adapter/clock/clock";
+import { LocalDate } from "../../common/domain/local-date.js";
+import type { Clock } from "../../adapter/clock/clock.js";
 
 const TOKYO_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Tokyo",

@@ -1,5 +1,5 @@
 import type { z as zod } from "zod";
-import type { GetPushConfigResponse } from "../../../../generated/notifications.zod";
+import type { GetPushConfigResponse } from "../../../../generated/notifications.zod.js";
 
 export const GET_PUSH_CONFIG_INPUT_PORT = Symbol(
   "GET_PUSH_CONFIG_INPUT_PORT",

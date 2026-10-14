@@ -1,9 +1,9 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { DrizzlePlanRepository } from "../../planning/infrastructure/drizzle-plan.repository";
+import { DrizzlePlanRepository } from "../../planning/infrastructure/drizzle-plan.repository.js";
 import type {
   PlanEligibility,
   PlanEligibilityPort,
-} from "../adapter/outbound/plan-eligibility.port";
+} from "../adapter/outbound/plan-eligibility.port.js";
 
 /**
  * PlanEligibilityPortをplanningの予定の読み取りにつなぐ実装。

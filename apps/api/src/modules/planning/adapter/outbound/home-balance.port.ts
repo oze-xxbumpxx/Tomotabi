@@ -1,5 +1,5 @@
 import type { BalanceSummary } from "@tomotabi/contracts";
-import type { HomeRosterEntry } from "./home-read.port";
+import type { HomeRosterEntry } from "./home-read.port.js";
 
 export const HOME_BALANCE_FACTORY = Symbol("HOME_BALANCE_FACTORY");
 

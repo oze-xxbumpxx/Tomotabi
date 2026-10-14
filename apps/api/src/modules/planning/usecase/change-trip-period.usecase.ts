@@ -1,21 +1,21 @@
-import { ApiError } from "../../../common/http/api-error";
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
 import {
   CHANGE_TRIP_PERIOD_OPERATION,
   type ChangeTripPeriodInput,
   type ChangeTripPeriodInputPort,
-} from "../adapter/inbound/change-trip-period.input-port";
-import type { TripWriteResult } from "../adapter/inbound/trip-write.result";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
-import { Trip } from "../domain/trip";
-import { parseTripPeriod } from "./trip-input";
+} from "../adapter/inbound/change-trip-period.input-port.js";
+import type { TripWriteResult } from "../adapter/inbound/trip-write.result.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
+import { Trip } from "../domain/trip.js";
+import { parseTripPeriod } from "./trip-input.js";
 import {
   executeTripWrite,
   runTripUpdate,
   type TripUpdateCommand,
-} from "./trip-write-flow";
+} from "./trip-write-flow.js";
 
 export class ChangeTripPeriodUseCase implements ChangeTripPeriodInputPort {
   constructor(

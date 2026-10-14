@@ -1,13 +1,13 @@
 import type { Trip as TripContract } from "@tomotabi/contracts";
-import { someInCauseChain } from "../../../common/errors/find-in-cause-chain";
-import { ApiError } from "../../../common/http/api-error";
-import type { UserId } from "../../../common/domain/user-id";
-import type { IdempotencyKey } from "../../../common/http/idempotency-key";
-import { InvalidTripTransitionError, type Trip } from "../domain/trip";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { TripWriteResult } from "../adapter/inbound/trip-write.result";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
-import { toTripDto } from "./trip-dto";
+import { someInCauseChain } from "../../../common/errors/find-in-cause-chain.js";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { IdempotencyKey } from "../../../common/http/idempotency-key.js";
+import { InvalidTripTransitionError, type Trip } from "../domain/trip.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { TripWriteResult } from "../adapter/inbound/trip-write.result.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
+import { toTripDto } from "./trip-dto.js";
 
 export type WriteOutcome<T> = Readonly<{
   httpStatus: 200 | 201;

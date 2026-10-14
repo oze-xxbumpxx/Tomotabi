@@ -1,9 +1,9 @@
-import type { ParticipantSlot } from "../../../common/domain/participant-slot";
-import { ApiError } from "../../../common/http/api-error";
-import { BoundedText } from "../../../common/domain/bounded-text";
-import { PaymentYen } from "../../../common/domain/yen";
-import type { TripRosterEntry } from "../adapter/outbound/finance-work-context";
-import type { CreatePaymentAllocation } from "../adapter/inbound/create-payment.input-port";
+import type { ParticipantSlot } from "../../../common/domain/participant-slot.js";
+import { ApiError } from "../../../common/http/api-error.js";
+import { BoundedText } from "../../../common/domain/bounded-text.js";
+import { PaymentYen } from "../../../common/domain/yen.js";
+import type { TripRosterEntry } from "../adapter/outbound/finance-work-context.js";
+import type { CreatePaymentAllocation } from "../adapter/inbound/create-payment.input-port.js";
 
 const MAX_LABEL_CODE_POINTS = 100;
 

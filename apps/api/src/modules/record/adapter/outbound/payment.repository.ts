@@ -3,7 +3,7 @@ import type {
   NewPaymentCancellation,
   Payment,
   PaymentCancellation,
-} from "../../domain/payment";
+} from "../../domain/payment.js";
 
 /**
  * 支払いとその取り消しの保存。record.payments・record.payment_cancellationsは

@@ -1,20 +1,20 @@
 import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { BoundedText } from "../../../common/domain/bounded-text";
-import type { ParticipantSlot } from "../../../common/domain/participant-slot";
-import { UserId } from "../../../common/domain/user-id";
-import type { PaymentYen, SignedYen } from "../../../common/domain/yen";
+import type { BoundedText } from "../../../common/domain/bounded-text.js";
+import type { ParticipantSlot } from "../../../common/domain/participant-slot.js";
+import { UserId } from "../../../common/domain/user-id.js";
+import type { PaymentYen, SignedYen } from "../../../common/domain/yen.js";
 import {
   paymentCancellations,
   payments,
-} from "../../../infrastructure/database/schema/record";
-import type { PaymentRepository } from "../adapter/outbound/payment.repository";
+} from "../../../infrastructure/database/schema/record.js";
+import type { PaymentRepository } from "../adapter/outbound/payment.repository.js";
 import type {
   NewPayment,
   NewPaymentCancellation,
   Payment,
   PaymentCancellation,
-} from "../domain/payment";
+} from "../domain/payment.js";
 
 type PaymentRow = typeof payments.$inferSelect;
 type PaymentCancellationRow = typeof paymentCancellations.$inferSelect;

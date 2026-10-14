@@ -1,6 +1,6 @@
 import type { TimelineItemKind } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { RecordType } from "../adapter/outbound/records-read.port";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { RecordType } from "../adapter/outbound/records-read.port.js";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

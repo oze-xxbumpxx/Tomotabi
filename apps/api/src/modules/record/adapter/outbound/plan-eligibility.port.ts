@@ -1,4 +1,4 @@
-import type { PlanKind } from "../../../planning/domain/plan-kind";
+import type { PlanKind } from "../../../planning/domain/plan-kind.js";
 
 /**
  * 記録を付けられるかの判断に必要な予定の状態（planningの読み取り結果）。

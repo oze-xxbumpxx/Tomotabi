@@ -4,7 +4,7 @@ import type {
   PlanEvent,
   PlanEventCancellation,
   PlanEventKind,
-} from "../../domain/plan-event";
+} from "../../domain/plan-event.js";
 
 /**
  * 達成・予約の記録の書き込み口

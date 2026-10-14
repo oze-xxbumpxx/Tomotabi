@@ -1,8 +1,8 @@
-import type { BoundedText } from "../../../common/domain/bounded-text";
-import type { LocalDate } from "../../../common/domain/local-date";
-import type { LocalTime } from "../../../common/domain/local-time";
-import type { UserId } from "../../../common/domain/user-id";
-import type { PlanKind } from "./plan-kind";
+import type { BoundedText } from "../../../common/domain/bounded-text.js";
+import type { LocalDate } from "../../../common/domain/local-date.js";
+import type { LocalTime } from "../../../common/domain/local-time.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { PlanKind } from "./plan-kind.js";
 
 export type Plan = Readonly<{
   id: string;

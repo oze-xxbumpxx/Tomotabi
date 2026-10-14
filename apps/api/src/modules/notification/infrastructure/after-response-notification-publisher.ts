@@ -1,7 +1,7 @@
-import type { AfterResponse } from "../../../adapter/after-response/after-response";
-import type { NotificationEvent } from "../domain/notification-event";
-import type { NotificationPublisher } from "../adapter/inbound/notification-publisher.port";
-import type { DispatchNotificationUseCase } from "../usecase/dispatch-notification.usecase";
+import type { AfterResponse } from "../../../adapter/after-response/after-response.js";
+import type { NotificationEvent } from "../domain/notification-event.js";
+import type { NotificationPublisher } from "../adapter/inbound/notification-publisher.port.js";
+import type { DispatchNotificationUseCase } from "../usecase/dispatch-notification.usecase.js";
 
 /** タスク名の接頭辞。ログに出す固定の語。 */
 const TASK_PREFIX = "push-notification-dispatch";

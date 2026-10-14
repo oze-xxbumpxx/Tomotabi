@@ -1,5 +1,5 @@
 import type { Plan } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const GET_PLAN_INPUT_PORT = Symbol("GET_PLAN_INPUT_PORT");
 

@@ -1,5 +1,5 @@
 import type { EventKind } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 /**
  * 有効な達成・予約1件。active_plan_eventsで「有効」な行に対応する。

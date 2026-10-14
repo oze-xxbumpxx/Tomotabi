@@ -1,6 +1,6 @@
 import type { Plan as PlanContract, PlanEvent } from "@tomotabi/contracts";
-import type { Plan } from "../domain/plan";
-import type { ActivePlanEvent } from "../adapter/outbound/record-history.port";
+import type { Plan } from "../domain/plan.js";
+import type { ActivePlanEvent } from "../adapter/outbound/record-history.port.js";
 
 function toPlanEventDto(event: ActivePlanEvent | null): PlanEvent | null {
   if (event === null) {

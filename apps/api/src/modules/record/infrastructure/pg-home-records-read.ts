@@ -1,10 +1,10 @@
 import type { TimelineItem } from "@tomotabi/contracts";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { HomeRosterEntry } from "../../planning/adapter/outbound/home-read.port";
-import type { HomeRecordsPort } from "../../planning/adapter/outbound/home-records.port";
-import type { TripRosterEntry } from "../adapter/outbound/finance-work-context";
-import { joinTimelineItems } from "../usecase/records-dto";
-import { PgRecordsRead } from "./pg-records-read";
+import type { HomeRosterEntry } from "../../planning/adapter/outbound/home-read.port.js";
+import type { HomeRecordsPort } from "../../planning/adapter/outbound/home-records.port.js";
+import type { TripRosterEntry } from "../adapter/outbound/finance-work-context.js";
+import { joinTimelineItems } from "../usecase/records-dto.js";
+import { PgRecordsRead } from "./pg-records-read.js";
 
 /** ホームの「最近の記録」で組み立てたい最大件数（F-40）。 */
 const HOME_RECENT_RECORDS_LIMIT = 3;

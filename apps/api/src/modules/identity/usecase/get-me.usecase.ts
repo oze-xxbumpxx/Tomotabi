@@ -1,7 +1,7 @@
 import type { Me } from "@tomotabi/contracts";
-import type { UserId } from "../../../common/domain/user-id";
-import type { GetMeInputPort } from "../adapter/inbound/get-me.input-port";
-import type { IdentityReader } from "../adapter/outbound/identity-reader";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { GetMeInputPort } from "../adapter/inbound/get-me.input-port.js";
+import type { IdentityReader } from "../adapter/outbound/identity-reader.js";
 
 export class GetMeUseCase implements GetMeInputPort {
   constructor(private readonly identities: IdentityReader) {}

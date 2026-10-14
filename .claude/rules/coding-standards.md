@@ -12,6 +12,7 @@
   - フレームワークが規約としてデフォルトエクスポートを要求するファイルは例外とし、
     どのファイルが例外かをプロジェクト側で列挙する。
 - 型のみのインポートは`import type`を使う。
+- `apps/api`はESM（`type: module`、`module: nodenext`、ADR-0009）。相対importには拡張子`.js`を付け、フォルダは`/index.js`まで書く（例: `from "./foo.js"`、`from "../database/schema/index.js"`）。付け忘れは`npm run type-check`で止まる。
 - `===` / `!==`を使う。`==` / `!=`は禁止。
 - 「値なし」は`null`に統一する（`undefined`と混在させない）。
   - 例外: 部分更新（PATCH）の入力に限り、`undefined`を「その欄を送っていない」の意味で使ってよい（`null`は「値を消す」）。

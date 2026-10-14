@@ -1,16 +1,16 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { PgCommandReceipts } from "../../../infrastructure/database/pg-command-receipts";
-import { tripFinanceGuards } from "../../../infrastructure/database/schema/infra";
-import type { ParticipantsFactory } from "../adapter/outbound/participants.port";
-import type { RecordHistoryFactory } from "../adapter/outbound/record-history.port";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { PgCommandReceipts } from "../../../infrastructure/database/pg-command-receipts.js";
+import { tripFinanceGuards } from "../../../infrastructure/database/schema/infra.js";
+import type { ParticipantsFactory } from "../adapter/outbound/participants.port.js";
+import type { RecordHistoryFactory } from "../adapter/outbound/record-history.port.js";
 import type {
   FinanceGuardWriter,
   PlanningWorkContext,
-} from "../adapter/outbound/planning-work-context";
-import { DrizzlePlanRepository } from "./drizzle-plan.repository";
-import { DrizzleTripRepository } from "./drizzle-trip.repository";
+} from "../adapter/outbound/planning-work-context.js";
+import { DrizzlePlanRepository } from "./drizzle-plan.repository.js";
+import { DrizzleTripRepository } from "./drizzle-trip.repository.js";
 
 class PgFinanceGuards implements FinanceGuardWriter {
   constructor(private readonly db: NodePgDatabase) {}

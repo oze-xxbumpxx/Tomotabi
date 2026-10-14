@@ -1,6 +1,6 @@
-import type { UserId } from "../../../../common/domain/user-id";
-import type { IdempotencyKey } from "../../../../common/http/idempotency-key";
-import type { PaymentWriteResult } from "./payment-write.result";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { IdempotencyKey } from "../../../../common/http/idempotency-key.js";
+import type { PaymentWriteResult } from "./payment-write.result.js";
 
 export const CREATE_PAYMENT_INPUT_PORT = Symbol("CREATE_PAYMENT_INPUT_PORT");
 export const CREATE_PAYMENT_OPERATION = "createPayment";

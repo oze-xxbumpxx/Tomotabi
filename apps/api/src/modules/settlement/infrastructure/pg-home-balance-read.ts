@@ -1,13 +1,13 @@
 import type { BalanceSummary } from "@tomotabi/contracts";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { HomeRosterEntry } from "../../planning/adapter/outbound/home-read.port";
-import type { HomeBalancePort } from "../../planning/adapter/outbound/home-balance.port";
-import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context";
-import { balanceOf } from "../domain/balance";
-import { deriveTargets } from "../domain/settlement-target";
-import { toTransferDto } from "../usecase/settlement-dto";
-import { DrizzleSettlementRepository } from "./drizzle-settlement.repository";
-import { PgPaymentsRead } from "./pg-payments-read";
+import type { HomeRosterEntry } from "../../planning/adapter/outbound/home-read.port.js";
+import type { HomeBalancePort } from "../../planning/adapter/outbound/home-balance.port.js";
+import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context.js";
+import { balanceOf } from "../domain/balance.js";
+import { deriveTargets } from "../domain/settlement-target.js";
+import { toTransferDto } from "../usecase/settlement-dto.js";
+import { DrizzleSettlementRepository } from "./drizzle-settlement.repository.js";
+import { PgPaymentsRead } from "./pg-payments-read.js";
 
 /**
  * ホームの「精算」の欄の照会。残額の取得（F-10）と同じ

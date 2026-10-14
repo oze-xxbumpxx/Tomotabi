@@ -3,48 +3,48 @@ import { PinoLogger } from "nestjs-pino";
 import {
   AFTER_RESPONSE,
   type AfterResponse,
-} from "../adapter/after-response/after-response";
-import { CLOCK, type Clock } from "../adapter/clock/clock";
-import { InProcessAfterResponse } from "../infrastructure/after-response/in-process-after-response";
-import { VercelAfterResponse } from "../infrastructure/after-response/vercel-after-response";
-import { SystemClock } from "../infrastructure/clock/system-clock";
-import { getPool } from "../infrastructure/database/pool";
+} from "../adapter/after-response/after-response.js";
+import { CLOCK, type Clock } from "../adapter/clock/clock.js";
+import { InProcessAfterResponse } from "../infrastructure/after-response/in-process-after-response.js";
+import { VercelAfterResponse } from "../infrastructure/after-response/vercel-after-response.js";
+import { SystemClock } from "../infrastructure/clock/system-clock.js";
+import { getPool } from "../infrastructure/database/pool.js";
 import {
   CLOSE_PUSH_SESSION_INPUT_PORT,
   type ClosePushSessionInputPort,
-} from "../modules/notification/adapter/inbound/close-push-session.input-port";
+} from "../modules/notification/adapter/inbound/close-push-session.input-port.js";
 import {
   DISPATCH_LOG,
   type DispatchLog,
-} from "../modules/notification/adapter/outbound/dispatch-log.port";
+} from "../modules/notification/adapter/outbound/dispatch-log.port.js";
 import {
   NOTIFICATION_DISPATCH_STORE,
   type NotificationDispatchStore,
-} from "../modules/notification/adapter/outbound/notification-dispatch-store";
+} from "../modules/notification/adapter/outbound/notification-dispatch-store.js";
 import {
   NOTIFICATION_UNIT_OF_WORK,
   type NotificationUnitOfWork,
-} from "../modules/notification/adapter/outbound/push-subscription.repository";
+} from "../modules/notification/adapter/outbound/push-subscription.repository.js";
 import {
   PUSH_SENDER,
   type PushSender,
-} from "../modules/notification/adapter/outbound/push-sender";
+} from "../modules/notification/adapter/outbound/push-sender.js";
 import {
   PUSH_TRANSPORT,
   type PushTransport,
-} from "../modules/notification/adapter/outbound/push-transport";
+} from "../modules/notification/adapter/outbound/push-transport.js";
 import {
   VAPID_KEYRING,
   type VapidKeyringPort,
-} from "../modules/notification/adapter/outbound/vapid-keyring.port";
-import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher";
-import { EnvVapidKeyring } from "../modules/notification/infrastructure/env-vapid-keyring";
-import { HttpsPushTransport } from "../modules/notification/infrastructure/https-push-transport";
-import { PgNotificationDispatchStore } from "../modules/notification/infrastructure/pg-notification-dispatch-store";
-import { PgNotificationUnitOfWork } from "../modules/notification/infrastructure/pg-notification-unit-of-work";
-import { WebPushSender } from "../modules/notification/infrastructure/web-push-sender";
-import { ClosePushSessionUseCase } from "../modules/notification/usecase/close-push-session.usecase";
-import { DispatchNotificationUseCase } from "../modules/notification/usecase/dispatch-notification.usecase";
+} from "../modules/notification/adapter/outbound/vapid-keyring.port.js";
+import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher.js";
+import { EnvVapidKeyring } from "../modules/notification/infrastructure/env-vapid-keyring.js";
+import { HttpsPushTransport } from "../modules/notification/infrastructure/https-push-transport.js";
+import { PgNotificationDispatchStore } from "../modules/notification/infrastructure/pg-notification-dispatch-store.js";
+import { PgNotificationUnitOfWork } from "../modules/notification/infrastructure/pg-notification-unit-of-work.js";
+import { WebPushSender } from "../modules/notification/infrastructure/web-push-sender.js";
+import { ClosePushSessionUseCase } from "../modules/notification/usecase/close-push-session.usecase.js";
+import { DispatchNotificationUseCase } from "../modules/notification/usecase/dispatch-notification.usecase.js";
 
 function useDatabase(): boolean {
   // planning/recordと同じ判定（未設定と空文字はどちらも「DBなし」）。

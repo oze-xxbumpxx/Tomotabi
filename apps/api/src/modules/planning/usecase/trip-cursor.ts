@@ -1,5 +1,5 @@
-import { ApiError } from "../../../common/http/api-error";
-import type { TripListCursor } from "../adapter/outbound/planning-read.port";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { TripListCursor } from "../adapter/outbound/planning-read.port.js";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

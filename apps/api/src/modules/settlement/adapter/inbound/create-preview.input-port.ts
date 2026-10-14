@@ -1,6 +1,6 @@
 import type { Preview } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { IdempotencyKey } from "../../../../common/http/idempotency-key";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { IdempotencyKey } from "../../../../common/http/idempotency-key.js";
 
 export const CREATE_PREVIEW_INPUT_PORT = Symbol("CREATE_PREVIEW_INPUT_PORT");
 export const CREATE_PREVIEW_OPERATION = "createSettlementPreview";

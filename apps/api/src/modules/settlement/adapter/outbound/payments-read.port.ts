@@ -1,7 +1,7 @@
 import type {
   Payment,
   PaymentCancellation,
-} from "../../../record/domain/payment";
+} from "../../../record/domain/payment.js";
 
 /**
  * 支払いの読み取り口。settlementの業務処理はrecordの支払いをこの

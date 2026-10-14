@@ -1,5 +1,5 @@
 import type { SettlementPage } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const LIST_SETTLEMENTS_INPUT_PORT = Symbol("LIST_SETTLEMENTS_INPUT_PORT");
 

@@ -1,11 +1,11 @@
-import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work";
-import type { CommandReceipt } from "../../../../common/idempotency/command-receipt";
-import type { IdempotencyKey } from "../../../../common/http/idempotency-key";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { ParticipantsPort } from "./participants.port";
-import type { PlanRepository } from "./plan.repository";
-import type { RecordHistoryPort } from "./record-history.port";
-import type { TripRepository } from "./trip.repository";
+import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work.js";
+import type { CommandReceipt } from "../../../../common/idempotency/command-receipt.js";
+import type { IdempotencyKey } from "../../../../common/http/idempotency-key.js";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { ParticipantsPort } from "./participants.port.js";
+import type { PlanRepository } from "./plan.repository.js";
+import type { RecordHistoryPort } from "./record-history.port.js";
+import type { TripRepository } from "./trip.repository.js";
 
 export const PLANNING_UNIT_OF_WORK = Symbol("PLANNING_UNIT_OF_WORK");
 

@@ -1,24 +1,24 @@
 import { randomUUID } from "node:crypto";
 import type { Cancellation } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
 import type {
   CancelPlanEventInput,
   CancelPlanEventInputPort,
-} from "../adapter/inbound/cancel-plan-event.input-port";
-import { cancelPlanEventOperation } from "../adapter/inbound/cancel-plan-event.input-port";
-import type { PlanEventCancellationResult } from "../adapter/inbound/plan-event-write.result";
-import type { PlanEventUnitOfWork } from "../adapter/outbound/plan-event-work-context";
+} from "../adapter/inbound/cancel-plan-event.input-port.js";
+import { cancelPlanEventOperation } from "../adapter/inbound/cancel-plan-event.input-port.js";
+import type { PlanEventCancellationResult } from "../adapter/inbound/plan-event-write.result.js";
+import type { PlanEventUnitOfWork } from "../adapter/outbound/plan-event-work-context.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
-import { toPlanEventCancellationDto } from "./plan-event-dto";
+} from "../adapter/outbound/notification-publisher.js";
+import { toPlanEventCancellationDto } from "./plan-event-dto.js";
 import {
   executePlanEventWrite,
   runPlanEventWriteTransaction,
   type PlanEventWriteOutcome,
-} from "./plan-event-write-flow";
+} from "./plan-event-write-flow.js";
 
 /**
  * 参加している旅行の中で、記録が無い・別の旅行の記録・URLの種類と

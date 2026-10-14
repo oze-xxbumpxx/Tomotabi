@@ -1,5 +1,5 @@
 import type { Balance } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const GET_BALANCE_INPUT_PORT = Symbol("GET_BALANCE_INPUT_PORT");
 

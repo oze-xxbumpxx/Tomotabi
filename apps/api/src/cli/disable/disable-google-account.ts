@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import type { Slot } from "../shared/slot";
+import type { Slot } from "../shared/slot.js";
 
 export type DisableResult = { userId: string; deletedSessions: number };
 

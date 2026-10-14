@@ -1,4 +1,4 @@
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const CLOSE_PUSH_SESSION_INPUT_PORT = Symbol(
   "CLOSE_PUSH_SESSION_INPUT_PORT",

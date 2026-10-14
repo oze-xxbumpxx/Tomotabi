@@ -1,27 +1,27 @@
 import { randomUUID } from "node:crypto";
 import type { Cancellation } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
 import {
   executeFinanceWrite,
   runFinanceWriteTransaction,
   type FinanceWritePersist,
-} from "../../record/usecase/finance-write-flow";
+} from "../../record/usecase/finance-write-flow.js";
 import {
   CANCEL_SETTLEMENT_OPERATION,
   type CancelSettlementInput,
   type CancelSettlementInputPort,
-} from "../adapter/inbound/cancel-settlement.input-port";
+} from "../adapter/inbound/cancel-settlement.input-port.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
+} from "../adapter/outbound/notification-publisher.js";
 import type {
   SettlementUnitOfWork,
   SettlementWorkContext,
-} from "../adapter/outbound/settlement-work-context";
-import { settlementNotFound } from "./get-settlement.usecase";
-import { toSettlementCancellationDto } from "./settlement-dto";
+} from "../adapter/outbound/settlement-work-context.js";
+import { settlementNotFound } from "./get-settlement.usecase.js";
+import { toSettlementCancellationDto } from "./settlement-dto.js";
 
 /**
  * 精算の取り消し（F-35・F-36、E-09）。お金の書き込みの共通の流れに乗せ、

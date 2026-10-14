@@ -9,22 +9,22 @@ import type {
   TargetItem,
   Transfer,
 } from "@tomotabi/contracts";
-import type { ParticipantSlot } from "../../../common/domain/participant-slot";
-import { SignedYen } from "../../../common/domain/yen";
-import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context";
-import { transferOf } from "../domain/balance";
+import type { ParticipantSlot } from "../../../common/domain/participant-slot.js";
+import { SignedYen } from "../../../common/domain/yen.js";
+import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context.js";
+import { transferOf } from "../domain/balance.js";
 import type {
   Payment,
   PaymentCancellation,
-} from "../../record/domain/payment";
-import { toPaymentDto } from "../../record/usecase/payment-dto";
-import type { ClaimKind } from "../domain/settlement-target";
+} from "../../record/domain/payment.js";
+import { toPaymentDto } from "../../record/usecase/payment-dto.js";
+import type { ClaimKind } from "../domain/settlement-target.js";
 import type {
   LatestActiveSettlement,
   PreviewRecord,
   SettlementCancellationRecord,
   SettlementRecord,
-} from "../adapter/outbound/settlement.repository";
+} from "../adapter/outbound/settlement.repository.js";
 
 function userOf(
   roster: readonly TripRosterEntry[],

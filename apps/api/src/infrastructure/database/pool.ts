@@ -2,7 +2,7 @@ import { attachDatabasePool } from "@vercel/functions";
 import { performance } from "node:perf_hooks";
 import type { PoolClient } from "pg";
 import { Pool } from "pg";
-import { requestTiming } from "../../bootstrap/server-timing";
+import { requestTiming } from "../../bootstrap/server-timing.js";
 
 let pool: Pool | undefined;
 

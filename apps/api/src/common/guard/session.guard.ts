@@ -12,9 +12,9 @@ import type { Response } from "express";
 import {
   SESSION_VERIFIER,
   type SessionVerifier,
-} from "../../modules/identity/adapter/outbound/session-verifier";
-import type { AuthenticatedRequest } from "./authenticated-request";
-import { PUBLIC_ROUTE_KEY } from "./public-route.decorator";
+} from "../../modules/identity/adapter/outbound/session-verifier.js";
+import type { AuthenticatedRequest } from "./authenticated-request.js";
+import { PUBLIC_ROUTE_KEY } from "./public-route.decorator.js";
 
 /**
  * SessionVerifierの結果を 通過 / 401 / 403 / 503へ変換する。

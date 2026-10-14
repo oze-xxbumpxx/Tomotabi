@@ -1,23 +1,23 @@
 import { and, asc, eq, exists, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { ParticipantSlot } from "../../../common/domain/participant-slot";
-import type { LocalDate } from "../../../common/domain/local-date";
-import type { UserId } from "../../../common/domain/user-id";
-import { users } from "../../../infrastructure/database/schema/identity";
+import { ParticipantSlot } from "../../../common/domain/participant-slot.js";
+import type { LocalDate } from "../../../common/domain/local-date.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { users } from "../../../infrastructure/database/schema/identity.js";
 import {
   plans,
   tripParticipants,
   trips,
-} from "../../../infrastructure/database/schema/planning";
+} from "../../../infrastructure/database/schema/planning.js";
 import type {
   HomeRosterEntry,
   HomeScheduleReadPort,
   HomeTripReadPort,
   HomeTripRow,
-} from "../adapter/outbound/home-read.port";
-import type { PlanView } from "../adapter/outbound/planning-read.port";
-import { toTripDomain } from "./drizzle-trip.repository";
-import { planViews } from "./pg-planning-read";
+} from "../adapter/outbound/home-read.port.js";
+import type { PlanView } from "../adapter/outbound/planning-read.port.js";
+import { toTripDomain } from "./drizzle-trip.repository.js";
+import { planViews } from "./pg-planning-read.js";
 
 /**
  * ホームの読み取りのうちplanningが持つ部分（旅行＋参加者、対象日の

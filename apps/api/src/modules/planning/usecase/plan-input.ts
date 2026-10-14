@@ -1,8 +1,8 @@
-import { ApiError } from "../../../common/http/api-error";
-import { BoundedText } from "../../../common/domain/bounded-text";
-import { LocalDate } from "../../../common/domain/local-date";
-import { LocalTime } from "../../../common/domain/local-time";
-import { PlanKind } from "../domain/plan-kind";
+import { ApiError } from "../../../common/http/api-error.js";
+import { BoundedText } from "../../../common/domain/bounded-text.js";
+import { LocalDate } from "../../../common/domain/local-date.js";
+import { LocalTime } from "../../../common/domain/local-time.js";
+import { PlanKind } from "../domain/plan-kind.js";
 
 const MAX_NAME_CODE_POINTS = 100;
 const MAX_MEMO_CODE_POINTS = 2000;

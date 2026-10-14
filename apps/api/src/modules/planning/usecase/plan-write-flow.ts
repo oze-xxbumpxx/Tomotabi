@@ -1,22 +1,22 @@
 import type { Plan as PlanContract } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { UserId } from "../../../common/domain/user-id";
-import type { IdempotencyKey } from "../../../common/http/idempotency-key";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { IdempotencyKey } from "../../../common/http/idempotency-key.js";
 import {
   PlanCancelledError,
   PlanHasRecordHistoryError,
   type Plan,
-} from "../domain/plan";
-import type { Trip } from "../domain/trip";
-import type { PlanWriteResult } from "../adapter/inbound/plan-write.result";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
-import { toPlanDto } from "./plan-dto";
+} from "../domain/plan.js";
+import type { Trip } from "../domain/trip.js";
+import type { PlanWriteResult } from "../adapter/inbound/plan-write.result.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
+import { toPlanDto } from "./plan-dto.js";
 import {
   storedReceipt,
   tripNotAccessible,
   type WriteOutcome,
-} from "./trip-write-flow";
+} from "./trip-write-flow.js";
 
 /**
  * 予定の書き込みの結果。WriteOutcomeに加えて、保存が実際に予定を

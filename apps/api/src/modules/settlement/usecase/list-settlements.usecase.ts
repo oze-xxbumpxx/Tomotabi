@@ -1,21 +1,21 @@
 import type { SettlementPage } from "@tomotabi/contracts";
-import type { PaymentCancellation } from "../../record/domain/payment";
-import { tripNotAccessible } from "../../planning/usecase/trip-write-flow";
+import type { PaymentCancellation } from "../../record/domain/payment.js";
+import { tripNotAccessible } from "../../planning/usecase/trip-write-flow.js";
 import type {
   ListSettlementsInput,
   ListSettlementsInputPort,
-} from "../adapter/inbound/list-settlements.input-port";
-import type { SettlementAnchor } from "../adapter/outbound/settlement.repository";
+} from "../adapter/inbound/list-settlements.input-port.js";
+import type { SettlementAnchor } from "../adapter/outbound/settlement.repository.js";
 import type {
   SettlementReadContext,
   SettlementReadUnitOfWork,
-} from "../adapter/outbound/settlement-work-context";
+} from "../adapter/outbound/settlement-work-context.js";
 import {
   decodeSettlementCursor,
   encodeSettlementCursor,
   invalidSettlementCursor,
-} from "./settlement-cursor";
-import { joinPreviewItems, toSettlementDto } from "./settlement-dto";
+} from "./settlement-cursor.js";
+import { joinPreviewItems, toSettlementDto } from "./settlement-dto.js";
 
 /**
  * 精算の一覧（F-33）。旅行内連番の降順・取り消し済みを含む・20件ずつの

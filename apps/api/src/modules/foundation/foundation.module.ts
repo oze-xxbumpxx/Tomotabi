@@ -1,37 +1,37 @@
 import { Module } from "@nestjs/common";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { getPool } from "../../infrastructure/database/pool";
-import type { UnitOfWork } from "../../adapter/transaction/unit-of-work";
+import { getPool } from "../../infrastructure/database/pool.js";
+import type { UnitOfWork } from "../../adapter/transaction/unit-of-work.js";
 import {
   GET_PROBE_INPUT_PORT,
   type GetProbeInputPort,
-} from "./adapter/inbound/get-probe.input-port";
+} from "./adapter/inbound/get-probe.input-port.js";
 import {
   INCREMENT_PROBE_INPUT_PORT,
   type IncrementProbeInputPort,
-} from "./adapter/inbound/increment-probe.input-port";
+} from "./adapter/inbound/increment-probe.input-port.js";
 import {
   FOUNDATION_UNIT_OF_WORK,
   type ProbeWorkContext,
-} from "./adapter/outbound/probe-work-context";
+} from "./adapter/outbound/probe-work-context.js";
 import {
   PROBE_REPOSITORY,
   type ProbeRepository,
-} from "./adapter/outbound/probe.repository";
+} from "./adapter/outbound/probe.repository.js";
 import {
   INCREMENT_PROBE_PORT,
   type IncrementProbePort,
-} from "./adapter/service/increment-probe.port";
-import { HealthController } from "./controller/health.controller";
-import { ProbeController } from "./controller/probe.controller";
-import { InMemoryProbeRepository } from "./infrastructure/in-memory-probe.repository";
-import { InMemoryProbeStore } from "./infrastructure/in-memory-probe.store";
-import { InMemoryUnitOfWork } from "./infrastructure/in-memory-unit-of-work";
-import { PgFoundationUnitOfWork } from "./infrastructure/pg-foundation-unit-of-work";
-import { PgProbeRepository } from "./infrastructure/pg-probe.repository";
-import { IncrementProbeService } from "./service/increment-probe.service";
-import { GetProbeUseCase } from "./usecase/get-probe.usecase";
-import { IncrementProbeUseCase } from "./usecase/increment-probe.usecase";
+} from "./adapter/service/increment-probe.port.js";
+import { HealthController } from "./controller/health.controller.js";
+import { ProbeController } from "./controller/probe.controller.js";
+import { InMemoryProbeRepository } from "./infrastructure/in-memory-probe.repository.js";
+import { InMemoryProbeStore } from "./infrastructure/in-memory-probe.store.js";
+import { InMemoryUnitOfWork } from "./infrastructure/in-memory-unit-of-work.js";
+import { PgFoundationUnitOfWork } from "./infrastructure/pg-foundation-unit-of-work.js";
+import { PgProbeRepository } from "./infrastructure/pg-probe.repository.js";
+import { IncrementProbeService } from "./service/increment-probe.service.js";
+import { GetProbeUseCase } from "./usecase/get-probe.usecase.js";
+import { IncrementProbeUseCase } from "./usecase/increment-probe.usecase.js";
 
 const MEMORY_PROBE_STORE = Symbol("MEMORY_PROBE_STORE");
 

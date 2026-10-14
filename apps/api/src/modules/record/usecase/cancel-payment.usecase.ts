@@ -1,25 +1,25 @@
 import { randomUUID } from "node:crypto";
 import type { Cancellation } from "@tomotabi/contracts";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
 import {
   CANCEL_PAYMENT_OPERATION,
   type CancelPaymentInput,
   type CancelPaymentInputPort,
-} from "../adapter/inbound/cancel-payment.input-port";
-import type { PaymentCancellationResult } from "../adapter/inbound/payment-write.result";
-import type { FinanceWorkContext } from "../adapter/outbound/finance-work-context";
+} from "../adapter/inbound/cancel-payment.input-port.js";
+import type { PaymentCancellationResult } from "../adapter/inbound/payment-write.result.js";
+import type { FinanceWorkContext } from "../adapter/outbound/finance-work-context.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
+} from "../adapter/outbound/notification-publisher.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
 import {
   executeFinanceWrite,
   runFinanceWriteTransaction,
   type FinanceWriteOutcome,
-} from "./finance-write-flow";
-import { paymentNotFound } from "./get-payment.usecase";
-import { toCancellationDto } from "./payment-dto";
+} from "./finance-write-flow.js";
+import { paymentNotFound } from "./get-payment.usecase.js";
+import { toCancellationDto } from "./payment-dto.js";
 
 /**
  * 支払いの取り消し。取り消しは別の記録を足す形（元の支払いの行は残る）。

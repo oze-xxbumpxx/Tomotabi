@@ -1,6 +1,6 @@
-import type { ParticipantSlot } from "../../../common/domain/participant-slot";
-import { SignedYen } from "../../../common/domain/yen";
-import type { SettlementTarget } from "./settlement-target";
+import type { ParticipantSlot } from "../../../common/domain/participant-slot.js";
+import { SignedYen } from "../../../common/domain/yen.js";
+import type { SettlementTarget } from "./settlement-target.js";
 
 /**
  * 残額。誰から誰へいくら、と次回の対象の件数。

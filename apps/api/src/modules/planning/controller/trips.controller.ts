@@ -14,19 +14,19 @@ import {
 import type { Trip, TripPage } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { parseIfMatch, toStrongETag } from "../../../common/http/etag";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { parseIfMatch, toStrongETag } from "../../../common/http/etag.js";
 import {
   parseIdempotencyKey,
   type IdempotencyKey,
-} from "../../../common/http/idempotency-key";
-import { computeRequestHash } from "../../../common/idempotency/command-receipt";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
+} from "../../../common/http/idempotency-key.js";
+import { computeRequestHash } from "../../../common/idempotency/command-receipt.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
 import {
   UpdateTripPeriodBody,
   UpdateTripPeriodParams,
-} from "../../../generated/planning.zod";
+} from "../../../generated/planning.zod.js";
 import {
   CreateTripBody,
   FinishTripParams,
@@ -35,41 +35,41 @@ import {
   RenameTripBody,
   RenameTripParams,
   StartTripParams,
-} from "../../../generated/trips.zod";
+} from "../../../generated/trips.zod.js";
 import {
   CREATE_TRIP_INPUT_PORT,
   CREATE_TRIP_OPERATION,
   type CreateTripInputPort,
-} from "../adapter/inbound/create-trip.input-port";
+} from "../adapter/inbound/create-trip.input-port.js";
 import {
   GET_TRIP_INPUT_PORT,
   type GetTripInputPort,
-} from "../adapter/inbound/get-trip.input-port";
+} from "../adapter/inbound/get-trip.input-port.js";
 import {
   LIST_TRIPS_INPUT_PORT,
   type ListTripsInputPort,
-} from "../adapter/inbound/list-trips.input-port";
+} from "../adapter/inbound/list-trips.input-port.js";
 import {
   RENAME_TRIP_INPUT_PORT,
   RENAME_TRIP_OPERATION,
   type RenameTripInputPort,
-} from "../adapter/inbound/rename-trip.input-port";
+} from "../adapter/inbound/rename-trip.input-port.js";
 import {
   CHANGE_TRIP_PERIOD_INPUT_PORT,
   CHANGE_TRIP_PERIOD_OPERATION,
   type ChangeTripPeriodInputPort,
-} from "../adapter/inbound/change-trip-period.input-port";
+} from "../adapter/inbound/change-trip-period.input-port.js";
 import {
   FINISH_TRIP_INPUT_PORT,
   FINISH_TRIP_OPERATION,
   type FinishTripInputPort,
-} from "../adapter/inbound/finish-trip.input-port";
+} from "../adapter/inbound/finish-trip.input-port.js";
 import {
   START_TRIP_INPUT_PORT,
   START_TRIP_OPERATION,
   type StartTripInputPort,
-} from "../adapter/inbound/start-trip.input-port";
-import type { TripWriteResult } from "../adapter/inbound/trip-write.result";
+} from "../adapter/inbound/start-trip.input-port.js";
+import type { TripWriteResult } from "../adapter/inbound/trip-write.result.js";
 
 type CreateTripBodyInput = zod.infer<typeof CreateTripBody>;
 type ListTripsQueryInput = zod.infer<typeof ListTripsQueryParams>;

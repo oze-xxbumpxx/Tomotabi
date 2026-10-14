@@ -1,18 +1,18 @@
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { ApiError } from "../../../common/http/api-error";
-import type { CommandReceipt } from "../../../common/idempotency/command-receipt";
-import type { IdempotencyKey } from "../../../common/http/idempotency-key";
-import type { UserId } from "../../../common/domain/user-id";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { CommandReceipt } from "../../../common/idempotency/command-receipt.js";
+import type { IdempotencyKey } from "../../../common/http/idempotency-key.js";
+import type { UserId } from "../../../common/domain/user-id.js";
 import {
   isUniqueViolation,
   tripNotAccessible,
   type WriteOutcome,
-} from "../../planning/usecase/trip-write-flow";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
+} from "../../planning/usecase/trip-write-flow.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
 import type {
   FinanceWorkContext,
   TripRosterEntry,
-} from "../adapter/outbound/finance-work-context";
+} from "../adapter/outbound/finance-work-context.js";
 
 /**
  * 財務の書き込みの結果。WriteOutcomeに加えて、書き込みログが使う

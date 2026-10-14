@@ -11,33 +11,33 @@ import {
 import type { Cancellation, Payment } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
 import {
   parseIdempotencyKey,
-} from "../../../common/http/idempotency-key";
-import { computeRequestHash } from "../../../common/idempotency/command-receipt";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
+} from "../../../common/http/idempotency-key.js";
+import { computeRequestHash } from "../../../common/idempotency/command-receipt.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
 import {
   CancelPaymentParams,
   CreatePaymentBody,
   CreatePaymentParams,
   GetPaymentParams,
-} from "../../../generated/finance.zod";
+} from "../../../generated/finance.zod.js";
 import {
   CANCEL_PAYMENT_INPUT_PORT,
   CANCEL_PAYMENT_OPERATION,
   type CancelPaymentInputPort,
-} from "../adapter/inbound/cancel-payment.input-port";
+} from "../adapter/inbound/cancel-payment.input-port.js";
 import {
   CREATE_PAYMENT_INPUT_PORT,
   CREATE_PAYMENT_OPERATION,
   type CreatePaymentInputPort,
-} from "../adapter/inbound/create-payment.input-port";
+} from "../adapter/inbound/create-payment.input-port.js";
 import {
   GET_PAYMENT_INPUT_PORT,
   type GetPaymentInputPort,
-} from "../adapter/inbound/get-payment.input-port";
+} from "../adapter/inbound/get-payment.input-port.js";
 
 type CreatePaymentParamsInput = zod.infer<typeof CreatePaymentParams>;
 type CreatePaymentBodyInput = zod.infer<typeof CreatePaymentBody>;

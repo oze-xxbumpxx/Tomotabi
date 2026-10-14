@@ -1,20 +1,20 @@
 import type { Balance as BalanceContract } from "@tomotabi/contracts";
-import type { Clock } from "../../../adapter/clock/clock";
-import type { PaymentCancellation } from "../../record/domain/payment";
-import { tripNotAccessible } from "../../planning/usecase/trip-write-flow";
-import { balanceOf } from "../domain/balance";
-import { deriveTargets } from "../domain/settlement-target";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { PaymentCancellation } from "../../record/domain/payment.js";
+import { tripNotAccessible } from "../../planning/usecase/trip-write-flow.js";
+import { balanceOf } from "../domain/balance.js";
+import { deriveTargets } from "../domain/settlement-target.js";
 import type {
   GetBalanceInput,
   GetBalanceInputPort,
-} from "../adapter/inbound/get-balance.input-port";
-import type { SettlementReadUnitOfWork } from "../adapter/outbound/settlement-work-context";
+} from "../adapter/inbound/get-balance.input-port.js";
+import type { SettlementReadUnitOfWork } from "../adapter/outbound/settlement-work-context.js";
 import {
   joinPreviewItems,
   toParticipantsDto,
   toTargetItemDto,
   toTransferDto,
-} from "./settlement-dto";
+} from "./settlement-dto.js";
 
 /**
  * 残額の取得（F-10）。支払い・取り消し・占有をREPEATABLE READの

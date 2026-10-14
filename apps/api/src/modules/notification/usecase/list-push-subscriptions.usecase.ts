@@ -1,11 +1,11 @@
-import type { UserId } from "../../../common/domain/user-id";
+import type { UserId } from "../../../common/domain/user-id.js";
 import type {
   ListPushSubscriptionsInputPort,
   PushSubscriptionList,
-} from "../adapter/inbound/list-push-subscriptions.input-port";
-import type { NotificationUnitOfWork } from "../adapter/outbound/push-subscription.repository";
-import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port";
-import { toPushSubscriptionItem } from "./push-subscription-item";
+} from "../adapter/inbound/list-push-subscriptions.input-port.js";
+import type { NotificationUnitOfWork } from "../adapter/outbound/push-subscription.repository.js";
+import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port.js";
+import { toPushSubscriptionItem } from "./push-subscription-item.js";
 
 /**
  * GET /me/push-subscriptions。自分の購読（有効・無効の両方）を

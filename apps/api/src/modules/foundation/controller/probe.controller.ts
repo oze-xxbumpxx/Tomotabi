@@ -3,11 +3,11 @@ import type { ProbeView } from "@tomotabi/contracts";
 import {
   GET_PROBE_INPUT_PORT,
   type GetProbeInputPort,
-} from "../adapter/inbound/get-probe.input-port";
+} from "../adapter/inbound/get-probe.input-port.js";
 import {
   INCREMENT_PROBE_INPUT_PORT,
   type IncrementProbeInputPort,
-} from "../adapter/inbound/increment-probe.input-port";
+} from "../adapter/inbound/increment-probe.input-port.js";
 
 @Controller("foundation/probes")
 export class ProbeController {

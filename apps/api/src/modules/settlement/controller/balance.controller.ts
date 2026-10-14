@@ -8,14 +8,14 @@ import {
 import type { Balance } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
-import { GetBalanceParams } from "../../../generated/finance.zod";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
+import { GetBalanceParams } from "../../../generated/finance.zod.js";
 import {
   GET_BALANCE_INPUT_PORT,
   type GetBalanceInputPort,
-} from "../adapter/inbound/get-balance.input-port";
+} from "../adapter/inbound/get-balance.input-port.js";
 
 type BalanceParams = zod.infer<typeof GetBalanceParams>;
 

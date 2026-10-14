@@ -1,13 +1,13 @@
 import type { Settlement } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { PaymentCancellation } from "../../record/domain/payment";
-import { tripNotAccessible } from "../../planning/usecase/trip-write-flow";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { PaymentCancellation } from "../../record/domain/payment.js";
+import { tripNotAccessible } from "../../planning/usecase/trip-write-flow.js";
 import type {
   GetSettlementInput,
   GetSettlementInputPort,
-} from "../adapter/inbound/get-settlement.input-port";
-import type { SettlementReadUnitOfWork } from "../adapter/outbound/settlement-work-context";
-import { joinPreviewItems, toSettlementDto } from "./settlement-dto";
+} from "../adapter/inbound/get-settlement.input-port.js";
+import type { SettlementReadUnitOfWork } from "../adapter/outbound/settlement-work-context.js";
+import { joinPreviewItems, toSettlementDto } from "./settlement-dto.js";
 
 export function settlementNotFound(): ApiError {
   return new ApiError({

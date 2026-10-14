@@ -1,38 +1,38 @@
 import { randomUUID } from "node:crypto";
 import type { Settlement } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import { SignedYen } from "../../../common/domain/yen";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
-import type { PaymentCancellation } from "../../record/domain/payment";
+import { ApiError } from "../../../common/http/api-error.js";
+import { SignedYen } from "../../../common/domain/yen.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
+import type { PaymentCancellation } from "../../record/domain/payment.js";
 import {
   executeFinanceWrite,
   runFinanceWriteTransaction,
   type FinanceWritePersist,
-} from "../../record/usecase/finance-write-flow";
-import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context";
+} from "../../record/usecase/finance-write-flow.js";
+import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
-import type { ClaimHistory } from "../domain/fingerprint";
-import { validatePreview } from "../domain/preview-validation";
-import type { ClaimKind } from "../domain/settlement-target";
+} from "../adapter/outbound/notification-publisher.js";
+import type { ClaimHistory } from "../domain/fingerprint.js";
+import { validatePreview } from "../domain/preview-validation.js";
+import type { ClaimKind } from "../domain/settlement-target.js";
 import {
   COMPLETE_SETTLEMENT_OPERATION,
   type CompleteSettlementInput,
   type CompleteSettlementInputPort,
-} from "../adapter/inbound/complete-settlement.input-port";
+} from "../adapter/inbound/complete-settlement.input-port.js";
 import type {
   NewSettlementItem,
   PreviewItemRecord,
   SettlementRecord,
-} from "../adapter/outbound/settlement.repository";
+} from "../adapter/outbound/settlement.repository.js";
 import type {
   SettlementUnitOfWork,
   SettlementWorkContext,
-} from "../adapter/outbound/settlement-work-context";
-import { currentClaimStates } from "./current-claims";
-import { joinPreviewItems, toSettlementDto } from "./settlement-dto";
+} from "../adapter/outbound/settlement-work-context.js";
+import { currentClaimStates } from "./current-claims.js";
+import { joinPreviewItems, toSettlementDto } from "./settlement-dto.js";
 
 export function previewNotFound(): ApiError {
   return new ApiError({

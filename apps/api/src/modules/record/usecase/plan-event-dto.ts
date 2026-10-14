@@ -2,7 +2,7 @@ import type {
   Cancellation,
   PlanEvent as PlanEventContract,
 } from "@tomotabi/contracts";
-import type { PlanEvent, PlanEventCancellation } from "../domain/plan-event";
+import type { PlanEvent, PlanEventCancellation } from "../domain/plan-event.js";
 
 /**
  * Domainの記録を公開契約の形にする。付けた直後の記録に取り消しは

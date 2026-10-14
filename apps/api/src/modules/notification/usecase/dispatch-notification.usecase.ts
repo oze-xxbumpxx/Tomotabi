@@ -1,17 +1,17 @@
-import type { Clock } from "../../../adapter/clock/clock";
-import { checkPushEndpoint } from "../domain/push-endpoint";
-import type { NotificationEvent } from "../domain/notification-event";
-import { buildNotificationMessage } from "../domain/notification-message";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import { checkPushEndpoint } from "../domain/push-endpoint.js";
+import type { NotificationEvent } from "../domain/notification-event.js";
+import { buildNotificationMessage } from "../domain/notification-message.js";
 import type {
   DispatchTarget,
   NotificationDispatchStore,
-} from "../adapter/outbound/notification-dispatch-store";
+} from "../adapter/outbound/notification-dispatch-store.js";
 import type {
   DispatchLog,
   DispatchResult,
-} from "../adapter/outbound/dispatch-log.port";
-import type { PushSender } from "../adapter/outbound/push-sender";
-import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port";
+} from "../adapter/outbound/dispatch-log.port.js";
+import type { PushSender } from "../adapter/outbound/push-sender.js";
+import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port.js";
 
 /** 同時に送る件数の上限（設計書「送る部品」: 同時3件）。 */
 const SEND_CONCURRENCY = 3;

@@ -1,32 +1,32 @@
 import { randomUUID } from "node:crypto";
 import type { Payment as PaymentContract } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
 import {
   CREATE_PAYMENT_OPERATION,
   type CreatePaymentInput,
   type CreatePaymentInputPort,
-} from "../adapter/inbound/create-payment.input-port";
-import type { PaymentWriteResult } from "../adapter/inbound/payment-write.result";
-import type { FinanceWorkContext } from "../adapter/outbound/finance-work-context";
+} from "../adapter/inbound/create-payment.input-port.js";
+import type { PaymentWriteResult } from "../adapter/inbound/payment-write.result.js";
+import type { FinanceWorkContext } from "../adapter/outbound/finance-work-context.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
-import { Payment } from "../domain/payment";
+} from "../adapter/outbound/notification-publisher.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
+import { Payment } from "../domain/payment.js";
 import {
   executeFinanceWrite,
   runFinanceWriteTransaction,
   type FinanceWriteOutcome,
-} from "./finance-write-flow";
+} from "./finance-write-flow.js";
 import {
   parseAmountYen,
   parsePaymentLabel,
   payerSlotOf,
   slot0PercentOf,
-} from "./payment-input";
-import { toPaymentDto } from "./payment-dto";
+} from "./payment-input.js";
+import { toPaymentDto } from "./payment-dto.js";
 
 /**
  * 支払いの記録。負担額・寄与はサーバーが計算して確定する

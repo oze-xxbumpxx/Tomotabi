@@ -1,15 +1,15 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import type { UserId } from "../../../common/domain/user-id";
-import { PgCommandReceipts } from "../../../infrastructure/database/pg-command-receipts";
-import { DrizzleTripRepository } from "../../planning/infrastructure/drizzle-trip.repository";
-import type { PlanEligibilityFactory } from "../adapter/outbound/plan-eligibility.port";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { PgCommandReceipts } from "../../../infrastructure/database/pg-command-receipts.js";
+import { DrizzleTripRepository } from "../../planning/infrastructure/drizzle-trip.repository.js";
+import type { PlanEligibilityFactory } from "../adapter/outbound/plan-eligibility.port.js";
 import type {
   PlanEventWorkContext,
   TripShareLockPort,
-} from "../adapter/outbound/plan-event-work-context";
-import { DrizzlePlanEventRepository } from "./drizzle-plan-event.repository";
+} from "../adapter/outbound/plan-event-work-context.js";
+import { DrizzlePlanEventRepository } from "./drizzle-plan-event.repository.js";
 
 class PgTripShareLock implements TripShareLockPort {
   constructor(private readonly db: NodePgDatabase) {}

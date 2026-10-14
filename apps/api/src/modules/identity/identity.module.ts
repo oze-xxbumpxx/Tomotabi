@@ -1,26 +1,26 @@
 import { Module } from "@nestjs/common";
 import type { Pool } from "pg";
-import { getPool } from "../../infrastructure/database/pool";
+import { getPool } from "../../infrastructure/database/pool.js";
 import {
   GET_ME_INPUT_PORT,
   type GetMeInputPort,
-} from "./adapter/inbound/get-me.input-port";
+} from "./adapter/inbound/get-me.input-port.js";
 import {
   IDENTITY_READER,
   type IdentityReader,
-} from "./adapter/outbound/identity-reader";
+} from "./adapter/outbound/identity-reader.js";
 import {
   SESSION_VERIFIER,
   type SessionVerifier,
-} from "./adapter/outbound/session-verifier";
-import { MeController } from "./controller/me.controller";
-import { getAuth } from "./infrastructure/better-auth";
+} from "./adapter/outbound/session-verifier.js";
+import { MeController } from "./controller/me.controller.js";
+import { getAuth } from "./infrastructure/better-auth.js";
 import {
   BetterAuthSessionVerifier,
   type SessionLookup,
-} from "./infrastructure/better-auth-session-verifier";
-import { PgIdentityReader } from "./infrastructure/pg-identity-reader";
-import { GetMeUseCase } from "./usecase/get-me.usecase";
+} from "./infrastructure/better-auth-session-verifier.js";
+import { PgIdentityReader } from "./infrastructure/pg-identity-reader.js";
+import { GetMeUseCase } from "./usecase/get-me.usecase.js";
 
 function runtimePool(): Pool | null {
   // DATABASE_URLが無い起動ではauthも作られず、経路はGuardが503にする。

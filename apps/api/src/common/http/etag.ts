@@ -1,4 +1,4 @@
-import { ApiError } from "./api-error";
+import { ApiError } from "./api-error.js";
 
 /**
  * 強いETag。引用付きの10進の正整数（version）。`"3"`の形だけを受け付ける。

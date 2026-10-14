@@ -1,6 +1,6 @@
-import type { BoundedText } from "../../../common/domain/bounded-text";
-import type { UserId } from "../../../common/domain/user-id";
-import { TripPeriod } from "./trip-period";
+import type { BoundedText } from "../../../common/domain/bounded-text.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { TripPeriod } from "./trip-period.js";
 
 export type TripStatus = "planning" | "traveling" | "finished";
 

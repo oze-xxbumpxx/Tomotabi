@@ -9,9 +9,9 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
 import pino from "pino";
-import { getPool } from "../../../infrastructure/database/pool";
-import * as identitySchema from "../../../infrastructure/database/schema/identity";
-import { isAllowedGoogleAccount } from "./allowlist-query";
+import { getPool } from "../../../infrastructure/database/pool.js";
+import * as identitySchema from "../../../infrastructure/database/schema/identity.js";
+import { isAllowedGoogleAccount } from "./allowlist-query.js";
 
 export type AuthConfig = {
   /** 公開アプリのオリジン（= baseURL。Nextのrewriteで同一オリジンに見える前置きを使う）。 */

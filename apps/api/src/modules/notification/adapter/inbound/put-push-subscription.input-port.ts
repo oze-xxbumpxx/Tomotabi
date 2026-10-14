@@ -1,7 +1,7 @@
 import type { z as zod } from "zod";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { RegisterPushSubscriptionBody } from "../../../../generated/notifications.zod";
-import type { PushSubscriptionItem } from "../../domain/push-subscription";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { RegisterPushSubscriptionBody } from "../../../../generated/notifications.zod.js";
+import type { PushSubscriptionItem } from "../../domain/push-subscription.js";
 
 export const PUT_PUSH_SUBSCRIPTION_INPUT_PORT = Symbol(
   "PUT_PUSH_SUBSCRIPTION_INPUT_PORT",

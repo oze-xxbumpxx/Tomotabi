@@ -16,11 +16,11 @@ import type {
 } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { parseIdempotencyKey } from "../../../common/http/idempotency-key";
-import { computeRequestHash } from "../../../common/idempotency/command-receipt";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { parseIdempotencyKey } from "../../../common/http/idempotency-key.js";
+import { computeRequestHash } from "../../../common/idempotency/command-receipt.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
 import {
   CancelSettlementParams,
   CompleteSettlementBody,
@@ -28,25 +28,25 @@ import {
   GetSettlementParams,
   ListSettlementsParams,
   ListSettlementsQueryParams,
-} from "../../../generated/finance.zod";
+} from "../../../generated/finance.zod.js";
 import {
   CANCEL_SETTLEMENT_INPUT_PORT,
   CANCEL_SETTLEMENT_OPERATION,
   type CancelSettlementInputPort,
-} from "../adapter/inbound/cancel-settlement.input-port";
+} from "../adapter/inbound/cancel-settlement.input-port.js";
 import {
   COMPLETE_SETTLEMENT_INPUT_PORT,
   COMPLETE_SETTLEMENT_OPERATION,
   type CompleteSettlementInputPort,
-} from "../adapter/inbound/complete-settlement.input-port";
+} from "../adapter/inbound/complete-settlement.input-port.js";
 import {
   GET_SETTLEMENT_INPUT_PORT,
   type GetSettlementInputPort,
-} from "../adapter/inbound/get-settlement.input-port";
+} from "../adapter/inbound/get-settlement.input-port.js";
 import {
   LIST_SETTLEMENTS_INPUT_PORT,
   type ListSettlementsInputPort,
-} from "../adapter/inbound/list-settlements.input-port";
+} from "../adapter/inbound/list-settlements.input-port.js";
 
 type CompleteParams = zod.infer<typeof CompleteSettlementParams>;
 type CompleteBody = zod.infer<typeof CompleteSettlementBody>;

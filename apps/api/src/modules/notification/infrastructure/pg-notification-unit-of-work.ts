@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import type { NotificationWorkContext } from "../adapter/outbound/push-subscription.repository";
-import { DrizzlePushSubscriptionRepository } from "./drizzle-push-subscription.repository";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import type { NotificationWorkContext } from "../adapter/outbound/push-subscription.repository.js";
+import { DrizzlePushSubscriptionRepository } from "./drizzle-push-subscription.repository.js";
 
 /**
  * 購読の登録・停止・一覧を1トランザクションに束ねる

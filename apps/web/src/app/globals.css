@@ -247,6 +247,8 @@ button:active:not(:disabled) {
   gap: var(--space-2);
   font-size: 15px;
   font-weight: 700;
+  /* リンク（<a>）にこの見た目を付けたときも、下線を出さない */
+  text-decoration: none;
 }
 
 .btn-primary {

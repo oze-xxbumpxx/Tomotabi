@@ -1,9 +1,11 @@
 # Devin environment blueprint — https://docs.devin.ai/onboard-devin/environment/blueprint-reference
 # 作業手順とルールはAGENTS.mdと .agents/skills/devin-workflow/SKILL.md。背景はdocs/devin-setup.md。
 
-# Node 24.xに揃える（.nvmrc / package.jsonのenginesと同じ）。ベースイメージのNodeは24と限らない。
+# Node 24.xに揃える（.nvmrc / package.jsonのenginesと同じ）。ベースイメージやNode 22で作った前の
+# スナップショットのNodeは24と限らないので、スナップショットを作り直すたびに確かめる。
 # 24が無ければnodejs.orgの公式配布物をチェックサムで確かめて入れる。最後に24でなければ失敗させる。
-initialize: |
+# そのあと、lockfileどおりに入れる。CI（.github/workflows/ci.yml）と同じ。
+maintenance: |
   set -eu
   if ! node --version 2>/dev/null | grep -q '^v24\.'; then
     case "$(uname -m)" in
@@ -22,10 +24,6 @@ initialize: |
     export PATH="$HOME/.local/node24/bin:$PATH"
     if [ -n "${ENVRC:-}" ]; then echo "PATH=$PATH" >> "$ENVRC"; fi
   fi
-  node --version | grep -q '^v24\.' || { echo "Node 24 が必要です: $(node --version)" >&2; exit 1; }
-
-# lockfileどおりに入れる。CI（.github/workflows/ci.yml）と同じ。Node 24以外では入れない。
-maintenance: |
   node --version | grep -q '^v24\.' || { echo "Node 24 が必要です: $(node --version)" >&2; exit 1; }
   npm ci
 

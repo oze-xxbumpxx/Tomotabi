@@ -1,8 +1,8 @@
-import type { BoundedText } from "../../../common/domain/bounded-text";
-import type { ParticipantSlot } from "../../../common/domain/participant-slot";
-import type { UserId } from "../../../common/domain/user-id";
-import type { PaymentYen } from "../../../common/domain/yen";
-import { SignedYen } from "../../../common/domain/yen";
+import type { BoundedText } from "../../../common/domain/bounded-text.js";
+import type { ParticipantSlot } from "../../../common/domain/participant-slot.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { PaymentYen } from "../../../common/domain/yen.js";
+import { SignedYen } from "../../../common/domain/yen.js";
 
 /**
  * 支払い1件（record.payments）。

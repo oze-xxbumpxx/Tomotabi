@@ -1,29 +1,29 @@
 import { randomUUID } from "node:crypto";
 import type { Plan as PlanContract } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { TripPeriod } from "../domain/trip-period";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { TripPeriod } from "../domain/trip-period.js";
 import {
   CREATE_PLAN_OPERATION,
   type CreatePlanInput,
   type CreatePlanInputPort,
-} from "../adapter/inbound/create-plan.input-port";
-import type { PlanWriteResult } from "../adapter/inbound/plan-write.result";
+} from "../adapter/inbound/create-plan.input-port.js";
+import type { PlanWriteResult } from "../adapter/inbound/plan-write.result.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
-import { parsePlanDate, parsePlanKind, parsePlanMemo, parsePlanName, parsePlanTime } from "./plan-input";
-import { toPlanDto } from "./plan-dto";
-import { executePlanWrite, type PlanWriteOutcome } from "./plan-write-flow";
+} from "../adapter/outbound/notification-publisher.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
+import { parsePlanDate, parsePlanKind, parsePlanMemo, parsePlanName, parsePlanTime } from "./plan-input.js";
+import { toPlanDto } from "./plan-dto.js";
+import { executePlanWrite, type PlanWriteOutcome } from "./plan-write-flow.js";
 import {
   isUniqueViolation,
   storedReceipt,
   tripNotAccessible,
-} from "./trip-write-flow";
+} from "./trip-write-flow.js";
 
 /**
  * 予定の追加。旅行行はFOR SHAREにする。期間の変更はFOR UPDATEを取るため、

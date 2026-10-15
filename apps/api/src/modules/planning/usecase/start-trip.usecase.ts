@@ -1,19 +1,19 @@
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
 import {
   START_TRIP_OPERATION,
   type StartTripInput,
   type StartTripInputPort,
-} from "../adapter/inbound/start-trip.input-port";
-import type { TripWriteResult } from "../adapter/inbound/trip-write.result";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
-import { Trip } from "../domain/trip";
+} from "../adapter/inbound/start-trip.input-port.js";
+import type { TripWriteResult } from "../adapter/inbound/trip-write.result.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
+import { Trip } from "../domain/trip.js";
 import {
   executeTripWrite,
   runTripUpdate,
   type TripUpdateCommand,
-} from "./trip-write-flow";
+} from "./trip-write-flow.js";
 
 export class StartTripUseCase implements StartTripInputPort {
   constructor(

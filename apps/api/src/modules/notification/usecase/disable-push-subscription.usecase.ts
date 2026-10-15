@@ -1,7 +1,7 @@
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UserId } from "../../../common/domain/user-id";
-import type { DisablePushSubscriptionInputPort } from "../adapter/inbound/disable-push-subscription.input-port";
-import type { NotificationUnitOfWork } from "../adapter/outbound/push-subscription.repository";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { DisablePushSubscriptionInputPort } from "../adapter/inbound/disable-push-subscription.input-port.js";
+import type { NotificationUnitOfWork } from "../adapter/outbound/push-subscription.repository.js";
 
 /**
  * DELETE /me/push-subscriptions/{id}。自分の購読だけを無効にする。

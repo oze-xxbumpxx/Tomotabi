@@ -1,26 +1,26 @@
 import { randomUUID } from "node:crypto";
 import type { PlanEvent as PlanEventContract } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import { planNotFound } from "../../planning/usecase/plan-write-flow";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
-import { planEventRejection } from "../domain/plan-event";
+import { ApiError } from "../../../common/http/api-error.js";
+import { planNotFound } from "../../planning/usecase/plan-write-flow.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
+import { planEventRejection } from "../domain/plan-event.js";
 import type {
   CreatePlanEventInput,
   CreatePlanEventInputPort,
-} from "../adapter/inbound/create-plan-event.input-port";
-import { createPlanEventOperation } from "../adapter/inbound/create-plan-event.input-port";
-import type { PlanEventWriteResult } from "../adapter/inbound/plan-event-write.result";
-import type { PlanEventUnitOfWork } from "../adapter/outbound/plan-event-work-context";
+} from "../adapter/inbound/create-plan-event.input-port.js";
+import { createPlanEventOperation } from "../adapter/inbound/create-plan-event.input-port.js";
+import type { PlanEventWriteResult } from "../adapter/inbound/plan-event-write.result.js";
+import type { PlanEventUnitOfWork } from "../adapter/outbound/plan-event-work-context.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
-import { toPlanEventDto } from "./plan-event-dto";
+} from "../adapter/outbound/notification-publisher.js";
+import { toPlanEventDto } from "./plan-event-dto.js";
 import {
   executePlanEventWrite,
   runPlanEventWriteTransaction,
   type PlanEventWriteOutcome,
-} from "./plan-event-write-flow";
+} from "./plan-event-write-flow.js";
 
 function planKindNotSupported(): ApiError {
   return new ApiError({

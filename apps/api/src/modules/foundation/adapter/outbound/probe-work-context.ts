@@ -1,4 +1,4 @@
-import type { ProbeRepository } from "./probe.repository";
+import type { ProbeRepository } from "./probe.repository.js";
 
 export interface ProbeWorkContext {
   probes: ProbeRepository;

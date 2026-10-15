@@ -12,8 +12,8 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { users } from "./identity";
-import { trips, tripParticipants } from "./planning";
+import { users } from "./identity.js";
+import { trips, tripParticipants } from "./planning.js";
 
 // Reference spec: docs/旅行アプリ設計3/詳細設計/sql/01_finance.sql and 03_planning_records.sql
 export const infra = pgSchema("infra");

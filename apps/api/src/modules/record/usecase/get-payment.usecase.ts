@@ -1,13 +1,13 @@
 import type { Payment as PaymentContract } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { tripNotAccessible } from "../../planning/usecase/trip-write-flow";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { tripNotAccessible } from "../../planning/usecase/trip-write-flow.js";
 import type {
   GetPaymentInput,
   GetPaymentInputPort,
-} from "../adapter/inbound/get-payment.input-port";
-import type { FinanceWorkContext } from "../adapter/outbound/finance-work-context";
-import { toPaymentDto } from "./payment-dto";
+} from "../adapter/inbound/get-payment.input-port.js";
+import type { FinanceWorkContext } from "../adapter/outbound/finance-work-context.js";
+import { toPaymentDto } from "./payment-dto.js";
 
 /**
  * 参加している旅行の中で、支払いが無い・別の旅行の支払いはどちらも

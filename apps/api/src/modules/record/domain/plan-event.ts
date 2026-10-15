@@ -1,5 +1,5 @@
-import type { UserId } from "../../../common/domain/user-id";
-import { PlanKind } from "../../planning/domain/plan-kind";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { PlanKind } from "../../planning/domain/plan-kind.js";
 
 /**
  * 予定につける記録の種類（record.plan_events.event_kind）。

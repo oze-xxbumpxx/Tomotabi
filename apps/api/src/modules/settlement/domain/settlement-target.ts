@@ -1,4 +1,4 @@
-import { SignedYen } from "../../../common/domain/yen";
+import { SignedYen } from "../../../common/domain/yen.js";
 
 /**
  * 精算の明細の種類。BASEは支払いをそのまま精算すること（寄与c）、

@@ -1,6 +1,6 @@
 import { createServer, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { EnrollmentError } from "./enrollment-error";
+import { EnrollmentError } from "./enrollment-error.js";
 
 export const CALLBACK_PATH = "/callback";
 export const DEFAULT_CALLBACK_TIMEOUT_MS = 5 * 60 * 1000;

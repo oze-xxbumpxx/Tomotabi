@@ -1,13 +1,13 @@
 import { fromNodeHeaders } from "better-auth/node";
 import type { Pool } from "pg";
 import type { IncomingHttpHeaders } from "node:http";
-import { UserId } from "../../../common/domain/user-id";
+import { UserId } from "../../../common/domain/user-id.js";
 import type {
   SessionVerificationResult,
   SessionVerifier,
   SessionVerifierHeaders,
-} from "../adapter/outbound/session-verifier";
-import { isAllowedGoogleAccount } from "./allowlist-query";
+} from "../adapter/outbound/session-verifier.js";
+import { isAllowedGoogleAccount } from "./allowlist-query.js";
 
 /**
  * `auth.api.getSession`だけに依存する最小の見え方。

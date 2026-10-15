@@ -1,5 +1,5 @@
 import type { TimelineItem } from "@tomotabi/contracts";
-import type { HomeRosterEntry } from "./home-read.port";
+import type { HomeRosterEntry } from "./home-read.port.js";
 
 export const HOME_RECORDS_FACTORY = Symbol("HOME_RECORDS_FACTORY");
 

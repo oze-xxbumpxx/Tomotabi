@@ -1,7 +1,7 @@
-import type { UserId } from "../../../../common/domain/user-id";
-import type { IdempotencyKey } from "../../../../common/http/idempotency-key";
-import type { PlanEventKind } from "../../domain/plan-event";
-import type { PlanEventCancellationResult } from "./plan-event-write.result";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { IdempotencyKey } from "../../../../common/http/idempotency-key.js";
+import type { PlanEventKind } from "../../domain/plan-event.js";
+import type { PlanEventCancellationResult } from "./plan-event-write.result.js";
 
 export const CANCEL_PLAN_EVENT_INPUT_PORT = Symbol(
   "CANCEL_PLAN_EVENT_INPUT_PORT",

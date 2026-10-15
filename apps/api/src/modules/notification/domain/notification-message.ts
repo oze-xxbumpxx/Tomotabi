@@ -7,7 +7,7 @@ import {
   type PushAction,
   type PushPayload,
 } from "@tomotabi/contracts";
-import type { NotificationEvent } from "./notification-event";
+import type { NotificationEvent } from "./notification-event.js";
 
 /** 通知に出すタイトル（アプリの名前）。 */
 export const NOTIFICATION_TITLE = "tomotabi";

@@ -1,15 +1,15 @@
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { ApiError } from "../../../common/http/api-error";
-import type { CommandReceipt } from "../../../common/idempotency/command-receipt";
-import type { IdempotencyKey } from "../../../common/http/idempotency-key";
-import type { UserId } from "../../../common/domain/user-id";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
-import type { PlanEventWorkContext } from "../adapter/outbound/plan-event-work-context";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { CommandReceipt } from "../../../common/idempotency/command-receipt.js";
+import type { IdempotencyKey } from "../../../common/http/idempotency-key.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
+import type { PlanEventWorkContext } from "../adapter/outbound/plan-event-work-context.js";
 import {
   isUniqueViolation,
   tripNotAccessible,
   type WriteOutcome,
-} from "../../planning/usecase/trip-write-flow";
+} from "../../planning/usecase/trip-write-flow.js";
 
 /**
  * 達成・予約の書き込みの結果。WriteOutcomeに加えて、書き込みログが

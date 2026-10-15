@@ -14,8 +14,8 @@ import {
   varchar,
   type PgTableExtraConfigValue,
 } from "drizzle-orm/pg-core";
-import { tripParticipants, trips } from "./planning";
-import { payments } from "./record";
+import { tripParticipants, trips } from "./planning.js";
+import { payments } from "./record.js";
 
 // Reference spec: docs/旅行アプリ設計3/詳細設計/sql/01_finance.sql
 // previews, preview_items, settlements, items and cancellations are append-only; the

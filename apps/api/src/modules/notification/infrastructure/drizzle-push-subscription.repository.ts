@@ -12,21 +12,21 @@ import {
   sql,
 } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { UserId } from "../../../common/domain/user-id";
+import type { UserId } from "../../../common/domain/user-id.js";
 import {
   sessions,
   users,
-} from "../../../infrastructure/database/schema/identity";
+} from "../../../infrastructure/database/schema/identity.js";
 import {
   closedPushSessions,
   pushSubscriptions,
-} from "../../../infrastructure/database/schema/notification";
+} from "../../../infrastructure/database/schema/notification.js";
 import type {
   NewPushSubscription,
   PushSubscriptionRepository,
   PushSubscriptionRow,
   PushSubscriptionUpdate,
-} from "../adapter/outbound/push-subscription.repository";
+} from "../adapter/outbound/push-subscription.repository.js";
 
 const toRow = (
   row: typeof pushSubscriptions.$inferSelect,

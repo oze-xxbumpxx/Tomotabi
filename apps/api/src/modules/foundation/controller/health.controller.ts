@@ -1,6 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
 import type { HealthView } from "@tomotabi/contracts";
-import { PublicRoute } from "../../../common/guard/public-route.decorator";
+import { PublicRoute } from "../../../common/guard/public-route.decorator.js";
 
 @Controller("health")
 export class HealthController {

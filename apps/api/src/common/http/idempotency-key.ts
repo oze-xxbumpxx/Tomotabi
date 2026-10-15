@@ -1,4 +1,4 @@
-import { ApiError } from "./api-error";
+import { ApiError } from "./api-error.js";
 
 export type IdempotencyKey = string & { readonly __brand: "IdempotencyKey" };
 

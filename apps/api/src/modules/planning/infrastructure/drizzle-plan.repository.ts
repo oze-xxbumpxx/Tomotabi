@@ -1,14 +1,14 @@
 import { and, eq, gt, lt, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { BoundedText } from "../../../common/domain/bounded-text";
-import { LocalDate } from "../../../common/domain/local-date";
-import { LocalTime } from "../../../common/domain/local-time";
-import { UserId } from "../../../common/domain/user-id";
-import { plans } from "../../../infrastructure/database/schema/planning";
-import type { Plan } from "../domain/plan";
-import type { PlanKind } from "../domain/plan-kind";
-import type { TripPeriod } from "../domain/trip-period";
-import type { NewPlan, PlanRepository } from "../adapter/outbound/plan.repository";
+import type { BoundedText } from "../../../common/domain/bounded-text.js";
+import { LocalDate } from "../../../common/domain/local-date.js";
+import { LocalTime } from "../../../common/domain/local-time.js";
+import { UserId } from "../../../common/domain/user-id.js";
+import { plans } from "../../../infrastructure/database/schema/planning.js";
+import type { Plan } from "../domain/plan.js";
+import type { PlanKind } from "../domain/plan-kind.js";
+import type { TripPeriod } from "../domain/trip-period.js";
+import type { NewPlan, PlanRepository } from "../adapter/outbound/plan.repository.js";
 
 type PlanRow = typeof plans.$inferSelect;
 

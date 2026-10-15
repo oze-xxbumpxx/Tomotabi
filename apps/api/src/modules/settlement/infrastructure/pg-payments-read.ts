@@ -3,16 +3,16 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   paymentCancellations,
   payments,
-} from "../../../infrastructure/database/schema/record";
+} from "../../../infrastructure/database/schema/record.js";
 import type {
   Payment,
   PaymentCancellation,
-} from "../../record/domain/payment";
+} from "../../record/domain/payment.js";
 import {
   toPaymentCancellationDomain,
   toPaymentDomain,
-} from "../../record/infrastructure/drizzle-payment.repository";
-import type { PaymentsReadPort } from "../adapter/outbound/payments-read.port";
+} from "../../record/infrastructure/drizzle-payment.repository.js";
+import type { PaymentsReadPort } from "../adapter/outbound/payments-read.port.js";
 
 /**
  * recordの支払いの読み取り（settlementからport越しに使う）。

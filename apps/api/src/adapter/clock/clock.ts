@@ -1,4 +1,4 @@
-import type { LocalDate } from "../../common/domain/local-date";
+import type { LocalDate } from "../../common/domain/local-date.js";
 
 export const CLOCK = Symbol("CLOCK");
 

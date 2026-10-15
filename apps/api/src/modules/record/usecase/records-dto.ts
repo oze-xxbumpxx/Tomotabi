@@ -4,13 +4,13 @@ import type {
   PlanEvent,
   TimelineItem,
 } from "@tomotabi/contracts";
-import type { Payment, PaymentCancellation } from "../domain/payment";
-import type { TripRosterEntry } from "../adapter/outbound/finance-work-context";
+import type { Payment, PaymentCancellation } from "../domain/payment.js";
+import type { TripRosterEntry } from "../adapter/outbound/finance-work-context.js";
 import type {
   PlanEventCancellation,
   RecordTimelineRow,
-} from "../adapter/outbound/records-read.port";
-import { toPaymentDto } from "./payment-dto";
+} from "../adapter/outbound/records-read.port.js";
+import { toPaymentDto } from "./payment-dto.js";
 
 function toEventCancellationDto(
   cancellation: PlanEventCancellation,

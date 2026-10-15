@@ -1,5 +1,5 @@
 import type { PushActionTarget } from "@tomotabi/contracts";
-import type { UserId } from "../../../common/domain/user-id";
+import type { UserId } from "../../../common/domain/user-id.js";
 
 /**
  * 保存のあとに渡す通知のイベント（設計書「保存のあとに送る流れ」）。

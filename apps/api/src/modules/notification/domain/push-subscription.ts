@@ -1,4 +1,4 @@
-import type { VapidKeyState } from "./vapid-keyring";
+import type { VapidKeyState } from "./vapid-keyring.js";
 
 /** 1人が同時に有効にできる購読の数（詳細設計・契約のmaxActiveSubscriptions）。 */
 export const MAX_ACTIVE_PUSH_SUBSCRIPTIONS = 3;

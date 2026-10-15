@@ -8,13 +8,13 @@ import {
 } from "@nestjs/common";
 import type { Me } from "@tomotabi/contracts";
 import type { Response } from "express";
-import type { AuthenticatedRequest } from "../../../common/guard/authenticated-request";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import type { UserId } from "../../../common/domain/user-id";
+import type { AuthenticatedRequest } from "../../../common/guard/authenticated-request.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import type { UserId } from "../../../common/domain/user-id.js";
 import {
   GET_ME_INPUT_PORT,
   type GetMeInputPort,
-} from "../adapter/inbound/get-me.input-port";
+} from "../adapter/inbound/get-me.input-port.js";
 
 @Controller("me")
 export class MeController {

@@ -1,5 +1,5 @@
-import type { IncrementProbePort } from "../adapter/service/increment-probe.port";
-import { ProbeCount, PROBE_COUNT_MAX } from "../domain/probe-count";
+import type { IncrementProbePort } from "../adapter/service/increment-probe.port.js";
+import { ProbeCount, PROBE_COUNT_MAX } from "../domain/probe-count.js";
 
 export class IncrementProbeService implements IncrementProbePort {
   increment(current: ProbeCount, step = 1): ProbeCount {

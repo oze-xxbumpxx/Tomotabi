@@ -1,10 +1,10 @@
-import { ApiError } from "../../../common/http/api-error";
+import { ApiError } from "../../../common/http/api-error.js";
 import type {
   GetPushConfigInputPort,
   PushConfig,
-} from "../adapter/inbound/get-push-config.input-port";
-import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port";
-import { MAX_ACTIVE_PUSH_SUBSCRIPTIONS } from "../domain/push-subscription";
+} from "../adapter/inbound/get-push-config.input-port.js";
+import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port.js";
+import { MAX_ACTIVE_PUSH_SUBSCRIPTIONS } from "../domain/push-subscription.js";
 
 /**
  * GET /me/push-config。今のVAPIDの公開鍵とkeyIdを返す。

@@ -1,4 +1,4 @@
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const PARTICIPANTS_FACTORY = Symbol("PARTICIPANTS_FACTORY");
 

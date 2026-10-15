@@ -1,16 +1,16 @@
 import { Module } from "@nestjs/common";
-import { getPool } from "../infrastructure/database/pool";
+import { getPool } from "../infrastructure/database/pool.js";
 import {
   SETTLEMENT_READ_UNIT_OF_WORK,
   SETTLEMENT_UNIT_OF_WORK,
   type SettlementReadUnitOfWork,
   type SettlementUnitOfWork,
-} from "../modules/settlement/adapter/outbound/settlement-work-context";
-import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-finance-unit-of-work";
-import { PgSettlementReadUnitOfWork } from "../modules/settlement/infrastructure/pg-settlement-read.unit-of-work";
-import { NOTIFICATION_PUBLISHER } from "../modules/settlement/adapter/outbound/notification-publisher";
-import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher";
-import { RecordCompositionModule } from "./record-composition.module";
+} from "../modules/settlement/adapter/outbound/settlement-work-context.js";
+import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-finance-unit-of-work.js";
+import { PgSettlementReadUnitOfWork } from "../modules/settlement/infrastructure/pg-settlement-read.unit-of-work.js";
+import { NOTIFICATION_PUBLISHER } from "../modules/settlement/adapter/outbound/notification-publisher.js";
+import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher.js";
+import { RecordCompositionModule } from "./record-composition.module.js";
 
 function useDatabase(): boolean {
   // planning / recordと同じ判定（未設定と空文字はどちらも「DBなし」）。

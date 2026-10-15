@@ -1,4 +1,4 @@
-import { ProbeCount } from "../domain/probe-count";
+import { ProbeCount } from "../domain/probe-count.js";
 
 export class InMemoryProbeStore {
   constructor(private count: ProbeCount = ProbeCount.create(0)) {}

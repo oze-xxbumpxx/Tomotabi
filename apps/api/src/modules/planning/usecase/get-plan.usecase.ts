@@ -2,11 +2,11 @@ import type { Plan as PlanContract } from "@tomotabi/contracts";
 import type {
   GetPlanInput,
   GetPlanInputPort,
-} from "../adapter/inbound/get-plan.input-port";
-import type { PlanningReadPort } from "../adapter/outbound/planning-read.port";
-import { toPlanDto } from "./plan-dto";
-import { planNotFound } from "./plan-write-flow";
-import { tripNotAccessible } from "./trip-write-flow";
+} from "../adapter/inbound/get-plan.input-port.js";
+import type { PlanningReadPort } from "../adapter/outbound/planning-read.port.js";
+import { toPlanDto } from "./plan-dto.js";
+import { planNotFound } from "./plan-write-flow.js";
+import { tripNotAccessible } from "./trip-write-flow.js";
 
 export class GetPlanUseCase implements GetPlanInputPort {
   constructor(private readonly read: PlanningReadPort) {}

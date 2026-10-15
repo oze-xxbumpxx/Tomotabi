@@ -10,26 +10,26 @@ import {
 import type { Cancellation, PlanEvent } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { parseIdempotencyKey } from "../../../common/http/idempotency-key";
-import { computeRequestHash } from "../../../common/idempotency/command-receipt";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { parseIdempotencyKey } from "../../../common/http/idempotency-key.js";
+import { computeRequestHash } from "../../../common/idempotency/command-receipt.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
 import {
   CancelBookingParams,
   CreateBookingBody,
   CreateBookingParams,
-} from "../../../generated/planning.zod";
+} from "../../../generated/planning.zod.js";
 import {
   CANCEL_PLAN_EVENT_INPUT_PORT,
   cancelPlanEventOperation,
   type CancelPlanEventInputPort,
-} from "../adapter/inbound/cancel-plan-event.input-port";
+} from "../adapter/inbound/cancel-plan-event.input-port.js";
 import {
   CREATE_PLAN_EVENT_INPUT_PORT,
   createPlanEventOperation,
   type CreatePlanEventInputPort,
-} from "../adapter/inbound/create-plan-event.input-port";
+} from "../adapter/inbound/create-plan-event.input-port.js";
 
 type CreateParams = zod.infer<typeof CreateBookingParams>;
 type CreateBody = zod.infer<typeof CreateBookingBody>;

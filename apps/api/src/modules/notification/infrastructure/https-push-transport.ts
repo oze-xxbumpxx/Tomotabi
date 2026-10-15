@@ -2,7 +2,7 @@ import { request as httpsRequest, type Agent } from "node:https";
 import type {
   PushRequestDetails,
   PushTransport,
-} from "../adapter/outbound/push-transport";
+} from "../adapter/outbound/push-transport.js";
 
 /** 1送りの全体の上限（設計書「エラー処理」: 購読あたり3秒）。 */
 const SEND_TIMEOUT_MS = 3_000;

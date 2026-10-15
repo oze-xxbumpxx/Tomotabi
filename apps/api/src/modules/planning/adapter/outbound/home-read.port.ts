@@ -1,12 +1,12 @@
-import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work";
-import type { ParticipantSlot } from "../../../../common/domain/participant-slot";
-import type { LocalDate } from "../../../../common/domain/local-date";
-import type { UserId } from "../../../../common/domain/user-id";
-import { someInCauseChain } from "../../../../common/errors/find-in-cause-chain";
-import type { Trip } from "../../domain/trip";
-import type { PlanView } from "./planning-read.port";
-import type { HomeBalancePort } from "./home-balance.port";
-import type { HomeRecordsPort } from "./home-records.port";
+import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work.js";
+import type { ParticipantSlot } from "../../../../common/domain/participant-slot.js";
+import type { LocalDate } from "../../../../common/domain/local-date.js";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import { someInCauseChain } from "../../../../common/errors/find-in-cause-chain.js";
+import type { Trip } from "../../domain/trip.js";
+import type { PlanView } from "./planning-read.port.js";
+import type { HomeBalancePort } from "./home-balance.port.js";
+import type { HomeRecordsPort } from "./home-records.port.js";
 
 export const HOME_READ_UNIT_OF_WORK = Symbol("HOME_READ_UNIT_OF_WORK");
 

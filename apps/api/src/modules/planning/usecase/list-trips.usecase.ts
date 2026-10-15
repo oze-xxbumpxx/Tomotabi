@@ -2,14 +2,14 @@ import type { TripPage } from "@tomotabi/contracts";
 import {
   type ListTripsInput,
   type ListTripsInputPort,
-} from "../adapter/inbound/list-trips.input-port";
-import type { PlanningReadPort } from "../adapter/outbound/planning-read.port";
+} from "../adapter/inbound/list-trips.input-port.js";
+import type { PlanningReadPort } from "../adapter/outbound/planning-read.port.js";
 import {
   decodeTripCursor,
   encodeTripCursor,
   invalidTripCursor,
-} from "./trip-cursor";
-import { toTripDto } from "./trip-dto";
+} from "./trip-cursor.js";
+import { toTripDto } from "./trip-dto.js";
 
 export class ListTripsUseCase implements ListTripsInputPort {
   constructor(private readonly read: PlanningReadPort) {}

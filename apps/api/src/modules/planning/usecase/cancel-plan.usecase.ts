@@ -1,20 +1,20 @@
 import { randomUUID } from "node:crypto";
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { Plan } from "../domain/plan";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { Plan } from "../domain/plan.js";
 import {
   CANCEL_PLAN_OPERATION,
   type CancelPlanInput,
   type CancelPlanInputPort,
-} from "../adapter/inbound/cancel-plan.input-port";
-import type { PlanWriteResult } from "../adapter/inbound/plan-write.result";
+} from "../adapter/inbound/cancel-plan.input-port.js";
+import type { PlanWriteResult } from "../adapter/inbound/plan-write.result.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
-import { executePlanWrite, runPlanUpdate } from "./plan-write-flow";
+} from "../adapter/outbound/notification-publisher.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
+import { executePlanWrite, runPlanUpdate } from "./plan-write-flow.js";
 
 /**
  * 予定の取りやめ（一度だけ）。復活のAPIは持たない。

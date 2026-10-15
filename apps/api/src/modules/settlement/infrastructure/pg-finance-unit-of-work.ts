@@ -1,26 +1,26 @@
 import { and, asc, eq, exists, sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { ParticipantSlot } from "../../../common/domain/participant-slot";
-import type { UserId } from "../../../common/domain/user-id";
-import { PgCommandReceipts } from "../../../infrastructure/database/pg-command-receipts";
-import { users } from "../../../infrastructure/database/schema/identity";
-import { tripFinanceGuards } from "../../../infrastructure/database/schema/infra";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { ParticipantSlot } from "../../../common/domain/participant-slot.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { PgCommandReceipts } from "../../../infrastructure/database/pg-command-receipts.js";
+import { users } from "../../../infrastructure/database/schema/identity.js";
+import { tripFinanceGuards } from "../../../infrastructure/database/schema/infra.js";
 import {
   plans,
   tripParticipants,
-} from "../../../infrastructure/database/schema/planning";
+} from "../../../infrastructure/database/schema/planning.js";
 import type {
   FinanceGuardLocker,
   TripPlansPort,
   TripRosterEntry,
   TripRosterPort,
-} from "../../record/adapter/outbound/finance-work-context";
-import { DrizzlePaymentRepository } from "../../record/infrastructure/drizzle-payment.repository";
-import type { SettlementWorkContext } from "../adapter/outbound/settlement-work-context";
-import { DrizzleSettlementRepository } from "./drizzle-settlement.repository";
-import { PgPaymentsRead } from "./pg-payments-read";
+} from "../../record/adapter/outbound/finance-work-context.js";
+import { DrizzlePaymentRepository } from "../../record/infrastructure/drizzle-payment.repository.js";
+import type { SettlementWorkContext } from "../adapter/outbound/settlement-work-context.js";
+import { DrizzleSettlementRepository } from "./drizzle-settlement.repository.js";
+import { PgPaymentsRead } from "./pg-payments-read.js";
 
 /**
  * 旅行の参加者の照会。認可はSQLの条件で行う: actorが旅行の参加者

@@ -1,32 +1,32 @@
 import type { Preview } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import { SignedYen } from "../../../common/domain/yen";
-import type { WriteLog } from "../../planning/adapter/outbound/write-log.port";
+import { ApiError } from "../../../common/http/api-error.js";
+import { SignedYen } from "../../../common/domain/yen.js";
+import type { WriteLog } from "../../planning/adapter/outbound/write-log.port.js";
 import {
   executeFinanceWrite,
   runFinanceWriteTransaction,
   type FinanceWritePersist,
-} from "../../record/usecase/finance-write-flow";
-import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context";
+} from "../../record/usecase/finance-write-flow.js";
+import type { TripRosterEntry } from "../../record/adapter/outbound/finance-work-context.js";
 import {
   EMPTY_CLAIM_HISTORY,
   fingerprintOf,
-} from "../domain/fingerprint";
-import { deriveTargets } from "../domain/settlement-target";
+} from "../domain/fingerprint.js";
+import { deriveTargets } from "../domain/settlement-target.js";
 import {
   CREATE_PREVIEW_OPERATION,
   type CreatePreviewInput,
   type CreatePreviewInputPort,
-} from "../adapter/inbound/create-preview.input-port";
+} from "../adapter/inbound/create-preview.input-port.js";
 import type {
   NewPreviewItem,
   PreviewRecord,
-} from "../adapter/outbound/settlement.repository";
+} from "../adapter/outbound/settlement.repository.js";
 import type {
   SettlementUnitOfWork,
   SettlementWorkContext,
-} from "../adapter/outbound/settlement-work-context";
-import { joinPreviewItems, toPreviewDto } from "./settlement-dto";
+} from "../adapter/outbound/settlement-work-context.js";
+import { joinPreviewItems, toPreviewDto } from "./settlement-dto.js";
 
 /**
  * 確認の作成（F-20）。お金の書き込みの共通の流れ（参加者の確認 →

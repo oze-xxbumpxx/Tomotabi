@@ -1,5 +1,5 @@
 import type { OnApplicationShutdown } from "@nestjs/common";
-import type { AfterResponse } from "../../adapter/after-response/after-response";
+import type { AfterResponse } from "../../adapter/after-response/after-response.js";
 
 /** 終了時にタスクの完了を待つ上限（設計書「リスク」: 最大5秒）。 */
 const SHUTDOWN_DRAIN_TIMEOUT_MS = 5_000;

@@ -1,20 +1,20 @@
 import { and, eq, exists, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { LockStrength } from "drizzle-orm/pg-core";
-import type { BoundedText } from "../../../common/domain/bounded-text";
-import { LocalDate } from "../../../common/domain/local-date";
-import { UserId } from "../../../common/domain/user-id";
+import type { BoundedText } from "../../../common/domain/bounded-text.js";
+import { LocalDate } from "../../../common/domain/local-date.js";
+import { UserId } from "../../../common/domain/user-id.js";
 import {
   tripParticipants,
   trips,
-} from "../../../infrastructure/database/schema/planning";
-import type { Trip, TripStatus } from "../domain/trip";
-import { TripPeriod } from "../domain/trip-period";
+} from "../../../infrastructure/database/schema/planning.js";
+import type { Trip, TripStatus } from "../domain/trip.js";
+import { TripPeriod } from "../domain/trip-period.js";
 import type {
   NewTrip,
   TripParticipantSlot,
   TripRepository,
-} from "../adapter/outbound/trip.repository";
+} from "../adapter/outbound/trip.repository.js";
 
 type TripRow = typeof trips.$inferSelect;
 

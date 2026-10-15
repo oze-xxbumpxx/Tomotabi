@@ -1,4 +1,4 @@
-import type { VapidKey } from "../../domain/vapid-keyring";
+import type { VapidKey } from "../../domain/vapid-keyring.js";
 
 export const PUSH_SENDER = Symbol("PUSH_SENDER");
 

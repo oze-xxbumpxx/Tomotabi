@@ -1,11 +1,11 @@
 import type { Pool } from "pg";
-import type { CliIo } from "../shared/console-io";
-import type { Slot } from "../shared/slot";
-import { buildAuthorizationUrl, createAuthorizationSecrets } from "./authorization-request";
-import { EnrollmentError } from "./enrollment-error";
-import { insertEnrollment } from "./enrollment-writer";
-import type { GoogleEnrollmentClient } from "./google-enrollment-client";
-import { startLoopbackServer } from "./loopback-server";
+import type { CliIo } from "../shared/console-io.js";
+import type { Slot } from "../shared/slot.js";
+import { buildAuthorizationUrl, createAuthorizationSecrets } from "./authorization-request.js";
+import { EnrollmentError } from "./enrollment-error.js";
+import { insertEnrollment } from "./enrollment-writer.js";
+import type { GoogleEnrollmentClient } from "./google-enrollment-client.js";
+import { startLoopbackServer } from "./loopback-server.js";
 
 export type EnrollDependencies = {
   clientId: string;

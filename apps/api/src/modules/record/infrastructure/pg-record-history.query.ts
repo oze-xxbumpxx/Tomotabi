@@ -1,15 +1,15 @@
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { EventKind } from "@tomotabi/contracts";
-import { UserId } from "../../../common/domain/user-id";
+import { UserId } from "../../../common/domain/user-id.js";
 import {
   activePlanEvents,
   planEvents,
-} from "../../../infrastructure/database/schema/record";
+} from "../../../infrastructure/database/schema/record.js";
 import type {
   ActivePlanEvent,
   RecordHistoryPort,
-} from "../../planning/adapter/outbound/record-history.port";
+} from "../../planning/adapter/outbound/record-history.port.js";
 
 /**
  * recordモジュールの公開照会。planningの予定の更新・取得が使う。

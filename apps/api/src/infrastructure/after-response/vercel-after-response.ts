@@ -1,6 +1,6 @@
 import type { OnApplicationShutdown } from "@nestjs/common";
 import { waitUntil } from "@vercel/functions";
-import type { AfterResponse } from "../../adapter/after-response/after-response";
+import type { AfterResponse } from "../../adapter/after-response/after-response.js";
 
 /** 終了時にタスクの完了を待つ上限（InProcessAfterResponseと同じ）。 */
 const SHUTDOWN_DRAIN_TIMEOUT_MS = 5_000;

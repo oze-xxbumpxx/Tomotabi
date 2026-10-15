@@ -3,18 +3,18 @@ import type { Auth } from "better-auth";
 import { toNodeHandler } from "better-auth/node";
 import type { Express, RequestHandler } from "express";
 import type { HttpLogger } from "pino-http";
-import { createRequestLogger } from "../infrastructure/logging/logger";
+import { createRequestLogger } from "../infrastructure/logging/logger.js";
 import {
   SESSION_VERIFIER,
   type SessionVerifier,
-} from "../modules/identity/adapter/outbound/session-verifier";
+} from "../modules/identity/adapter/outbound/session-verifier.js";
 import {
   CLOSE_PUSH_SESSION_INPUT_PORT,
   type ClosePushSessionInputPort,
-} from "../modules/notification/adapter/inbound/close-push-session.input-port";
-import { authRouteAllowlist } from "./auth-route-allowlist";
-import { onBeforeWriteHead, serverTiming } from "./server-timing";
-import { signOutPushGuard } from "./sign-out-push-guard";
+} from "../modules/notification/adapter/inbound/close-push-session.input-port.js";
+import { authRouteAllowlist } from "./auth-route-allowlist.js";
+import { onBeforeWriteHead, serverTiming } from "./server-timing.js";
+import { signOutPushGuard } from "./sign-out-push-guard.js";
 
 const NO_STORE_API_HEADERS = [
   ["Cache-Control", "private, no-store"],

@@ -1,8 +1,8 @@
 import type { TimelineItemKind } from "@tomotabi/contracts";
-import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { Payment, PaymentCancellation } from "../../domain/payment";
-import type { TripRosterPort } from "./finance-work-context";
+import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work.js";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { Payment, PaymentCancellation } from "../../domain/payment.js";
+import type { TripRosterPort } from "./finance-work-context.js";
 
 export const RECORDS_READ_UNIT_OF_WORK = Symbol("RECORDS_READ_UNIT_OF_WORK");
 

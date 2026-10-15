@@ -3,8 +3,8 @@ import type {
   PushSender,
   PushSendOutcome,
   PushSendRequest,
-} from "../adapter/outbound/push-sender";
-import type { PushTransport } from "../adapter/outbound/push-transport";
+} from "../adapter/outbound/push-sender.js";
+import type { PushTransport } from "../adapter/outbound/push-transport.js";
 
 /**
  * Web Pushで送る部品（設計書「送る部品」）。web-pushの

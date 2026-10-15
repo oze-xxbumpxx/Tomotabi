@@ -3,28 +3,28 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { alias } from "drizzle-orm/pg-core";
 import type { Pool } from "pg";
 import type { EventKind } from "@tomotabi/contracts";
-import { UserId } from "../../../common/domain/user-id";
-import type { LocalDate } from "../../../common/domain/local-date";
+import { UserId } from "../../../common/domain/user-id.js";
+import type { LocalDate } from "../../../common/domain/local-date.js";
 import {
   plans,
   tripParticipants,
   trips,
-} from "../../../infrastructure/database/schema/planning";
+} from "../../../infrastructure/database/schema/planning.js";
 import {
   activePlanEvents,
   planEvents,
-} from "../../../infrastructure/database/schema/record";
-import type { Trip } from "../domain/trip";
+} from "../../../infrastructure/database/schema/record.js";
+import type { Trip } from "../domain/trip.js";
 import type {
   PlanningReadPort,
   PlanView,
   TripListAnchor,
   TripListPage,
   TripListQuery,
-} from "../adapter/outbound/planning-read.port";
-import type { ActivePlanEvent } from "../adapter/outbound/record-history.port";
-import { toPlanDomain } from "./drizzle-plan.repository";
-import { toTripDomain } from "./drizzle-trip.repository";
+} from "../adapter/outbound/planning-read.port.js";
+import type { ActivePlanEvent } from "../adapter/outbound/record-history.port.js";
+import { toPlanDomain } from "./drizzle-plan.repository.js";
+import { toTripDomain } from "./drizzle-trip.repository.js";
 
 type PlanEventRow = typeof planEvents.$inferSelect;
 

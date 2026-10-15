@@ -1,4 +1,4 @@
-import type { VapidKey, VapidKeyring } from "../../domain/vapid-keyring";
+import type { VapidKey, VapidKeyring } from "../../domain/vapid-keyring.js";
 
 export const VAPID_KEYRING = Symbol("VAPID_KEYRING");
 

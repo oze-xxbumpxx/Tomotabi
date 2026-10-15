@@ -1,4 +1,4 @@
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const SESSION_VERIFIER = Symbol("SESSION_VERIFIER");
 

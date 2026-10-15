@@ -2,9 +2,9 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Logger } from "nestjs-pino";
-import { AppModule } from "./app.module";
-import { configureApp } from "./bootstrap/configure-app";
-import { createAuthFromEnv } from "./modules/identity/infrastructure/better-auth";
+import { AppModule } from "./app.module.js";
+import { configureApp } from "./bootstrap/configure-app.js";
+import { createAuthFromEnv } from "./modules/identity/infrastructure/better-auth.js";
 
 async function bootstrap(): Promise<void> {
   const auth = createAuthFromEnv();

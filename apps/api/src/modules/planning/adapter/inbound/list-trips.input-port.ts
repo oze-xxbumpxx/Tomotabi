@@ -1,5 +1,5 @@
 import type { TripPage, TripStatus } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const LIST_TRIPS_INPUT_PORT = Symbol("LIST_TRIPS_INPUT_PORT");
 

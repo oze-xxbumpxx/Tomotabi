@@ -1,8 +1,8 @@
-import type { UserId } from "../../../../common/domain/user-id";
-import type { LocalDate } from "../../../../common/domain/local-date";
-import type { Plan } from "../../domain/plan";
-import type { Trip, TripStatus } from "../../domain/trip";
-import type { ActivePlanEvent } from "./record-history.port";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { LocalDate } from "../../../../common/domain/local-date.js";
+import type { Plan } from "../../domain/plan.js";
+import type { Trip, TripStatus } from "../../domain/trip.js";
+import type { ActivePlanEvent } from "./record-history.port.js";
 
 export const PLANNING_READ_PORT = Symbol("PLANNING_READ_PORT");
 

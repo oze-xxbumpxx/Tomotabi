@@ -1,19 +1,19 @@
 import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { UserId } from "../../../common/domain/user-id";
+import { UserId } from "../../../common/domain/user-id.js";
 import {
   activePlanEvents,
   planEventCancellations,
   planEvents,
-} from "../../../infrastructure/database/schema/record";
-import type { PlanEventRepository } from "../adapter/outbound/plan-event.repository";
+} from "../../../infrastructure/database/schema/record.js";
+import type { PlanEventRepository } from "../adapter/outbound/plan-event.repository.js";
 import type {
   NewPlanEvent,
   NewPlanEventCancellation,
   PlanEvent,
   PlanEventCancellation,
   PlanEventKind,
-} from "../domain/plan-event";
+} from "../domain/plan-event.js";
 
 type PlanEventRow = typeof planEvents.$inferSelect;
 type CancellationRow = typeof planEventCancellations.$inferSelect;

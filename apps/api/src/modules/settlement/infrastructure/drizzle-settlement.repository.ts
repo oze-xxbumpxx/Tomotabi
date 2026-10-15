@@ -8,9 +8,9 @@ import {
   sql,
 } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { UserId } from "../../../common/domain/user-id";
-import type { SignedYen } from "../../../common/domain/yen";
-import { payments } from "../../../infrastructure/database/schema/record";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { SignedYen } from "../../../common/domain/yen.js";
+import { payments } from "../../../infrastructure/database/schema/record.js";
 import {
   activeClaims,
   previewItems,
@@ -18,9 +18,9 @@ import {
   settlementCancellations,
   settlementItems,
   settlements,
-} from "../../../infrastructure/database/schema/settlement";
-import type { ClaimHistory } from "../domain/fingerprint";
-import type { ActiveClaim, ClaimKind } from "../domain/settlement-target";
+} from "../../../infrastructure/database/schema/settlement.js";
+import type { ClaimHistory } from "../domain/fingerprint.js";
+import type { ActiveClaim, ClaimKind } from "../domain/settlement-target.js";
 import type {
   ExistingSettlement,
   LatestActiveSettlement,
@@ -41,7 +41,7 @@ import type {
   SettlementPage,
   SettlementRecord,
   SettlementRepository,
-} from "../adapter/outbound/settlement.repository";
+} from "../adapter/outbound/settlement.repository.js";
 
 type PreviewRow = typeof previews.$inferSelect;
 type PreviewItemRow = typeof previewItems.$inferSelect;

@@ -1,31 +1,31 @@
 import { Module } from "@nestjs/common";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { UnitOfWork } from "../adapter/transaction/unit-of-work";
-import { getPool } from "../infrastructure/database/pool";
+import type { UnitOfWork } from "../adapter/transaction/unit-of-work.js";
+import { getPool } from "../infrastructure/database/pool.js";
 import {
   FINANCE_UNIT_OF_WORK,
   type FinanceWorkContext,
-} from "../modules/record/adapter/outbound/finance-work-context";
+} from "../modules/record/adapter/outbound/finance-work-context.js";
 import {
   PLAN_ELIGIBILITY_FACTORY,
   type PlanEligibilityFactory,
   type PlanEligibilityPort,
-} from "../modules/record/adapter/outbound/plan-eligibility.port";
+} from "../modules/record/adapter/outbound/plan-eligibility.port.js";
 import {
   PLAN_EVENT_UNIT_OF_WORK,
   type PlanEventWorkContext,
-} from "../modules/record/adapter/outbound/plan-event-work-context";
+} from "../modules/record/adapter/outbound/plan-event-work-context.js";
 import {
   RECORDS_READ_UNIT_OF_WORK,
   type RecordsReadUnitOfWork,
-} from "../modules/record/adapter/outbound/records-read.port";
-import { PgPlanEligibilityQuery } from "../modules/record/infrastructure/pg-plan-eligibility.query";
-import { PgPlanEventUnitOfWork } from "../modules/record/infrastructure/pg-plan-event.unit-of-work";
-import { PgRecordsReadUnitOfWork } from "../modules/record/infrastructure/pg-records-read.unit-of-work";
-import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-finance-unit-of-work";
-import { NOTIFICATION_PUBLISHER } from "../modules/record/adapter/outbound/notification-publisher";
-import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher";
-import { PlanningCompositionModule } from "./planning-composition.module";
+} from "../modules/record/adapter/outbound/records-read.port.js";
+import { PgPlanEligibilityQuery } from "../modules/record/infrastructure/pg-plan-eligibility.query.js";
+import { PgPlanEventUnitOfWork } from "../modules/record/infrastructure/pg-plan-event.unit-of-work.js";
+import { PgRecordsReadUnitOfWork } from "../modules/record/infrastructure/pg-records-read.unit-of-work.js";
+import { PgFinanceUnitOfWork } from "../modules/settlement/infrastructure/pg-finance-unit-of-work.js";
+import { NOTIFICATION_PUBLISHER } from "../modules/record/adapter/outbound/notification-publisher.js";
+import { AfterResponseNotificationPublisher } from "../modules/notification/infrastructure/after-response-notification-publisher.js";
+import { PlanningCompositionModule } from "./planning-composition.module.js";
 
 function useDatabase(): boolean {
   // planningと同じ判定（未設定と空文字はどちらも「DBなし」）。

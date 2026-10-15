@@ -1,5 +1,5 @@
-import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work";
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work.js";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const NOTIFICATION_UNIT_OF_WORK = Symbol("NOTIFICATION_UNIT_OF_WORK");
 

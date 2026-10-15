@@ -1,4 +1,4 @@
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const NOTIFICATION_DISPATCH_STORE = Symbol(
   "NOTIFICATION_DISPATCH_STORE",

@@ -1,9 +1,9 @@
-import type { BoundedText } from "../../../../common/domain/bounded-text";
-import type { LocalDate } from "../../../../common/domain/local-date";
-import type { LocalTime } from "../../../../common/domain/local-time";
-import type { Plan } from "../../domain/plan";
-import type { PlanKind } from "../../domain/plan-kind";
-import type { TripPeriod } from "../../domain/trip-period";
+import type { BoundedText } from "../../../../common/domain/bounded-text.js";
+import type { LocalDate } from "../../../../common/domain/local-date.js";
+import type { LocalTime } from "../../../../common/domain/local-time.js";
+import type { Plan } from "../../domain/plan.js";
+import type { PlanKind } from "../../domain/plan-kind.js";
+import type { TripPeriod } from "../../domain/trip-period.js";
 
 /**
  * 予定の新規作成データ。id / version / created_at / updated_atはDBが埋める。

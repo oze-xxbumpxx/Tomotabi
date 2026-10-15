@@ -1,4 +1,4 @@
-import { LocalDate } from "../../../common/domain/local-date";
+import { LocalDate } from "../../../common/domain/local-date.js";
 
 /**
  * 旅行期間。開始日 ≦ 終了日。両端の日を含む。

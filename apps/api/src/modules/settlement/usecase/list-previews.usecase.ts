@@ -1,22 +1,22 @@
 import type { PreviewPage } from "@tomotabi/contracts";
-import { tripNotAccessible } from "../../planning/usecase/trip-write-flow";
-import { validatePreview } from "../domain/preview-validation";
+import { tripNotAccessible } from "../../planning/usecase/trip-write-flow.js";
+import { validatePreview } from "../domain/preview-validation.js";
 import type {
   ListPreviewsInput,
   ListPreviewsInputPort,
-} from "../adapter/inbound/list-previews.input-port";
-import type { PreviewAnchor } from "../adapter/outbound/settlement.repository";
+} from "../adapter/inbound/list-previews.input-port.js";
+import type { PreviewAnchor } from "../adapter/outbound/settlement.repository.js";
 import type {
   SettlementReadContext,
   SettlementReadUnitOfWork,
-} from "../adapter/outbound/settlement-work-context";
-import { currentClaimStates } from "./current-claims";
+} from "../adapter/outbound/settlement-work-context.js";
+import { currentClaimStates } from "./current-claims.js";
 import {
   decodePreviewCursor,
   encodePreviewCursor,
   invalidPreviewCursor,
-} from "./preview-cursor";
-import { toPreviewSummaryDto } from "./settlement-dto";
+} from "./preview-cursor.js";
+import { toPreviewSummaryDto } from "./settlement-dto.js";
 
 /**
  * 確認の一覧（F-22・未決事項3）。自分が作った未完了の確認だけを

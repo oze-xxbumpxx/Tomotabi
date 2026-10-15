@@ -1,4 +1,4 @@
-import type { ProbeCount } from "../../domain/probe-count";
+import type { ProbeCount } from "../../domain/probe-count.js";
 
 export const PROBE_REPOSITORY = Symbol("PROBE_REPOSITORY");
 

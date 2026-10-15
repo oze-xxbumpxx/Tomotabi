@@ -1,23 +1,23 @@
 import { randomUUID } from "node:crypto";
-import { ApiError } from "../../../common/http/api-error";
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { Plan } from "../domain/plan";
-import { TripPeriod } from "../domain/trip-period";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { Plan } from "../domain/plan.js";
+import { TripPeriod } from "../domain/trip-period.js";
 import {
   MOVE_PLAN_OPERATION,
   type MovePlanInput,
   type MovePlanInputPort,
-} from "../adapter/inbound/move-plan.input-port";
-import type { PlanWriteResult } from "../adapter/inbound/plan-write.result";
+} from "../adapter/inbound/move-plan.input-port.js";
+import type { PlanWriteResult } from "../adapter/inbound/plan-write.result.js";
 import {
   noopNotificationPublisher,
   type NotificationPublisher,
-} from "../adapter/outbound/notification-publisher";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
-import { parsePlanDate } from "./plan-input";
-import { executePlanWrite, runPlanUpdate } from "./plan-write-flow";
+} from "../adapter/outbound/notification-publisher.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
+import { parsePlanDate } from "./plan-input.js";
+import { executePlanWrite, runPlanUpdate } from "./plan-write-flow.js";
 
 /**
  * 予定の日の移動。移動先が期間内かは、FOR SHAREで読んだ確定済みの期間で

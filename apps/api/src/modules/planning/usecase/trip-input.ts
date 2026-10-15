@@ -1,7 +1,7 @@
-import { ApiError } from "../../../common/http/api-error";
-import { BoundedText } from "../../../common/domain/bounded-text";
-import { LocalDate } from "../../../common/domain/local-date";
-import { TripPeriod } from "../domain/trip-period";
+import { ApiError } from "../../../common/http/api-error.js";
+import { BoundedText } from "../../../common/domain/bounded-text.js";
+import { LocalDate } from "../../../common/domain/local-date.js";
+import { TripPeriod } from "../domain/trip-period.js";
 
 const MAX_NAME_CODE_POINTS = 100;
 

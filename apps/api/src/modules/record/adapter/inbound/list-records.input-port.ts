@@ -1,6 +1,6 @@
 import type { Records } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { RecordType } from "../outbound/records-read.port";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { RecordType } from "../outbound/records-read.port.js";
 
 export const LIST_RECORDS_INPUT_PORT = Symbol("LIST_RECORDS_INPUT_PORT");
 

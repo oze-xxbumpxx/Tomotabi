@@ -1,12 +1,12 @@
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { TimelineItemKind } from "@tomotabi/contracts";
-import { UserId } from "../../../common/domain/user-id";
+import { UserId } from "../../../common/domain/user-id.js";
 import {
   paymentCancellations,
   payments,
   planEventCancellations,
-} from "../../../infrastructure/database/schema/record";
+} from "../../../infrastructure/database/schema/record.js";
 import type {
   PlanEventCancellation,
   RecordsReadPort,
@@ -14,12 +14,12 @@ import type {
   RecordsTimelineQuery,
   RecordTimelineAnchor,
   RecordTimelineRow,
-} from "../adapter/outbound/records-read.port";
-import type { Payment, PaymentCancellation } from "../domain/payment";
+} from "../adapter/outbound/records-read.port.js";
+import type { Payment, PaymentCancellation } from "../domain/payment.js";
 import {
   toPaymentCancellationDomain,
   toPaymentDomain,
-} from "./drizzle-payment.repository";
+} from "./drizzle-payment.repository.js";
 
 type UnionRow = Readonly<{
   kind: string;

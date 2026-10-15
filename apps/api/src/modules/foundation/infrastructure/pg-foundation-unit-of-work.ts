@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import type { ProbeWorkContext } from "../adapter/outbound/probe-work-context";
-import { PgProbeRepository } from "./pg-probe.repository";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import type { ProbeWorkContext } from "../adapter/outbound/probe-work-context.js";
+import { PgProbeRepository } from "./pg-probe.repository.js";
 
 export class PgFoundationUnitOfWork implements UnitOfWork<ProbeWorkContext> {
   constructor(private readonly pool: Pool) {}

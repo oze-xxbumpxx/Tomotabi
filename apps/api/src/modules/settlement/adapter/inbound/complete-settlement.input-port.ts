@@ -1,6 +1,6 @@
 import type { Settlement } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { IdempotencyKey } from "../../../../common/http/idempotency-key";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { IdempotencyKey } from "../../../../common/http/idempotency-key.js";
 
 export const COMPLETE_SETTLEMENT_INPUT_PORT = Symbol(
   "COMPLETE_SETTLEMENT_INPUT_PORT",

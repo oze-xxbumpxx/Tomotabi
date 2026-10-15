@@ -1,6 +1,6 @@
 import { createParamDecorator, type ExecutionContext } from "@nestjs/common";
-import type { UserId } from "../domain/user-id";
-import type { AuthenticatedRequest } from "./authenticated-request";
+import type { UserId } from "../domain/user-id.js";
+import type { AuthenticatedRequest } from "./authenticated-request.js";
 
 /**
  * SessionGuardが検証してrequestに載せたUserIdを取り出す。

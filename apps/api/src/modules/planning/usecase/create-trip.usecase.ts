@@ -1,23 +1,23 @@
 import type { Trip as TripContract } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
 import {
   CREATE_TRIP_OPERATION,
   type CreateTripInput,
   type CreateTripInputPort,
-} from "../adapter/inbound/create-trip.input-port";
-import type { TripWriteResult } from "../adapter/inbound/trip-write.result";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
-import { parseTripName, parseTripPeriod } from "./trip-input";
-import { toTripDto } from "./trip-dto";
+} from "../adapter/inbound/create-trip.input-port.js";
+import type { TripWriteResult } from "../adapter/inbound/trip-write.result.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
+import { parseTripName, parseTripPeriod } from "./trip-input.js";
+import { toTripDto } from "./trip-dto.js";
 import {
   executeTripWrite,
   isUniqueViolation,
   storedReceipt,
   type TripWriteOutcome,
-} from "./trip-write-flow";
+} from "./trip-write-flow.js";
 
 /**
  * 旅行の作成。ロックする旅行がまだ無いため、旅行行ロックの代わりに

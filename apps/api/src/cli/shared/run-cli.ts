@@ -1,7 +1,7 @@
 import { Pool } from "pg";
-import { SlotNotEnrolledError } from "../disable/disable-google-account";
-import { EnrollmentError } from "../enroll/enrollment-error";
-import { CliUsageError, requireEnv } from "./slot";
+import { SlotNotEnrolledError } from "../disable/disable-google-account.js";
+import { EnrollmentError } from "../enroll/enrollment-error.js";
+import { CliUsageError, requireEnv } from "./slot.js";
 
 type PgError = Error & { code: string; constraint?: string };
 

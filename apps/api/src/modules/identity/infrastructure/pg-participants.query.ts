@@ -1,11 +1,11 @@
 import { asc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { UserId } from "../../../common/domain/user-id";
-import { allowedGoogleAccounts } from "../../../infrastructure/database/schema/identity";
+import { UserId } from "../../../common/domain/user-id.js";
+import { allowedGoogleAccounts } from "../../../infrastructure/database/schema/identity.js";
 import type {
   AllowlistParticipant,
   ParticipantsPort,
-} from "../../planning/adapter/outbound/participants.port";
+} from "../../planning/adapter/outbound/participants.port.js";
 
 /**
  * planning側のParticipantsPortをidentityの許可リストで実装した公開照会。

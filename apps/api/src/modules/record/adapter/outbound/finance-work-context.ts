@@ -1,8 +1,8 @@
-import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work";
-import type { ParticipantSlot } from "../../../../common/domain/participant-slot";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { CommandReceiptStore } from "../../../planning/adapter/outbound/planning-work-context";
-import type { PaymentRepository } from "./payment.repository";
+import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work.js";
+import type { ParticipantSlot } from "../../../../common/domain/participant-slot.js";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { CommandReceiptStore } from "../../../planning/adapter/outbound/planning-work-context.js";
+import type { PaymentRepository } from "./payment.repository.js";
 
 export const FINANCE_UNIT_OF_WORK = Symbol("FINANCE_UNIT_OF_WORK");
 

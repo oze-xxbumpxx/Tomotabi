@@ -14,30 +14,30 @@ import type {
 } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { parseIdempotencyKey } from "../../../common/http/idempotency-key";
-import { computeRequestHash } from "../../../common/idempotency/command-receipt";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { parseIdempotencyKey } from "../../../common/http/idempotency-key.js";
+import { computeRequestHash } from "../../../common/idempotency/command-receipt.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
 import {
   CreateSettlementPreviewParams,
   GetSettlementPreviewParams,
   ListSettlementPreviewsParams,
   ListSettlementPreviewsQueryParams,
-} from "../../../generated/finance.zod";
+} from "../../../generated/finance.zod.js";
 import {
   CREATE_PREVIEW_INPUT_PORT,
   CREATE_PREVIEW_OPERATION,
   type CreatePreviewInputPort,
-} from "../adapter/inbound/create-preview.input-port";
+} from "../adapter/inbound/create-preview.input-port.js";
 import {
   GET_PREVIEW_INPUT_PORT,
   type GetPreviewInputPort,
-} from "../adapter/inbound/get-preview.input-port";
+} from "../adapter/inbound/get-preview.input-port.js";
 import {
   LIST_PREVIEWS_INPUT_PORT,
   type ListPreviewsInputPort,
-} from "../adapter/inbound/list-previews.input-port";
+} from "../adapter/inbound/list-previews.input-port.js";
 
 type PreviewParams = zod.infer<typeof CreateSettlementPreviewParams>;
 type ListPreviewsParamsInput = zod.infer<typeof ListSettlementPreviewsParams>;

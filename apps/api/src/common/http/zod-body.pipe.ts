@@ -1,6 +1,6 @@
 import type { PipeTransform } from "@nestjs/common";
 import type { z as zod } from "zod";
-import { ApiError } from "./api-error";
+import { ApiError } from "./api-error.js";
 
 export type ZodBodyPipeOptions = {
   /**

@@ -1,6 +1,6 @@
 import { OAuth2Client } from "google-auth-library";
-import type { ExchangeCodeInput, GoogleEnrollmentClient, IdTokenClaims } from "./google-enrollment-client";
-import { EnrollmentError } from "./enrollment-error";
+import type { ExchangeCodeInput, GoogleEnrollmentClient, IdTokenClaims } from "./google-enrollment-client.js";
+import { EnrollmentError } from "./enrollment-error.js";
 
 export class GoogleAuthLibraryClient implements GoogleEnrollmentClient {
   private readonly client: OAuth2Client;

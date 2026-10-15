@@ -1,101 +1,101 @@
 import { Module } from "@nestjs/common";
-import { CLOCK, type Clock } from "../../adapter/clock/clock";
-import type { UnitOfWork } from "../../adapter/transaction/unit-of-work";
-import { PlanningCompositionModule } from "../../composition/planning-composition.module";
+import { CLOCK, type Clock } from "../../adapter/clock/clock.js";
+import type { UnitOfWork } from "../../adapter/transaction/unit-of-work.js";
+import { PlanningCompositionModule } from "../../composition/planning-composition.module.js";
 import {
   CANCEL_PLAN_INPUT_PORT,
   type CancelPlanInputPort,
-} from "./adapter/inbound/cancel-plan.input-port";
+} from "./adapter/inbound/cancel-plan.input-port.js";
 import {
   CREATE_PLAN_INPUT_PORT,
   type CreatePlanInputPort,
-} from "./adapter/inbound/create-plan.input-port";
+} from "./adapter/inbound/create-plan.input-port.js";
 import {
   CREATE_TRIP_INPUT_PORT,
   type CreateTripInputPort,
-} from "./adapter/inbound/create-trip.input-port";
+} from "./adapter/inbound/create-trip.input-port.js";
 import { PinoLogger } from "nestjs-pino";
 import {
   GET_HOME_INPUT_PORT,
   type GetHomeInputPort,
-} from "./adapter/inbound/get-home.input-port";
+} from "./adapter/inbound/get-home.input-port.js";
 import {
   GET_ITINERARY_INPUT_PORT,
   type GetItineraryInputPort,
-} from "./adapter/inbound/get-itinerary.input-port";
+} from "./adapter/inbound/get-itinerary.input-port.js";
 import {
   GET_PLAN_INPUT_PORT,
   type GetPlanInputPort,
-} from "./adapter/inbound/get-plan.input-port";
+} from "./adapter/inbound/get-plan.input-port.js";
 import {
   GET_TRIP_INPUT_PORT,
   type GetTripInputPort,
-} from "./adapter/inbound/get-trip.input-port";
+} from "./adapter/inbound/get-trip.input-port.js";
 import {
   LIST_TRIPS_INPUT_PORT,
   type ListTripsInputPort,
-} from "./adapter/inbound/list-trips.input-port";
+} from "./adapter/inbound/list-trips.input-port.js";
 import {
   MOVE_PLAN_INPUT_PORT,
   type MovePlanInputPort,
-} from "./adapter/inbound/move-plan.input-port";
+} from "./adapter/inbound/move-plan.input-port.js";
 import {
   RENAME_TRIP_INPUT_PORT,
   type RenameTripInputPort,
-} from "./adapter/inbound/rename-trip.input-port";
+} from "./adapter/inbound/rename-trip.input-port.js";
 import {
   CHANGE_TRIP_PERIOD_INPUT_PORT,
   type ChangeTripPeriodInputPort,
-} from "./adapter/inbound/change-trip-period.input-port";
+} from "./adapter/inbound/change-trip-period.input-port.js";
 import {
   FINISH_TRIP_INPUT_PORT,
   type FinishTripInputPort,
-} from "./adapter/inbound/finish-trip.input-port";
+} from "./adapter/inbound/finish-trip.input-port.js";
 import {
   START_TRIP_INPUT_PORT,
   type StartTripInputPort,
-} from "./adapter/inbound/start-trip.input-port";
+} from "./adapter/inbound/start-trip.input-port.js";
 import {
   UPDATE_PLAN_INPUT_PORT,
   type UpdatePlanInputPort,
-} from "./adapter/inbound/update-plan.input-port";
+} from "./adapter/inbound/update-plan.input-port.js";
 import {
   HOME_READ_UNIT_OF_WORK,
   type HomeReadUnitOfWork,
-} from "./adapter/outbound/home-read.port";
+} from "./adapter/outbound/home-read.port.js";
 import {
   PLANNING_READ_PORT,
   type PlanningReadPort,
-} from "./adapter/outbound/planning-read.port";
+} from "./adapter/outbound/planning-read.port.js";
 import {
   PLANNING_UNIT_OF_WORK,
   type PlanningWorkContext,
-} from "./adapter/outbound/planning-work-context";
+} from "./adapter/outbound/planning-work-context.js";
 import {
   NOTIFICATION_PUBLISHER,
   type NotificationPublisher,
-} from "./adapter/outbound/notification-publisher";
+} from "./adapter/outbound/notification-publisher.js";
 import {
   WRITE_LOG,
   type WriteLog,
-} from "./adapter/outbound/write-log.port";
-import { HomeController } from "./controller/home.controller";
-import { PlansController } from "./controller/plans.controller";
-import { TripsController } from "./controller/trips.controller";
-import { CancelPlanUseCase } from "./usecase/cancel-plan.usecase";
-import { CreatePlanUseCase } from "./usecase/create-plan.usecase";
-import { CreateTripUseCase } from "./usecase/create-trip.usecase";
-import { GetHomeUseCase } from "./usecase/get-home.usecase";
-import { GetItineraryUseCase } from "./usecase/get-itinerary.usecase";
-import { GetPlanUseCase } from "./usecase/get-plan.usecase";
-import { GetTripUseCase } from "./usecase/get-trip.usecase";
-import { ListTripsUseCase } from "./usecase/list-trips.usecase";
-import { MovePlanUseCase } from "./usecase/move-plan.usecase";
-import { RenameTripUseCase } from "./usecase/rename-trip.usecase";
-import { ChangeTripPeriodUseCase } from "./usecase/change-trip-period.usecase";
-import { FinishTripUseCase } from "./usecase/finish-trip.usecase";
-import { StartTripUseCase } from "./usecase/start-trip.usecase";
-import { UpdatePlanUseCase } from "./usecase/update-plan.usecase";
+} from "./adapter/outbound/write-log.port.js";
+import { HomeController } from "./controller/home.controller.js";
+import { PlansController } from "./controller/plans.controller.js";
+import { TripsController } from "./controller/trips.controller.js";
+import { CancelPlanUseCase } from "./usecase/cancel-plan.usecase.js";
+import { CreatePlanUseCase } from "./usecase/create-plan.usecase.js";
+import { CreateTripUseCase } from "./usecase/create-trip.usecase.js";
+import { GetHomeUseCase } from "./usecase/get-home.usecase.js";
+import { GetItineraryUseCase } from "./usecase/get-itinerary.usecase.js";
+import { GetPlanUseCase } from "./usecase/get-plan.usecase.js";
+import { GetTripUseCase } from "./usecase/get-trip.usecase.js";
+import { ListTripsUseCase } from "./usecase/list-trips.usecase.js";
+import { MovePlanUseCase } from "./usecase/move-plan.usecase.js";
+import { RenameTripUseCase } from "./usecase/rename-trip.usecase.js";
+import { ChangeTripPeriodUseCase } from "./usecase/change-trip-period.usecase.js";
+import { FinishTripUseCase } from "./usecase/finish-trip.usecase.js";
+import { StartTripUseCase } from "./usecase/start-trip.usecase.js";
+import { UpdatePlanUseCase } from "./usecase/update-plan.usecase.js";
 
 type WriteDeps = [
   uow: UnitOfWork<PlanningWorkContext>,

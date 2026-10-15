@@ -1,6 +1,6 @@
 import type { z as zod } from "zod";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { ListPushSubscriptionsResponse } from "../../../../generated/notifications.zod";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { ListPushSubscriptionsResponse } from "../../../../generated/notifications.zod.js";
 
 export const LIST_PUSH_SUBSCRIPTIONS_INPUT_PORT = Symbol(
   "LIST_PUSH_SUBSCRIPTIONS_INPUT_PORT",

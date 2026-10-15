@@ -1,6 +1,6 @@
-import type { PushSubscriptionRow } from "../adapter/outbound/push-subscription.repository";
-import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port";
-import type { PushSubscriptionItem } from "../domain/push-subscription";
+import type { PushSubscriptionRow } from "../adapter/outbound/push-subscription.repository.js";
+import type { VapidKeyringPort } from "../adapter/outbound/vapid-keyring.port.js";
+import type { PushSubscriptionItem } from "../domain/push-subscription.js";
 
 /**
  * DBの行を応答の項目に写す。宛先と鍵の列はここで落とす。

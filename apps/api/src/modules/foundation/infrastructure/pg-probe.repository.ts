@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { ProbeRepository } from "../adapter/outbound/probe.repository";
-import { ProbeCount } from "../domain/probe-count";
-import { m0Probes } from "./m0-probe.schema";
+import type { ProbeRepository } from "../adapter/outbound/probe.repository.js";
+import { ProbeCount } from "../domain/probe-count.js";
+import { m0Probes } from "./m0-probe.schema.js";
 
 export const M0_PROBE_ID = "default";
 

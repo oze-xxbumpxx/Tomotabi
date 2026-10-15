@@ -1,4 +1,4 @@
-import type { NotificationEvent } from "../../domain/notification-event";
+import type { NotificationEvent } from "../../domain/notification-event.js";
 
 /**
  * ほかのモジュールから保存のあとの通知のイベントを受け取る口

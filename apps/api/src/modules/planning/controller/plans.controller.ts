@@ -13,15 +13,15 @@ import {
 import type { Itinerary, Plan } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { parseIfMatch, toStrongETag } from "../../../common/http/etag";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { parseIfMatch, toStrongETag } from "../../../common/http/etag.js";
 import {
   parseIdempotencyKey,
   type IdempotencyKey,
-} from "../../../common/http/idempotency-key";
-import { computeRequestHash } from "../../../common/idempotency/command-receipt";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
+} from "../../../common/http/idempotency-key.js";
+import { computeRequestHash } from "../../../common/idempotency/command-receipt.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
 import {
   CancelPlanParams,
   CreatePlanBody,
@@ -33,36 +33,36 @@ import {
   MovePlanParams,
   UpdatePlanBody,
   UpdatePlanParams,
-} from "../../../generated/planning.zod";
+} from "../../../generated/planning.zod.js";
 import {
   CANCEL_PLAN_INPUT_PORT,
   CANCEL_PLAN_OPERATION,
   type CancelPlanInputPort,
-} from "../adapter/inbound/cancel-plan.input-port";
+} from "../adapter/inbound/cancel-plan.input-port.js";
 import {
   CREATE_PLAN_INPUT_PORT,
   CREATE_PLAN_OPERATION,
   type CreatePlanInputPort,
-} from "../adapter/inbound/create-plan.input-port";
+} from "../adapter/inbound/create-plan.input-port.js";
 import {
   GET_ITINERARY_INPUT_PORT,
   type GetItineraryInputPort,
-} from "../adapter/inbound/get-itinerary.input-port";
+} from "../adapter/inbound/get-itinerary.input-port.js";
 import {
   GET_PLAN_INPUT_PORT,
   type GetPlanInputPort,
-} from "../adapter/inbound/get-plan.input-port";
+} from "../adapter/inbound/get-plan.input-port.js";
 import {
   MOVE_PLAN_INPUT_PORT,
   MOVE_PLAN_OPERATION,
   type MovePlanInputPort,
-} from "../adapter/inbound/move-plan.input-port";
-import type { PlanWriteResult } from "../adapter/inbound/plan-write.result";
+} from "../adapter/inbound/move-plan.input-port.js";
+import type { PlanWriteResult } from "../adapter/inbound/plan-write.result.js";
 import {
   UPDATE_PLAN_INPUT_PORT,
   UPDATE_PLAN_OPERATION,
   type UpdatePlanInputPort,
-} from "../adapter/inbound/update-plan.input-port";
+} from "../adapter/inbound/update-plan.input-port.js";
 
 type TripParams = zod.infer<typeof CreatePlanParams>;
 type PlanParams = zod.infer<typeof GetPlanParams>;

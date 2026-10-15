@@ -1,18 +1,18 @@
 import type { Itinerary } from "@tomotabi/contracts";
-import { ApiError } from "../../../common/http/api-error";
-import type { Clock } from "../../../adapter/clock/clock";
-import type { LocalDate } from "../../../common/domain/local-date";
-import type { Trip } from "../domain/trip";
-import { TripPeriod } from "../domain/trip-period";
+import { ApiError } from "../../../common/http/api-error.js";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { LocalDate } from "../../../common/domain/local-date.js";
+import type { Trip } from "../domain/trip.js";
+import { TripPeriod } from "../domain/trip-period.js";
 import type {
   GetItineraryInput,
   GetItineraryInputPort,
-} from "../adapter/inbound/get-itinerary.input-port";
-import type { PlanningReadPort } from "../adapter/outbound/planning-read.port";
-import { parsePlanDate } from "./plan-input";
-import { toPlanDto } from "./plan-dto";
-import { toTripDto } from "./trip-dto";
-import { tripNotAccessible } from "./trip-write-flow";
+} from "../adapter/inbound/get-itinerary.input-port.js";
+import type { PlanningReadPort } from "../adapter/outbound/planning-read.port.js";
+import { parsePlanDate } from "./plan-input.js";
+import { toPlanDto } from "./plan-dto.js";
+import { toTripDto } from "./trip-dto.js";
+import { tripNotAccessible } from "./trip-write-flow.js";
 
 /**
  * 日別しおりの取得。指定日の予定（取りやめ済みを含む）を、有効な

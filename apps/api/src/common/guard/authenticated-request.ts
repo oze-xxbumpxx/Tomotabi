@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import type { UserId } from "../domain/user-id";
+import type { UserId } from "../domain/user-id.js";
 
 /**
  * SessionGuardが通過を許した要求。userId・sessionId・

@@ -1,8 +1,8 @@
-import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { CommandReceiptStore } from "../../../planning/adapter/outbound/planning-work-context";
-import type { PlanEligibilityPort } from "./plan-eligibility.port";
-import type { PlanEventRepository } from "./plan-event.repository";
+import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work.js";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { CommandReceiptStore } from "../../../planning/adapter/outbound/planning-work-context.js";
+import type { PlanEligibilityPort } from "./plan-eligibility.port.js";
+import type { PlanEventRepository } from "./plan-event.repository.js";
 
 export const PLAN_EVENT_UNIT_OF_WORK = Symbol("PLAN_EVENT_UNIT_OF_WORK");
 

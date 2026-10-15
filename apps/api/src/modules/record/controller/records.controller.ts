@@ -9,17 +9,17 @@ import {
 import type { Records } from "@tomotabi/contracts";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
+import type { UserId } from "../../../common/domain/user-id.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
 import {
   ListRecordsParams,
   ListRecordsQueryParams,
-} from "../../../generated/planning.zod";
+} from "../../../generated/planning.zod.js";
 import {
   LIST_RECORDS_INPUT_PORT,
   type ListRecordsInputPort,
-} from "../adapter/inbound/list-records.input-port";
+} from "../adapter/inbound/list-records.input-port.js";
 
 type ListParams = zod.infer<typeof ListRecordsParams>;
 type ListQuery = zod.infer<typeof ListRecordsQueryParams>;

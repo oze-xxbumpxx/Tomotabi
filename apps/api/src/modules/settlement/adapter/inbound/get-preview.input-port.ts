@@ -1,5 +1,5 @@
 import type { Preview } from "@tomotabi/contracts";
-import type { UserId } from "../../../../common/domain/user-id";
+import type { UserId } from "../../../../common/domain/user-id.js";
 
 export const GET_PREVIEW_INPUT_PORT = Symbol("GET_PREVIEW_INPUT_PORT");
 

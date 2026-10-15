@@ -1,15 +1,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool, PoolClient } from "pg";
-import { ApiError } from "../../../common/http/api-error";
+import { ApiError } from "../../../common/http/api-error.js";
 import type {
   HomeReadContext,
   HomeReadUnitOfWork,
   HomeSectionResult,
-} from "../adapter/outbound/home-read.port";
-import { isUnrecoverableHomeReadError } from "../adapter/outbound/home-read.port";
-import type { HomeBalanceFactory } from "../adapter/outbound/home-balance.port";
-import type { HomeRecordsFactory } from "../adapter/outbound/home-records.port";
-import { PgHomeRead } from "./pg-home-read";
+} from "../adapter/outbound/home-read.port.js";
+import { isUnrecoverableHomeReadError } from "../adapter/outbound/home-read.port.js";
+import type { HomeBalanceFactory } from "../adapter/outbound/home-balance.port.js";
+import type { HomeRecordsFactory } from "../adapter/outbound/home-records.port.js";
+import { PgHomeRead } from "./pg-home-read.js";
 
 /** 回復できない欄の失敗を、ホーム全体の503に写す。 */
 function homeUnavailable(): ApiError {

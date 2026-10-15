@@ -1,25 +1,25 @@
 import { and, eq, exists, gt, ne, notExists, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool, PoolClient } from "pg";
-import type { UserId } from "../../../common/domain/user-id";
+import type { UserId } from "../../../common/domain/user-id.js";
 import {
   allowedGoogleAccounts,
   sessions,
   users,
-} from "../../../infrastructure/database/schema/identity";
+} from "../../../infrastructure/database/schema/identity.js";
 import {
   closedPushSessions,
   pushSubscriptions,
-} from "../../../infrastructure/database/schema/notification";
+} from "../../../infrastructure/database/schema/notification.js";
 import {
   tripParticipants,
   trips,
-} from "../../../infrastructure/database/schema/planning";
+} from "../../../infrastructure/database/schema/planning.js";
 import type {
   DispatchContext,
   DispatchTarget,
   NotificationDispatchStore,
-} from "../adapter/outbound/notification-dispatch-store";
+} from "../adapter/outbound/notification-dispatch-store.js";
 
 /** 読み取り・無効化のトランザクションの上限（設計書「エラー処理」）。 */
 const QUERY_TIMEOUT = "2s";

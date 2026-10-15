@@ -11,36 +11,36 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 import type { z as zod } from "zod";
-import type { UserId } from "../../../common/domain/user-id";
-import type { AuthenticatedRequest } from "../../../common/guard/authenticated-request";
-import { CurrentUser } from "../../../common/guard/current-user.decorator";
-import { ZodBodyPipe } from "../../../common/http/zod-body.pipe";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { AuthenticatedRequest } from "../../../common/guard/authenticated-request.js";
+import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
+import { ZodBodyPipe } from "../../../common/http/zod-body.pipe.js";
 import {
   DisablePushSubscriptionParams,
   RegisterPushSubscriptionBody,
-} from "../../../generated/notifications.zod";
-import { ApiError } from "../../../common/http/api-error";
-import { endpointHasControlChar } from "../domain/push-endpoint";
-import type { PushSubscriptionItem } from "../domain/push-subscription";
+} from "../../../generated/notifications.zod.js";
+import { ApiError } from "../../../common/http/api-error.js";
+import { endpointHasControlChar } from "../domain/push-endpoint.js";
+import type { PushSubscriptionItem } from "../domain/push-subscription.js";
 import {
   DISABLE_PUSH_SUBSCRIPTION_INPUT_PORT,
   type DisablePushSubscriptionInputPort,
-} from "../adapter/inbound/disable-push-subscription.input-port";
+} from "../adapter/inbound/disable-push-subscription.input-port.js";
 import {
   GET_PUSH_CONFIG_INPUT_PORT,
   type GetPushConfigInputPort,
   type PushConfig,
-} from "../adapter/inbound/get-push-config.input-port";
+} from "../adapter/inbound/get-push-config.input-port.js";
 import {
   LIST_PUSH_SUBSCRIPTIONS_INPUT_PORT,
   type ListPushSubscriptionsInputPort,
   type PushSubscriptionList,
-} from "../adapter/inbound/list-push-subscriptions.input-port";
+} from "../adapter/inbound/list-push-subscriptions.input-port.js";
 import {
   PUT_PUSH_SUBSCRIPTION_INPUT_PORT,
   type PushRegistrationInput,
   type PutPushSubscriptionInputPort,
-} from "../adapter/inbound/put-push-subscription.input-port";
+} from "../adapter/inbound/put-push-subscription.input-port.js";
 
 type DisableParams = zod.infer<typeof DisablePushSubscriptionParams>;
 

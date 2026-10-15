@@ -1,7 +1,7 @@
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UserId } from "../../../common/domain/user-id";
-import type { ClosePushSessionInputPort } from "../adapter/inbound/close-push-session.input-port";
-import type { NotificationUnitOfWork } from "../adapter/outbound/push-subscription.repository";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UserId } from "../../../common/domain/user-id.js";
+import type { ClosePushSessionInputPort } from "../adapter/inbound/close-push-session.input-port.js";
+import type { NotificationUnitOfWork } from "../adapter/outbound/push-subscription.repository.js";
 
 /**
  * POST /api/auth/sign-out の手前で、そのセッションの通知を止める

@@ -1,22 +1,22 @@
-import type { Clock } from "../../../adapter/clock/clock";
-import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work";
-import { Plan } from "../domain/plan";
-import type { PlanKind } from "../domain/plan-kind";
+import type { Clock } from "../../../adapter/clock/clock.js";
+import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { Plan } from "../domain/plan.js";
+import type { PlanKind } from "../domain/plan-kind.js";
 import {
   UPDATE_PLAN_OPERATION,
   type UpdatePlanInput,
   type UpdatePlanInputPort,
-} from "../adapter/inbound/update-plan.input-port";
-import type { PlanWriteResult } from "../adapter/inbound/plan-write.result";
-import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context";
-import type { WriteLog } from "../adapter/outbound/write-log.port";
+} from "../adapter/inbound/update-plan.input-port.js";
+import type { PlanWriteResult } from "../adapter/inbound/plan-write.result.js";
+import type { PlanningWorkContext } from "../adapter/outbound/planning-work-context.js";
+import type { WriteLog } from "../adapter/outbound/write-log.port.js";
 import {
   parsePlanKind,
   parsePlanMemo,
   parsePlanName,
   parsePlanTime,
-} from "./plan-input";
-import { executePlanWrite, runPlanUpdate } from "./plan-write-flow";
+} from "./plan-input.js";
+import { executePlanWrite, runPlanUpdate } from "./plan-write-flow.js";
 
 /**
  * 予定の部分更新。日付は含めない（日の移動はmoveが担う）。

@@ -5,8 +5,8 @@
 
 import { generateKeyPairSync } from "node:crypto";
 import { chmodSync, existsSync, writeFileSync } from "node:fs";
-import { CliUsageError } from "../shared/slot";
-import type { CliIo } from "../shared/console-io";
+import { CliUsageError } from "../shared/slot.js";
+import type { CliIo } from "../shared/console-io.js";
 
 /** VAPID_KEYSの配列に足す1要素。作った鍵は未使用なのでstateはcurrent。 */
 export type VapidKeyElement = {

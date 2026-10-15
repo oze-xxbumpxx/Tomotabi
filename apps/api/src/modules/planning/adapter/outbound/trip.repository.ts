@@ -1,7 +1,7 @@
-import type { BoundedText } from "../../../../common/domain/bounded-text";
-import type { UserId } from "../../../../common/domain/user-id";
-import type { Trip } from "../../domain/trip";
-import type { TripPeriod } from "../../domain/trip-period";
+import type { BoundedText } from "../../../../common/domain/bounded-text.js";
+import type { UserId } from "../../../../common/domain/user-id.js";
+import type { Trip } from "../../domain/trip.js";
+import type { TripPeriod } from "../../domain/trip-period.js";
 
 export type NewTrip = Readonly<{
   name: BoundedText;

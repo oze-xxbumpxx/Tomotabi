@@ -1,10 +1,10 @@
-import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work";
+import type { UnitOfWork } from "../../../../adapter/transaction/unit-of-work.js";
 import type {
   FinanceWorkContext,
   TripRosterPort,
-} from "../../../record/adapter/outbound/finance-work-context";
-import type { PaymentsReadPort } from "./payments-read.port";
-import type { SettlementRepository } from "./settlement.repository";
+} from "../../../record/adapter/outbound/finance-work-context.js";
+import type { PaymentsReadPort } from "./payments-read.port.js";
+import type { SettlementRepository } from "./settlement.repository.js";
 
 export const SETTLEMENT_UNIT_OF_WORK = Symbol("SETTLEMENT_UNIT_OF_WORK");
 export const SETTLEMENT_READ_UNIT_OF_WORK = Symbol(

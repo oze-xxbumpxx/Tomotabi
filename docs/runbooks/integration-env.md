@@ -27,7 +27,7 @@ Googleの戻り先にVercelの画面のURLが要るので、Vercelのプロジ�
 
   ```bash
   brew install libpq
-  echo 'export PATH="/opt/homebrew/opt/libpq/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+  echo "export PATH=\"$(brew --prefix libpq)/bin:\$PATH\"" >> ~/.zshrc && source ~/.zshrc
   ```
 - このリポジトリの最新のmainと`npm ci`
 - 秘密情報を一時的に書いておく場所（パスワード管理ソフトなど）。リポジトリの中や`.env`には書かない
@@ -66,17 +66,17 @@ psql "$MIGRATION_DATABASE_URL" -c 'select current_user'
 npm run db:migrate -w @tomotabi/api
 ```
 
-`select current_user`で`migrator`と出れば、接続文字列は正しい。
+`select current_user`で`migrator`と出れば、接続文字列は正しい。8章でも使うので、`printf %s "$MIGRATION_DATABASE_URL" | pbcopy`でパスワード管理ソフトに控え、`pbcopy < /dev/null`で空にする。
 
 最後に、実行用の接続文字列を作る。Neonの**pooled**の接続は、直接の接続のホスト名の最初の部分に`-pooler`が付いたもの。次のコマンドで、ユーザー名とパスワードも`app_runtime`のものに替えて作る。
 
 ```bash
 DATABASE_URL="$(ADMIN_URL="$ADMIN_URL" PW="$APP_RUNTIME_PASSWORD" python3 -c 'import os,urllib.parse as u; p=u.urlsplit(os.environ["ADMIN_URL"]); first,rest=p.hostname.split(".",1); first=first if first.endswith("-pooler") else first+"-pooler"; host=first+"."+rest+(":%d" % p.port if p.port else ""); print(u.urlunsplit(p._replace(netloc="app_runtime:%s@%s" % (os.environ["PW"], host))))')"
 psql "$DATABASE_URL" -c 'select current_user'
-printf %s "$DATABASE_URL" | sed -E 's#://([^:]+):[^@]*@#://\1:****@#'
+DATABASE_URL="$DATABASE_URL" python3 -c 'import os,urllib.parse as u; p=u.urlsplit(os.environ["DATABASE_URL"]); print(u.urlunsplit(p._replace(netloc="%s:****@%s" % (p.username, p.hostname))))'
 ```
 
-`app_runtime`と出て、表示したホスト名に`-pooler`があり、末尾に`sslmode=require`があれば正しい。これが6章の`DATABASE_URL`になる。Vercelに貼るときは`printf %s "$DATABASE_URL" | pbcopy`でクリップボードへ写し、登録のあと`pbcopy < /dev/null`で空にする。
+`app_runtime`と出て、表示したホスト名に`-pooler`があれば正しい（表示はパスワードを伏せる）。接続文字列の末尾に`sslmode=require`があることは、`printf %s "$DATABASE_URL" | grep -o 'sslmode=[a-z-]*'`で確かめる。これが6章の`DATABASE_URL`になる。Vercelに貼るときは`printf %s "$DATABASE_URL" | pbcopy`でクリップボードへ写し、登録のあと`pbcopy < /dev/null`で空にする。
 
 **パスワードが合わないとき**（`password authentication failed`）は、端末のタブを閉じてパスワードの変数が消えたか、写し間違えた。管理者の接続で付け直し、上の手順で接続文字列を作り直す。
 
@@ -163,7 +163,15 @@ export MIGRATION_DATABASE_URL ENROLL_GOOGLE_CLIENT_ID ENROLL_GOOGLE_CLIENT_SECRE
 npm run cli:enroll -w @tomotabi/api -- --slot 0
 ```
 
-`MIGRATION_DATABASE_URL`は2章で入れたもの。端末を閉じていたら、2章と同じく`read -rs`で入れ直す。
+`MIGRATION_DATABASE_URL`は2章で入れたもの。端末を閉じていたら、パスワード管理ソフトに控えたmigratorの直接の接続を、次で入れ直す。
+
+```bash
+read -rs "MIGRATION_DATABASE_URL?migratorの直接の接続: "; echo
+export MIGRATION_DATABASE_URL
+psql "$MIGRATION_DATABASE_URL" -c 'select current_user'
+```
+
+`migrator`と出れば入っている。
 
 slot 1も同じように、もう一人のアカウントで行う。二人がそろうまでは旅行を作れない（アプリが「二人がそろっていない」として断る）ので、旅行から先の点検は二人の登録のあとに行う。
 

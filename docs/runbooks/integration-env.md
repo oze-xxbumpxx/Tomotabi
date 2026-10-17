@@ -23,7 +23,12 @@ Googleの戻り先にVercelの画面のURLが要るので、Vercelのプロジ�
 
 ## 0. 手元に用意するもの
 
-- `psql`（PostgreSQLのクライアント。Homebrewなら`brew install libpq`）
+- `psql`（PostgreSQLのクライアント）。Homebrewの`libpq`は、入れただけではコマンドが見つからないので、PATHに足す。
+
+  ```bash
+  brew install libpq
+  echo 'export PATH="/opt/homebrew/opt/libpq/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+  ```
 - このリポジトリの最新のmainと`npm ci`
 - 秘密情報を一時的に書いておく場所（パスワード管理ソフトなど）。リポジトリの中や`.env`には書かない
 
@@ -53,15 +58,34 @@ psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/grant-database.sql
 
 2つのパスワードは、`echo "$MIGRATOR_PASSWORD"`のように表示してパスワード管理ソフトへ写す。
 
-続けて、migratorのロールでmigrationを適用する。接続文字列は、管理者の接続のユーザー名とパスワードを`migrator`のものに替えた**直接の接続**。
+続けて、migratorのロールでmigrationを適用する。接続文字列は、管理者の接続のユーザー名とパスワードを`migrator`のものに替えた**直接の接続**。手で書き換えると間違えやすいので、同じ端末のタブで、次のコマンドで作る。
 
 ```bash
-read -rs "MIGRATION_DATABASE_URL?migratorの直接の接続: "; echo
-export MIGRATION_DATABASE_URL
+export MIGRATION_DATABASE_URL="$(ADMIN_URL="$ADMIN_URL" PW="$MIGRATOR_PASSWORD" python3 -c 'import os,urllib.parse as u; p=u.urlsplit(os.environ["ADMIN_URL"]); host=p.hostname+(":%d" % p.port if p.port else ""); print(u.urlunsplit(p._replace(netloc="migrator:%s@%s" % (os.environ["PW"], host))))')"
+psql "$MIGRATION_DATABASE_URL" -c 'select current_user'
 npm run db:migrate -w @tomotabi/api
 ```
 
-最後に、実行用の接続文字列を作る。Neonの管理画面で**pooled**の接続文字列を取り、ユーザー名とパスワードを`app_runtime`のものに替える。末尾に`sslmode=require`があることを確かめる。これが6章の`DATABASE_URL`になる。
+`select current_user`で`migrator`と出れば、接続文字列は正しい。
+
+最後に、実行用の接続文字列を作る。Neonの**pooled**の接続は、直接の接続のホスト名の最初の部分に`-pooler`が付いたもの。次のコマンドで、ユーザー名とパスワードも`app_runtime`のものに替えて作る。
+
+```bash
+DATABASE_URL="$(ADMIN_URL="$ADMIN_URL" PW="$APP_RUNTIME_PASSWORD" python3 -c 'import os,urllib.parse as u; p=u.urlsplit(os.environ["ADMIN_URL"]); first,rest=p.hostname.split(".",1); first=first if first.endswith("-pooler") else first+"-pooler"; host=first+"."+rest+(":%d" % p.port if p.port else ""); print(u.urlunsplit(p._replace(netloc="app_runtime:%s@%s" % (os.environ["PW"], host))))')"
+psql "$DATABASE_URL" -c 'select current_user'
+printf %s "$DATABASE_URL" | sed -E 's#://([^:]+):[^@]*@#://\1:****@#'
+```
+
+`app_runtime`と出て、表示したホスト名に`-pooler`があり、末尾に`sslmode=require`があれば正しい。これが6章の`DATABASE_URL`になる。Vercelに貼るときは`printf %s "$DATABASE_URL" | pbcopy`でクリップボードへ写し、登録のあと`pbcopy < /dev/null`で空にする。
+
+**パスワードが合わないとき**（`password authentication failed`）は、端末のタブを閉じてパスワードの変数が消えたか、写し間違えた。管理者の接続で付け直し、上の手順で接続文字列を作り直す。
+
+```bash
+MIGRATOR_PASSWORD="$(openssl rand -hex 32)"
+echo "ALTER ROLE migrator PASSWORD :'pw';" | psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -v pw="$MIGRATOR_PASSWORD"
+```
+
+`app_runtime`も同じ形で付け直せる（`APP_RUNTIME_PASSWORD`と`ALTER ROLE app_runtime`）。付け直したら、パスワード管理ソフトの値も替える。
 
 ## 3. Vercelに2つのプロジェクトを作る
 
@@ -109,6 +133,8 @@ Settings > Environment Variablesで、Environmentは**Production**、秘密情�
 | api-test | `VAPID_KEYS` | `[<5章の1要素>]` | する |
 | api-test | `VAPID_SUBJECT` | `https://github.com/oze-xxbumpxx/Tomotabi` | しない |
 
+登録したら、一覧に7つそろっているかを数える。値の前後に`http://`や`/`が付いていないかも見る（貼るときにURLと見なされて付くことがある）。環境変数を変えたら、9章のボタンで出し直すまで反映されない。Vercelの画面の「Redeploy」は、このワークフローで出したデプロイでは使えない。
+
 web-testには登録しない。画面の`/api`の転送先（`API_ORIGIN`）は、デプロイのワークフローが7章のGitHubの変数からビルドに渡す。
 
 ## 7. GitHubのEnvironmentを作る
@@ -139,7 +165,7 @@ npm run cli:enroll -w @tomotabi/api -- --slot 0
 
 `MIGRATION_DATABASE_URL`は2章で入れたもの。端末を閉じていたら、2章と同じく`read -rs`で入れ直す。
 
-slot 1も同じように、もう一人のアカウントで行う。
+slot 1も同じように、もう一人のアカウントで行う。二人がそろうまでは旅行を作れない（アプリが「二人がそろっていない」として断る）ので、旅行から先の点検は二人の登録のあとに行う。
 
 ## 9. 最初のデプロイ
 

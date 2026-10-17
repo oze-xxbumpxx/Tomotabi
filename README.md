@@ -1,6 +1,6 @@
 # Tomotabi
 
-本人とパートナー向けの旅行Webアプリ。いまは **M0（開発基盤と互換性の検証）** までです。旅行・精算・認証は未実装です。
+本人とパートナー向けの旅行Webアプリ。ログイン（Googleと二人の初期登録）、旅行と予定（しおり）、支払いと精算、記録とホーム、通知まで実装済みです。いまは、Vercel・Neonの検証用の環境で、実機の点検をしています（結合検証環境）。本番への公開はまだです。
 
 ## 採用構成
 
@@ -11,9 +11,9 @@
 | api | NestJSモジュラーモノリス。業務モジュール内はController / UseCase / Service / Domain / Infrastructure / Adapter |
 | 契約 | `packages/contracts`に公開APIの型とOpenAPIだけを置く |
 | webのAPI通信 | OpenAPIからOrvalでfetch関数とZodスキーマを生成（`apps/web/src/shared/api/generated/`、手編集禁止）。応答はZodで検証し、neverthrowの`ResultAsync`で成功と失敗を返す |
-| DB | Drizzle ORM + `pg`。M0の表は検証用`infra.m0_probes`のみ |
+| DB | Drizzle ORM + `pg`。スキーマは`identity`・`planning`・`record`・`settlement`・`notification`・`infra`（`apps/api/src/infrastructure/database/schema/`） |
 | テスト | Vitest（web / api共通ランナー）。APIは`@nestjs/testing`とSupertest。実PostgreSQLはTestcontainers |
-| CI | GitHub Actionsのquality / build / api-db |
+| CI | GitHub Actionsのquality / build / api-db / harness / e2e。検証用の環境へのデプロイは手動のワークフロー`deploy-integration`（承認つき、mainだけ） |
 
 **Adapterの意味**: このリポジトリではAdapterは **IF定義の置き場** です。一般的なPorts and Adaptersでいう「外部接続の実装」はInfrastructureに置きます。UseCaseはIFに依存し、Service / Infrastructureの実装はModuleで注入します。
 
@@ -22,17 +22,17 @@
 ```text
 apps/web/src/
   app/                 ルートと layout（Server Component）
-  screens/home/        画面の組立
-  features/foundation/ 検証用 UI / model / api
+  screens/             画面の組立（ホーム・旅行・しおり・記録・支払い・精算・通知の設定など）
+  features/            機能ごとの UI / model / api
   shared/              汎用 UI と HTTP
 apps/api/src/
-  modules/foundation/  6区分の最小接続例（業務機能ではない）
+  modules/             identity・planning・record・settlement・notification・foundation
   adapter/transaction/ 共通 UnitOfWork の IF
-  infrastructure/      pool と M0 検証 SQL
-packages/contracts/    wire 型と foundation OpenAPI
+  infrastructure/      pool・DBのスキーマ・ログなど
+packages/contracts/    wire 型と OpenAPI
 ```
 
-未実装のtrips / paymentsなどの空クラスは作っていません。
+`apps/api`はESM（ADR-0009）。相対importには`.js`を付けます。
 
 ## 前提
 
@@ -158,11 +158,9 @@ allowlistを`enabled = false`にして、そのユーザーの全セッション
 | Playwright E2E | 未作成。成功扱いにしていない |
 | ハーネス | PASS。`node --test .claude/tests/*.test.mjs` 88件 |
 
-## 残課題（M1以降）
+## 残課題
 
-- Better Auth標準表、二人の初期登録、Cookie / Guard
-- 本番migrationとruntime権限。`sql/00_validation_prerequisites.sql`は本番migrationではない
-- 旅行・予定・支払い・精算・通知
-- Playwright E2Eの有効化
-- Vercel / Neonの作成と公開（M0対象外）
+- 結合検証環境の残りの点検（`docs/tests/integration-env.md`の記録の表）
+- 公開準備: 本番の設定、本番のmigrationと初期登録、DBのバックアップと戻し方、運用の確認項目（詳細設計08）
+- 初回公開と、iPhone・Androidでの最後の受け入れ（`docs/tests/final-acceptance.md`）
 - GitHub Actionsのactionをcommit SHAで固定する

@@ -4,7 +4,7 @@ Claude CodeとCodexは、このリポジトリの同じハーネス・成果物�
 
 ## 現在の状態
 
-- M0（開発基盤）まで。旅行・認証・精算などの業務機能は未実装。
+- ログイン・旅行と予定・支払いと精算・記録とホーム・通知まで実装済み。いまは結合検証環境（Vercel・Neonの検証用の環境）で実機の点検をしている。本番への公開はまだ。
 - 採用スタック: Node 24.x（ADR-0008）、npm workspaces、`apps/web`（Next.js App Router）、`apps/api`（NestJSモジュラーモノリス＋6区分）、`packages/contracts`（公開API契約のみ）、Drizzle＋pg、Vitest。詳細はREADMEと`docs/decisions/ADR-0001-m0-workspace-and-stack.md`。
 - スタック固有の規約は、採用済み技術にだけ適用する。存在しない設計書・コマンド・レビュー結果をあるものとして扱わない。
 - ハーネスの`run-quality-gates.sh`はロックファイルからパッケージマネージャーを検出して実行する（本リポジトリではnpm）。アプリの品質確認は`npm run lint` / `npm run type-check` / `npm test` / `npm run build`を使う。

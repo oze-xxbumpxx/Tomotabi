@@ -17,3 +17,23 @@ export function RecordListSkeleton() {
     </SkeletonFrame>
   );
 }
+
+/**
+ * 記録の画面全体の骨組み。直接開いたとき、問い合わせを読む前（Suspenseの待ち）に出す。
+ * 読み込み中の本物の画面（見出し・絞り込み・一覧の骨組み）と同じ並びにして、
+ * 骨組みどうしが入れ替わって動かないようにする。
+ */
+export function RecordsPageSkeleton() {
+  return (
+    <main className="records-page">
+      <h1 className="page-title">記録</h1>
+      <div className="record-filters" aria-hidden="true">
+        <Skeleton width="64px" height={36} />
+        <Skeleton width="64px" height={36} />
+        <Skeleton width="64px" height={36} />
+        <Skeleton width="64px" height={36} />
+      </div>
+      <RecordListSkeleton />
+    </main>
+  );
+}

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Loading } from "@/shared/ui/state/loading";
+import { RecordsPageSkeleton } from "@/screens/records/records-skeleton";
 import { isUuidString } from "@/shared/lib/uuid";
 import { RecordsRoute } from "./records-route";
 
@@ -20,7 +20,7 @@ export default async function Page({
   }
   // useSearchParams()を使う部品はSuspenseで包む（包まないとページ全体がブラウザでの組み立てになる）。
   return (
-    <Suspense fallback={<main className="records-page"><Loading /></main>}>
+    <Suspense fallback={<RecordsPageSkeleton />}>
       <RecordsRoute tripId={tripId} />
     </Suspense>
   );

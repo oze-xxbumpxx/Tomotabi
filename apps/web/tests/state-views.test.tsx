@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -7,6 +7,7 @@ import { Loading } from "@/shared/ui/state/loading";
 import { NotAvailable } from "@/shared/ui/state/not-available";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
 import {
+  REFETCHING_DELAY_MS,
   RefetchFailed,
   Refetching,
 } from "@/shared/ui/state/refetch-failed";
@@ -70,16 +71,60 @@ describe("W-14: 再取得の失敗は前回の表示を残す", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it("読み込み中と更新中を出す", () => {
-    render(
-      <>
-        <Loading />
-        <Refetching />
-      </>,
-    );
+  it("読み込み中は共通の骨組みを出し、読み上げには「読み込み中」と伝える（SS-T02）", () => {
+    render(<Loading />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("読み込み中");
-    expect(screen.getByText("更新中")).toBeInTheDocument();
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("読み込み中");
+    expect(status).toHaveAttribute("aria-busy", "true");
+    expect(status.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+  });
+
+  it("更新中は0.5秒たつまで出さず、たつと重ねる札で出す（SS-T03・SS-T04）", () => {
+    vi.useFakeTimers();
+    try {
+      const { container, unmount } = render(
+        <main>
+          <p>中身</p>
+          <Refetching />
+        </main>,
+      );
+      expect(screen.queryByText("更新中")).not.toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(REFETCHING_DELAY_MS - 1);
+      });
+      expect(screen.queryByText("更新中")).not.toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      const badge = screen.getByText("更新中").closest(".refetching");
+      expect(badge).not.toBeNull();
+      // 中身の段落の並びは変わらない（札は中身の前に差し込まれない）
+      expect(container.querySelector("main")?.firstElementChild?.textContent).toBe("中身");
+
+      unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("0.5秒より前に再取得が終われば、更新中は一度も出ない（SS-T03）", () => {
+    vi.useFakeTimers();
+    try {
+      const { rerender } = render(<Refetching />);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      rerender(<></>);
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.queryByText("更新中")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

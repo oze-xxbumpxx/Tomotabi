@@ -10,13 +10,20 @@
       "reason": "L2。結合検証環境でのユーザーの指摘3つが要件にあたり、要件定義書は作らない"
     },
     "design": {
-      "state": "approval"
+      "state": "done",
+      "approved": {
+        "pr": 234,
+        "at": "2026-10-18"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/screen-speed.md"
+      ]
     },
     "implement": {
-      "state": "pending"
+      "state": "active"
     },
     "review": {
       "state": "pending"
@@ -28,5 +35,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-18T10:39:30.141Z"
+  "updated_at": "2026-10-18T10:47:05.681Z"
 }

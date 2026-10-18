@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +12,17 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, push: vi.fn() }),
 }));
 
+import { createQueryClient } from "@/shared/api/query-client";
 import { EntryScreen } from "@/screens/entry/entry-screen";
+
+// ログイン中の人の情報は取得の仕組み（TanStack Query）で使い回すので、試験ごとに新しい入れ物で包む。
+function renderEntry() {
+  return render(
+    <QueryClientProvider client={createQueryClient()}>
+      <EntryScreen />
+    </QueryClientProvider>,
+  );
+}
 
 const userId = "550e8400-e29b-41d4-a716-446655440000";
 const tripId = "8a6e0804-2bd0-4672-b79d-d97027f9071a";
@@ -84,7 +95,7 @@ describe("EntryScreen (/)", () => {
     stubApi({ status: 200, body: meBody });
     window.localStorage.setItem(selectedKey, tripId);
 
-    render(<EntryScreen />);
+    renderEntry();
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(`/trips/${tripId}/home`),
@@ -100,7 +111,7 @@ describe("EntryScreen (/)", () => {
     );
     window.localStorage.setItem(selectedKey, tripId);
 
-    render(<EntryScreen />);
+    renderEntry();
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith("/trips"),
@@ -116,7 +127,7 @@ describe("EntryScreen (/)", () => {
   it("W-03: 保存値が無ければ /trips へ", async () => {
     const fetchMock = stubApi({ status: 200, body: meBody });
 
-    render(<EntryScreen />);
+    renderEntry();
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith("/trips"),
@@ -134,7 +145,7 @@ describe("EntryScreen (/)", () => {
     });
     stubApi({ status: 200, body: meBody });
 
-    render(<EntryScreen />);
+    renderEntry();
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith("/trips"),
@@ -144,7 +155,7 @@ describe("EntryScreen (/)", () => {
   it("401 なら /sign-in へ（再送しない）", async () => {
     const fetchMock = stubApi({ status: 401 });
 
-    render(<EntryScreen />);
+    renderEntry();
 
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith("/sign-in"),
@@ -158,7 +169,7 @@ describe("EntryScreen (/)", () => {
   it("503 なら一時的な利用不可を出し、再試行で進める", async () => {
     const fetchMock = stubApi({ status: 503 });
 
-    render(<EntryScreen />);
+    renderEntry();
 
     expect(
       await screen.findByText(/一時的に利用できません/),
@@ -186,7 +197,7 @@ describe("EntryScreen (/)", () => {
       body: { user: { id: "not-uuid", displayName: "そうた" } },
     });
 
-    render(<EntryScreen />);
+    renderEntry();
 
     expect(
       await screen.findByText("情報を読み込めませんでした。"),

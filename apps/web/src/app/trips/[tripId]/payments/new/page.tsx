@@ -1,44 +1,27 @@
 import { notFound } from "next/navigation";
-import { PaymentFormScreen } from "@/screens/payment-form/payment-form-screen";
+import { Suspense } from "react";
+import { Loading } from "@/shared/ui/state/loading";
 import { isUuidString } from "@/shared/lib/uuid";
+import { PaymentNewRoute } from "./payment-new-route";
 
-/**
- * 支払いを記録（/trips/{tripId}/payments/new?planId=）。
- * planIdはUUIDの形のときだけ渡す（形の合わない指定は無かったことにする）。
- */
-export default async function PaymentNewPage({
+/** 画面の部品をCDNから配るため、IDは前もって決めない（設計書 screen-speed のSS-06）。 */
+export function generateStaticParams(): { tripId: string }[] {
+  return [];
+}
+
+export default async function Page({
   params,
-  searchParams,
 }: {
   params: Promise<{ tripId: string }>;
-  searchParams: Promise<{
-    planId?: string | string[];
-    from?: string | string[];
-  }>;
 }) {
   const { tripId } = await params;
   if (!isUuidString(tripId)) {
     notFound();
   }
-  const raw = await searchParams;
-  const planIdParam = Array.isArray(raw.planId)
-    ? raw.planId[0]
-    : raw.planId;
-  const planId =
-    planIdParam !== undefined && isUuidString(planIdParam)
-      ? planIdParam
-      : null;
-  // 「正しい内容で支払いを記録」の写す支払い（形の合わない指定は無し扱い）。
-  const fromParam = Array.isArray(raw.from) ? raw.from[0] : raw.from;
-  const fromPaymentId =
-    fromParam !== undefined && isUuidString(fromParam)
-      ? fromParam
-      : null;
+  // useSearchParams()を使う部品はSuspenseで包む（包まないとページ全体がブラウザでの組み立てになる）。
   return (
-    <PaymentFormScreen
-      tripId={tripId}
-      planId={planId}
-      fromPaymentId={fromPaymentId}
-    />
+    <Suspense fallback={<main><Loading /></main>}>
+      <PaymentNewRoute tripId={tripId} />
+    </Suspense>
   );
 }

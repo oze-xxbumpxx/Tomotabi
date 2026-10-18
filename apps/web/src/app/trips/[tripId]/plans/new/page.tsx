@@ -1,24 +1,27 @@
 import { notFound } from "next/navigation";
-import { PlanFormScreen } from "@/screens/plan-form/plan-form-screen";
+import { Suspense } from "react";
+import { Loading } from "@/shared/ui/state/loading";
 import { isUuidString } from "@/shared/lib/uuid";
+import { PlanNewRoute } from "./plan-new-route";
+
+/** 画面の部品をCDNから配るため、IDは前もって決めない（設計書 screen-speed のSS-06）。 */
+export function generateStaticParams(): { tripId: string }[] {
+  return [];
+}
 
 export default async function Page({
   params,
-  searchParams,
 }: {
   params: Promise<{ tripId: string }>;
-  searchParams: Promise<{ date?: string | string[] }>;
 }) {
   const { tripId } = await params;
   if (!isUuidString(tripId)) {
     notFound();
   }
-  const { date: raw } = await searchParams;
-  const date =
-    typeof raw === "string" && raw !== ""
-      ? raw
-      : Array.isArray(raw) && typeof raw[0] === "string" && raw[0] !== ""
-        ? raw[0]
-        : null;
-  return <PlanFormScreen mode="new" tripId={tripId} date={date} />;
+  // useSearchParams()を使う部品はSuspenseで包む（包まないとページ全体がブラウザでの組み立てになる）。
+  return (
+    <Suspense fallback={<main><Loading /></main>}>
+      <PlanNewRoute tripId={tripId} />
+    </Suspense>
+  );
 }

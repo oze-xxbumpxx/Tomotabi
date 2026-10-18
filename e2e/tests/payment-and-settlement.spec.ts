@@ -48,7 +48,7 @@ async function recordPayment(page: Page, input: PaymentInput): Promise<void> {
 /** タブバーの「精算」から精算の画面を開く。 */
 async function openSettlement(page: Page): Promise<void> {
   await page.getByRole("navigation", { name: "タブ" }).getByRole("link", { name: "精算" }).click();
-  await expect(page.getByRole("heading", { name: "精算" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "精算", exact: true })).toBeVisible();
 }
 
 test("FE-01: 支払いを2件記録して受け渡しを確認・記録する", async ({ hinataPage: page }) => {

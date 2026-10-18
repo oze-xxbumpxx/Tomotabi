@@ -33,7 +33,7 @@ import { formatLocalDate } from "@/shared/lib/local-date";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 import { useNow } from "@/shared/lib/use-now";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
-import { Loading } from "@/shared/ui/state/loading";
+import { HomeSkeleton } from "./home-skeleton";
 import { NotAvailable } from "@/shared/ui/state/not-available";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
 import {
@@ -267,11 +267,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
   }
 
   if (home.isPending) {
-    return (
-      <main>
-        <Loading />
-      </main>
-    );
+    return <HomeSkeleton />;
   }
 
   // 取得・再取得の401は、表示済みのデータがあっても業務データを隠してC-1。

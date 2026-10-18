@@ -71,6 +71,16 @@
     --color-warning: #f5c66b;
     --color-danger: #ff8a7a;
     --color-danger-bg: #3a1714;
+
+    /* v3のデザイントークンでダークが「—」（未定）の7色。ダークモードの画面（v3の第4弾）が
+       決まるまでの仮の値として、Claude Codeが既存のダークの色に合わせて選んだ
+       （2026-10-18 ユーザーの判断）。v3で決まったら置き換える。 */
+    --color-surface-locked: #262523;
+    --color-text-secondary: #d4d2cc;
+    --color-accent-soft: #3a2116;
+    --color-success-bg: #12301c;
+    --color-info-bg: #182247;
+    --color-warning-bg: #3a2a0c;
   }
 }
 

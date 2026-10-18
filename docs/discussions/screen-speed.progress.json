@@ -1,0 +1,32 @@
+{
+  "feature": "screen-speed",
+  "title": "画面の速さと読み込み中の表示",
+  "level": "L2",
+  "page": "https://claude.ai/artifact/EPpUMXVPh9neRVAuqZQpHX",
+  "round": 2,
+  "stages": {
+    "requirements": {
+      "state": "skipped",
+      "reason": "L2。結合検証環境でのユーザーの指摘3つが要件にあたり、要件定義書は作らない"
+    },
+    "design": {
+      "state": "approval"
+    },
+    "plan": {
+      "state": "pending"
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-10-18T10:39:30.141Z"
+}

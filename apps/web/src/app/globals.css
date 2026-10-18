@@ -83,6 +83,13 @@
   box-sizing: border-box;
 }
 
+html {
+  /* 2回たたいたときの拡大を止める（viewportの指定と合わせる） */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
 }

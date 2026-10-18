@@ -439,6 +439,21 @@ afterEach(async () => {
 });
 
 describe("精算の画面（14・14f・14g・14i）", () => {
+  it("ログイン中の人の情報が使い回しで揃っていても、業務のデータを待つあいだは全体の骨組みを出す", () => {
+    // 業務のデータは返さない（待ちのまま）
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+    const client = createQueryClient();
+    client.setQueryData(["me"], meBody);
+    render(
+      <QueryClientProvider client={client}>
+        <SettlementScreen tripId={tripId} />
+      </QueryClientProvider>,
+    );
+    const status = screen.getByRole("status");
+    expect(status.tagName).toBe("MAIN");
+    expect(status).toHaveClass("settle-page");
+  });
+
   it("FW-05: 対象 0 件は「現在、精算する対象はありません」で確認は作れない", async () => {
     const fetchMock = stubApi({
       balance: () => json(balanceBody({ targetCount: 0, items: [], transfer: zeroTransfer })),

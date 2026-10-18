@@ -188,12 +188,9 @@ export function SettlementScreen({
     );
   }
 
-  if (
-    balance.isPending &&
-    previews.isPending &&
-    settlements.isPending &&
-    meState.status === "loading"
-  ) {
+  // 全体の骨組みは業務のデータ3つだけで決める。ログイン中の人の情報は使い回すので、
+  // 前の画面で取れていれば最初から揃っている（設計書 screen-speed のSS-05）。
+  if (balance.isPending && previews.isPending && settlements.isPending) {
     return <SettlementSkeleton />;
   }
 

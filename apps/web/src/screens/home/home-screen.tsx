@@ -1,7 +1,8 @@
 "use client";
 
 import { BookOpenText } from "@phosphor-icons/react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
+import type { Trip, TripPage } from "@tomotabi/contracts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -19,6 +20,8 @@ import {
   TripEditSheet,
   TripMenu,
   TripTabBar,
+  tripQueryKey,
+  tripsListQueryKey,
   useHome,
   useTripMutation,
   type TripSaveState,
@@ -29,11 +32,11 @@ import {
   clearSelectedTripId,
   saveSelectedTripId,
 } from "@/shared/browser/selected-trip-store";
-import { formatLocalDate } from "@/shared/lib/local-date";
+import { formatLocalDate, tokyoDateOf } from "@/shared/lib/local-date";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 import { useNow } from "@/shared/lib/use-now";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
-import { Loading } from "@/shared/ui/state/loading";
+import { HomeSkeleton, scheduleExpectedFor } from "./home-skeleton";
 import { NotAvailable } from "@/shared/ui/state/not-available";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
 import {
@@ -267,10 +270,18 @@ export function HomeScreen({ tripId }: { tripId: string }) {
   }
 
   if (home.isPending) {
+    // 旅行の一覧や旅行1件のキャッシュがあれば、その状態で予定のカードを出すか決める。
+    const cachedTrip =
+      queryClient.getQueryData<Trip>(tripQueryKey(tripId)) ??
+      queryClient
+        .getQueryData<InfiniteData<TripPage>>(tripsListQueryKey)
+        ?.pages.flatMap((page) => page.items)
+        .find((item) => item.id === tripId) ??
+      null;
     return (
-      <main>
-        <Loading />
-      </main>
+      <HomeSkeleton
+        showSchedule={scheduleExpectedFor(cachedTrip, tokyoDateOf(new Date()))}
+      />
     );
   }
 

@@ -22,7 +22,10 @@ import { ApiRequestError } from "@/shared/api/api-failure";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
-import { Loading } from "@/shared/ui/state/loading";
+import {
+  SettlementSkeleton,
+  TransferCardSkeleton,
+} from "./settlement-skeleton";
 import { NotAvailable } from "@/shared/ui/state/not-available";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
@@ -185,17 +188,10 @@ export function SettlementScreen({
     );
   }
 
-  if (
-    balance.isPending &&
-    previews.isPending &&
-    settlements.isPending &&
-    meState.status === "loading"
-  ) {
-    return (
-      <main>
-        <Loading />
-      </main>
-    );
+  // 全体の骨組みは業務のデータ3つだけで決める。ログイン中の人の情報は使い回すので、
+  // 前の画面で取れていれば最初から揃っている（設計書 screen-speed のSS-05）。
+  if (balance.isPending && previews.isPending && settlements.isPending) {
+    return <SettlementSkeleton />;
   }
 
   /** 確認の作成の主操作。保留がある・確認中・確認できないあいだは新しい要求を送らない。 */
@@ -262,7 +258,7 @@ export function SettlementScreen({
       <h1 className="page-title">精算</h1>
 
       {balance.isPending ? (
-        <Loading />
+        <TransferCardSkeleton />
       ) : balanceData === undefined ? (
         <section className="settle-card">
           <FetchFailed

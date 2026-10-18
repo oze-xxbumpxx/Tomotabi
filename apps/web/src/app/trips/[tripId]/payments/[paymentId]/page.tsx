@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { PaymentDetailScreen } from "@/screens/payment-detail/payment-detail-screen";
 import { isUuidString } from "@/shared/lib/uuid";
 
+/** 画面の部品をCDNから配るため、IDは前もって決めない（設計書 screen-speed のSS-06）。 */
+export function generateStaticParams(): { tripId: string; paymentId: string }[] {
+  return [];
+}
+
 /**
  * 支払いの詳細（/trips/{tripId}/payments/{paymentId}）。
  * 記録の一覧の支払いの行・支払いを取り消した行から遷移する。

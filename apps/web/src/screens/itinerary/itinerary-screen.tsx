@@ -42,7 +42,7 @@ import {
 } from "@/shared/lib/local-date";
 import { useNow } from "@/shared/lib/use-now";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
-import { Loading } from "@/shared/ui/state/loading";
+import { ItinerarySkeleton } from "./itinerary-skeleton";
 import { NotAvailable } from "@/shared/ui/state/not-available";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
 import {
@@ -237,11 +237,7 @@ export function ItineraryScreen({
   }
 
   if (itinerary.isPending) {
-    return (
-      <main>
-        <Loading />
-      </main>
-    );
+    return <ItinerarySkeleton />;
   }
 
   // 取得・再取得の401は、表示済みのデータがあっても業務データを隠してC-1。
@@ -262,11 +258,7 @@ export function ItineraryScreen({
   // 旅行の読み取りにも同じ出し分け（401 → C-1、403 / 404 → C-2）を適用する。
   if (outsidePeriod) {
     if (tripQuery.isPending) {
-      return (
-        <main>
-          <Loading />
-        </main>
-      );
+      return <ItinerarySkeleton />;
     }
     const tripFailure =
       tripQuery.error instanceof ApiRequestError

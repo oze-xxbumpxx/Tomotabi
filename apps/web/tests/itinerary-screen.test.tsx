@@ -29,15 +29,17 @@ const { replaceMock, pushMock, signOutMock } = vi.hoisted(() => ({
   signOutMock: vi.fn(),
 }));
 
+let searchParamsValue = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, push: pushMock }),
+  useSearchParams: () => searchParamsValue,
 }));
 
 vi.mock("@/shared/auth/auth-client", () => ({
   authClient: { signOut: signOutMock },
 }));
 
-import ItineraryPage from "@/app/trips/[tripId]/itinerary/page";
+import { ItineraryRoute } from "@/app/trips/[tripId]/itinerary/itinerary-route";
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
 import {
   setPendingToast,
@@ -251,14 +253,14 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
 
   it("URL の date が日付の形でなければ date なし（サーバー既定）で取る", async () => {
     const fetchMock = stubApi({});
+    // 問い合わせはブラウザで読む（設計書 screen-speed のSS-06）
+    searchParamsValue = new URLSearchParams("date=abc");
     render(
       <QueryClientProvider client={createQueryClient()}>
-        {await ItineraryPage({
-          params: Promise.resolve({ tripId }),
-          searchParams: Promise.resolve({ date: "abc" }),
-        })}
+        <ItineraryRoute tripId={tripId} />
       </QueryClientProvider>,
     );
+    searchParamsValue = new URLSearchParams();
 
     await screen.findByRole("heading", { name: "沖縄" });
     const itineraryCalls = fetchMock.mock.calls.filter(([url]) =>

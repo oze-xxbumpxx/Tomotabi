@@ -35,7 +35,7 @@ import { ApiRequestError } from "@/shared/api/api-failure";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { useNow } from "@/shared/lib/use-now";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
-import { Loading } from "@/shared/ui/state/loading";
+import { RecordListSkeleton } from "./records-skeleton";
 import { NotAvailable } from "@/shared/ui/state/not-available";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
@@ -407,7 +407,7 @@ export function RecordsScreen({
       )}
 
       {records.isPending ? (
-        <Loading />
+        <RecordListSkeleton />
       ) : records.data === undefined ? (
         <section className="record-card">
           <FetchFailed

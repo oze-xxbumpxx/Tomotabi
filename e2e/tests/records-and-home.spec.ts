@@ -269,7 +269,7 @@ test("RE-02: 終了すると予定の欄が消えて精算が上に出る。終�
 
   // 精算（受け渡しの確認と記録）もできる。
   await openTab(page, "精算");
-  await expect(page.getByRole("heading", { name: "精算" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "精算", exact: true })).toBeVisible();
   await expect(page.getByText("対象 3 件")).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("1,000 円");
   await page.getByRole("button", { name: "受け渡しを確認する" }).click();
@@ -309,7 +309,7 @@ test("RE-03: 確認を作ったあと支払いを取り消し、了承して記�
   // ひなた 2,000円（折半）→ あおい → ひなた 1,000円 の確認を作る。
   await recordPayment(page, { amount: "2000", label: "美観地区カフェ" });
   await openTab(page, "精算");
-  await expect(page.getByRole("heading", { name: "精算" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "精算", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "受け渡しを確認する" }).click();
   await page.waitForURL(
     new RegExp(`/trips/${tripId}/settlement/previews/[^/]+$`),

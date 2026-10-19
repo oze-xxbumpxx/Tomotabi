@@ -493,6 +493,20 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     expect(amountInput).toHaveValue("1,234,567");
   });
 
+  it("途中に打っても、入力位置は打った数字の直後に残る", async () => {
+    stubApi({});
+    renderForm();
+    const amountInput = (await waitForForm()) as HTMLInputElement;
+    const user = userEvent.setup();
+
+    await user.type(amountInput, "1200");
+    // 「1,2|00」の位置に「5」を打つ → 「12,5|00」
+    amountInput.setSelectionRange(3, 3);
+    await user.keyboard("5");
+    expect(amountInput).toHaveValue("12,500");
+    expect(amountInput.selectionStart).toBe(4);
+  });
+
   it("FW-03: 数字以外・0・10,000,000 は欄のエラーになり送らない", async () => {
     const fetchMock = stubApi({});
     renderForm();

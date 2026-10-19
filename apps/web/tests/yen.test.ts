@@ -103,6 +103,11 @@ describe("groupYenInput（打ったそばから3桁区切り）", () => {
     expect(groupYenInput(raw, caret)).toEqual({ value, caret: nextCaret });
   });
 
+  it("前後の空白は除いて区切る（貼り付けた金額）", () => {
+    expect(groupYenInput(" 1234567 ", 9)).toEqual({ value: "1,234,567", caret: 9 });
+    expect(groupYenInput("　12000", 6)).toEqual({ value: "12,000", caret: 6 });
+  });
+
   it("数字とカンマ以外が混ざれば触らない（欄の検証で誤りを出す）", () => {
     expect(groupYenInput("12a", 3)).toEqual({ value: "12a", caret: 3 });
     expect(groupYenInput("1.5", 3)).toEqual({ value: "1.5", caret: 3 });

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CaretRight, Warning } from "@phosphor-icons/react";
-import { useId, type RefObject } from "react";
+import { useId, useLayoutEffect, useRef, type RefObject } from "react";
 import { formatLocalDate } from "@/shared/lib/local-date";
 import { formatYen, groupYenInput } from "@/shared/lib/yen";
 import { Field } from "@/shared/ui/field";
@@ -85,6 +85,16 @@ export function PaymentFormFields({
   planHref?: string;
 }) {
   const amountId = useId();
+  const pendingCaret = useRef<{ input: HTMLInputElement; caret: number } | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    const pending = pendingCaret.current;
+    pendingCaret.current = null;
+    if (pending !== null && document.activeElement === pending.input) {
+      pending.input.setSelectionRange(pending.caret, pending.caret);
+    }
+  }, [values.amount]);
   const me = participants.find((p) => p.userId === meUserId);
   const payer = participants.find((p) => p.userId === values.payerUserId);
   const slot0 = participants.find((p) => p.slot === 0);
@@ -141,13 +151,11 @@ export function PaymentFormFields({
                 input.value,
                 input.selectionStart ?? input.value.length,
               );
+              // 整えると文字数が変わるので、値を描き直した直後（下のuseLayoutEffect）に
+              // 入力位置を数字の並びに合わせて戻す。次の描画まで待たないので、
+              // そのあいだに利用者が動かした位置を古い位置で上書きしない。
+              pendingCaret.current = { input, caret: grouped.caret };
               onChange({ field: "amount", value: grouped.value });
-              // 整えると文字数が変わるので、入力位置を数字の並びに合わせて戻す。
-              requestAnimationFrame(() => {
-                if (document.activeElement === input) {
-                  input.setSelectionRange(grouped.caret, grouped.caret);
-                }
-              });
             }}
           />
           <span className="pay-amount-unit" aria-hidden="true">

@@ -98,12 +98,14 @@ export function groupYenInput(
   raw: string,
   caret: number,
 ): { value: string; caret: number } {
-  if (!/^[0-9０-９,，]*$/.test(raw)) {
+  // 前後の空白（全角を含む）は、検証と同じく除いてから見る（貼り付けた金額のため）。
+  const trimmed = raw.trim();
+  if (!/^[0-9０-９,，]*$/.test(trimmed)) {
     return { value: raw, caret };
   }
   const isDigit = (ch: string): boolean => /[0-9０-９]/.test(ch);
   const digitsBefore = [...raw.slice(0, caret)].filter(isDigit).length;
-  const digits = normalizeDigits(raw);
+  const digits = normalizeDigits(trimmed);
   let value = "";
   for (let i = 0; i < digits.length; i += 1) {
     const rest = digits.length - i;

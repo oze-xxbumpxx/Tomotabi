@@ -35,6 +35,9 @@ export default defineConfig({
     viewport: { width: 375, height: 812 },
     isMobile: true,
     hasTouch: true,
+    // シートの開く・閉じる動き（0.2〜0.4秒）の途中で押して外れないよう、動きを減らす設定で動かす。
+    // E2Eは画面の流れを確かめるもので、動きの見た目は単体試験と実機で確かめる。
+    reducedMotion: "reduce",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

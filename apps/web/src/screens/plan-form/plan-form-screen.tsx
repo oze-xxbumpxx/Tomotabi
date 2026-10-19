@@ -439,7 +439,7 @@ export function PlanFormScreen({
       <>
         {underlying}
         {/* key でフォーム用のシートと入れ替え、開き直して初期フォーカスを当て直す */}
-        <Sheet key="loading" title={sheetTitle} onClose={tryClose}>
+        <Sheet key="loading" title={sheetTitle} onClose={tryClose} closable={state.status !== "saving" && state.status !== "unknown"}>
           <Loading />
         </Sheet>
       </>
@@ -495,6 +495,7 @@ export function PlanFormScreen({
       <Sheet
         title={sheetTitle}
         onClose={tryClose}
+        closable={state.status !== "saving" && state.status !== "unknown"}
         initialFocus={pendingLocked ? undefined : nameRef}
         footer={
           // 閉じるのは右上の×だけ（v3のシートの形。下は決める操作1つ）

@@ -159,7 +159,7 @@ export function TripNewScreen() {
       <>
         <TripsScreen />
         {/* key でフォーム用のシートと入れ替え、開き直して初期フォーカスを当て直す */}
-        <Sheet key="loading" title="新しい旅行" onClose={tryClose}>
+        <Sheet key="loading" title="新しい旅行" onClose={tryClose} closable={!(saving || unknown)}>
           <Loading />
         </Sheet>
       </>
@@ -178,6 +178,7 @@ export function TripNewScreen() {
         key="form"
         title="新しい旅行"
         onClose={tryClose}
+        closable={!(saving || unknown)}
         initialFocus={locked ? undefined : nameRef}
         footer={
           // 閉じるのは右上の×だけ（v3のシートの形。下は決める操作1つ）

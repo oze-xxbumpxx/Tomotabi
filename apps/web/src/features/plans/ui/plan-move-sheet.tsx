@@ -110,6 +110,7 @@ export function PlanMoveSheet({
     <Sheet
       title="日の移動"
       onClose={tryClose}
+      closable={!(saving || state.status === "unknown")}
       footer={
         state.status === "unknown" ||
         state.status === "conflict" ||

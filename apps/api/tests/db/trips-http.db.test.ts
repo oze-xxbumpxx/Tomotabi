@@ -217,11 +217,11 @@ afterAll(async () => {
 });
 
 describe("作成（T-01〜T-06）", () => {
-  it("T-01: 201・ETag・DTO、参加者 2 行・guard 1 行・receipt 1 行", async () => {
+  it("T-01: 201・ETagなし・DTO、参加者 2 行・guard 1 行・receipt 1 行", async () => {
     const response = await postTrip(hinataCookie, TRIP_BODY, newKey());
 
     expect(response.status).toBe(201);
-    expect(response.headers.etag).toBe('"1"');
+    expect(response.headers.etag).toBeUndefined();
     expect(response.headers["cache-control"]).toBe("private, no-store");
     expect(response.body).toMatchObject({
       name: "京都 2 泊",
@@ -338,7 +338,7 @@ describe("作成（T-01〜T-06）", () => {
     }
   });
 
-  it("T-04: 同じキー・同じ body の再送は同じ DTO・ETag で行が増えない", async () => {
+  it("T-04: 同じキー・同じ body の再送は同じ DTO で行が増えない", async () => {
     const key = newKey();
     const first = await postTrip(hinataCookie, TRIP_BODY, key);
     expect(first.status).toBe(201);
@@ -347,7 +347,6 @@ describe("作成（T-01〜T-06）", () => {
     const replay = await postTrip(hinataCookie, TRIP_BODY, key);
     expect(replay.status).toBe(201);
     expect(replay.body).toEqual(first.body);
-    expect(replay.headers.etag).toBe(first.headers.etag);
     expect(await tableCounts()).toEqual(before);
   });
 
@@ -548,7 +547,7 @@ describe("一覧と取得（T-07〜T-09）", () => {
 });
 
 describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
-  it("T-10: PATCH 名は 200 で ETag が上がる", async () => {
+  it("T-10: PATCH 名は 200 で版が上がり、応答に ETag を付けない", async () => {
     const tripId = await createTrip(hinataCookie);
 
     const response = await authed(
@@ -560,7 +559,7 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
       .send({ name: "沖縄 3 泊" });
 
     expect(response.status).toBe(200);
-    expect(response.headers.etag).toBe('"2"');
+    expect(response.headers.etag).toBeUndefined();
     expect(response.body).toMatchObject({ name: "沖縄 3 泊", version: "2" });
   });
 

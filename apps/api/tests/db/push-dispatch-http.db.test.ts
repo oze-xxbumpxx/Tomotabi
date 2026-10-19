@@ -619,7 +619,7 @@ describe("11種の操作の届け先（PD-16）", () => {
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", started.headers.etag ?? '"2"');
+      .set("If-Match", `"${started.body.version as string}"`);
     expect([200, 201]).toContain(finished.status);
     await afterResponse.drain();
     expect(transport.calls.length).toBe(0);

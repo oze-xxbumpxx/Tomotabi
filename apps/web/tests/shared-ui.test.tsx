@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Dialog } from "@/shared/ui/dialog";
 import { Field } from "@/shared/ui/field";
 import { Segmented } from "@/shared/ui/segmented";
-import { Sheet } from "@/shared/ui/sheet";
+import { SHEET_CLOSE_MS, SHEET_DRAG_CLOSE_PX, Sheet } from "@/shared/ui/sheet";
 import { Toast } from "@/shared/ui/toast";
 
 afterEach(() => {
@@ -28,6 +28,129 @@ describe("Sheet", () => {
     expect(screen.getByText("シートの中身")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "閉じる" }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Sheet の閉じる動き", () => {
+  // jsdomにはPointerEventが無く、clientYを持たないEventになるので、MouseEventで代わりにする。
+  if (typeof window.PointerEvent === "undefined") {
+    class PointerEventShim extends MouseEvent {
+      readonly pointerId: number;
+      constructor(type: string, init: PointerEventInit = {}) {
+        super(type, init);
+        this.pointerId = init.pointerId ?? 0;
+      }
+    }
+    window.PointerEvent = PointerEventShim as unknown as typeof PointerEvent;
+  }
+  function allowMotion(reduce: boolean) {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: reduce, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+    );
+  }
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function renderSheet(onClose: () => void) {
+    return render(
+      <Sheet title="予定を追加" onClose={onClose}>
+        <p>シートの中身</p>
+      </Sheet>,
+    );
+  }
+
+  it("閉じるを押すと下へ滑る動きを始め、終わってから onClose を呼ぶ", () => {
+    allowMotion(false);
+    const onClose = vi.fn();
+    renderSheet(onClose);
+    const dialog = screen.getByRole("dialog");
+
+    fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    expect(dialog).toHaveAttribute("data-closing");
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.animationEnd(dialog);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("動きの終わりが届かなくても、打ち切りの時間で onClose を呼ぶ", () => {
+    vi.useFakeTimers();
+    allowMotion(false);
+    const onClose = vi.fn();
+    renderSheet(onClose);
+
+    fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    act(() => {
+      vi.advanceTimersByTime(SHEET_CLOSE_MS + 150);
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("呼び出し側が閉じなかったら（保存中など）、元の位置に戻す", () => {
+    vi.useFakeTimers();
+    allowMotion(false);
+    const onClose = vi.fn();
+    renderSheet(onClose);
+    const dialog = screen.getByRole("dialog");
+
+    fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    fireEvent.animationEnd(dialog);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(dialog).not.toHaveAttribute("data-closing");
+  });
+
+  it("動きを減らす設定の端末では、すぐに onClose を呼ぶ", () => {
+    allowMotion(true);
+    const onClose = vi.fn();
+    renderSheet(onClose);
+
+    fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("見出しを指で十分に下へ引いて離すと閉じ、少しなら元に戻す", () => {
+    vi.useFakeTimers();
+    allowMotion(false);
+    const onClose = vi.fn();
+    renderSheet(onClose);
+    const dialog = screen.getByRole("dialog");
+    const grab = dialog.querySelector(".sheet-grab") as HTMLElement;
+
+    // 少しだけ・ゆっくり引く → 戻る
+    fireEvent.pointerDown(grab, { clientY: 100, timeStamp: 0, pointerId: 1 });
+    fireEvent.pointerMove(grab, { clientY: 130, pointerId: 1 });
+    expect(dialog.style.getPropertyValue("--sheet-drag")).toBe("30px");
+    vi.advanceTimersByTime(1000);
+    fireEvent.pointerUp(grab, { clientY: 130, timeStamp: 1000, pointerId: 1 });
+    expect(dialog.style.getPropertyValue("--sheet-drag")).toBe("0px");
+    expect(dialog).not.toHaveAttribute("data-closing");
+
+    // 十分に引く → 閉じる動き
+    fireEvent.pointerDown(grab, { clientY: 100, timeStamp: 2000, pointerId: 1 });
+    fireEvent.pointerMove(grab, { clientY: 100 + SHEET_DRAG_CLOSE_PX + 10, pointerId: 1 });
+    vi.advanceTimersByTime(2000);
+    fireEvent.pointerUp(grab, { clientY: 100 + SHEET_DRAG_CLOSE_PX + 10, timeStamp: 4000, pointerId: 1 });
+    expect(dialog).toHaveAttribute("data-closing");
+    fireEvent.animationEnd(dialog);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("引いた量が少なくても、速く下へ払えば閉じる", () => {
+    vi.useFakeTimers();
+    allowMotion(false);
+    renderSheet(vi.fn());
+    const dialog = screen.getByRole("dialog");
+    const grab = dialog.querySelector(".sheet-grab") as HTMLElement;
+
+    fireEvent.pointerDown(grab, { clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(grab, { clientY: 160, pointerId: 1 });
+    vi.advanceTimersByTime(60);
+    fireEvent.pointerUp(grab, { clientY: 160, pointerId: 1 });
+    expect(dialog).toHaveAttribute("data-closing");
   });
 });
 

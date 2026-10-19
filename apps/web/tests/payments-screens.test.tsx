@@ -386,14 +386,15 @@ describe("二人の負担と金額の検証（FW-02・FW-03）", () => {
     });
   });
 
-  it("金額の入力はカンマ・空・小数を拒否し、全角は半角に直す", () => {
+  it("金額の入力は空・小数を拒否し、全角は半角に直し、3桁区切りのカンマは除く", () => {
     expect(paymentAmountFromInput("")).toBeNull();
-    expect(paymentAmountFromInput("7,001")).toBeNull();
+    expect(paymentAmountFromInput("7,001")).toBe(7001n);
+    expect(paymentAmountFromInput("7.5")).toBeNull();
     expect(paymentAmountFromInput("１０００")).toBe(1000n);
     expect(paymentAmountFromInput(" 7001 ")).toBe(7001n);
   });
 
-  it("検証は空・0・10,000,000・カンマ付きを欄のエラーにする", () => {
+  it("検証は空・0・10,000,000・数字以外を欄のエラーにし、カンマ付きは受ける", () => {
     const base: PaymentFormValues = {
       amount: "1",
       payerUserId: userId,
@@ -405,7 +406,8 @@ describe("二人の負担と金額の検証（FW-02・FW-03）", () => {
     expect(validatePaymentForm({ ...base, amount: "" }).amount).toBe(
       "金額を入力してください",
     );
-    expect(validatePaymentForm({ ...base, amount: "7,001" }).amount).toBe(
+    expect(validatePaymentForm({ ...base, amount: "7,001" }).amount).toBeUndefined();
+    expect(validatePaymentForm({ ...base, amount: "7.5" }).amount).toBe(
       "半角数字だけで入力してください",
     );
     for (const amount of ["0", "10000000"]) {
@@ -481,13 +483,23 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     expect(document.querySelector(".pay-share-tag")).toBeNull();
   });
 
-  it("FW-03: カンマ付き・0・10,000,000 は欄のエラーになり送らない", async () => {
+  it("金額は打ったそばから3桁で区切る（2026-10-19 ユーザーの判断）", async () => {
+    stubApi({});
+    renderForm();
+    const amountInput = await waitForForm();
+    const user = userEvent.setup();
+
+    await user.type(amountInput, "1234567");
+    expect(amountInput).toHaveValue("1,234,567");
+  });
+
+  it("FW-03: 数字以外・0・10,000,000 は欄のエラーになり送らない", async () => {
     const fetchMock = stubApi({});
     renderForm();
     const amountInput = await waitForForm();
     const user = userEvent.setup();
 
-    await user.type(amountInput, "7,001");
+    await user.type(amountInput, "7.5");
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(
       await screen.findByText("半角数字だけで入力してください"),

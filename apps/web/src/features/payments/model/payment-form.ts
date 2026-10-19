@@ -59,11 +59,19 @@ function digitsOfInput(raw: string): string {
 }
 
 /**
- * 金額欄の入力を円にする。全角数字は半角へ直すが、カンマ・小数・符号・
- * 数字以外が混ざる入力はnullを返す（"7,001"はエラーになる）。
+ * 金額欄の入力の数字だけ。3桁区切りのカンマ（全角を含む）は除く。金額の欄は
+ * 打ったそばから区切るため（2026-10-19 ユーザーの判断で、詳細設計の「カンマは誤り」を変えた）。
+ */
+function amountDigitsOfInput(raw: string): string {
+  return digitsOfInput(raw).replace(/[,，]/g, "");
+}
+
+/**
+ * 金額欄の入力を円にする。全角数字は半角へ直し、3桁区切りのカンマは除く。
+ * 小数・符号・数字以外が混ざる入力はnullを返す。
  */
 export function paymentAmountFromInput(raw: string): bigint | null {
-  const digits = digitsOfInput(raw);
+  const digits = amountDigitsOfInput(raw);
   if (!/^[0-9]+$/.test(digits)) {
     return null;
   }
@@ -130,7 +138,7 @@ export function validatePaymentForm(
 ): PaymentFormErrors {
   const errors: PaymentFormErrors = {};
 
-  const digits = digitsOfInput(values.amount);
+  const digits = amountDigitsOfInput(values.amount);
   if (digits === "") {
     errors.amount = "金額を入力してください";
   } else if (!/^[0-9]+$/.test(digits)) {

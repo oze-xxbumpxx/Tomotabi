@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CaretRight, Warning } from "@phosphor-icons/react";
 import { useId, type RefObject } from "react";
 import { formatLocalDate } from "@/shared/lib/local-date";
-import { formatYen } from "@/shared/lib/yen";
+import { formatYen, groupYenInput } from "@/shared/lib/yen";
 import { Field } from "@/shared/ui/field";
 import { Segmented, type SegmentedOption } from "@/shared/ui/segmented";
 import type { Participant } from "../api/payments-api";
@@ -130,9 +130,25 @@ export function PaymentFormFields({
             aria-disabled={locked || undefined}
             aria-invalid={errors.amount !== undefined ? true : undefined}
             ref={fieldRefs?.amount}
-            onChange={(event) =>
-              onChange({ field: "amount", value: event.target.value })
-            }
+            onChange={(event) => {
+              const input = event.target;
+              // 日本語入力の変換中は整えない（変換が崩れるため）。
+              if ((event.nativeEvent as InputEvent).isComposing) {
+                onChange({ field: "amount", value: input.value });
+                return;
+              }
+              const grouped = groupYenInput(
+                input.value,
+                input.selectionStart ?? input.value.length,
+              );
+              onChange({ field: "amount", value: grouped.value });
+              // 整えると文字数が変わるので、入力位置を数字の並びに合わせて戻す。
+              requestAnimationFrame(() => {
+                if (document.activeElement === input) {
+                  input.setSelectionRange(grouped.caret, grouped.caret);
+                }
+              });
+            }}
           />
           <span className="pay-amount-unit" aria-hidden="true">
             円

@@ -88,3 +88,39 @@ export function formatYen(yen: bigint): string {
 export function isPaymentYenAmount(yen: bigint): boolean {
   return yen >= PAYMENT_YEN_MIN && yen <= PAYMENT_YEN_MAX;
 }
+
+/**
+ * 金額の入力欄を、打ったそばから3桁区切りにする（スマホの数字のキーボードにはカンマが無いため）。
+ * 数字（全角を含む）とカンマだけのときだけ整え、ほかの文字が混ざれば触らない
+ * （欄の検証で誤りを出すため）。`caret`は入力位置で、整えたあとの位置を返す。
+ */
+export function groupYenInput(
+  raw: string,
+  caret: number,
+): { value: string; caret: number } {
+  // 前後の空白（全角を含む）は、検証と同じく除いてから見る（貼り付けた金額のため）。
+  const trimmed = raw.trim();
+  if (!/^[0-9０-９,，]*$/.test(trimmed)) {
+    return { value: raw, caret };
+  }
+  const isDigit = (ch: string): boolean => /[0-9０-９]/.test(ch);
+  const digitsBefore = [...raw.slice(0, caret)].filter(isDigit).length;
+  const digits = normalizeDigits(trimmed);
+  let value = "";
+  for (let i = 0; i < digits.length; i += 1) {
+    const rest = digits.length - i;
+    value += digits[i];
+    if (rest > 1 && rest % 3 === 1) {
+      value += ",";
+    }
+  }
+  let seen = 0;
+  let next = 0;
+  while (next < value.length && seen < digitsBefore) {
+    if (value[next] !== ",") {
+      seen += 1;
+    }
+    next += 1;
+  }
+  return { value, caret: next };
+}

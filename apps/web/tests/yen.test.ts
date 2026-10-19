@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatYen,
+  groupYenInput,
   isPaymentYenAmount,
   PAYMENT_YEN_MAX,
   yenFromDecimalString,
@@ -82,5 +83,33 @@ describe("isPaymentYenAmount（支払い 1 件の範囲）", () => {
     expect(isPaymentYenAmount(PAYMENT_YEN_MAX)).toBe(true);
     expect(isPaymentYenAmount(PAYMENT_YEN_MAX + 1n)).toBe(false);
     expect(isPaymentYenAmount(10000000n)).toBe(false);
+  });
+});
+
+describe("groupYenInput（打ったそばから3桁区切り）", () => {
+  it.each([
+    ["", 0, "", 0],
+    ["1", 1, "1", 1],
+    ["1000", 4, "1,000", 5],
+    ["12000", 5, "12,000", 6],
+    ["1,0000", 6, "10,000", 6],
+    ["1234567", 7, "1,234,567", 9],
+    ["１２０００", 5, "12,000", 6],
+    // 途中に打ったとき、入力位置は数字の並びで合わせる（「1,2|00」に「5」→「12,5|00」）
+    ["1,2500", 4, "12,500", 4],
+    // カンマを消したとき（「1,|000」でBackspace→「1|000」）は、数字の並びのまま戻す
+    ["1000", 1, "1,000", 1],
+  ])("%s（位置%i）→ %s（位置%i）", (raw, caret, value, nextCaret) => {
+    expect(groupYenInput(raw, caret)).toEqual({ value, caret: nextCaret });
+  });
+
+  it("前後の空白は除いて区切る（貼り付けた金額）", () => {
+    expect(groupYenInput(" 1234567 ", 9)).toEqual({ value: "1,234,567", caret: 9 });
+    expect(groupYenInput("　12000", 6)).toEqual({ value: "12,000", caret: 6 });
+  });
+
+  it("数字とカンマ以外が混ざれば触らない（欄の検証で誤りを出す）", () => {
+    expect(groupYenInput("12a", 3)).toEqual({ value: "12a", caret: 3 });
+    expect(groupYenInput("1.5", 3)).toEqual({ value: "1.5", caret: 3 });
   });
 });

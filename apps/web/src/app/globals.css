@@ -335,9 +335,10 @@ dialog.sheet[open]::backdrop {
   animation: sheet-backdrop-in 0.3s ease-out;
 }
 
-/* 指で引いているあいだは、指にそのままついてくる */
+/* 指で引いているあいだは、指にそのままついてくる（開く動きの途中でも止めて指に合わせる） */
 dialog.sheet[data-dragging] {
   transition: none;
+  animation: none;
 }
 
 /* 閉じる動き（v3: 0.2〜0.4秒で一度だけ）。終わってから画面から外す */

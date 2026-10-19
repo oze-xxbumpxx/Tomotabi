@@ -20,6 +20,11 @@ type SheetProps = {
   footer?: ReactNode;
   /** 開いたときにフォーカスする要素（指定が無ければ先頭の要素）。 */
   initialFocus?: RefObject<HTMLElement | null>;
+  /**
+   * いま閉じてよいか（既定はtrue）。保存中・結果不明のあいだはfalseにする。
+   * falseのあいだは閉じる動きを始めず、引いたシートは元の位置に戻す。
+   */
+  closable?: boolean;
 };
 
 /** 閉じる動き（CSSの`sheet-out`）の長さ。animationendが来なかったときの打ち切りにも使う。 */
@@ -28,6 +33,8 @@ export const SHEET_CLOSE_MS = 250;
 export const SHEET_DRAG_CLOSE_PX = 96;
 /** これより速く下へ払ったら、引いた量が少なくても閉じる（px/ms）。 */
 const SHEET_FLICK_VELOCITY = 0.5;
+/** 払いの速さは、指を離す直前のこの時間の動きで測る（押したまま止めていた時間で薄めない）。 */
+const SHEET_FLICK_WINDOW_MS = 100;
 
 /** 動きを付けてよいか。動きを減らす設定の端末と、matchMediaが無い環境では付けない（v3の決まり）。 */
 function motionAllowed(): boolean {
@@ -38,7 +45,8 @@ function motionAllowed(): boolean {
   );
 }
 
-type Drag = { startY: number; startTime: number; offset: number };
+type Sample = { offset: number; time: number };
+type Drag = { startY: number; offset: number; samples: Sample[] };
 
 export function Sheet({
   title,
@@ -46,6 +54,7 @@ export function Sheet({
   children,
   footer,
   initialFocus,
+  closable = true,
 }: SheetProps) {
   const dialogRef = useModalDialog(initialFocus);
   const titleId = useId();
@@ -53,24 +62,23 @@ export function Sheet({
   const drag = useRef<Drag | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finished = useRef(false);
-  const mounted = useRef(true);
 
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
+  useEffect(
+    () => () => {
       if (timer.current !== null) {
         clearTimeout(timer.current);
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   const setOffset = (offset: number) => {
     dialogRef.current?.style.setProperty("--sheet-drag", `${offset}px`);
   };
 
-  // 閉じる動きが終わってから呼び出し側に閉じてもらう。呼び出し側が閉じなかったとき
-  // （保存中で閉じられないなど）は、シートを元の位置に戻す。
+  // 閉じる動きが終わってから呼び出し側に閉じてもらう。閉じてよいかは`closable`で
+  // 先に決めているので、ここでは戻さない（画面を移って閉じるとき、移り終わるまで
+  // シートが戻ってこないように）。
   const finishClose = useCallback(() => {
     if (finished.current) {
       return;
@@ -81,34 +89,37 @@ export function Sheet({
       timer.current = null;
     }
     onClose();
-    setTimeout(() => {
-      if (mounted.current) {
-        finished.current = false;
-        setOffset(0);
-        setClosing(false);
-      }
-    }, 0);
   }, [onClose]);
 
   const requestClose = useCallback(() => {
     if (closing) {
       return;
     }
+    if (!closable) {
+      // 閉じられないあいだは、引いたシートを元の位置に戻すだけにする。
+      setOffset(0);
+      return;
+    }
     if (!motionAllowed()) {
+      setOffset(0);
       onClose();
       return;
     }
     finished.current = false;
     setClosing(true);
     timer.current = setTimeout(finishClose, SHEET_CLOSE_MS + 150);
-  }, [closing, finishClose, onClose]);
+  }, [closable, closing, finishClose, onClose]);
 
   const onGrabDown = (event: PointerEvent<HTMLDivElement>) => {
     // 閉じるボタンの押下は引く操作として扱わない。
     if (closing || (event.target as HTMLElement).closest("button") !== null) {
       return;
     }
-    drag.current = { startY: event.clientY, startTime: Date.now(), offset: 0 };
+    drag.current = {
+      startY: event.clientY,
+      offset: 0,
+      samples: [{ offset: 0, time: Date.now() }],
+    };
     event.currentTarget.setPointerCapture?.(event.pointerId);
     dialogRef.current?.setAttribute("data-dragging", "");
   };
@@ -120,24 +131,48 @@ export function Sheet({
     }
     // 上へは動かさない（シートは画面の下に付いている）。
     current.offset = Math.max(0, event.clientY - current.startY);
+    const now = Date.now();
+    current.samples.push({ offset: current.offset, time: now });
+    current.samples = current.samples.filter(
+      (sample) => now - sample.time <= SHEET_FLICK_WINDOW_MS,
+    );
     setOffset(current.offset);
   };
 
-  const onGrabUp = () => {
+  const endDrag = (): Drag | null => {
     const current = drag.current;
+    drag.current = null;
+    dialogRef.current?.removeAttribute("data-dragging");
+    return current;
+  };
+
+  const onGrabUp = () => {
+    const current = endDrag();
     if (current === null) {
       return;
     }
-    drag.current = null;
-    dialogRef.current?.removeAttribute("data-dragging");
-    const elapsed = Math.max(1, Date.now() - current.startTime);
-    const velocity = current.offset / elapsed;
+    const now = Date.now();
+    const recent = current.samples.filter(
+      (sample) => now - sample.time <= SHEET_FLICK_WINDOW_MS,
+    );
+    const first = recent[0];
+    const velocity =
+      first === undefined
+        ? 0
+        : (current.offset - first.offset) / Math.max(1, now - first.time);
     if (current.offset >= SHEET_DRAG_CLOSE_PX || velocity >= SHEET_FLICK_VELOCITY) {
       requestClose();
       return;
     }
     // 足りなければ元の位置へ戻す（CSSのtransitionで戻る）。
     setOffset(0);
+  };
+
+  // 端末が操作を中断したとき（pointercancel）は、利用者が離したのではないので閉じない。
+  const onGrabCancel = () => {
+    if (endDrag() !== null) {
+      setOffset(0);
+    }
   };
 
   return (
@@ -166,7 +201,7 @@ export function Sheet({
         onPointerDown={onGrabDown}
         onPointerMove={onGrabMove}
         onPointerUp={onGrabUp}
-        onPointerCancel={onGrabUp}
+        onPointerCancel={onGrabCancel}
       >
         <div className="sheet-handle" aria-hidden="true" />
         <div className="sheet-head">

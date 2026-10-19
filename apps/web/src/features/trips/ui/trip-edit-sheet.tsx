@@ -300,6 +300,7 @@ export function TripEditSheet({
     <Sheet
       title="旅行名と期間を変更"
       onClose={tryClose}
+      closable={!(saving || unknownSave !== undefined)}
       footer={
         unknownSave !== undefined ||
         conflictSave !== undefined ||

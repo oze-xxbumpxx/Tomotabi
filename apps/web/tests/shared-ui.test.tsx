@@ -53,9 +53,9 @@ describe("Sheet の閉じる動き", () => {
     vi.unstubAllGlobals();
   });
 
-  function renderSheet(onClose: () => void) {
+  function renderSheet(onClose: () => void, closable = true) {
     return render(
-      <Sheet title="予定を追加" onClose={onClose}>
+      <Sheet title="予定を追加" onClose={onClose} closable={closable}>
         <p>シートの中身</p>
       </Sheet>,
     );
@@ -88,19 +88,29 @@ describe("Sheet の閉じる動き", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("呼び出し側が閉じなかったら（保存中など）、元の位置に戻す", () => {
-    vi.useFakeTimers();
+  it("閉じられないあいだ（closable=false。保存中など）は、閉じる動きを始めず onClose も呼ばない", () => {
     allowMotion(false);
     const onClose = vi.fn();
-    renderSheet(onClose);
+    renderSheet(onClose, false);
+    const dialog = screen.getByRole("dialog");
+
+    fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    expect(dialog).not.toHaveAttribute("data-closing");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("閉じる動きのあとは、呼び出し側が外すまで閉じたまま（画面を移る途中で戻らない）", () => {
+    vi.useFakeTimers();
+    allowMotion(false);
+    renderSheet(vi.fn());
     const dialog = screen.getByRole("dialog");
 
     fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
     fireEvent.animationEnd(dialog);
     act(() => {
-      vi.advanceTimersByTime(1);
+      vi.advanceTimersByTime(2000);
     });
-    expect(dialog).not.toHaveAttribute("data-closing");
+    expect(dialog).toHaveAttribute("data-closing");
   });
 
   it("動きを減らす設定の端末では、すぐに onClose を呼ぶ", () => {
@@ -137,6 +147,51 @@ describe("Sheet の閉じる動き", () => {
     expect(dialog).toHaveAttribute("data-closing");
     fireEvent.animationEnd(dialog);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("長く押したままにしてから速く払っても閉じる（払いの速さは直前の動きで測る）", () => {
+    vi.useFakeTimers();
+    allowMotion(false);
+    renderSheet(vi.fn());
+    const dialog = screen.getByRole("dialog");
+    const grab = dialog.querySelector(".sheet-grab") as HTMLElement;
+
+    fireEvent.pointerDown(grab, { clientY: 100, pointerId: 1 });
+    vi.advanceTimersByTime(1000);
+    fireEvent.pointerMove(grab, { clientY: 100, pointerId: 1 });
+    vi.advanceTimersByTime(60);
+    fireEvent.pointerMove(grab, { clientY: 160, pointerId: 1 });
+    fireEvent.pointerUp(grab, { clientY: 160, pointerId: 1 });
+    expect(dialog).toHaveAttribute("data-closing");
+  });
+
+  it("端末が操作を中断したとき（pointercancel）は、引いた量が多くても閉じずに戻る", () => {
+    allowMotion(false);
+    const onClose = vi.fn();
+    renderSheet(onClose);
+    const dialog = screen.getByRole("dialog");
+    const grab = dialog.querySelector(".sheet-grab") as HTMLElement;
+
+    fireEvent.pointerDown(grab, { clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(grab, { clientY: 100 + SHEET_DRAG_CLOSE_PX + 50, pointerId: 1 });
+    fireEvent.pointerCancel(grab, { pointerId: 1 });
+    expect(dialog).not.toHaveAttribute("data-closing");
+    expect(dialog.style.getPropertyValue("--sheet-drag")).toBe("0px");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("動きを減らす設定で閉じられないときも、引いたシートを元に戻す", () => {
+    allowMotion(true);
+    const onClose = vi.fn();
+    renderSheet(onClose, false);
+    const dialog = screen.getByRole("dialog");
+    const grab = dialog.querySelector(".sheet-grab") as HTMLElement;
+
+    fireEvent.pointerDown(grab, { clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(grab, { clientY: 100 + SHEET_DRAG_CLOSE_PX + 50, pointerId: 1 });
+    fireEvent.pointerUp(grab, { clientY: 100 + SHEET_DRAG_CLOSE_PX + 50, pointerId: 1 });
+    expect(dialog.style.getPropertyValue("--sheet-drag")).toBe("0px");
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("引いた量が少なくても、速く下へ払えば閉じる", () => {

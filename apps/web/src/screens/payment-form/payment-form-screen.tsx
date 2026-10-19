@@ -396,7 +396,7 @@ export function PaymentFormScreen({
     return (
       <>
         {underlying}
-        <Sheet key="loading" title="支払いを記録" onClose={tryClose}>
+        <Sheet key="loading" title="支払いを記録" onClose={tryClose} closable={state.status !== "saving" && state.status !== "unknown"}>
           <Loading />
         </Sheet>
       </>
@@ -484,6 +484,7 @@ export function PaymentFormScreen({
         key="form"
         title="支払いを記録"
         onClose={tryClose}
+        closable={state.status !== "saving" && state.status !== "unknown"}
         initialFocus={locked ? undefined : amountRef}
         footer={
           // 閉じるのは右上の×だけ（v3の11。下は「保存」1つ）

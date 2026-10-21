@@ -72,6 +72,12 @@ describe("全部の/apiの応答のヘッダー（IH-01〜IH-03）", () => {
     }
   });
 
+  it("Expressが本文から作る弱いETagを付けない（#246）", async () => {
+    const response = await request(app.getHttpServer()).get("/api/me");
+    expect(response.status).toBe(200);
+    expect(response.headers.etag).toBeUndefined();
+  });
+
   it("認証の経路にも同じ3つが付く（公開経路の503・経路の制限の404）", async () => {
     // authなしのため公開経路は503、許可リスト外は404（どちらも経路の制限側の応答）。
     const unavailable = await request(app.getHttpServer())

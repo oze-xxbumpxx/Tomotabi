@@ -252,7 +252,8 @@ export class PlansController {
   }
 
   private writeResult(response: Response, result: PlanWriteResult): Plan {
-    response.setHeader("ETag", toStrongETag(result.body.version));
+    // ETagは付けない（次のIf-Matchは本文のversionから作る）。Vercelの層が要求の
+    // If-Matchと応答の新しいETagを比べ、保存済みの200を412に差し替えていたと見られるため（#246）。
     response.setHeader("Cache-Control", "private, no-store");
     response.status(result.httpStatus);
     return result.body;

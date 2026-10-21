@@ -18,9 +18,9 @@ export type TripSend = (
   request: MutationRequest,
 ) => ResultAsync<ApiSuccess<Trip>, ApiFailure>;
 
-/** 応答のETag。ヘッダーが無いときは本文のversionから作る（`"3"`の形）。 */
+/** 次のIf-Matchに使うETag（`"3"`の形）。書き込みの応答はETagヘッダーを持たないので、本文のversionから作る。 */
 export function etagOf(result: ApiSuccess<{ version: string }>): string {
-  return result.etag ?? `"${result.data.version}"`;
+  return `"${result.data.version}"`;
 }
 
 /**

@@ -42,14 +42,6 @@
                   "$ref": "#/components/schemas/Trip"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           },
           "400": {
@@ -308,14 +300,6 @@
                   "$ref": "#/components/schemas/Trip"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           },
           "400": {
@@ -418,14 +402,6 @@
                   "$ref": "#/components/schemas/Trip"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           },
           "400": {
@@ -517,14 +493,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/Trip"
                 }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
               }
             }
           },

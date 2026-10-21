@@ -127,14 +127,6 @@
                   "$ref": "#/components/schemas/Plan"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "成功時の予定version。引用付き10進整数。"
-              }
             }
           },
           "400": {
@@ -322,14 +314,6 @@
                   "$ref": "#/components/schemas/Plan"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           },
           "400": {
@@ -455,14 +439,6 @@
                   "$ref": "#/components/schemas/Plan"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           },
           "400": {
@@ -578,14 +554,6 @@
                   "$ref": "#/components/schemas/Plan"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           },
           "400": {
@@ -697,14 +665,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/Trip"
                 }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
               }
             }
           },

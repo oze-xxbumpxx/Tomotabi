@@ -57,6 +57,10 @@ export function configureApp(
   requestLogger: HttpLogger = createRequestLogger(),
 ): void {
   const http = app.getHttpAdapter().getInstance() as Express;
+  // Expressが本文から作る弱いETagを止める。/apiはno-storeで使い道が無く、書き込みの
+  // 応答に付くとVercelの層がIf-Matchと比べて保存済みの200を412にしていたと見られる（#246）。
+  // 取得のETag（version）はcontrollerが明示して付ける。
+  http.set("etag", false);
   const publicOrigin = process.env.PUBLIC_APP_ORIGIN ?? "";
   http.use(requestLogger);
   http.use("/api", serverTiming);

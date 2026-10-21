@@ -117,6 +117,8 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
   const run = useCallback(
     async (request: MutationRequest, afterUnknown: boolean) => {
       const pendingLink = pendingRequestRef.current;
+      // 端末への保存（IndexedDB）を待つあいだも送信中と分かるよう、先にsavingにする。
+      setState({ status: "saving", request });
       if (pendingLink !== null) {
         try {
           await savePendingRequest(
@@ -132,7 +134,6 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
           return;
         }
       }
-      setState({ status: "saving", request });
       const outcome = await sendRef.current(request);
       // 確定した結果（成功・拒否・競合）が返ったら保留を消す。
       // unknown・session-expiredは送れたか分からないので残す。

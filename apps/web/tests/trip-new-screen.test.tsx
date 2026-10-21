@@ -411,6 +411,30 @@ describe("TripNewScreen (/trips/new)", () => {
     );
   });
 
+  it("「旅行をつくる」を押した直後（端末に残し終える前）からボタンを無効にして保存中と出す", async () => {
+    const fetchMock = stubApi(() => new Promise<Response>(() => {}));
+    renderScreen();
+
+    fireEvent.change(await screen.findByLabelText("旅行名"), {
+      target: { value: "沖縄" },
+    });
+    fillDates("2026-10-12", "2026-10-14");
+    const button = screen.getByRole("button", { name: "旅行をつくる" });
+    await waitFor(() => expect(button).toBeEnabled());
+    // userEvent.clickは内部で時間を進め、その間に端末への保存が終わってしまう。
+    // 同期のfireEventで押し、保存が終わる前の表示を確かめる。
+    fireEvent.click(button);
+
+    const busy = screen.getByRole("button", { name: "保存中" });
+    expect(busy).toBeDisabled();
+    expect(busy).toHaveAttribute("aria-busy", "true");
+    expect(writeCalls(fetchMock)).toHaveLength(0);
+
+    // 端末に残し終えたら、ボタンは無効のまま1回だけ送る。
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
+    expect(screen.getByRole("button", { name: "保存中" })).toBeDisabled();
+  });
+
   it("RW-02: 端末に残せなければ送らずに止めて案内を出す", async () => {
     const fetchMock = stubApi(() => json(tripBody, 201));
     renderScreen();

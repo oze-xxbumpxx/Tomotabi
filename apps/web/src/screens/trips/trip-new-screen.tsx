@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleNotch } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useMe } from "@/features/auth";
@@ -193,8 +194,21 @@ export function TripNewScreen() {
                   !online ||
                   createCheck.check.status !== "none"
                 }
+                aria-busy={saving}
               >
-                {saving ? "保存中" : "旅行をつくる"}
+                {saving ? (
+                  <>
+                    <CircleNotch
+                      size={18}
+                      weight="bold"
+                      className="icon-spin"
+                      aria-hidden="true"
+                    />
+                    保存中
+                  </>
+                ) : (
+                  "旅行をつくる"
+                )}
               </button>
             </>
           )

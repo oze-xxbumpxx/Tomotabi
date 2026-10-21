@@ -408,7 +408,7 @@ describe("二人の負担と金額の検証（FW-02・FW-03）", () => {
     );
     expect(validatePaymentForm({ ...base, amount: "7,001" }).amount).toBeUndefined();
     expect(validatePaymentForm({ ...base, amount: "7.5" }).amount).toBe(
-      "半角数字だけで入力してください",
+      "数字だけで入力してください",
     );
     for (const amount of ["0", "10000000"]) {
       expect(validatePaymentForm({ ...base, amount }).amount).toBe(
@@ -516,7 +516,7 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     await user.type(amountInput, "7.5");
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(
-      await screen.findByText("半角数字だけで入力してください"),
+      await screen.findByText("数字だけで入力してください"),
     ).toBeInTheDocument();
     expect(writeCalls(fetchMock)).toHaveLength(0);
 

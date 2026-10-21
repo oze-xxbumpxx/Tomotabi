@@ -142,7 +142,7 @@ export function validatePaymentForm(
   if (digits === "") {
     errors.amount = "金額を入力してください";
   } else if (!/^[0-9]+$/.test(digits)) {
-    errors.amount = "半角数字だけで入力してください";
+    errors.amount = "数字だけで入力してください";
   } else if (!isPaymentYenAmount(BigInt(digits))) {
     errors.amount = "1 円から 9,999,999 円までの金額にしてください";
   }

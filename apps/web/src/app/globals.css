@@ -546,6 +546,7 @@ dialog.dialog[open] {
   min-height: 96px;
   padding: var(--space-3) var(--space-4);
   resize: vertical;
+  overflow-wrap: anywhere;
 }
 
 .field-input:focus,
@@ -2068,10 +2069,13 @@ dialog.dialog[open] {
   border-top: 1px solid var(--color-line);
 }
 
+/* 行はグリッドなので、子にmin-width: 0が無いと空白の無い長い文字列で列が広がり、ページが横にはみ出す */
 .plan-record-main {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .plan-record-label {
@@ -2097,6 +2101,8 @@ dialog.dialog[open] {
 }
 
 .plan-record-memo {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 14px;
   line-height: 1.75;
   color: var(--color-text-secondary);

@@ -271,9 +271,13 @@ export class TripsController {
     };
   }
 
+  /**
+   * 書き込みの応答にはETagを付けない（次のIf-Matchは本文のversionから作る）。
+   * VercelのCDNは、関数の応答のETagと要求のIf-Matchを比べ、違えば保存の
+   * 成功を412に置き換える。書き込みが成功すると版は必ず進むので、付けると
+   * 成功した保存が412に見える（結合検証環境で発生）。
+   */
   private writeResult(response: Response, result: TripWriteResult): Trip {
-    // ETagは付けない（次のIf-Matchは本文のversionから作る）。Vercelの層が要求の
-    // If-Matchと応答の新しいETagを比べ、保存済みの200を412に差し替えていたと見られるため（#246）。
     response.setHeader("Cache-Control", "private, no-store");
     response.status(result.httpStatus);
     return result.body;

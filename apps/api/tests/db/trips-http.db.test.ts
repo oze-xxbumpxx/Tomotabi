@@ -547,7 +547,7 @@ describe("一覧と取得（T-07〜T-09）", () => {
 });
 
 describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
-  it("T-10: PATCH 名は 200 で version が上がる（ETagヘッダーは付けない）", async () => {
+  it("T-10: PATCH 名は 200 で版が上がり、応答に ETag を付けない", async () => {
     const tripId = await createTrip(hinataCookie);
 
     const response = await authed(

@@ -106,14 +106,6 @@
                   "$ref": "#/components/schemas/Trip"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           },
           "201": {
@@ -123,14 +115,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/Trip"
                 }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
               }
             }
           }
@@ -430,14 +414,6 @@
                   "$ref": "#/components/schemas/Trip"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           }
         },
@@ -560,14 +536,6 @@
                   "$ref": "#/components/schemas/Trip"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           }
         },
@@ -679,14 +647,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/Trip"
                 }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
               }
             }
           }

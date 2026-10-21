@@ -273,14 +273,6 @@
                   "$ref": "#/components/schemas/Plan"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "成功時の予定version。引用付き10進整数。"
-              }
             }
           },
           "201": {
@@ -290,14 +282,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/Plan"
                 }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "成功時の予定version。引用付き10進整数。"
               }
             }
           }
@@ -506,14 +490,6 @@
                   "$ref": "#/components/schemas/Plan"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion。例：\"3\""
-              }
             }
           }
         },
@@ -638,14 +614,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/Plan"
                 }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion。例：\"3\""
               }
             }
           }
@@ -772,14 +740,6 @@
                   "$ref": "#/components/schemas/Plan"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion。例：\"3\""
-              }
             }
           }
         }
@@ -891,14 +851,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/Trip"
                 }
-              }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion。例：\"3\""
               }
             }
           }

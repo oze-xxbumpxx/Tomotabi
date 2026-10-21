@@ -833,6 +833,8 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
     );
     expect(again.status).toBe(409);
     expect(again.body).toMatchObject({ code: "PLAN_CANCELLED" });
+    // Expressが本文から作る弱いETagも付かない（Vercelが412に置き換えないように）
+    expect(again.headers.etag).toBeUndefined();
 
     const edited = await patchPlan(
       hinataCookie,
@@ -860,7 +862,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
     expect(inList).toEqual([planId]);
   });
 
-  it("P-09: 追加の同じキー再送は、相手が名前を変えたあとでも追加時点の DTO を返す", async () => {
+  it("P-09: 追加の同じキー再送は、相手が名前を変えたあとでも追加時点の DTO・ETag を返す", async () => {
     const tripId = await createTrip(hinataCookie);
     const key = newKey();
     const created = await postPlan(hinataCookie, tripId, {

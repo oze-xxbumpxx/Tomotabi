@@ -182,19 +182,20 @@ app_runtimeには次だけを与える。DELETEはどの表にも与えない。
 
 | Method | Path | 必須ヘッダー | 成功 | 主な失敗 |
 |---|---|---|---|---|
-| POST | /trips | Idempotency-Key | 201（再送は元の状態）＋ETag | 400、409 PARTICIPANTS_NOT_READY / IDEMPOTENCY_KEY_REUSED、422 |
+| POST | /trips | Idempotency-Key | 201（再送は元の状態。版は本文） | 400、409 PARTICIPANTS_NOT_READY / IDEMPOTENCY_KEY_REUSED、422 |
 | GET | /trips?status=&cursor=&limit= | — | 200 `{ items, nextCursor }` | 400 |
 | GET | /trips/{tripId} | — | 200＋ETag | 403 |
-| PATCH | /trips/{tripId} | Idempotency-Key、If-Match | 200＋ETag | 403、409、422、428 |
-| PUT | /trips/{tripId}/period | Idempotency-Key、If-Match | 200＋ETag | 403、409、422 PLAN_OUTSIDE_TRIP_PERIOD、428 |
-| POST | /trips/{tripId}/start・/finish | Idempotency-Key、If-Match | 200＋ETag | 403、409 INVALID_TRIP_TRANSITION / VERSION_CONFLICT、428 |
+| PATCH | /trips/{tripId} | Idempotency-Key、If-Match | 200（版は本文） | 403、409、422、428 |
+| PUT | /trips/{tripId}/period | Idempotency-Key、If-Match | 200（版は本文） | 403、409、422 PLAN_OUTSIDE_TRIP_PERIOD、428 |
+| POST | /trips/{tripId}/start・/finish | Idempotency-Key、If-Match | 200（版は本文） | 403、409 INVALID_TRIP_TRANSITION / VERSION_CONFLICT、428 |
 | GET | /trips/{tripId}/itinerary?date= | — | 200 Itinerary | 403、422（期間外の日付） |
-| POST | /trips/{tripId}/plans | Idempotency-Key | 201＋ETag | 403、409、422 PLAN_OUTSIDE_TRIP_PERIOD |
+| POST | /trips/{tripId}/plans | Idempotency-Key | 201（版は本文） | 403、409、422 PLAN_OUTSIDE_TRIP_PERIOD |
 | GET | /trips/{tripId}/plans/{planId} | — | 200＋ETag | 403、404 |
-| PATCH | /trips/{tripId}/plans/{planId} | Idempotency-Key、If-Match | 200＋ETag | 403、404、409 PLAN_HAS_RECORD_HISTORY、422、428 |
-| POST | /trips/{tripId}/plans/{planId}/move | Idempotency-Key、If-Match | 200＋ETag | 403、404、409、422 PLAN_OUTSIDE_TRIP_PERIOD、428 |
-| POST | /trips/{tripId}/plans/{planId}/cancel | Idempotency-Key、If-Match | 200＋ETag | 403、404、409 PLAN_CANCELLED、428 |
+| PATCH | /trips/{tripId}/plans/{planId} | Idempotency-Key、If-Match | 200（版は本文） | 403、404、409 PLAN_HAS_RECORD_HISTORY、422、428 |
+| POST | /trips/{tripId}/plans/{planId}/move | Idempotency-Key、If-Match | 200（版は本文） | 403、404、409、422 PLAN_OUTSIDE_TRIP_PERIOD、428 |
+| POST | /trips/{tripId}/plans/{planId}/cancel | Idempotency-Key、If-Match | 200（版は本文） | 403、404、409 PLAN_CANCELLED、428 |
 
+- 書き込みの応答にはETagを付けない。次の`If-Match`は本文の`version`から`"<version>"`で作る（2026-10-20変更）。結合検証環境で、VercelのCDNが関数の応答のETagと要求の`If-Match`を比べ、成功した保存を412に置き換えた。書き込みが成功すると版は進むので、ETagを付けると必ず食い違う。同じ理由で、Expressが本文から自動で付ける弱いETagも止めている。ETagを付けるのは読む応答（GET）だけ。
 - DTOは詳細設計のTrip・Plan・Itinerary・PlanCreate・PlanPatch・Move・Period・TripCreate・TripRenameをそのまま使う。Planの`achievement` / `booking`はM2でも返す（表に行が無ければnull）。
 - GET /tripsの`limit`は既定20・最大50。カーソルは`(created_at, id)`をbase64urlにした不透明な文字列で、改ざんされていたら400。
 - GET itineraryの`date`を省略したら、日本時間の今日が期間内なら今日、外なら初日。明示された期間外の日付は422（画面は「旅行期間外です」と日付選択を出す。07 §5）。
@@ -236,13 +237,13 @@ Guard（Origin → セッション → userId）
 → UseCase: UnitOfWork.run(ctx => {
      1. 旅行行をロック（下表）。無い・参加していない → 403
      2. receipt を (userId, operation, key) で探す
-          あり・hash 一致   → 保存した http_status・response_body を返す（ETag は body.version から）
+          あり・hash 一致   → 保存した http_status・response_body を返す
           あり・hash 不一致 → 409 IDEMPOTENCY_KEY_REUSED
      3. 対象行をロック。If-Match と version を比べる（不一致 → 409 VERSION_CONFLICT）
      4. Domain の規則で検証し、変更を作る（実質同じ値なら version を増やさない）
      5. 保存。receipt を INSERT（response_body に成功 DTO）
    })
-→ COMMIT 後に応答（ETag ヘッダーを付ける）
+→ COMMIT 後に応答（ETag ヘッダーは付けない。下の注を参照）
 ```
 
 - request_hashは`sha256(正規化 JSON { operation, tripId, resourceId, body, ifMatch })`。bodyは検証後の正規化した値（名前は前後の空白を除いたもの、キーの順序は固定）。

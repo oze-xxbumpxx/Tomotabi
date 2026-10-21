@@ -117,8 +117,7 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
   const run = useCallback(
     async (request: MutationRequest, afterUnknown: boolean) => {
       const pendingLink = pendingRequestRef.current;
-      // 端末への保存（IndexedDB）は数秒かかることがあるので、その前に
-      // savingにして、押した直後から送信中だと分かるようにする。
+      // 端末への保存（IndexedDB）を待つあいだも送信中と分かるよう、先にsavingにする。
       setState({ status: "saving", request });
       if (pendingLink !== null) {
         try {

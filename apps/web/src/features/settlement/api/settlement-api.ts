@@ -107,7 +107,7 @@ export function listSettlementsPage(
 
 // ---- 変更要求の組み立て（MutationDraft） ----
 
-/** 確認の作成（POST /trips/{tripId}/settlement-previews。body・If-Matchなし）。 */
+/** 確認の作成（POST /trips/{tripId}/settlement-previews。body・版なし）。 */
 export function createSettlementPreviewDraft(tripId: string): MutationDraft {
   return {
     operation: "createSettlementPreview",

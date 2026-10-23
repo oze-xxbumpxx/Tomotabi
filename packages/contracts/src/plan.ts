@@ -41,7 +41,7 @@ export type Plan = {
    */
   cancelledAt: string | null;
   cancelledBy: string | null;
-  /** 10進の正整数の文字列。ETag / If-Matchに使う版番号。 */
+  /** 10進の正整数の文字列。書き込みの`X-Expected-Version`にそのまま送る版番号。 */
   version: string;
   achievement: PlanEvent | null;
   booking: PlanEvent | null;

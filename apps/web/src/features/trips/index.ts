@@ -66,7 +66,6 @@ export {
   useTripList,
 } from "./model/trip-queries";
 export {
-  etagOf,
   invalidateTripViews,
   useCreateTrip,
   useTripMutation,

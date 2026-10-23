@@ -58,9 +58,8 @@ export function configureApp(
 ): void {
   const http = app.getHttpAdapter().getInstance() as Express;
   const publicOrigin = process.env.PUBLIC_APP_ORIGIN ?? "";
-  // Expressが本文から自動で付ける弱いETagを止める。書き込みの応答に
-  // 付くと、VercelのCDNがIf-Matchと比べて成功を412に置き換える。
-  // 読む応答のETagは各コントローラーが版から付ける。
+  // Expressが本文から自動で付ける弱いETagを止める。APIはETagを使わず、
+  // 版は本文のversionとX-Expected-Versionでやり取りする。
   http.set("etag", false);
   http.use(requestLogger);
   http.use("/api", serverTiming);

@@ -38,7 +38,7 @@ export function tripNotAccessible(): ApiError {
 
 /**
  * receiptを先に読む。同じキーの再送は（別の利用者がその後で更新していても）
- * 元の結果を返す決まりなので、If-Matchの検査より先に見る（設計書「書き込みの
+ * 元の結果を返す決まりなので、版の確認より先に見る（設計書「書き込みの
  * 共通の流れ」2）。request_hashが違う同一キーは409 IDEMPOTENCY_KEY_REUSED。
  */
 export async function storedReceipt<T>(
@@ -68,7 +68,7 @@ export async function storedReceipt<T>(
 
 /**
  * 旅行が絡む書き込みの共通の流れ（設計書）: 旅行行のロック → receipt →
- * If-Match → Domain → 更新とreceiptを同じトランザクションで保存。
+ * 版の確認 → Domain → 更新とreceiptを同じトランザクションで保存。
  * ロックは常に旅行 → 予定の順。M2-b・M3でも同じ順にしないとデッドロックする。
  */
 export async function runTripUpdate(

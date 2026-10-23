@@ -40,7 +40,7 @@ export type SaveState<TData = unknown, TLatest = unknown> =
       status: "conflict";
       request: MutationRequest;
       /** 最新の取得が終わるまでnull。 */
-      latest: ApiSuccess<TLatest> | null;
+      latest: LatestSuccess<TLatest> | null;
       latestFailed: boolean;
     };
 
@@ -68,10 +68,13 @@ function classifyFailure(failure: ApiFailure): FailureAction {
   return { status: "unknown" };
 }
 
+/** conflictのあとに取り直した最新。`version`が「あなたの入力で保存」で送る版になる。 */
+export type LatestSuccess<T> = ApiSuccess<T> & { version: string };
+
 export type UseSaveStateOptions<TData, TLatest> = {
   send: (request: MutationRequest) => ResultAsync<ApiSuccess<TData>, ApiFailure>;
-  /** conflictになったとき最新を取得する関数（最新のETagが「あなたの入力で保存」のIf-Matchになる）。 */
-  fetchLatest?: (() => ResultAsync<ApiSuccess<TLatest>, ApiFailure>) | null;
+  /** conflictになったとき最新を取得する関数（最新のversionが「あなたの入力で保存」の版になる）。 */
+  fetchLatest?: (() => ResultAsync<LatestSuccess<TLatest>, ApiFailure>) | null;
   onSucceeded?: ((result: ApiSuccess<TData>) => void) | null;
   /**
    * 結果不明の要求をIndexedDBに残す操作の指定（ADR-0006）。
@@ -92,11 +95,11 @@ export type UseSaveStateOptions<TData, TLatest> = {
 /**
  * 書き込みの保存状態。`submit`は送るたびに新しい要求（新しいキー）を作る。
  * 結果不明（network・5xx・応答の解釈失敗）は`unknown`で、その要求は
- * `confirmWithSameRequest`で同じキー・本文・If-Matchのままだけ送り直せる
+ * `confirmWithSameRequest`で同じキー・本文・版のままだけ送り直せる
  * （`unknown`の間は`submit`を受け付けず、別の入力で保存し直させない）。
  * 401は`session-expired`。`unknown`のあとの確認が401なら`unconfirmed: true`。
  * 409かつcodeがVERSION_CONFLICTのときだけ`conflict`。
- * `conflict`で`saveMineOverLatest`を呼ぶと、同じ本文・最新のETag・新しいキーで送る。
+ * `conflict`で`saveMineOverLatest`を呼ぶと、同じ本文・最新の版・新しいキーで送る。
  */
 export function useSaveState<TData = unknown, TLatest = unknown>(
   options: UseSaveStateOptions<TData, TLatest>,
@@ -301,7 +304,7 @@ export function useSaveState<TData = unknown, TLatest = unknown>(
     }
     const retry: MutationRequest = {
       ...state.request,
-      ifMatch: state.latest.etag,
+      expectedVersion: state.latest.version,
       idempotencyKey: crypto.randomUUID(),
     };
     busyRef.current = true;

@@ -331,9 +331,9 @@ export type OriginParameter = string;
 export type IdempotencyKeyParameter = string;
 
 /**
- * 単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。
+ * 取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。
  */
-export type IfMatchParameter = string;
+export type ExpectedVersionParameter = string;
 
 export type ListTripsParams = {
 status?: ListTripsStatus;
@@ -620,7 +620,7 @@ export const getRenameTripUrl = (tripId: string,) => {
 }
 
 /**
- * 旅行名の変更。Idempotency-Key・If-Match 必須。
+ * 旅行名の変更。Idempotency-Key・X-Expected-Version 必須。
  */
 export const renameTrip = async (tripId: string,
     tripRename: TripRename, options?: Parameters<typeof httpClient>[1]): Promise<renameTripResponse> => {

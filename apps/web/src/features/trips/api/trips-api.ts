@@ -103,8 +103,8 @@ export function getHome(
 }
 
 /**
- * GET /api/trips/{tripId} の応答全体（ETagつき）。
- * conflictになったとき最新のIf-Matchを組み立て直すために使う。
+ * GET /api/trips/{tripId} の応答全体。
+ * conflictになったとき最新の版を取り直すために使う。
  */
 export function getTripWithMeta(
   tripId: string,
@@ -153,7 +153,7 @@ export function createTripDraft(values: TripCreate): MutationDraft {
 export function renameTripDraft(
   tripId: string,
   name: string,
-  ifMatch: string | null,
+  expectedVersion: string | null,
 ): MutationDraft {
   const body: TripRename = { name };
   return {
@@ -161,47 +161,47 @@ export function renameTripDraft(
     url: getRenameTripUrl(tripId),
     method: "PATCH",
     body,
-    ifMatch,
+    expectedVersion,
   };
 }
 
 export function updateTripPeriodDraft(
   tripId: string,
   period: Period,
-  ifMatch: string | null,
+  expectedVersion: string | null,
 ): MutationDraft {
   return {
     operation: UPDATE_TRIP_PERIOD_OPERATION,
     url: getUpdateTripPeriodUrl(tripId),
     method: "PUT",
     body: period,
-    ifMatch,
+    expectedVersion,
   };
 }
 
 export function startTripDraft(
   tripId: string,
-  ifMatch: string | null,
+  expectedVersion: string | null,
 ): MutationDraft {
   return {
     operation: START_TRIP_OPERATION,
     url: getStartTripUrl(tripId),
     method: "POST",
     body: null,
-    ifMatch,
+    expectedVersion,
   };
 }
 
 export function finishTripDraft(
   tripId: string,
-  ifMatch: string | null,
+  expectedVersion: string | null,
 ): MutationDraft {
   return {
     operation: FINISH_TRIP_OPERATION,
     url: getFinishTripUrl(tripId),
     method: "POST",
     body: null,
-    ifMatch,
+    expectedVersion,
   };
 }
 

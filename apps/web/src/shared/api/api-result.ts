@@ -28,13 +28,11 @@ export function callApi<T>(
 export type ApiSuccess<T> = {
   data: T;
   status: number;
-  /** 成功応答のETagヘッダー。無ければnull。 */
-  etag: string | null;
 };
 
 /**
- * callApiと同じ検証をし、検証済みのdataに加えてstatusとETagを返す。
- * 書き込みの成功応答（ETagを次のIf-Matchに使う）に使う。
+ * callApiと同じ検証をし、検証済みのdataに加えてstatusを返す。
+ * 書き込みの成功応答（201と200の区別）に使う。
  */
 export function callApiWithMeta<T>(
   request: Promise<{ data: unknown; status: number; headers: Headers }>,
@@ -46,7 +44,6 @@ export function callApiWithMeta<T>(
       ? okAsync<ApiSuccess<T>, ApiFailure>({
           data: parsed.data,
           status: response.status,
-          etag: response.headers.get("etag"),
         })
       : errAsync<ApiSuccess<T>, ApiFailure>({ kind: "validation" });
   });

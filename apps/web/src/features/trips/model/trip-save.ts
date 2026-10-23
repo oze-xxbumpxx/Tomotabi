@@ -18,11 +18,6 @@ export type TripSend = (
   request: MutationRequest,
 ) => ResultAsync<ApiSuccess<Trip>, ApiFailure>;
 
-/** 次のIf-Matchに使うETag（`"3"`の形）。書き込みの応答はETagヘッダーを持たないので、本文のversionから作る。 */
-export function etagOf(result: ApiSuccess<{ version: string }>): string {
-  return `"${result.data.version}"`;
-}
-
 /**
  * 07 §11: 旅行の名前・期間・状態が変わったら、旅行一覧・旅行・しおりの日付選択を
  * 再取得する。しおりの日付キーはM2-dで`["itinerary", tripId, date]`になる
@@ -59,7 +54,7 @@ function pendingOf(input: {
 }
 
 /**
- * 旅行の作成（POST /trips）。If-Matchは付けない。
+ * 旅行の作成（POST /trips）。版（X-Expected-Version）は付けない。
  * 送る直前に端末に残す要求の旅行のIDは、送る時点でIDが無いので
  * 決まった値`new-trip`を使う（ADR-0006・設計書「端末に残す仕組みの広げ方」）。
  */
@@ -86,8 +81,7 @@ export function useCreateTrip(options: {
 
 /**
  * 旅行への書き込み（名前の変更・期間の変更・開始・終了）。操作ごとに違うのは
- * sendだけ。conflictでは最新の旅行を取り直し、ETagが無い応答でも
- * versionからIf-Matchを組み立て直す。
+ * sendだけ。conflictでは最新の旅行を取り直し、そのversionを次の版にする。
  */
 export function useTripMutation(options: {
   tripId: string;
@@ -108,7 +102,7 @@ export function useTripMutation(options: {
     fetchLatest: () =>
       getTripWithMeta(options.tripId).map((latest) => ({
         ...latest,
-        etag: latest.etag ?? `"${latest.data.version}"`,
+        version: latest.data.version,
       })),
     onSucceeded: (result) => {
       invalidateTripViews(queryClient, options.tripId);

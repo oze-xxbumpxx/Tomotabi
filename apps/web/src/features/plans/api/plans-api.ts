@@ -44,8 +44,8 @@ export function getPlan(
 }
 
 /**
- * GET /api/trips/{tripId}/plans/{planId} の応答全体（ETagつき）。
- * conflictになったとき最新のIf-Matchを組み立て直すために使う。
+ * GET /api/trips/{tripId}/plans/{planId} の応答全体。
+ * conflictになったとき最新の版を取り直すために使う。
  */
 export function getPlanWithMeta(
   tripId: string,
@@ -82,14 +82,14 @@ export function updatePlanDraft(
   tripId: string,
   planId: string,
   patch: PlanPatch,
-  ifMatch: string | null,
+  expectedVersion: string | null,
 ): MutationDraft {
   return {
     operation: UPDATE_PLAN_OPERATION,
     url: getUpdatePlanUrl(tripId, planId),
     method: "PATCH",
     body: patch,
-    ifMatch,
+    expectedVersion,
   };
 }
 
@@ -97,7 +97,7 @@ export function movePlanDraft(
   tripId: string,
   planId: string,
   date: string,
-  ifMatch: string | null,
+  expectedVersion: string | null,
 ): MutationDraft {
   const body: Move = { date };
   return {
@@ -105,21 +105,21 @@ export function movePlanDraft(
     url: getMovePlanUrl(tripId, planId),
     method: "POST",
     body,
-    ifMatch,
+    expectedVersion,
   };
 }
 
 export function cancelPlanDraft(
   tripId: string,
   planId: string,
-  ifMatch: string | null,
+  expectedVersion: string | null,
 ): MutationDraft {
   return {
     operation: CANCEL_PLAN_OPERATION,
     url: getCancelPlanUrl(tripId, planId),
     method: "POST",
     body: null,
-    ifMatch,
+    expectedVersion,
   };
 }
 

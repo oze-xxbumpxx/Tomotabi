@@ -14,8 +14,11 @@ export type MutationRequest = {
   url: string;
   method: "POST" | "PATCH" | "PUT";
   bodyJson: string | null;
-  /** If-Matchに付ける値（ETag）。不要な操作はnull。 */
-  ifMatch: string | null;
+  /**
+   * X-Expected-Versionに付ける版（本文のversion。引用符なしの10進）。不要な操作はnull。
+   * If-Matchは使わない。Vercelの層が、If-Matchの付いた要求の成功の応答を412に置き換えるため。
+   */
+  expectedVersion: string | null;
   idempotencyKey: string;
 };
 
@@ -24,13 +27,13 @@ export type MutationDraft = {
   url: string;
   method: MutationRequest["method"];
   body: unknown;
-  ifMatch?: string | null;
+  expectedVersion?: string | null;
 };
 
 /**
  * 要求を1組で固定し、Idempotency-Keyを新しく採番する。
  * 結果不明のあとの確認は、この返り値をそのまま`sendMutationRequest`に渡す
- * （キー・本文・If-Matchを変えて送り直さない）。入力を変えた送信は別の要求として作り直す。
+ * （キー・本文・版を変えて送り直さない）。入力を変えた送信は別の要求として作り直す。
  */
 export function createMutationRequest(
   draft: MutationDraft,
@@ -43,14 +46,14 @@ export function createMutationRequest(
       draft.body === null || draft.body === undefined
         ? null
         : JSON.stringify(draft.body),
-    ifMatch: draft.ifMatch ?? null,
+    expectedVersion: draft.expectedVersion ?? null,
     idempotencyKey: crypto.randomUUID(),
   };
 }
 
 /**
- * 固定した要求をそのまま送り、成功応答をZodで検証してETagと一緒に返す。
- * 同じ`request`を渡す限り、キー・本文・If-Matchは変わらない。
+ * 固定した要求をそのまま送り、成功応答をZodで検証して返す。
+ * 同じ`request`を渡す限り、キー・本文・版は変わらない。
  */
 export function sendMutationRequest<T>(
   request: MutationRequest,
@@ -59,8 +62,8 @@ export function sendMutationRequest<T>(
   const headers: Record<string, string> = {
     "idempotency-key": request.idempotencyKey,
   };
-  if (request.ifMatch !== null) {
-    headers["if-match"] = request.ifMatch;
+  if (request.expectedVersion !== null) {
+    headers["x-expected-version"] = request.expectedVersion;
   }
   return callApiWithMeta(
     httpClient<{ data: unknown; status: number; headers: Headers }>(

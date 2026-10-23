@@ -45,7 +45,7 @@ const STATUS_FALLBACK: Readonly<
   404: { code: "NOT_FOUND", message: "Not found" },
   415: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Content-Type must be application/json" },
   422: { code: "VALIDATION_FAILED", message: "Validation failed" },
-  428: { code: "IF_MATCH_REQUIRED", message: "If-Match header is required" },
+  428: { code: "EXPECTED_VERSION_REQUIRED", message: "X-Expected-Version header is required" },
 };
 
 /**

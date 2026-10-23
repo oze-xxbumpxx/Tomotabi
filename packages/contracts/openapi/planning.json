@@ -213,14 +213,6 @@
                   "$ref": "#/components/schemas/Plan"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           },
           "400": {
@@ -277,7 +269,7 @@
       },
       "patch": {
         "operationId": "updatePlan",
-        "description": "日付は更新不可。種類変更は達成・予約の全履歴がない場合のみ。Idempotency-Key・If-Match 必須。",
+        "description": "日付は更新不可。種類変更は達成・予約の全履歴がない場合のみ。Idempotency-Key・X-Expected-Version 必須。",
         "parameters": [
           {
             "$ref": "#/components/parameters/tripId"
@@ -292,7 +284,7 @@
             "$ref": "#/components/parameters/IdempotencyKey"
           },
           {
-            "$ref": "#/components/parameters/IfMatch"
+            "$ref": "#/components/parameters/ExpectedVersion"
           }
         ],
         "requestBody": {
@@ -377,7 +369,7 @@
             }
           },
           "428": {
-            "description": "If-Match 欠落（IF_MATCH_REQUIRED）",
+            "description": "X-Expected-Version 欠落（EXPECTED_VERSION_REQUIRED）",
             "content": {
               "application/json": {
                 "schema": {
@@ -402,7 +394,7 @@
     "/api/trips/{tripId}/plans/{planId}/move": {
       "post": {
         "operationId": "movePlan",
-        "description": "予定の日の移動。移動先は旅行期間内。Idempotency-Key・If-Match 必須。",
+        "description": "予定の日の移動。移動先は旅行期間内。Idempotency-Key・X-Expected-Version 必須。",
         "parameters": [
           {
             "$ref": "#/components/parameters/tripId"
@@ -417,7 +409,7 @@
             "$ref": "#/components/parameters/IdempotencyKey"
           },
           {
-            "$ref": "#/components/parameters/IfMatch"
+            "$ref": "#/components/parameters/ExpectedVersion"
           }
         ],
         "requestBody": {
@@ -502,7 +494,7 @@
             }
           },
           "428": {
-            "description": "If-Match 欠落（IF_MATCH_REQUIRED）",
+            "description": "X-Expected-Version 欠落（EXPECTED_VERSION_REQUIRED）",
             "content": {
               "application/json": {
                 "schema": {
@@ -527,7 +519,7 @@
     "/api/trips/{tripId}/plans/{planId}/cancel": {
       "post": {
         "operationId": "cancelPlan",
-        "description": "予定の取りやめ。既存の達成・予約は取り消さない。取りやめ済みは 409 PLAN_CANCELLED。Idempotency-Key・If-Match 必須。",
+        "description": "予定の取りやめ。既存の達成・予約は取り消さない。取りやめ済みは 409 PLAN_CANCELLED。Idempotency-Key・X-Expected-Version 必須。",
         "parameters": [
           {
             "$ref": "#/components/parameters/tripId"
@@ -542,7 +534,7 @@
             "$ref": "#/components/parameters/IdempotencyKey"
           },
           {
-            "$ref": "#/components/parameters/IfMatch"
+            "$ref": "#/components/parameters/ExpectedVersion"
           }
         ],
         "responses": {
@@ -607,7 +599,7 @@
             }
           },
           "428": {
-            "description": "If-Match 欠落（IF_MATCH_REQUIRED）",
+            "description": "X-Expected-Version 欠落（EXPECTED_VERSION_REQUIRED）",
             "content": {
               "application/json": {
                 "schema": {
@@ -632,7 +624,7 @@
     "/api/trips/{tripId}/period": {
       "put": {
         "operationId": "updateTripPeriod",
-        "description": "旅行期間の変更。取りやめ済みを含む全予定が新期間内であることを検証（外れは 422 PLAN_OUTSIDE_TRIP_PERIOD）。Idempotency-Key・If-Match 必須。",
+        "description": "旅行期間の変更。取りやめ済みを含む全予定が新期間内であることを検証（外れは 422 PLAN_OUTSIDE_TRIP_PERIOD）。Idempotency-Key・X-Expected-Version 必須。",
         "parameters": [
           {
             "$ref": "#/components/parameters/tripId"
@@ -644,7 +636,7 @@
             "$ref": "#/components/parameters/IdempotencyKey"
           },
           {
-            "$ref": "#/components/parameters/IfMatch"
+            "$ref": "#/components/parameters/ExpectedVersion"
           }
         ],
         "requestBody": {
@@ -719,7 +711,7 @@
             }
           },
           "428": {
-            "description": "If-Match 欠落（IF_MATCH_REQUIRED）",
+            "description": "X-Expected-Version 欠落（EXPECTED_VERSION_REQUIRED）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1313,15 +1305,15 @@
         },
         "description": "利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。"
       },
-      "IfMatch": {
-        "name": "If-Match",
+      "ExpectedVersion": {
+        "name": "X-Expected-Version",
         "in": "header",
         "required": true,
         "schema": {
           "type": "string",
-          "pattern": "^\"[1-9][0-9]*\"$"
+          "pattern": "^[1-9][0-9]*$"
         },
-        "description": "単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。"
+        "description": "取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。"
       }
     },
     "schemas": {

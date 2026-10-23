@@ -57,7 +57,7 @@ function pendingOf(input: {
 }
 
 /**
- * 予定の追加（POST /trips/{tripId}/plans）。If-Matchは付けない。
+ * 予定の追加（POST /trips/{tripId}/plans）。版（X-Expected-Version）は付けない。
  * 送る直前に端末に残し（ADR-0006）、残せなければ送らずに止める。
  */
 export function useCreatePlan(options: {
@@ -84,8 +84,7 @@ export function useCreatePlan(options: {
 
 /**
  * 予定への書き込み（編集・日の移動・取りやめ）。操作ごとに違うのはsendだけ。
- * conflictでは最新の予定を取り直し、ETagが無い応答でもversionから
- * If-Matchを組み立て直す。
+ * conflictでは最新の予定を取り直し、そのversionを次の版にする。
  */
 export function usePlanMutation(options: {
   tripId: string;
@@ -107,7 +106,7 @@ export function usePlanMutation(options: {
     fetchLatest: () =>
       getPlanWithMeta(options.tripId, options.planId).map((latest) => ({
         ...latest,
-        etag: latest.etag ?? `"${latest.data.version}"`,
+        version: latest.data.version,
       })),
     onSucceeded: (result) => {
       invalidatePlanViews(queryClient, options.tripId, options.planId);

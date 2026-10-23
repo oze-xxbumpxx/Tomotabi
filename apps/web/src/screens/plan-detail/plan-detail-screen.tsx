@@ -383,7 +383,7 @@ export function PlanDetailScreen({
     );
   }
 
-  const etag = `"${plan.version}"`;
+  const version = plan.version;
   const canCancel = plan.cancelledAt === null;
 
   // 「達成を記録」「予約済みを記録」は種類と取りやめで条件が分かれる
@@ -448,7 +448,7 @@ export function PlanDetailScreen({
   };
 
   const onWriteClose = (save: PlanSave) => {
-    // 拒否のあとに閉じたら最新を取り直す（再送は最新のETagで）。
+    // 拒否のあとに閉じたら最新を取り直す（再送は最新の版で）。
     if (save.state.status === "rejected") {
       void planQuery.refetch();
     }
@@ -631,7 +631,7 @@ export function PlanDetailScreen({
           <PlanMoveSheet
             trip={tripQuery.data}
             plan={plan}
-            etag={etag}
+            version={version}
             move={move}
             movePending={moveCheck}
             onClose={() => onWriteClose(move)}
@@ -663,7 +663,7 @@ export function PlanDetailScreen({
       {layer === "cancel" && (
         <CancelPlanDialog
           plan={plan}
-          etag={etag}
+          version={version}
           cancel={cancel}
           cancelPending={cancelCheck}
           onClose={() => onWriteClose(cancel)}

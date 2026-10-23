@@ -29,26 +29,11 @@ describe("httpClient", () => {
       method: "GET",
     });
 
-    expect(result).toMatchObject({ data: { count: 4 }, status: 200, etag: null });
+    expect(result).toMatchObject({ data: { count: 4 }, status: 200 });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/foundation/probes");
     expect(init).toMatchObject({ method: "GET", credentials: "include", cache: "no-store" });
     expect(new Headers(init.headers).has("content-type")).toBe(false);
-  });
-
-  it("returns the ETag response header on success", async () => {
-    stubFetch(
-      new Response(JSON.stringify({ version: 3 }), {
-        headers: { ETag: '"3"' },
-      }),
-    );
-
-    const result = await httpClient<{ data: unknown; etag: string | null }>(
-      "/api/trips/abc",
-      { method: "GET" },
-    );
-
-    expect(result.etag).toBe('"3"');
   });
 
   it("adds a JSON content type to a body-less POST", async () => {

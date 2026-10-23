@@ -344,7 +344,7 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
     render(
       <TripMenu
         trip={trip as never}
-        etag='"1"'
+        version="1"
         displayName="ひなた"
         start={
           {
@@ -416,7 +416,7 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
     render(
       <TripMenu
         trip={trip as never}
-        etag='"1"'
+        version="1"
         displayName="ひなた"
         start={
           {

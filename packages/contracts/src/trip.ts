@@ -9,9 +9,8 @@ export type Trip = {
   endsOn: string;
   status: TripStatus;
   /**
-   * 10進の正整数の文字列。単一の強いETagの中身で、If-Matchには`"3"`の
-   * 引用付きで渡す。変化のたびに1増え、同じ状態への遷移や同じ値への
-   * 変更では増えない。
+   * 10進の正整数の文字列。書き込みの`X-Expected-Version`にそのまま送る。
+   * 変化のたびに1増え、同じ状態への遷移や同じ値への変更では増えない。
    */
   version: string;
   /** ISO 8601の日時。 */

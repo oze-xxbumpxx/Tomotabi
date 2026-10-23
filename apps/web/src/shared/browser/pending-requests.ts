@@ -114,6 +114,7 @@ export function isValidPendingRequest(record: {
   url?: unknown;
   bodyJson?: unknown;
   idempotencyKey?: unknown;
+  expectedVersion?: unknown;
   ifMatch?: unknown;
   createdAt?: unknown;
 }): record is PendingRequestRecord {
@@ -130,7 +131,7 @@ export function isValidPendingRequest(record: {
     typeof record.method !== "string" ||
     !ALLOWED_METHODS.has(record.method) ||
     (record.bodyJson !== null && typeof record.bodyJson !== "string") ||
-    (record.ifMatch !== null && typeof record.ifMatch !== "string") ||
+    !readExpectedVersion(record).ok ||
     typeof record.createdAt !== "string" ||
     Number.isNaN(Date.parse(record.createdAt))
   ) {
@@ -144,6 +145,36 @@ export function isValidPendingRequest(record: {
     }
   }
   return isAllowedPendingUrl(record);
+}
+
+const EXPECTED_VERSION_PATTERN = /^[1-9][0-9]*$/;
+const LEGACY_IF_MATCH_PATTERN = /^"([1-9][0-9]*)"$/;
+
+/**
+ * 記録の版を読む。If-Matchで送っていたころの記録（`ifMatch: "3"`）は`3`に直す。
+ * 新しい版を出す前に結果が分からなかった要求も、同じ版で確かめ直せるようにするため。
+ */
+function readExpectedVersion(record: {
+  expectedVersion?: unknown;
+  ifMatch?: unknown;
+}): { ok: true; value: string | null } | { ok: false } {
+  if (record.expectedVersion !== undefined) {
+    if (record.expectedVersion === null) {
+      return { ok: true, value: null };
+    }
+    return typeof record.expectedVersion === "string" &&
+      EXPECTED_VERSION_PATTERN.test(record.expectedVersion)
+      ? { ok: true, value: record.expectedVersion }
+      : { ok: false };
+  }
+  if (record.ifMatch === null) {
+    return { ok: true, value: null };
+  }
+  const legacy =
+    typeof record.ifMatch === "string"
+      ? LEGACY_IF_MATCH_PATTERN.exec(record.ifMatch)
+      : null;
+  return legacy === null ? { ok: false } : { ok: true, value: legacy[1]! };
 }
 
 function isExpired(record: PendingRequestRecord, now: number): boolean {
@@ -160,7 +191,10 @@ export type PendingRequestRecord = {
   url: string;
   bodyJson: string | null;
   idempotencyKey: string;
-  ifMatch: string | null;
+  /** X-Expected-Versionに付ける版。2026-10-23より前の記録には無く、代わりに`ifMatch`がある。 */
+  expectedVersion?: string | null;
+  /** If-Matchで送っていたころの記録の版（`"3"`の形）。読むときに`expectedVersion`へ直す。 */
+  ifMatch?: string | null;
   /** ISO 8601。同じ操作に複数残ったときは新しいものを正とする。 */
   createdAt: string;
 };
@@ -228,7 +262,7 @@ export function toPendingRequestRecord(input: {
     url: input.request.url,
     bodyJson: input.request.bodyJson,
     idempotencyKey: input.request.idempotencyKey,
-    ifMatch: input.request.ifMatch,
+    expectedVersion: input.request.expectedVersion,
     createdAt: new Date().toISOString(),
   };
 }
@@ -362,7 +396,7 @@ export async function clearPendingRequestsForUser(
 }
 
 /**
- * 保存されていた要求を送り直せる形に戻す（同じキー・本文・If-Match）。
+ * 保存されていた要求を送り直せる形に戻す（同じキー・本文・版）。
  * 形・経路が確かめられないレコードにはnullを返す（呼び出し側は送らずに消す）。
  */
 export function pendingRequestToMutation(
@@ -371,12 +405,16 @@ export function pendingRequestToMutation(
   if (!isValidPendingRequest(record)) {
     return null;
   }
+  const version = readExpectedVersion(record);
+  if (!version.ok) {
+    return null;
+  }
   return {
     operation: record.operation,
     url: record.url,
     method: record.method,
     bodyJson: record.bodyJson,
-    ifMatch: record.ifMatch,
+    expectedVersion: version.value,
     idempotencyKey: record.idempotencyKey,
   };
 }

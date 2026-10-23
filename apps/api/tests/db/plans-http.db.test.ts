@@ -133,10 +133,10 @@ async function createPlan(
   tripId: string,
   body: Record<string, unknown>,
   key = newKey(),
-): Promise<{ id: string; etag: string }> {
+): Promise<{ id: string; version: string }> {
   const response = await postPlan(cookie, tripId, body, key);
   expect(response.status).toBe(201);
-  return { id: response.body.id as string, etag: `"${response.body.version as string}"` };
+  return { id: response.body.id as string, version: `${response.body.version as string}` };
 }
 
 async function patchPlan(
@@ -144,12 +144,12 @@ async function patchPlan(
   tripId: string,
   planId: string,
   body: unknown,
-  ifMatch = '"1"',
+  version = "1",
   key = newKey(),
 ): Promise<request.Response> {
   return authed(http().patch(`/api/trips/${tripId}/plans/${planId}`), cookie)
     .set("Idempotency-Key", key)
-    .set("If-Match", ifMatch)
+    .set("X-Expected-Version", version)
     .send(body);
 }
 
@@ -158,7 +158,7 @@ async function movePlan(
   tripId: string,
   planId: string,
   date: string,
-  ifMatch: string,
+  version: string,
   key = newKey(),
 ): Promise<request.Response> {
   return authed(
@@ -166,7 +166,7 @@ async function movePlan(
     cookie,
   )
     .set("Idempotency-Key", key)
-    .set("If-Match", ifMatch)
+    .set("X-Expected-Version", version)
     .send({ date });
 }
 
@@ -174,7 +174,7 @@ async function cancelPlan(
   cookie: string,
   tripId: string,
   planId: string,
-  ifMatch: string,
+  version: string,
   key = newKey(),
 ): Promise<request.Response> {
   return authed(
@@ -182,7 +182,7 @@ async function cancelPlan(
     cookie,
   )
     .set("Idempotency-Key", key)
-    .set("If-Match", ifMatch);
+    .set("X-Expected-Version", version);
 }
 
 /** ひなたが参加しない旅行を別利用者2人で直接作る。 */
@@ -419,7 +419,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
       hinataCookie,
     );
     expect(ok.status).toBe(200);
-    expect(ok.headers.etag).toBe('"1"');
+    expect(ok.headers.etag).toBeUndefined();
     expect(ok.body).toMatchObject({ id: planA, canChangeKind: true });
 
     const otherTrip = await authed(
@@ -466,11 +466,11 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
     // 書き込み経路（PATCH・move・cancel）も同じ403 / 404に揃える
     const write403 = [
       await patchPlan(hinataCookie, foreignTripId, planA, { name: "x" }),
-      await movePlan(hinataCookie, foreignTripId, planA, "2026-10-01", '"1"'),
-      await cancelPlan(hinataCookie, foreignTripId, planA, '"1"'),
+      await movePlan(hinataCookie, foreignTripId, planA, "2026-10-01", "1"),
+      await cancelPlan(hinataCookie, foreignTripId, planA, "1"),
       await patchPlan(hinataCookie, missingTripId, planA, { name: "x" }),
-      await movePlan(hinataCookie, missingTripId, planA, "2026-09-11", '"1"'),
-      await cancelPlan(hinataCookie, missingTripId, planA, '"1"'),
+      await movePlan(hinataCookie, missingTripId, planA, "2026-09-11", "1"),
+      await cancelPlan(hinataCookie, missingTripId, planA, "1"),
     ];
     for (const response of write403) {
       expect(response.status).toBe(403);
@@ -484,12 +484,12 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
         await patchPlan(hinataCookie, tripB, missingPlanId, { name: "x" }),
       ],
       [
-        await movePlan(hinataCookie, tripB, planA, "2026-09-11", '"1"'),
-        await movePlan(hinataCookie, tripB, missingPlanId, "2026-09-11", '"1"'),
+        await movePlan(hinataCookie, tripB, planA, "2026-09-11", "1"),
+        await movePlan(hinataCookie, tripB, missingPlanId, "2026-09-11", "1"),
       ],
       [
-        await cancelPlan(hinataCookie, tripB, planA, '"1"'),
-        await cancelPlan(hinataCookie, tripB, missingPlanId, '"1"'),
+        await cancelPlan(hinataCookie, tripB, planA, "1"),
+        await cancelPlan(hinataCookie, tripB, missingPlanId, "1"),
       ],
     ];
     for (const [otherTripWrite, missingWrite] of writePairs) {
@@ -541,7 +541,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
       date: "2026-09-12",
       time: "06:00",
     });
-    await cancelPlan(hinataCookie, tripId, cancelled.id, '"1"');
+    await cancelPlan(hinataCookie, tripId, cancelled.id, "1");
 
     const itinerary = await authed(
       http().get(`/api/trips/${tripId}/itinerary?date=${day}`),
@@ -666,7 +666,7 @@ describe("取得としおり（P-03、P-10〜P-12）", () => {
 });
 
 describe("更新・移動・取りやめ（P-04〜P-08）", () => {
-  it("P-04: 部分更新は version が増え、同じ値は増えない。If-Match 必須", async () => {
+  it("P-04: 部分更新は version が増え、同じ値は増えない。X-Expected-Version 必須（EV-02）", async () => {
     const tripId = await createTrip(hinataCookie);
     const { id: planId } = await createPlan(hinataCookie, tripId, {
       name: "清水寺",
@@ -675,14 +675,25 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
       time: "09:00",
     });
 
-    const noIfMatch = await authed(
+    const noVersion = await authed(
       http().patch(`/api/trips/${tripId}/plans/${planId}`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
       .send({ name: "別名" });
-    expect(noIfMatch.status).toBe(428);
-    expect(noIfMatch.body).toMatchObject({ code: "IF_MATCH_REQUIRED" });
+    expect(noVersion.status).toBe(428);
+    expect(noVersion.body).toMatchObject({ code: "EXPECTED_VERSION_REQUIRED" });
+
+    // If-Matchは読まない（Vercelの層が成功の応答を412に置き換えるため使わない）。
+    const ifMatchOnly = await authed(
+      http().patch(`/api/trips/${tripId}/plans/${planId}`),
+      hinataCookie,
+    )
+      .set("Idempotency-Key", newKey())
+      .set("If-Match", '"1"')
+      .send({ name: "別名" });
+    expect(ifMatchOnly.status).toBe(428);
+    expect(ifMatchOnly.body).toMatchObject({ code: "EXPECTED_VERSION_REQUIRED" });
 
     const renamed = await patchPlan(hinataCookie, tripId, planId, {
       name: "銀閣寺",
@@ -705,14 +716,14 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
       tripId,
       planId,
       { name: "銀閣寺", time: null, memo: "メモ" },
-      '"2"',
+      "2",
     );
     expect(same.status).toBe(200);
     expect(same.body.version).toBe("2");
     expect(same.headers.etag).toBeUndefined();
 
     // 空のpatchは400
-    const empty = await patchPlan(hinataCookie, tripId, planId, {}, '"2"');
+    const empty = await patchPlan(hinataCookie, tripId, planId, {}, "2");
     expect(empty.status).toBe(400);
 
     const current = await authed(
@@ -784,7 +795,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
       tripId,
       planId,
       "2026-09-10",
-      '"1"',
+      "1",
     );
     expect(moved.status).toBe(200);
     expect(moved.body).toMatchObject({ date: "2026-09-10", version: "2" });
@@ -795,7 +806,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
       tripId,
       planId,
       "2026-09-15",
-      '"2"',
+      "2",
     );
     expect(outside.status).toBe(422);
     expect(outside.body).toMatchObject({ code: "PLAN_OUTSIDE_TRIP_PERIOD" });
@@ -815,7 +826,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
       date: "2026-09-11",
     });
 
-    const cancelled = await cancelPlan(hinataCookie, tripId, planId, '"1"');
+    const cancelled = await cancelPlan(hinataCookie, tripId, planId, "1");
     expect(cancelled.status).toBe(200);
     expect(cancelled.headers.etag).toBeUndefined();
     expect(cancelled.body).toMatchObject({
@@ -828,7 +839,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
       aoiCookie,
       tripId,
       planId,
-      '"2"',
+      "2",
       newKey(),
     );
     expect(again.status).toBe(409);
@@ -841,7 +852,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
       tripId,
       planId,
       { memo: "来年こそ" },
-      '"2"',
+      "2",
     );
     expect(edited.status).toBe(200);
     expect(edited.body).toMatchObject({
@@ -862,7 +873,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
     expect(inList).toEqual([planId]);
   });
 
-  it("P-09: 追加の同じキー再送は、相手が名前を変えたあとでも追加時点の DTO・ETag を返す", async () => {
+  it("P-09: 追加の同じキー再送は、相手が名前を変えたあとでも追加時点の DTO を返す", async () => {
     const tripId = await createTrip(hinataCookie);
     const key = newKey();
     const created = await postPlan(hinataCookie, tripId, {
@@ -873,7 +884,7 @@ describe("更新・移動・取りやめ（P-04〜P-08）", () => {
     expect(created.status).toBe(201);
     const planId = created.body.id as string;
 
-    await patchPlan(aoiCookie, tripId, planId, { name: "あおいの改名" }, '"1"');
+    await patchPlan(aoiCookie, tripId, planId, { name: "あおいの改名" }, "1");
 
     const replay = await postPlan(hinataCookie, tripId, {
       name: "清水寺",
@@ -903,7 +914,7 @@ describe("同時実行（P-13〜P-15）", () => {
     const [shrink, created] = await Promise.all([
       authed(http().put(`/api/trips/${tripId}/period`), hinataCookie)
         .set("Idempotency-Key", newKey())
-        .set("If-Match", '"1"')
+        .set("X-Expected-Version", "1")
         .send({ startsOn: "2026-09-01", endsOn: "2026-09-02" }),
       postPlan(hinataCookie, tripId, {
         name: "ぎりぎりの予定",
@@ -992,7 +1003,7 @@ describe("同時実行（P-13〜P-15）", () => {
     }
   });
 
-  it("P-15: 同じ予定の同時更新（同じ If-Match・別キー）は片方だけ 200", async () => {
+  it("P-15: 同じ予定の同時更新（同じ版・別キー）は片方だけ 200", async () => {
     const tripId = await createTrip(hinataCookie);
     const { id: planId } = await createPlan(hinataCookie, tripId, {
       name: "清水寺",

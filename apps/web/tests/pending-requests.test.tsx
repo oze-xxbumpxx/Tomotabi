@@ -58,7 +58,7 @@ function failSend(failure: ApiFailure): Send {
 
 function okSend(data: Data): Send {
   return () =>
-    okAsync<ApiSuccess<Data>, ApiFailure>({ data, status: 201, etag: null });
+    okAsync<ApiSuccess<Data>, ApiFailure>({ data, status: 201 });
 }
 
 function makeRecord(
@@ -408,7 +408,7 @@ describe("保留中の要求（IndexedDB）", () => {
         "url",
         "bodyJson",
         "idempotencyKey",
-        "ifMatch",
+        "expectedVersion",
         "createdAt",
       ].sort(),
     );
@@ -488,6 +488,18 @@ describe("読み出した保留の検証", () => {
       name: "tripId の文字列が途中で終わる url",
       record: () =>
         makeRecord({ url: `/api/trips/${TRIP_ID}evil/payments` }),
+    },
+    // EV-07: 版の形の確認。
+    {
+      name: "引用符の付いた expectedVersion",
+      record: () => makeRecord({ expectedVersion: '"3"' }),
+    },
+    {
+      name: "引用符の無い古い ifMatch",
+      record: () => {
+        const { expectedVersion: _version, ...legacy } = makeRecord();
+        return { ...legacy, ifMatch: "3" };
+      },
     },
   ];
 
@@ -594,6 +606,19 @@ describe("読み出した保留の検証", () => {
       expect(mutation?.url).toBe(url);
       expect(mutation?.idempotencyKey).toBe(record.idempotencyKey);
     }
+  });
+
+  it("EV-07: If-Matchで送っていたころの保留（ifMatch: \"3\"）は版3として送り直せる形に戻る", () => {
+    const { expectedVersion: _version, ...legacy } = makeRecord({
+      url: `/api/trips/${TRIP_ID}/plans/${crypto.randomUUID()}`,
+      operation: "update-plan",
+    });
+    const mutation = pendingRequestToMutation({ ...legacy, ifMatch: '"3"' });
+    expect(mutation?.expectedVersion).toBe("3");
+
+    const noVersion = pendingRequestToMutation({ ...legacy, ifMatch: null });
+    expect(noVersion).not.toBeNull();
+    expect(noVersion?.expectedVersion).toBeNull();
   });
 
   it("旅行の新規作成の保留は `new-trip` の tripId で `/api/trips` ちょうどだけを許す", () => {

@@ -11,7 +11,7 @@ import {
   sendMutationRequest,
   type MutationRequest,
 } from "@/shared/api/mutation-request";
-import { useSaveState } from "@/shared/api/save-state";
+import { useSaveState, type LatestSuccess } from "@/shared/api/save-state";
 import { Field } from "@/shared/ui/field";
 import { ConflictNotice, type ConflictRow } from "@/shared/ui/state/conflict";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
@@ -22,7 +22,7 @@ type TripData = { name: string };
 type Send = (
   request: MutationRequest,
 ) => ResultAsync<ApiSuccess<TripData>, ApiFailure>;
-type FetchLatest = () => ResultAsync<ApiSuccess<TripData>, ApiFailure>;
+type FetchLatest = () => ResultAsync<LatestSuccess<TripData>, ApiFailure>;
 
 // 設計書の表どおりの出し分けをする、テストだけの小さなフォーム。
 function RenameForm({
@@ -78,7 +78,7 @@ function RenameForm({
           url: "/api/trips/trip-1",
           method: "PATCH",
           body: { name },
-          ifMatch: '"3"',
+          expectedVersion: "3",
         });
       }}
     >
@@ -137,12 +137,11 @@ function failSend(failure: ApiFailure): Send {
   return () => errAsync<ApiSuccess<TripData>, ApiFailure>(failure);
 }
 
-function okSend(trip: TripData, etag = '"4"'): Send {
+function okSend(trip: TripData): Send {
   return () =>
     okAsync<ApiSuccess<TripData>, ApiFailure>({
       data: trip,
       status: 200,
-      etag,
     });
 }
 
@@ -173,7 +172,6 @@ describe("useSaveState", () => {
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ name: "秋の京都" }), {
           status: 200,
-          headers: { ETag: '"4"' },
         }),
       );
     vi.stubGlobal("fetch", fetchMock);
@@ -193,7 +191,7 @@ describe("useSaveState", () => {
     );
     expect(await screen.findByText("保存しました")).toBeInTheDocument();
 
-    // fetchのモックで、1回目と2回目の要求のキー・本文・If-Matchが同じことを確かめる。
+    // fetchのモックで、1回目と2回目の要求のキー・本文・版が同じことを確かめる。
     const [first, second] = fetchMock.mock.calls as [
       [string, RequestInit],
       [string, RequestInit],
@@ -204,7 +202,7 @@ describe("useSaveState", () => {
       firstHeaders.get("idempotency-key"),
     );
     expect(second[1].body).toBe(first[1].body);
-    expect(secondHeaders.get("if-match")).toBe(firstHeaders.get("if-match"));
+    expect(secondHeaders.get("x-expected-version")).toBe(firstHeaders.get("x-expected-version"));
     expect(second[0]).toBe(first[0]);
     expect(second[1].method).toBe(first[1].method);
   });
@@ -250,7 +248,7 @@ describe("useSaveState", () => {
     expect(second.bodyJson).toBe(JSON.stringify({ name: "直した名前" }));
   });
 
-  it("W-11: VERSION_CONFLICT shows the latest next to the input and saves with the latest ETag and a new key", async () => {
+  it("W-11: VERSION_CONFLICT shows the latest next to the input and saves with the latest version and a new key", async () => {
     const send = vi
       .fn<Send>()
       .mockImplementationOnce(
@@ -258,10 +256,10 @@ describe("useSaveState", () => {
       )
       .mockImplementationOnce(okSend({ name: "あなたの名前" }));
     const fetchLatest = vi.fn<FetchLatest>(() =>
-      okAsync<ApiSuccess<TripData>, ApiFailure>({
+      okAsync<LatestSuccess<TripData>, ApiFailure>({
         data: { name: "相手の名前" },
         status: 200,
-        etag: '"7"',
+        version: "7",
       }),
     );
     const user = userEvent.setup();
@@ -292,7 +290,7 @@ describe("useSaveState", () => {
 
     const first = send.mock.calls[0][0];
     const second = send.mock.calls[1][0];
-    expect(second.ifMatch).toBe('"7"');
+    expect(second.expectedVersion).toBe("7");
     expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
     expect(second.bodyJson).toBe(JSON.stringify({ name: "あなたの名前" }));
   });
@@ -416,7 +414,6 @@ describe("W-25: only the error code is used (no server text on screen)", () => {
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ name: "相手の名前" }), {
           status: 200,
-          headers: { ETag: '"7"' },
         }),
       );
     vi.stubGlobal("fetch", fetchMock);
@@ -429,7 +426,7 @@ describe("W-25: only the error code is used (no server text on screen)", () => {
           { method: "GET" },
         ),
         tripSchema,
-      );
+      ).map((latest) => ({ ...latest, version: "7" }));
 
     const user = userEvent.setup();
     const { container } = render(

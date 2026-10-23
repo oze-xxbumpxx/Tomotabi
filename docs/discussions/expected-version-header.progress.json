@@ -16,10 +16,13 @@
       ]
     },
     "plan": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/expected-version-header.md"
+      ]
     },
     "implement": {
-      "state": "pending"
+      "state": "done"
     },
     "review": {
       "state": "pending"
@@ -31,5 +34,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-23T12:43:31.269Z"
+  "updated_at": "2026-10-23T13:01:26.372Z"
 }

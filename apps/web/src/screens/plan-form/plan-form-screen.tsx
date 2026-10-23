@@ -145,22 +145,22 @@ export function PlanFormScreen({
 
   // 編集は保存済みの値で欄を埋める（開いていたときの基準として保持する）。
   const savedRef = useRef<PlanFormValues | null>(null);
-  const etagRef = useRef<string | null>(null);
+  const versionRef = useRef<string | null>(null);
   useEffect(() => {
     if (mode === "edit" && plan !== undefined && savedRef.current === null) {
       savedRef.current = valuesOfPlan(plan);
-      etagRef.current = `"${plan.version}"`;
+      versionRef.current = plan.version;
       setValues(valuesOfPlan(plan));
     }
   }, [mode, plan]);
 
-  // 428（If-Match必須）で拒否されたらETagが古いので、最新を取り直す
-  // までは送り直せない。取り直しでETagを差し替えて編集に戻す。
+  // 428（版の確認が必須）で拒否されたら版が古いので、最新を取り直す
+  // までは送り直せない。取り直しで版を差し替えて編集に戻す。
   const reloadLatest = async () => {
     if (mode === "edit") {
       const result = await planQuery.refetch();
       if (result.data !== undefined) {
-        etagRef.current = `"${result.data.version}"`;
+        versionRef.current = result.data.version;
       }
     } else {
       await tripQuery.refetch();
@@ -228,11 +228,11 @@ export function PlanFormScreen({
       ? planFormValuesFromJson(pendingRecord.bodyJson)
       : null;
 
-  // conflictの最新値で欄を埋め直すときの基準になるETag。
-  const etagNow =
+  // conflictの最新値で欄を埋め直すときの基準になる版。
+  const versionNow =
     state.status === "conflict" && state.latest !== null
-      ? state.latest.etag
-      : (etagRef.current ?? "");
+      ? state.latest.version
+      : (versionRef.current ?? "");
 
   useEffect(() => {
     if (meState.status === "unauthenticated") {
@@ -255,9 +255,9 @@ export function PlanFormScreen({
 
   const applyChange = (change: PlanFormChange) => {
     // 拒否（422など）のあと欄を直したら編集に戻す。サーバーは拒否した
-    // 要求で予定を変えないのでETagはそのまま使え、送り直しは新しい
-    // キーになる（07 §10 / W-10と同じ考え方）。428（If-Match必須）
-    // だけはETagが古いので、欄を変えても先に最新を取り直させる。
+    // 要求で予定を変えないので版はそのまま使え、送り直しは新しい
+    // キーになる（07 §10 / W-10と同じ考え方）。428（版の確認が必須）
+    // だけは版が古いので、欄を変えても先に最新を取り直させる。
     if (state.status === "rejected" && state.httpStatus !== 428) {
       save.backToEditing();
     }
@@ -322,7 +322,7 @@ export function PlanFormScreen({
       return;
     }
     void update.submit(
-      updatePlanDraft(tripId, planId ?? "", patch, etagNow),
+      updatePlanDraft(tripId, planId ?? "", patch, versionNow),
     );
   };
 
@@ -509,7 +509,7 @@ export function PlanFormScreen({
                   locked ||
                   !online ||
                   pendingCheck.check.status !== "none" ||
-                  // 428（ETagが古い）のときだけ止める。ほかの拒否は欄を
+                  // 428（版が古い）のときだけ止める。ほかの拒否は欄を
                   // 直せば編集に戻り、新しいキーで送り直せる。
                   (state.status === "rejected" && state.httpStatus === 428)
                 }
@@ -578,13 +578,13 @@ export function PlanFormScreen({
               },
             ]}
             onSaveMine={() => {
-              // 同じ要求を最新のETagと新しいキーで送り直す。
+              // 同じ要求を最新の版と新しいキーで送り直す。
               void update.saveMineOverLatest();
             }}
             onUseLatest={() => {
               if (state.latest !== null) {
                 savedRef.current = valuesOfPlan(state.latest.data);
-                etagRef.current = state.latest.etag;
+                versionRef.current = state.latest.version;
                 setValues(valuesOfPlan(state.latest.data));
               }
               update.backToEditing();

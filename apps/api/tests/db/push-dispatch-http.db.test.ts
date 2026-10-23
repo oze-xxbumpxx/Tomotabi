@@ -411,7 +411,7 @@ describe("11種の操作の届け先（PD-16）", () => {
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"')
+      .set("X-Expected-Version", "1")
       .send({ date: "2026-09-12" });
     expect(moved.status).toBe(200);
     await expectSent("plan_moved");
@@ -532,7 +532,7 @@ describe("11種の操作の届け先（PD-16）", () => {
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"');
+      .set("X-Expected-Version", "1");
     expect(cancel.status).toBe(200);
     await expectSent("plan_cancelled");
   });
@@ -558,16 +558,16 @@ describe("11種の操作の届け先（PD-16）", () => {
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"')
+      .set("X-Expected-Version", "1")
       .send({ name: "銀閣寺", memo: "メモ" });
     expect(renamed.status).toBe(200);
-    // 予定を取りやめる（届く操作。PATCHで版が上がっているのでIf-Matchは"2"）
+    // 予定を取りやめる（届く操作。PATCHで版が上がっているので版は"2"）
     const cancel = await authed(
       http().post(`/api/trips/${tripId}/plans/${planId}/cancel`),
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"2"');
+      .set("X-Expected-Version", "2");
     expect(cancel.status).toBe(200);
 
     // 既にあった取り消しは200を返すが送らない（支払いで確かめる。
@@ -612,14 +612,14 @@ describe("11種の操作の届け先（PD-16）", () => {
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"');
+      .set("X-Expected-Version", "1");
     expect([200, 201]).toContain(started.status);
     const finished = await authed(
       http().post(`/api/trips/${tripId}/finish`),
       actor.cookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", `"${started.body.version as string}"`);
+      .set("X-Expected-Version", `${started.body.version as string}`);
     expect([200, 201]).toContain(finished.status);
     await afterResponse.drain();
     expect(transport.calls.length).toBe(0);

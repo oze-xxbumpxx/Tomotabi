@@ -517,11 +517,11 @@ describe("一覧と取得（T-07〜T-09）", () => {
     expect(seen.sort()).toEqual([...finished, ...microIds].sort());
   });
 
-  it("T-09: 取得は 200＋ETag。参加しない・存在しないはどちらも同じ 403 本文", async () => {
+  it("T-09: 取得は 200（ETagなし。EV-04）。参加しない・存在しないはどちらも同じ 403 本文", async () => {
     const own = await createTrip(hinataCookie, "自分の旅行");
     const ok = await authed(http().get(`/api/trips/${own}`), hinataCookie);
     expect(ok.status).toBe(200);
-    expect(ok.headers.etag).toBe('"1"');
+    expect(ok.headers.etag).toBeUndefined();
     expect(ok.headers["cache-control"]).toBe("private, no-store");
     expect(ok.body.id).toBe(own);
 
@@ -546,7 +546,7 @@ describe("一覧と取得（T-07〜T-09）", () => {
   });
 });
 
-describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
+describe("名前・期間の変更と X-Expected-Version（T-10〜T-12）", () => {
   it("T-10: PATCH 名は 200 で版が上がり、応答に ETag を付けない", async () => {
     const tripId = await createTrip(hinataCookie);
 
@@ -555,7 +555,7 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"')
+      .set("X-Expected-Version", "1")
       .send({ name: "沖縄 3 泊" });
 
     expect(response.status).toBe(200);
@@ -563,28 +563,38 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
     expect(response.body).toMatchObject({ name: "沖縄 3 泊", version: "2" });
   });
 
-  it("T-11: If-Match なしは 428、古い値は 409 で名前は変わらない", async () => {
+  it("T-11: X-Expected-Version なしは 428（If-Match だけでも 428）、古い値は 409 で名前は変わらない", async () => {
     const tripId = await createTrip(hinataCookie);
     await authed(http().patch(`/api/trips/${tripId}`), hinataCookie)
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"')
+      .set("X-Expected-Version", "1")
       .send({ name: "一度目の名前" });
 
-    const noIfMatch = await authed(
+    const noVersion = await authed(
       http().patch(`/api/trips/${tripId}`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
       .send({ name: "二度目" });
-    expect(noIfMatch.status).toBe(428);
-    expect(noIfMatch.body).toMatchObject({ code: "IF_MATCH_REQUIRED" });
+    expect(noVersion.status).toBe(428);
+    expect(noVersion.body).toMatchObject({ code: "EXPECTED_VERSION_REQUIRED" });
+
+    const ifMatchOnly = await authed(
+      http().patch(`/api/trips/${tripId}`),
+      hinataCookie,
+    )
+      .set("Idempotency-Key", newKey())
+      .set("If-Match", '"2"')
+      .send({ name: "二度目" });
+    expect(ifMatchOnly.status).toBe(428);
+    expect(ifMatchOnly.body).toMatchObject({ code: "EXPECTED_VERSION_REQUIRED" });
 
     const stale = await authed(
       http().patch(`/api/trips/${tripId}`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"')
+      .set("X-Expected-Version", "1")
       .send({ name: "二度目" });
     expect(stale.status).toBe(409);
     expect(stale.body).toMatchObject({ code: "VERSION_CONFLICT" });
@@ -611,7 +621,7 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"')
+      .set("X-Expected-Version", "1")
       .send({ startsOn: "2026-09-10", endsOn: "2026-09-11" });
     expect(shrink.status).toBe(422);
     expect(shrink.body).toMatchObject({ code: "PLAN_OUTSIDE_TRIP_PERIOD" });
@@ -625,7 +635,7 @@ describe("名前・期間の変更と If-Match（T-10〜T-12）", () => {
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"')
+      .set("X-Expected-Version", "1")
       .send({ startsOn: "2026-09-01", endsOn: "2026-09-20" });
     expect(widen.status).toBe(200);
     expect(widen.body).toMatchObject({ startsOn: "2026-09-01", endsOn: "2026-09-20", version: "2" });
@@ -641,7 +651,7 @@ describe("開始・終了（T-13〜T-16）", () => {
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"');
+      .set("X-Expected-Version", "1");
     expect(started.status).toBe(200);
     expect(started.body).toMatchObject({
       status: "traveling",
@@ -655,7 +665,7 @@ describe("開始・終了（T-13〜T-16）", () => {
       aoiCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"2"');
+      .set("X-Expected-Version", "2");
     expect(finished.status).toBe(200);
     expect(finished.body).toMatchObject({
       status: "finished",
@@ -674,23 +684,23 @@ describe("開始・終了（T-13〜T-16）", () => {
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"');
+      .set("X-Expected-Version", "1");
     expect(earlyFinish.status).toBe(409);
     expect(earlyFinish.body).toMatchObject({ code: "INVALID_TRIP_TRANSITION" });
 
     const finishedTrip = await createTrip(hinataCookie);
     await authed(http().post(`/api/trips/${finishedTrip}/start`), hinataCookie)
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"');
+      .set("X-Expected-Version", "1");
     await authed(http().post(`/api/trips/${finishedTrip}/finish`), hinataCookie)
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"2"');
+      .set("X-Expected-Version", "2");
     const restart = await authed(
       http().post(`/api/trips/${finishedTrip}/start`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"3"');
+      .set("X-Expected-Version", "3");
     expect(restart.status).toBe(409);
     expect(restart.body).toMatchObject({ code: "INVALID_TRIP_TRANSITION" });
   });
@@ -699,17 +709,17 @@ describe("開始・終了（T-13〜T-16）", () => {
     const tripId = await createTrip(hinataCookie);
     await authed(http().post(`/api/trips/${tripId}/start`), hinataCookie)
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"');
+      .set("X-Expected-Version", "1");
     const before = await authed(http().get(`/api/trips/${tripId}`), hinataCookie);
 
-    // 別のキーでstart（ETagは現在値に一致）
+    // 別のキーでstart（版は現在値に一致）
     const againKey = newKey();
     const again = await authed(
       http().post(`/api/trips/${tripId}/start`),
       hinataCookie,
     )
       .set("Idempotency-Key", againKey)
-      .set("If-Match", '"2"');
+      .set("X-Expected-Version", "2");
     expect(again.status).toBe(200);
     expect(again.body.version).toBe("2");
     expect(again.body.startedAt).toBe(before.body.startedAt);
@@ -720,7 +730,7 @@ describe("開始・終了（T-13〜T-16）", () => {
       hinataCookie,
     )
       .set("Idempotency-Key", againKey)
-      .set("If-Match", '"2"');
+      .set("X-Expected-Version", "2");
     expect(replay.status).toBe(200);
     expect(replay.body).toEqual(again.body);
 
@@ -733,17 +743,17 @@ describe("開始・終了（T-13〜T-16）", () => {
     const tripId = await createTrip(hinataCookie);
     await authed(http().post(`/api/trips/${tripId}/start`), hinataCookie)
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"1"');
+      .set("X-Expected-Version", "1");
     await authed(http().post(`/api/trips/${tripId}/finish`), hinataCookie)
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"2"');
+      .set("X-Expected-Version", "2");
 
     const renamed = await authed(
       http().patch(`/api/trips/${tripId}`),
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"3"')
+      .set("X-Expected-Version", "3")
       .send({ name: "行ってきた旅行" });
     expect(renamed.status).toBe(200);
     expect(renamed.body).toMatchObject({ name: "行ってきた旅行", status: "finished", version: "4" });
@@ -753,7 +763,7 @@ describe("開始・終了（T-13〜T-16）", () => {
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
-      .set("If-Match", '"4"')
+      .set("X-Expected-Version", "4")
       .send({ startsOn: "2026-09-09", endsOn: "2026-09-13" });
     expect(period.status).toBe(200);
     expect(period.body).toMatchObject({ startsOn: "2026-09-09", endsOn: "2026-09-13", version: "5" });

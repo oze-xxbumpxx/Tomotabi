@@ -80,7 +80,7 @@ export function listRecordsPage(
 
 // ---- 変更要求の組み立て（MutationDraft） ----
 
-/** POST /api/trips/{tripId}/achievements。If-Matchは付けない。 */
+/** POST /api/trips/{tripId}/achievements。版（X-Expected-Version）は付けない。 */
 export function createAchievementDraft(
   tripId: string,
   planId: string,
@@ -94,7 +94,7 @@ export function createAchievementDraft(
   };
 }
 
-/** POST /api/trips/{tripId}/achievements/{recordId}/cancel。If-Matchは付けない。 */
+/** POST /api/trips/{tripId}/achievements/{recordId}/cancel。版（X-Expected-Version）は付けない。 */
 export function cancelAchievementDraft(
   tripId: string,
   recordId: string,
@@ -107,7 +107,7 @@ export function cancelAchievementDraft(
   };
 }
 
-/** POST /api/trips/{tripId}/bookings。If-Matchは付けない。 */
+/** POST /api/trips/{tripId}/bookings。版（X-Expected-Version）は付けない。 */
 export function createBookingDraft(
   tripId: string,
   planId: string,
@@ -121,7 +121,7 @@ export function createBookingDraft(
   };
 }
 
-/** POST /api/trips/{tripId}/bookings/{recordId}/cancel。If-Matchは付けない。 */
+/** POST /api/trips/{tripId}/bookings/{recordId}/cancel。版（X-Expected-Version）は付けない。 */
 export function cancelBookingDraft(
   tripId: string,
   recordId: string,

@@ -113,19 +113,19 @@ export const GetTripResponse = zod.object({
 
 
 /**
- * 旅行名の変更。Idempotency-Key・If-Match 必須。
+ * 旅行名の変更。Idempotency-Key・X-Expected-Version 必須。
  */
 export const RenameTripParams = zod.object({
   "tripId": zod.uuid()
 })
 
-export const renameTripHeaderIfMatchRegExp = new RegExp('^"[1-9][0-9]*"$');
+export const renameTripHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const RenameTripHeader = zod.object({
   "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
   "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
-  "If-Match": zod.string().regex(renameTripHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
+  "X-Expected-Version": zod.string().regex(renameTripHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
 })
 
 
@@ -162,13 +162,13 @@ export const StartTripParams = zod.object({
   "tripId": zod.uuid()
 })
 
-export const startTripHeaderIfMatchRegExp = new RegExp('^"[1-9][0-9]*"$');
+export const startTripHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const StartTripHeader = zod.object({
   "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
   "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
-  "If-Match": zod.string().regex(startTripHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
+  "X-Expected-Version": zod.string().regex(startTripHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
 })
 
 
@@ -198,13 +198,13 @@ export const FinishTripParams = zod.object({
   "tripId": zod.uuid()
 })
 
-export const finishTripHeaderIfMatchRegExp = new RegExp('^"[1-9][0-9]*"$');
+export const finishTripHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const FinishTripHeader = zod.object({
   "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
   "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
-  "If-Match": zod.string().regex(finishTripHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
+  "X-Expected-Version": zod.string().regex(finishTripHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
 })
 
 

@@ -40,7 +40,10 @@ export type RequestHashInput = Readonly<{
   resourceId: string | null;
   /** 検証後の正規化したbody。bodyの無い操作はnull */
   body: unknown;
-  /** If-Matchのversion。不要な操作はnull */
+  /**
+   * X-Expected-Versionのversion。不要な操作はnull。名前はIf-Matchで送っていた
+   * ころのまま（request_hashの鍵名なので、変えると再送のhashが合わなくなる）。
+   */
   ifMatch: string | null;
 }>;
 

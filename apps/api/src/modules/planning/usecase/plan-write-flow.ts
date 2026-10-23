@@ -49,7 +49,7 @@ export function planNotFound(): ApiError {
 
 /**
  * 予定の書き込みの共通の流れ（設計書「書き込みの共通の流れ」）:
- * 旅行行FOR SHARE → receipt → 予定行FOR NO KEY UPDATE → If-Match →
+ * 旅行行FOR SHARE → receipt → 予定行FOR NO KEY UPDATE → 版の確認 →
  * Domain → 更新とreceiptを同じトランザクションで保存。
  *
  * 旅行はFOR SHAREにする。期間の変更はFOR UPDATEを取るため、こちらが

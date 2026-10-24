@@ -6,7 +6,7 @@ import { createGitHubClient } from './delegation-github.mjs';
 import {
   DelegationError, EVENT_MARKER, ANCHOR_MARKER, TASK_MARKER, ZERO_HASH, canonicalJson, hashJson,
   parseRequestComment, extractPlanTask, createJournalEvent, formatAnchor,
-  readSnapshot, readIssueComments, uneditedComment, reduceRequest, verifyControlRun, verifyMainCommit,
+  readSnapshot, readIssueComments, uneditedComment, reduceRequest, verifyControlRun, verifyMainCommit, applyChanges,
 } from './delegation-shared.mjs';
 
 const fail = (code) => { throw new DelegationError(code); };
@@ -14,8 +14,29 @@ const positive = (value) => Number.isSafeInteger(value) && value > 0;
 const publicError = (error) => error instanceof DelegationError ? error.code : 'communication_unknown';
 const systemMeta = (run, operation) => ({ source_run_id: run.id, source_run_attempt: run.run_attempt, request_id: null, request_comment_id: null, operation });
 
-/** 追記と先頭位置を読み直すまで、起票と許可を進めない。 */
+const withoutUpdatedSeq = ({ updated_seq: _seq, ...rest }) => rest;
+
+/**
+ * 要求に結び付かない内部のイベントで、変更が今の状態と同じならtrue。
+ * 同じ状態を書き続けて管理Issueのコメントが上限に達したため（delegation-journal-rollover）。
+ * tasksは書くときに付くupdated_seqを除いて比べる。
+ */
+export function unchangedInternalEvent(state, changes, meta) {
+  if (meta.request_id !== null && meta.request_id !== undefined) return false;
+  applyChanges(state, changes);
+  if (changes.requests !== undefined) return false;
+  return ['tasks', 'prs', 'checks'].every((key) => Object.entries(changes[key] ?? {}).every(([id, value]) => {
+    const current = state[key][id];
+    if (current === undefined) return false;
+    return key === 'tasks'
+      ? canonicalJson(withoutUpdatedSeq(current)) === canonicalJson(withoutUpdatedSeq(value))
+      : canonicalJson(current) === canonicalJson(value);
+  }));
+}
+
+/** 追記と先頭位置を読み直すまで、起票と許可を進めない。変わらない内部のイベントは書かない。 */
 export async function persistEvent(client, config, state, changes, meta, result) {
+  if (unchangedInternalEvent(state, changes, meta)) return state;
   const event = createJournalEvent(state, changes, meta, result, { maxBytes: config.limits?.event_bytes ?? 49152 });
   let comment = null;
   try {
@@ -424,7 +445,8 @@ export async function runController({ client, config, runId, runAttempt, runtime
 export async function initializeAnchor(client, config, run, event) {
   if (run.event !== 'workflow_dispatch' || !config.actor_ids.request.includes(event?.sender?.id) || !config.actor_ids.request.includes(run.triggering_actor?.id)) fail('initialize_unauthorized');
   const issue = await client.rest('GET', `/repos/${config.repository}/issues/${config.management_issue}`);
-  if (issue?.number !== config.management_issue || issue.pull_request) fail('initialize_unverified');
+  const issueCreatedAt = Date.parse(issue?.created_at ?? '');
+  if (issue?.number !== config.management_issue || issue.pull_request || !Number.isFinite(issueCreatedAt)) fail('initialize_unverified');
   const list = () => readIssueComments(client, config);
   const isAnchor = (comment) => comment.author_id === config.actor_ids.actions && comment.body?.startsWith(`${ANCHOR_MARKER}\n`);
   const existing = (await list()).filter(isAnchor);
@@ -434,7 +456,9 @@ export async function initializeAnchor(client, config, run, event) {
     return { code: 'anchor_initialized', anchor_comment_id: existing[0].id, seq: state.seq, hash: state.hash };
   }
   const priorRuns = await client.paginate(`/repos/${config.repository}/actions/workflows/${config.controller_workflow_id}/runs?event=workflow_dispatch`, { key: 'workflow_runs', maxPages: config.limits.max_pages, maxItems: 1000 });
-  if (run.run_attempt !== 1 || priorRuns.some((prior) => prior.id !== run.id)) fail('initialize_unknown');
+  // 前の管理Issueの初期化は数えない。作成時刻の読めない実行は、二重に書かないよう数える。
+  const sinceIssue = priorRuns.filter((prior) => !(Date.parse(prior.created_at ?? '') < issueCreatedAt));
+  if (run.run_attempt !== 1 || sinceIssue.some((prior) => prior.id !== run.id)) fail('initialize_unknown');
   const pointer = { schema_version: 1, last_seq: 0, last_event_id: null, last_hash: ZERO_HASH };
   let comment = null;
   try { comment = await client.rest('POST', `/repos/${config.repository}/issues/${config.management_issue}/comments`, { body: formatAnchor(pointer) }); } catch {

@@ -1,6 +1,6 @@
 # 設計書: delegation-journal-rollover（委譲の共有状態を新しい管理Issueに移し、同じ状態を書かないようにする）
 
-- ステータス: draft
+- ステータス: confirmed（2026-10-24 チャットで承認）
 - レベル: L2
 - 関連: 論点の記録 `docs/discussions/delegation-journal-rollover.md`、元の設計 `docs/designs/delegation-review-reliability.md`
 
@@ -41,7 +41,8 @@ delegation-control-writerが2026-10-11 10時56分から毎回落ちている。#
 
 ## 対象範囲
 
-- `.claude/scripts/delegation-control.mjs`（イベントを書く処理・初期化・警告）
+- `.claude/scripts/delegation-control.mjs`（イベントを書く処理・初期化）
+- `.claude/scripts/delegation-shared.mjs`（コメントの読み込みと警告。`readIssueComments`がここにあるため）
 - `.claude/config/delegation-review.json`（管理Issueの番号・先頭コメントのID）
 - `.github/workflows/delegation-control.yml`（要求コメントを拾うIssue番号）
 - `.claude/tests/delegation-control.test.mjs`・`.claude/tests/delegation-workflows.test.mjs`
@@ -158,4 +159,4 @@ PR1のあいだ（先頭コメントIDが0）の定期実行は、今までど�
 
 ## 未決事項
 
-仮決定が3件（#191の扱い・上限の知らせ方・初期化の二重実行の防ぎ方）。設計の承認（このPRのマージ）までに異議が無ければ決定に移す。
+なし。仮決定の3件（#191の扱い・上限の知らせ方・初期化の二重実行の防ぎ方）は、2026-10-24の承認で決定にした。

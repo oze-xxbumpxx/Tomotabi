@@ -105,7 +105,10 @@ export function RecordRowView({
 
   if (payment !== null) {
     name = payment.label ?? "支払い";
-    meta = `${time} · ${actorPart}支払い · ${shareNoteOfPayment(
+    // 支払いの行は記録した人ではなく払った人を出す（v3の10）。
+    const payerName = nameOfUser(payment.payerUserId);
+    const payerPart = payerName !== "" ? `${payerName} が` : "";
+    meta = `${time} · ${payerPart}支払い · ${shareNoteOfPayment(
       payment,
       nameOfUser,
     )}`;

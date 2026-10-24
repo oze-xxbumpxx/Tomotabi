@@ -125,7 +125,14 @@ export function HomeRecordsCard({
           {items.map((item) => {
             const { Icon, className } = recordIcon(item);
             const voided = recordVoided(item);
-            const actor = displayNameOf(item.actorId, participants, me);
+            // 支払いの行は記録した人ではなく払った人を出す（v3の10）。
+            const actor = displayNameOf(
+              item.kind === "payment" && "payerUserId" in item.detail
+                ? item.detail.payerUserId
+                : item.actorId,
+              participants,
+              me,
+            );
             const title = recordTitleOf(item, planNameOf, paymentLabelOf);
             const amount = recordAmount(item);
             return (

@@ -603,6 +603,32 @@ describe("記録の一覧（RW-05〜RW-08）", () => {
     ).toBeInTheDocument();
   });
 
+  it("支払いの行は記録した人ではなく払った人の名前を出す（RW-08）", async () => {
+    stubApi({
+      records: () =>
+        json({
+          items: [
+            paymentItem({
+              actorId: userId,
+              detail: payment({ payerUserId: otherUserId }),
+            }),
+          ],
+          nextCursor: null,
+        }),
+    });
+    renderScreen(
+      <RecordsScreen
+        tripId={tripId}
+        type={null}
+        planId={null}
+        recordId={null}
+        recordType={null}
+      />,
+    );
+    expect(await screen.findByText(/そら が支払い · 折半/)).toBeInTheDocument();
+    expect(screen.queryByText(/ひなた が支払い/)).not.toBeInTheDocument();
+  });
+
   it("取り消しの行を押すと元の記録の小さな詳細を開く（RW-08）", async () => {
     stubApi({
       records: (url) => {

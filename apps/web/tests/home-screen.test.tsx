@@ -342,7 +342,11 @@ describe("HomeScreen (/trips/{id}/home)", () => {
                 targetCount: 2,
               },
             },
-            recentRecords: { status: "ok", data: [record()] },
+            // 記録したのは自分でも、行には払った人（あおい）を出す。
+            recentRecords: {
+              status: "ok",
+              data: [record({ actorId: userId })],
+            },
           }),
         ),
     });

@@ -300,6 +300,15 @@ const ACTOR_FIELDS = '__typename ... on User{databaseId} ... on Bot{databaseId}'
 const dateTime = (value) => typeof value === 'string' && /^\d{4}-\d\d-\d\dT/.test(value) && Number.isFinite(Date.parse(value));
 const actorId = (actor) => actor === null ? null : ['User', 'Bot'].includes(actor?.__typename) && positive(actor.databaseId) ? actor.databaseId : -1;
 
+const WARNED_CLIENTS = new WeakSet();
+
+/** 上限に当たって落ちる前に、Actionsの警告で知らせる。1回の実行（client）につき1回だけ出す。 */
+function warnNearCommentLimit(client, count, limit, warnAt) {
+  if (count <= warnAt || WARNED_CLIENTS.has(client)) return;
+  WARNED_CLIENTS.add(client);
+  console.log(`::warning::管理Issueのコメントが${count}件で、読み込みの上限${limit}件に近づいています。新しい管理Issueへの移り方はdocs/designs/delegation-journal-rollover.md`);
+}
+
 /** 本文と作者・最終編集情報を同じGraphQL応答から読み、REST時刻だけでは未編集としない。 */
 export async function readIssueComments(client, config) {
   const [owner, name] = config.repository.split('/');
@@ -327,7 +336,10 @@ export async function readIssueComments(client, config) {
       comments.push({ id, body: node.body, user: { id: actorId(node.author) }, author_id: actorId(node.author), editor_id: actorId(node.editor), last_edited_at: node.lastEditedAt, created_at: node.createdAt, updated_at: node.updatedAt });
     }
     if (comments.length >= maxItems) fail('comment_limit');
-    if (!connection.pageInfo.hasNextPage) return comments;
+    if (!connection.pageInfo.hasNextPage) {
+      warnNearCommentLimit(client, comments.length, maxItems, config.limits?.comments_warn ?? 900);
+      return comments;
+    }
     if (connection.nodes.length === 0 || typeof connection.pageInfo.endCursor !== 'string' || connection.pageInfo.endCursor === '' || cursors.has(connection.pageInfo.endCursor)) fail('comments_unknown');
     cursor = connection.pageInfo.endCursor;
     cursors.add(cursor);

@@ -60,10 +60,12 @@ test('writerの実際のif式は通常コメントを省略し、要求と完了
     ref, event_name: eventName, event: { action, repository: { default_branch: 'main' }, issue: { number, pull_request: pr },
       comment: { user: { id: author }, body }, changes: { body: { from: previous } } },
   }, (value, prefix) => String(value ?? '').startsWith(prefix), (pattern, value) => pattern.replace('{0}', value));
+  const issue = JSON.parse(readFileSync(new URL('../config/delegation-review.json', import.meta.url))).management_issue;
   assert.equal(Boolean(check({ body: '通常コメント' })), false);
-  assert.equal(Boolean(check({ number: 191, body: '<!-- tomotabi-delegation-event -->\n{}' })), false);
-  assert.equal(Boolean(check({ number: 191, body: '<!-- tomotabi-delegation-request -->\n{}' })), true);
-  assert.equal(Boolean(check({ number: 191, previous: '<!-- tomotabi-delegation-request -->\n{}' })), true);
+  assert.equal(Boolean(check({ number: 191, body: '<!-- tomotabi-delegation-request -->\n{}' })), false);
+  assert.equal(Boolean(check({ number: issue, body: '<!-- tomotabi-delegation-event -->\n{}' })), false);
+  assert.equal(Boolean(check({ number: issue, body: '<!-- tomotabi-delegation-request -->\n{}' })), true);
+  assert.equal(Boolean(check({ number: issue, previous: '<!-- tomotabi-delegation-request -->\n{}' })), true);
   assert.equal(Boolean(check({ pr: true, body: '通常コメント' })), false);
   assert.equal(Boolean(check({ pr: true, action: 'deleted', body: '', previous: '' })), true);
   assert.equal(Boolean(check({ pr: true, action: 'deleted', body: null, previous: '' })), true);

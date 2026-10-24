@@ -10,16 +10,23 @@
       "reason": "L2なので要件定義書は作らない"
     },
     "design": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/designs/delegation-journal-rollover.md"
-      ]
+      ],
+      "approved": {
+        "pr": 225,
+        "at": "2026-10-24"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/delegation-journal-rollover.md"
+      ]
     },
     "implement": {
-      "state": "pending"
+      "state": "active"
     },
     "review": {
       "state": "pending"
@@ -31,5 +38,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-14T23:28:50.638Z"
+  "updated_at": "2026-10-24T02:37:50.686Z"
 }

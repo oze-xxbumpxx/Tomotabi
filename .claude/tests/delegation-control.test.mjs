@@ -14,6 +14,9 @@ const SHA = 'a'.repeat(40);
 const NOW = '2026-10-09T10:00:00Z';
 const AUTHOR = 109064833;
 const ACTIONS = 41898282;
+const ISSUE_CREATED = '2026-10-09T09:00:00Z';
+/** 内部のイベントは、変更が今の状態と違うときだけ書く。書かせたい試験は、回ごとに違う変更を渡す。 */
+const probe = (n = 1) => ({ checks: { [SHA]: { probe: n } } });
 const config = {
   schema_version: 1, repository: REPO, repository_id: 1359576461, default_branch: 'main', management_issue: 1, anchor_comment_id: 1,
   controller_workflow_id: 12, controller_workflow_path: '.github/workflows/delegation-control.yml', listener_workflow_id: 13, listener_workflow_path: '.github/workflows/delegation-events.yml',
@@ -22,7 +25,7 @@ const config = {
   limits: { request_bytes: 8192, event_bytes: 49152, comments: 1000, max_pages: 10, page_size: 100, requests_per_run: 20, tasks: 100, reviews: 1000, open_prs: 1000, wait_ms: 120000 },
 };
 const copy = (value) => JSON.parse(JSON.stringify(value));
-const makeRun = (id = 1) => ({ id, run_attempt: 1, repository: { id: config.repository_id }, head_repository: { id: config.repository_id }, workflow_id: 12, head_branch: 'main', head_sha: SHA, event: 'issue_comment', triggering_actor: { id: AUTHOR } });
+const makeRun = (id = 1) => ({ id, run_attempt: 1, created_at: NOW, repository: { id: config.repository_id }, head_repository: { id: config.repository_id }, workflow_id: 12, head_branch: 'main', head_sha: SHA, event: 'issue_comment', triggering_actor: { id: AUTHOR } });
 const plan = '<!-- delegation-task:task -->\n公開された作業\n<!-- /delegation-task -->';
 const register = () => ({ schema_version: 1, operation: 'register', request_id: randomUUID(), task_key: 'feature:task', plan_path: 'docs/implementation-plans/feature.md', plan_sha: SHA, task_digest: taskDigest('公開された作業'), start_conditions_confirmed: true });
 
@@ -67,7 +70,7 @@ function memoryGitHub({ anchor = true, failure = null } = {}) {
       } else if (method === 'POST' && path.endsWith('/issues')) {
         result = { number: nextIssue++, body: body.body, state: 'open', user: { id: ACTIONS } };
         issues.push(copy(result));
-      } else if (method === 'GET' && path.includes('/issues/')) result = Number(path.split('/').at(-1)) === 1 ? { number: 1, state: 'open' } : copy(issues.find((issue) => issue.number === Number(path.split('/').at(-1))));
+      } else if (method === 'GET' && path.includes('/issues/')) result = Number(path.split('/').at(-1)) === 1 ? { number: 1, state: 'open', created_at: ISSUE_CREATED } : copy(issues.find((issue) => issue.number === Number(path.split('/').at(-1))));
       else if (method === 'POST' && path.endsWith('/check-runs')) {
         result = { ...body, id: checks.size + 1, conclusion: null };
         checks.set(result.id, copy(result));
@@ -462,7 +465,7 @@ test('固定runのrepo/workflow/branch/SHA/attemptを検証し、作者だけで
   client.comments[0].user.id = AUTHOR;
   await assert.rejects(readSnapshot(client, config), /anchor_author_unverified/);
   const untrusted = memoryGitHub();
-  const state = await persistEvent(untrusted, config, await readSnapshot(untrusted, config), {}, { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' }, { code: 'confirmed', allowed: false });
+  const state = await persistEvent(untrusted, config, await readSnapshot(untrusted, config), probe(), { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' }, { code: 'confirmed', allowed: false });
   assert.equal(state.seq, 1);
   untrusted.comments.find((comment) => comment.body.startsWith(EVENT_MARKER)).updated_at = '2026-10-09T11:00:00Z';
   await assert.rejects(readSnapshot(untrusted, config), /journal_author_unverified/);
@@ -474,7 +477,7 @@ test('未許可作者の偽eventをparseせず、Actions作者の破損は停止
   client.comments.at(-1).body = `${EVENT_MARKER}\nSECRET_NOT_JSON`;
   let state = await readSnapshot(client, config);
   assert.equal(state.seq, 0);
-  state = await persistEvent(client, config, state, {}, { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' }, { code: 'confirmed', allowed: false });
+  state = await persistEvent(client, config, state, probe(), { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' }, { code: 'confirmed', allowed: false });
   assert.equal(state.seq, 1);
   client.add({}, ACTIONS);
   client.comments.at(-1).body = `${EVENT_MARKER}\nSECRET_NOT_JSON`;
@@ -484,7 +487,7 @@ test('未許可作者の偽eventをparseせず、Actions作者の破損は停止
 test('同じ秒のjournal編集もActions本人による編集も停止する', async () => {
   for (const editor of [ACTIONS, AUTHOR, null]) {
     const client = memoryGitHub();
-    await persistEvent(client, config, await readSnapshot(client, config), {}, { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' }, { code: 'confirmed', allowed: false });
+    await persistEvent(client, config, await readSnapshot(client, config), probe(), { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' }, { code: 'confirmed', allowed: false });
     const event = client.comments.find((comment) => comment.body.startsWith(EVENT_MARKER));
     event.editor_id = editor;
     event.last_edited_at = NOW;
@@ -571,7 +574,7 @@ test('過去runをまとめて読み、workflow/mainの共通確認を実行内�
   let state = await readSnapshot(client, config);
   for (let id = 1; id <= 60; id += 1) {
     if (id > 1) client.runs.push(makeRun(id));
-    state = await persistEvent(client, config, state, {}, { source_run_id: id, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' }, { code: 'confirmed', allowed: false });
+    state = await persistEvent(client, config, state, probe(id), { source_run_id: id, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' }, { code: 'confirmed', allowed: false });
   }
   // 新しいwriterは過去の全runを一括取得し、共通のmain照合を1回にする。
   const fresh = memoryGitHub();
@@ -763,7 +766,7 @@ test('bootstrapはActionsのanchorを1回作り、初回journal後も読める',
   assert.equal(boot.code, 'anchor_initialized');
   assert.equal(client.comments[0].user.id, ACTIONS);
   assert.equal((await initializeAnchor(client, readyConfig, client.run, event)).anchor_comment_id, boot.anchor_comment_id);
-  const state = await persistEvent(client, readyConfig, await readSnapshot(client, readyConfig), {}, { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'bootstrap-test' }, { code: 'confirmed', allowed: false });
+  const state = await persistEvent(client, readyConfig, await readSnapshot(client, readyConfig), probe(), { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'bootstrap-test' }, { code: 'confirmed', allowed: false });
   assert.equal(state.seq, 1);
 });
 
@@ -925,4 +928,94 @@ test('未確認のレビューではlive checkもaction_requiredになり、共�
   assert.equal(state.checks[SHA].conclusion, null);
   assert.equal(client.checks.get(1).status, 'completed');
   assert.equal(client.checks.get(1).conclusion, 'action_required');
+});
+
+// delegation-journal-rollover: 同じ状態を書かない・初期化をIssueごとに・上限の手前で警告
+const internalMeta = { source_run_id: 1, source_run_attempt: 1, request_id: null, request_comment_id: null, operation: 'test' };
+const eventCount = (client) => client.comments.filter((comment) => comment.body.startsWith(EVENT_MARKER)).length;
+const rolloverTask = { task_key: 'feature:task', task_digest: 'b'.repeat(64), state: 'registered' };
+
+test('内部のイベントは、変更が今の状態と同じなら書かず、空の変更も書かない', async () => {
+  const client = memoryGitHub();
+  let state = await persistEvent(client, config, await readSnapshot(client, config), probe(1), internalMeta, { code: 'confirmed', allowed: false });
+  assert.equal(eventCount(client), 1);
+  const posts = client.calls.filter((call) => call.method === 'POST').length;
+  state = await persistEvent(client, config, state, probe(1), internalMeta, { code: 'confirmed', allowed: false });
+  state = await persistEvent(client, config, state, {}, internalMeta, { code: 'confirmed', allowed: false });
+  assert.equal(state.seq, 1);
+  assert.equal(eventCount(client), 1);
+  assert.equal(client.calls.filter((call) => call.method === 'POST').length, posts);
+});
+
+test('tasksはupdated_seqだけが違うなら書かず、ほかの項目が1つでも違えば書く', async () => {
+  const client = memoryGitHub();
+  let state = await persistEvent(client, config, await readSnapshot(client, config), { tasks: { 'feature:task': rolloverTask } }, internalMeta, { code: 'confirmed', allowed: false });
+  assert.equal(state.tasks['feature:task'].updated_seq, 1);
+  state = await persistEvent(client, config, state, { tasks: { 'feature:task': { ...rolloverTask, updated_seq: 99 } } }, internalMeta, { code: 'confirmed', allowed: false });
+  assert.equal(eventCount(client), 1);
+  state = await persistEvent(client, config, state, { tasks: { 'feature:task': { ...rolloverTask, state: 'issue_creating' } } }, internalMeta, { code: 'confirmed', allowed: false });
+  assert.equal(eventCount(client), 2);
+  state = await persistEvent(client, config, state, { ...probe(1), prs: { 5: { head_sha: SHA } } }, internalMeta, { code: 'confirmed', allowed: false });
+  assert.equal(eventCount(client), 3);
+  state = await persistEvent(client, config, state, { ...probe(1), prs: { 5: { head_sha: SHA } } }, internalMeta, { code: 'confirmed', allowed: false });
+  assert.equal(eventCount(client), 3);
+  assert.equal(state.seq, 3);
+});
+
+test('要求から来たイベントは、変更が今の状態と同じでも書く', async () => {
+  const client = memoryGitHub();
+  let state = await persistEvent(client, config, await readSnapshot(client, config), probe(1), internalMeta, { code: 'confirmed', allowed: false });
+  const meta = { ...internalMeta, request_id: randomUUID(), request_comment_id: 2, request_hash: 'c'.repeat(64) };
+  state = await persistEvent(client, config, state, probe(1), meta, { code: 'rejected', allowed: false });
+  assert.equal(eventCount(client), 2);
+  assert.equal(state.requests[meta.request_id].result.code, 'rejected');
+});
+
+test('比べる前に形を確かめ、崩れた変更は書かずに止める', async () => {
+  const client = memoryGitHub();
+  const state = await readSnapshot(client, config);
+  await assert.rejects(persistEvent(client, config, state, { checks: { short: {} } }, internalMeta, { code: 'confirmed', allowed: false }), /invalid_event_check/);
+  assert.equal(eventCount(client), 0);
+});
+
+test('初期化は、管理Issueの作成より前の手動実行を数えず、後の別の実行があれば止める', async () => {
+  const event = { inputs: { operation: 'initialize' }, sender: { id: AUTHOR } };
+  const before = memoryGitHub({ anchor: false });
+  before.run.event = 'workflow_dispatch';
+  before.runs.unshift({ ...makeRun(9), event: 'workflow_dispatch', created_at: '2026-10-09T08:00:00Z' });
+  assert.equal((await initializeAnchor(before, config, before.run, event)).code, 'anchor_initialized');
+  const after = memoryGitHub({ anchor: false });
+  after.run.event = 'workflow_dispatch';
+  after.runs.unshift({ ...makeRun(9), event: 'workflow_dispatch', created_at: '2026-10-09T09:30:00Z' });
+  await assert.rejects(initializeAnchor(after, config, after.run, event), /initialize_unknown/);
+  const unreadable = memoryGitHub({ anchor: false });
+  unreadable.run.event = 'workflow_dispatch';
+  unreadable.runs.unshift({ ...makeRun(9), event: 'workflow_dispatch', created_at: null });
+  await assert.rejects(initializeAnchor(unreadable, config, unreadable.run, event), /initialize_unknown/);
+  assert.equal(after.calls.filter((call) => call.method === 'POST').length + unreadable.calls.filter((call) => call.method === 'POST').length, 0);
+});
+
+test('管理Issueの作成時刻が読めなければ初期化しない', async () => {
+  const client = memoryGitHub({ anchor: false });
+  client.run.event = 'workflow_dispatch';
+  const rest = client.rest.bind(client);
+  client.rest = async (method, path, body) => {
+    const result = await rest(method, path, body);
+    return method === 'GET' && path.endsWith('/issues/1') ? { ...result, created_at: null } : result;
+  };
+  await assert.rejects(initializeAnchor(client, config, client.run, { inputs: { operation: 'initialize' }, sender: { id: AUTHOR } }), /initialize_unverified/);
+});
+
+test('コメントが900件を超えたら実行ごとに1回だけ警告し、処理は続ける', async (t) => {
+  const client = memoryGitHub();
+  for (let i = 0; i < 905; i += 1) client.comments.push({ id: 1000 + i, body: '通常コメント', user: { id: AUTHOR }, created_at: NOW, updated_at: NOW });
+  const logged = t.mock.method(console, 'log', () => {});
+  assert.equal((await readIssueComments(client, config)).length, 906);
+  await readIssueComments(client, config);
+  const warnings = logged.mock.calls.map((call) => String(call.arguments[0])).filter((line) => line.startsWith('::warning::'));
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /906件.*1000件/);
+  const quiet = memoryGitHub();
+  await readIssueComments(quiet, config);
+  assert.equal(logged.mock.calls.filter((call) => String(call.arguments[0]).startsWith('::warning::')).length, 1);
 });

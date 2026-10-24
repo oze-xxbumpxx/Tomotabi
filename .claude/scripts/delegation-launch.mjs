@@ -65,9 +65,9 @@ export const OBSERVE_MS = 60_000;
 export const OBSERVE_INTERVAL_MS = 2_000;
 
 /** 手元の`devin list --format json`を、専用クローンを作業フォルダにして読む（読み取りだけ）。 */
-function listLocalSessions(clone) {
+function listLocalSessions(clone, timeoutMs = 10_000) {
   return new Promise((resolve, reject) => {
-    execFile('devin', ['list', '--format', 'json'], { cwd: clone, timeout: 10_000, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
+    execFile('devin', ['list', '--format', 'json'], { cwd: clone, timeout: Math.max(1, Math.min(10_000, timeoutMs)), maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
       if (error) { reject(error); return; }
       try { resolve(JSON.parse(stdout)); } catch (parseError) { reject(parseError); }
     });
@@ -98,13 +98,17 @@ export function readExportSessionId(path) {
  * 書き出しは作業が終わるまで出ない見込みなので、確定には使わず、出ていれば照合だけに使う。
  * 待つ時間いっぱい読み、最後まで新しいIDがちょうど1つのときだけ返す。途中で2つ以上になればnull。
  */
-export async function observeLocalSession({ before, clone, exportFile, listSessions, sleep, observeMs = OBSERVE_MS, intervalMs = OBSERVE_INTERVAL_MS }) {
+export async function observeLocalSession({ before, clone, exportFile, listSessions, sleep, now = Date.now, observeMs = OBSERVE_MS, intervalMs = OBSERVE_INTERVAL_MS }) {
   let found = [];
-  for (let waited = 0; waited < observeMs; waited += intervalMs) {
-    await sleep(intervalMs);
-    let now;
-    try { now = sessionIdsIn(await listSessions(clone), clone); } catch { return null; }
-    found = now.filter((id) => !before.has(id));
+  // 一覧を読む時間も含めて数える。読むのが遅くても、待つ時間の上限を超えないため。
+  const deadline = now() + observeMs;
+  while (now() < deadline) {
+    await sleep(Math.min(intervalMs, Math.max(0, deadline - now())));
+    const remaining = deadline - now();
+    if (remaining <= 0) break;
+    let current;
+    try { current = sessionIdsIn(await listSessions(clone, remaining), clone); } catch { return null; }
+    found = current.filter((id) => !before.has(id));
     if (found.length > 1) return null;
   }
   if (found.length !== 1) return null;
@@ -113,12 +117,44 @@ export async function observeLocalSession({ before, clone, exportFile, listSessi
   return found[0];
 }
 
-/** 専用クローンを使う起動を1つに絞る。残ったロックは自動で消さず、人が確かめる。 */
-function acquireCloneLock(stateDir) {
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM';
+  }
+}
+
+/**
+ * 専用クローンを使う起動を1つに絞る。起動したら、Devinのプロセスが終わるまでロックを残す
+ * （同じクローンで2つの作業が混ざらないため）。記録したDevinのプロセスが終わっていれば
+ * 取り直す。プロセスが分からないロック（起動の結果が不明なもの）は自動で消さず、人が確かめる。
+ */
+export function acquireCloneLock(stateDir, { isAlive = processAlive } = {}) {
+  mkdirSync(stateDir, { recursive: true, mode: 0o700 });
   const path = join(stateDir, LOCK_NAME);
+  if (existsSync(path)) {
+    let previous = null;
+    try { previous = JSON.parse(readFileSync(path, 'utf8')); } catch { previous = null; }
+    const pid = previous?.devin_pid;
+    if (!Number.isSafeInteger(pid) || pid <= 0 || isAlive(pid)) throw new Error('専用クローンを使う別の起動があります');
+    rmSync(path, { force: true });
+  }
   const fd = openSync(path, 'wx', 0o600);
-  try { writeFileSync(fd, JSON.stringify({ pid: process.pid, at: new Date().toISOString() })); } finally { closeSync(fd); }
-  return () => rmSync(path, { force: true });
+  try { writeFileSync(fd, JSON.stringify({ wrapper_pid: process.pid, devin_pid: null, at: new Date().toISOString() })); } finally { closeSync(fd); }
+  let held = false;
+  return {
+    /** 起動したDevinのプロセスを書いて、ロックを残す。pidが分からなければnullのまま残す。 */
+    hold(devinPid) {
+      held = true;
+      writeFileSync(path, JSON.stringify({ wrapper_pid: process.pid, devin_pid: Number.isSafeInteger(devinPid) && devinPid > 0 ? devinPid : null, at: new Date().toISOString() }), { mode: 0o600 });
+    },
+    /** 起動しなかったときだけロックを外す。 */
+    finish() {
+      if (!held) rmSync(path, { force: true });
+    },
+  };
 }
 
 function privatePrompt(path) {
@@ -143,7 +179,7 @@ async function spawnDevin({ args, clone, logFd }) {
   return new Promise((resolve, reject) => {
     const child = spawn('devin', args, { cwd: clone, detached: true, stdio: ['ignore', logFd, logFd] });
     child.once('error', reject);
-    child.once('spawn', () => { child.unref(); resolve({ session_id: null, session_url: null, observed_model: 'unknown' }); });
+    child.once('spawn', () => { child.unref(); resolve({ session_id: null, session_url: null, observed_model: 'unknown', pid: child.pid ?? null }); });
   });
 }
 
@@ -167,10 +203,10 @@ export async function launchDelegation(options, dependencies = {}) {
   }
   if (options.runner !== 'local') return launchWithState(options, dependencies, { config, promptFile, stateDir, local: null });
   let clone;
-  let release;
+  let lock;
   try {
     clone = realpathSync(options.clone ?? DEFAULT_CLONE);
-    release = (dependencies.acquireCloneLock ?? acquireCloneLock)(stateDir);
+    lock = (dependencies.acquireCloneLock ?? acquireCloneLock)(stateDir, { isAlive: dependencies.isAlive ?? processAlive });
   } catch {
     return { exitCode: 4, state: 'unknown', reason: `専用クローンを使う別の起動があるか、専用クローンがありません。${LOCK_NAME}を確かめてください` };
   }
@@ -179,9 +215,9 @@ export async function launchDelegation(options, dependencies = {}) {
     let before;
     // 共有状態に触れる前に読む。beginのあとに読めないと、未起動のタスクがlaunchingのまま残るため。
     try { before = new Set(sessionIdsIn(await listSessions(clone), clone)); } catch { return { exitCode: 5, state: 'unknown', reason: 'セッションの一覧を読めません。共有状態には何も送っていません' }; }
-    return await launchWithState(options, dependencies, { config, promptFile, stateDir, local: { clone, before, listSessions } });
+    return await launchWithState(options, dependencies, { config, promptFile, stateDir, local: { clone, before, listSessions, lock } });
   } finally {
-    release();
+    lock.finish();
   }
 }
 
@@ -233,13 +269,15 @@ async function launchWithState(options, dependencies, { config, promptFile, stat
     observed = null;
   } finally {
     if (log !== undefined) closeSync(log.fd);
+    // 起動を試みたら、成否が分からなくてもロックを残す（同じクローンで2つ動かさない）。
+    if (spawned && local !== null) local.lock.hold(observed?.pid ?? null);
   }
   let sessionId = null;
   let sessionUrl = null;
   let sessionConfirmed = false;
   if (local !== null) {
     // 手元のセッションにURLは無い。IDは起動の前後の一覧の差で決める。
-    sessionId = observed === null ? null : await observeLocalSession({ before: local.before, clone: local.clone, exportFile, listSessions: local.listSessions, sleep: dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))), observeMs: dependencies.observeMs, intervalMs: dependencies.intervalMs });
+    sessionId = observed === null ? null : await observeLocalSession({ before: local.before, clone: local.clone, exportFile, listSessions: local.listSessions, sleep: dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))), now: dependencies.now, observeMs: dependencies.observeMs, intervalMs: dependencies.intervalMs });
     sessionConfirmed = sessionId !== null;
   } else {
     sessionId = typeof observed?.session_id === 'string' && SESSION.test(observed.session_id) ? observed.session_id : null;

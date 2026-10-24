@@ -46,7 +46,7 @@ description: >
 
 導入前の`migration_complete:false`と`cli_launch_verified:false`は停止する設定である。CLI内部の起動POST再送とセッション形式の実機確認を、stub試験の成功で済ませたことにしない。クラウドの起動は`cloud_launch_verified:false`でも止める（内部の再送とURLの形を確かめていないため）。
 
-手元の起動は、専用クローンのロック（状態の置き場の`devin-clone.lock`）を取り、起動の前の一覧を読んでから共有状態に触れる。起動のあとは60秒いっぱい`devin list --format json`を読み、最後まで新しいIDがちょうど1つのときだけ、そのIDで確定する（手元のセッションにURLは無いので`session_url`は空）。書き出し（`--export`、状態の置き場の`devin-logs/export-<activation_id>.json`）が出ていれば、そのIDと照合する。専用クローンでは人がDevinを開かない（別のセッションと取り違えないため）。ロックが残ったら、動いている起動が無いことを確かめてから人が消す。設計は`docs/designs/devin-local-session.md`。
+手元の起動は、専用クローンのロック（状態の置き場の`devin-clone.lock`）を取り、起動の前の一覧を読んでから共有状態に触れる。起動のあとは60秒いっぱい`devin list --format json`を読み、最後まで新しいIDがちょうど1つのときだけ、そのIDで確定する（手元のセッションにURLは無いので`session_url`は空）。書き出し（`--export`、状態の置き場の`devin-logs/export-<activation_id>.json`）が出ていれば、そのIDと照合する。専用クローンでは人がDevinを開かない（別のセッションと取り違えないため）。起動したら、ロックにDevinのプロセス番号を書いて残し、そのプロセスが終わるまで次の起動を止める（終わっていれば次の起動が取り直す）。プロセス番号の無いロック（起動の結果が分からないもの）は自動で消さないので、動いているDevinが無いことを確かめてから人が消す。設計は`docs/designs/devin-local-session.md`。
 
 2026-10-24に、設計どおり一時フォルダで1回だけ手元のDevinを起動して確かめた（設計書の「確かめの結果」）。「本物のDevinを起動する試験はしない」の例外はこの1回だけで、繰り返さない。
 

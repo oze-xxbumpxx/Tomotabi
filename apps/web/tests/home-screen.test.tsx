@@ -492,6 +492,11 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       await screen.findByRole("heading", { name: "沖縄" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/終了 · 10\/12 月/)).toBeInTheDocument();
+    // 終了した旅行は、期間の途中で終えたこともあるので、帯の日の内訳を言わない（#250）。
+    expect(
+      screen.getByRole("img", { name: "3日間の旅行は終了しました" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/過ぎた日/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: /の予定/ }),
     ).not.toBeInTheDocument();

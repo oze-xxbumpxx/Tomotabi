@@ -36,7 +36,7 @@ export function HomeHeader({
   onOpenMenu: () => void;
 }) {
   const bars = homeBarsOf(home.context, home.trip);
-  const barsSummary = homeBarsSummaryOf(bars);
+  const barsSummary = homeBarsSummaryOf(bars, home.context.mode);
   const percent = todayPercent(now);
   return (
     <>

@@ -27,17 +27,29 @@
       "reason": "L2で文言とリンク先だけなので実装計画は作らない"
     },
     "implement": {
-      "state": "active"
+      "state": "done",
+      "approved": {
+        "pr": 279,
+        "at": "2026-10-25"
+      }
     },
     "review": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 279,
+        "at": "2026-10-25"
+      }
     },
     "merge": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 279,
+        "at": "2026-10-25"
+      }
     },
     "reflect": {
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-24T22:39:07.297Z"
+  "updated_at": "2026-10-24T23:17:37.664Z"
 }

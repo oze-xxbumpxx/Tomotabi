@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "@/shared/api/api-failure";
-import { httpClient } from "@/shared/api/http-client";
+import { httpClient, READ_TIMEOUT_MS } from "@/shared/api/http-client";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -53,6 +53,81 @@ describe("httpClient", () => {
     expect(await failureOf(httpClient("/api/health", { method: "GET" }))).toEqual({
       kind: "network",
     });
+  });
+
+  // #251: 応答が返らない読む要求は、時間を切って通信失敗にする（骨組みのまま止めない）。
+  function hangingFetch(): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          );
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("times out a GET that never answers and reports a network failure", async () => {
+    vi.useFakeTimers();
+    try {
+      hangingFetch();
+      const pending = failureOf(httpClient("/api/trips", { method: "GET" }));
+      await vi.advanceTimersByTimeAsync(READ_TIMEOUT_MS);
+      expect(await pending).toEqual({ kind: "network" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("times out a GET whose body stops after the headers arrived", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_url: string, init: RequestInit) => {
+          // ヘッダーは返すが、本文は中断されるまで終わらない。
+          const body = new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('{"items":'));
+              init.signal?.addEventListener("abort", () =>
+                controller.error(new DOMException("aborted", "AbortError")),
+              );
+            },
+          });
+          return Promise.resolve(new Response(body, { status: 200 }));
+        }),
+      );
+      const pending = failureOf(httpClient("/api/trips", { method: "GET" }));
+      await vi.advanceTimersByTimeAsync(READ_TIMEOUT_MS);
+      expect(await pending).toEqual({ kind: "network" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not time out a write, so its result is not guessed", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = hangingFetch();
+      void httpClient("/api/trips", { method: "POST", body: "{}" }).catch(() => {});
+      await vi.advanceTimersByTimeAsync(READ_TIMEOUT_MS * 2);
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+      expect(init.signal ?? null).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still stops a GET when the caller aborts it", async () => {
+    hangingFetch();
+    const caller = new AbortController();
+    const pending = failureOf(
+      httpClient("/api/trips", { method: "GET", signal: caller.signal }),
+    );
+    caller.abort();
+    expect(await pending).toEqual({ kind: "network" });
   });
 
   it("classifies a non-2xx response as an HTTP failure with its status", async () => {

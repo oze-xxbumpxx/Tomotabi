@@ -1,5 +1,34 @@
 import { ApiRequestError, isApiErrorCode } from "./api-failure";
 
+/**
+ * 読む要求（GET）を失敗とみなすまでの時間。応答が返らないと、読み込み中の
+ * 骨組みが出たままになり、再試行も出せないため（#251）。書き込みは結果が
+ * 分からなくなるので切らない。
+ */
+export const READ_TIMEOUT_MS = 15_000;
+
+/** 呼び出し側の中断と、時間切れのどちらでも止まる印を作る。 */
+function withReadTimeout(signal: AbortSignal | null | undefined): {
+  signal: AbortSignal;
+  clear: () => void;
+} {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), READ_TIMEOUT_MS);
+  const onAbort = () => controller.abort();
+  if (signal?.aborted === true) {
+    controller.abort();
+  } else {
+    signal?.addEventListener("abort", onAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    clear: () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    },
+  };
+}
+
 async function readErrorCode(response: Response) {
   try {
     const body: unknown = await response.json();
@@ -18,6 +47,7 @@ async function readErrorCode(response: Response) {
  * 2xxかつJSON本文のときだけ`{ data, status, headers }`を返す。`data`は未検証なので、
  * 呼び出し側（`callApi`）でZod検証するまで信頼しない。
  * 非2xxでは本文から既知のcodeだけを取り出して`http`に載せる。message・requestIdは取り出さない。
+ * GETは`READ_TIMEOUT_MS`で切り、通信失敗（network）として扱う。
  * @throws ApiRequestError通信失敗（network）、非2xx（http）、空またはJSONでない本文（invalid-json）
  */
 export async function httpClient<T>(url: string, options: RequestInit): Promise<T> {
@@ -27,47 +57,61 @@ export async function httpClient<T>(url: string, options: RequestInit): Promise<
     headers.set("content-type", "application/json");
   }
 
-  let response: Response;
+  // 時間切れは本文を読み終えるまで保つ。ヘッダーのあとに本文の転送が止まっても
+  // 読み込み中のままにしないため。
+  const timeout =
+    method === "GET" || method === "HEAD" ? withReadTimeout(options.signal) : null;
   try {
-    response = await fetch(url, {
-      ...options,
-      method,
-      headers,
-      credentials: "include",
-      cache: "no-store",
-    });
-  } catch {
-    throw new ApiRequestError({ kind: "network" });
-  }
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        method,
+        headers,
+        credentials: "include",
+        cache: "no-store",
+        ...(timeout === null ? {} : { signal: timeout.signal }),
+      });
+    } catch {
+      throw new ApiRequestError({ kind: "network" });
+    }
 
-  if (!response.ok) {
-    const code = await readErrorCode(response);
-    throw new ApiRequestError({ kind: "http", status: response.status, code });
-  }
+    if (!response.ok) {
+      const code = await readErrorCode(response);
+      throw new ApiRequestError({ kind: "http", status: response.status, code });
+    }
 
-  // 204は本文を持たない応答（購読の無効化など）。空本文として扱う。
-  if (response.status === 204) {
+    // 204は本文を持たない応答（購読の無効化など）。空本文として扱う。
+    if (response.status === 204) {
+      return {
+        data: null,
+        status: response.status,
+        headers: response.headers,
+      } as T;
+    }
+
+    let text: string;
+    try {
+      text = await response.text();
+    } catch {
+      throw new ApiRequestError({ kind: "network" });
+    }
+    if (text === "") {
+      throw new ApiRequestError({ kind: "invalid-json" });
+    }
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new ApiRequestError({ kind: "invalid-json" });
+    }
+
     return {
-      data: null,
+      data,
       status: response.status,
       headers: response.headers,
     } as T;
+  } finally {
+    timeout?.clear();
   }
-
-  const text = await response.text();
-  if (text === "") {
-    throw new ApiRequestError({ kind: "invalid-json" });
-  }
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new ApiRequestError({ kind: "invalid-json" });
-  }
-
-  return {
-    data,
-    status: response.status,
-    headers: response.headers,
-  } as T;
 }

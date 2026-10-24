@@ -146,6 +146,12 @@ describe("TripsScreen (/trips)", () => {
     // 状態は色だけでなく文字で出す。
     expect(screen.getByText("出発前")).toBeInTheDocument();
     expect(screen.getByText("終了")).toBeInTheDocument();
+    // #251: 初めて開いた人に、何のアプリか・状態の意味・行を押せることを伝える。
+    expect(
+      screen.getByText("二人の旅行のしおり・記録・精算をまとめるアプリです。"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/出発前はまだ始まっていない旅行/)).toBeInTheDocument();
+    expect(screen.getByText(/行を押すと、その旅行を開きます/)).toBeInTheDocument();
   });
 
   it("最初の取得が失敗したら「取得できませんでした」と再試行", async () => {

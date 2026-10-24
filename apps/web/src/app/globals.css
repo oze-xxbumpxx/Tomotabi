@@ -988,7 +988,7 @@ dialog.dialog[open] {
 
 .trip-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 24px;
+  grid-template-columns: minmax(0, 1fr) auto 24px 16px;
   gap: 10px;
   align-items: center;
   padding: 14px 0;
@@ -1024,6 +1024,23 @@ dialog.dialog[open] {
   color: var(--color-accent-text);
   display: flex;
   align-items: center;
+}
+
+/* 行を押すと開けることを示す（#251） */
+.trip-row-caret {
+  color: var(--color-text-muted);
+}
+
+.trips-lead {
+  margin: calc(-1 * var(--space-4)) 0 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.trips-status-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
 }
 
 /* 0 件（19。左寄せ・タブと主ボタンは出さない） */

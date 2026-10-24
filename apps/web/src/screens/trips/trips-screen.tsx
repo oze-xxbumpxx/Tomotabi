@@ -61,6 +61,7 @@ export function TripsScreen() {
   return (
     <main className="trips-page">
       <h1 className="page-title">旅行を切り替え</h1>
+      <p className="trips-lead">二人の旅行のしおり・記録・精算をまとめるアプリです。</p>
       {!online && (
         <OfflineBanner
           at={trips.data === undefined ? null : new Date(trips.dataUpdatedAt)}
@@ -96,6 +97,9 @@ export function TripsScreen() {
       )}
       {items.length > 0 && (
         <>
+          <p className="trips-status-note">
+            出発前はまだ始まっていない旅行、旅行中はいま出かけている旅行です。行を押すと、その旅行を開きます。
+          </p>
           <div className="trip-list-card">
             {items.map((trip) => (
               <TripRow

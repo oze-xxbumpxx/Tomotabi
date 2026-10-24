@@ -42,11 +42,11 @@ export function TransferCard({
   if (direction === null) {
     return (
       <section className="settle-card">
-        <p className="settle-count tabular-nums">{`対象 ${targetCount} 件`}</p>
+        <p className="settle-count tabular-nums">{`まだ精算していない明細 ${targetCount} 件`}</p>
         <p className="settle-amount tabular-nums">0 円</p>
         <p className="settle-zero-title">受け渡しは不要です</p>
         <p className="settle-zero-body">
-          {`未処理の対象が ${targetCount} 件あります`}
+          {`まだ精算していない明細が ${targetCount} 件あります`}
         </p>
         {action}
       </section>
@@ -62,7 +62,7 @@ export function TransferCard({
 
   return (
     <section className="settle-card">
-      <p className="settle-count tabular-nums">{`対象 ${targetCount} 件`}</p>
+      <p className="settle-count tabular-nums">{`まだ精算していない明細 ${targetCount} 件`}</p>
       <div className="settle-transfer">
         <div className="settle-person">
           <PersonAvatar

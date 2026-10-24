@@ -64,7 +64,7 @@ test("FE-01: 支払いを2件記録して受け渡しを確認・記録する", 
   await recordPayment(page, { amount: "3000", label: "ランチ", payerName: "あおい" });
 
   await openSettlement(page);
-  await expect(page.getByText("対象 2 件")).toBeVisible();
+  await expect(page.getByText("まだ精算していない明細 2 件")).toBeVisible();
   await expect(page.getByText("レンタカー")).toBeVisible();
   await expect(page.getByText("ランチ")).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("2,000 円");
@@ -74,7 +74,7 @@ test("FE-01: 支払いを2件記録して受け渡しを確認・記録する", 
   await page.waitForURL(new RegExp(`/trips/${tripId}/settlement/previews/[^/]+$`));
   await expect(page.getByRole("heading", { name: "受け渡しの確認" })).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("2,000 円");
-  await expect(page.getByText(/対象 2 件/)).toBeVisible();
+  await expect(page.getByText(/この確認の明細 2 件/)).toBeVisible();
   await page.getByRole("checkbox", { name: "表示の全額を受け渡しました" }).check();
   await page.getByRole("button", { name: "受け渡し完了を記録" }).click();
   await page
@@ -105,7 +105,7 @@ test("FE-02: 互いに同額を立て替えたときは 0 円として精算を�
   await recordPayment(page, { amount: "4000", label: "宿代", payerName: "あおい" });
 
   await openSettlement(page);
-  await expect(page.getByText("対象 2 件")).toBeVisible();
+  await expect(page.getByText("まだ精算していない明細 2 件")).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("0 円");
   await expect(page.getByText("受け渡しは不要です")).toBeVisible();
 
@@ -146,7 +146,7 @@ test("FE-03: 確認を作ったあとの支払いは確認の金額を変えな�
   // ひなたが 1,000 円（折半）→ あおい → ひなた 500 円 の受け渡し。
   await recordPayment(page, { amount: "1000", label: "入場料" });
   await openSettlement(page);
-  await expect(page.getByText("対象 1 件")).toBeVisible();
+  await expect(page.getByText("まだ精算していない明細 1 件")).toBeVisible();
   await page.getByRole("button", { name: "受け渡しを確認する" }).click();
   await page.waitForURL(new RegExp(`/trips/${tripId}/settlement/previews/[^/]+$`));
   await expect(page.locator(".settle-amount")).toHaveText("500 円");
@@ -159,7 +159,7 @@ test("FE-03: 確認を作ったあとの支払いは確認の金額を変えな�
   // 確認を再読み込みしても、作った時点の対象と金額で固定されている。
   await page.reload();
   await expect(page.locator(".settle-amount")).toHaveText("500 円");
-  await expect(page.getByText(/対象 1 件/)).toBeVisible();
+  await expect(page.getByText(/この確認の明細 1 件/)).toBeVisible();
 
   // 固定した確認はそのまま記録できる（ready のまま）。
   await page.getByRole("checkbox", { name: "表示の全額を受け渡しました" }).check();
@@ -171,7 +171,7 @@ test("FE-03: 確認を作ったあとの支払いは確認の金額を変えな�
 
   // 残る対象はあおいが足した支払いだけ（ひなたの負担 1,500 円 → ひなた → あおい 1,500 円）。
   await page.waitForURL(new RegExp(`/trips/${tripId}/settlement$`));
-  await expect(page.getByText("対象 1 件")).toBeVisible();
+  await expect(page.getByText("まだ精算していない明細 1 件")).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("1,500 円");
   await expect(page.getByText("カフェ")).toBeVisible();
 });

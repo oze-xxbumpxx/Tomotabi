@@ -380,7 +380,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       expect(settle).toHaveTextContent(/あおい から ひなた へ/),
     );
     expect(settle).toHaveTextContent("1,285");
-    expect(settle).toHaveTextContent("対象 2 件");
+    expect(settle).toHaveTextContent("まだ精算していない明細 2 件");
     expect(
       screen.getByRole("link", { name: "精算へ" }),
     ).toHaveAttribute("href", `/trips/${tripId}/settlement`);
@@ -442,6 +442,14 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       screen.getByRole("heading", { name: /今日の予定/ }),
     ).toBeInTheDocument();
 
+    // #250: 期間の帯は、過ぎた日・今日・これからを言葉でも出し、読み上げから外さない。
+    expect(
+      screen.getByRole("img", { name: "3日のうち 過ぎた日 1日 · 今日 · これから 1日" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("3日のうち 過ぎた日 1日 · 今日 · これから 1日", { selector: ".home-bars-caption" }),
+    ).toBeInTheDocument();
+
     // まだ開始していない日は「旅行を開始」への案内（メニューを開く）。
     expect(
       screen.getByText("この旅行はまだ開始していません"),
@@ -484,6 +492,11 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       await screen.findByRole("heading", { name: "沖縄" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/終了 · 10\/12 月/)).toBeInTheDocument();
+    // 終了した旅行は、期間の途中で終えたこともあるので、帯の日の内訳を言わない（#250）。
+    expect(
+      screen.getByRole("img", { name: "3日間の旅行は終了しました" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/過ぎた日/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: /の予定/ }),
     ).not.toBeInTheDocument();
@@ -843,7 +856,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       await screen.findByText("受け渡しは不要です"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("未処理の対象が 3 件あります"),
+      screen.getByText("まだ精算していない明細が 3 件あります"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "精算へ" }),

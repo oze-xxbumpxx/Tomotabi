@@ -80,7 +80,7 @@ export function HomeBalanceCard({
         <span className="home-settle-main">
           <span className="home-settle-text">受け渡しは不要です</span>
           <span className="home-settle-label">
-            {`未処理の対象が ${targetCount} 件あります`}
+            {`まだ精算していない明細が ${targetCount} 件あります`}
           </span>
         </span>
         <Link className="home-card-link" href={settlement}>
@@ -114,7 +114,7 @@ export function HomeBalanceCard({
           <span className="home-settle-yen">円</span>
         </span>
         <span className="home-settle-label tabular-nums">
-          {`対象 ${targetCount} 件`}
+          {`まだ精算していない明細 ${targetCount} 件`}
         </span>
       </span>
       <Link className="home-card-link" href={settlement}>

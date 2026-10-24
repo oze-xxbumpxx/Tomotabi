@@ -49,6 +49,7 @@ export {
   hiddenCountOf,
   type HomeBar,
   homeBarsOf,
+  homeBarsSummaryOf,
   isCancellationItem,
   recordTitleOf,
   recordVerbOf,

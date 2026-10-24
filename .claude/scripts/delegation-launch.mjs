@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { chmodSync, closeSync, mkdirSync, openSync, readFileSync, realpathSync, statSync, writeFileSync, fsyncSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync, fsyncSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_CLONE } from './devin-watch.mjs';
@@ -54,9 +54,107 @@ export function reserveSpent(stateDir, activationId, metadata) {
   return path;
 }
 
-export function buildDevinArgs({ runner, model, promptFile }) {
+export function buildDevinArgs({ runner, model, promptFile, exportFile = null }) {
   if (!['local', 'cloud'].includes(runner) || !MODELS.includes(model)) throw new Error('runner/modelが不正です');
-  return [...(runner === 'cloud' ? ['--cloud'] : []), '--model', model, '--permission-mode', 'dangerous', '-p', '--prompt-file', promptFile];
+  return [...(runner === 'cloud' ? ['--cloud'] : []), '--model', model, '--permission-mode', 'dangerous', ...(exportFile === null ? [] : ['--export', exportFile]), '-p', '--prompt-file', promptFile];
+}
+
+const SESSION = /^[A-Za-z0-9_-]{1,128}$/;
+const LOCK_NAME = 'devin-clone.lock';
+export const OBSERVE_MS = 60_000;
+export const OBSERVE_INTERVAL_MS = 2_000;
+
+/** 手元の`devin list --format json`を、専用クローンを作業フォルダにして読む（読み取りだけ）。 */
+function listLocalSessions(clone, timeoutMs = 10_000) {
+  return new Promise((resolve, reject) => {
+    execFile('devin', ['list', '--format', 'json'], { cwd: clone, timeout: Math.max(1, Math.min(10_000, timeoutMs)), maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
+      if (error) { reject(error); return; }
+      try { resolve(JSON.parse(stdout)); } catch (parseError) { reject(parseError); }
+    });
+  });
+}
+
+/** 一覧のうち、専用クローンで動いたセッションのIDだけを返す。形が違えば例外。 */
+export function sessionIdsIn(list, clone) {
+  if (!Array.isArray(list)) throw new Error('セッションの一覧の形が違います');
+  return list.filter((item) => item?.working_directory === clone).map((item) => {
+    if (typeof item.id !== 'string' || !SESSION.test(item.id)) throw new Error('セッションのIDの形が違います');
+    return item.id;
+  });
+}
+
+/** 書き出し（ATIF）の先頭のsession_idを読む。会話の本文は使わない。まだ無い・読めなければnull。 */
+export function readExportSessionId(path) {
+  try {
+    const id = JSON.parse(readFileSync(path, 'utf8'))?.session_id;
+    return typeof id === 'string' && SESSION.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 手元のセッションのIDを、起動の前の一覧との差で決める（docs/designs/devin-local-session.md）。
+ * 書き出しは作業が終わるまで出ない見込みなので、確定には使わず、出ていれば照合だけに使う。
+ * 待つ時間いっぱい読み、最後まで新しいIDがちょうど1つのときだけ返す。途中で2つ以上になればnull。
+ */
+export async function observeLocalSession({ before, clone, exportFile, listSessions, sleep, now = Date.now, observeMs = OBSERVE_MS, intervalMs = OBSERVE_INTERVAL_MS }) {
+  let found = [];
+  // 一覧を読む時間も含めて数える。読むのが遅くても、待つ時間の上限を超えないため。
+  const deadline = now() + observeMs;
+  while (now() < deadline) {
+    await sleep(Math.min(intervalMs, Math.max(0, deadline - now())));
+    const remaining = deadline - now();
+    if (remaining <= 0) break;
+    let current;
+    try { current = sessionIdsIn(await listSessions(clone, remaining), clone); } catch { return null; }
+    found = current.filter((id) => !before.has(id));
+    if (found.length > 1) return null;
+  }
+  if (found.length !== 1) return null;
+  const exported = readExportSessionId(exportFile);
+  if (exported !== null && exported !== found[0]) return null;
+  return found[0];
+}
+
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM';
+  }
+}
+
+/**
+ * 専用クローンを使う起動を1つに絞る。起動したら、Devinのプロセスが終わるまでロックを残す
+ * （同じクローンで2つの作業が混ざらないため）。記録したDevinのプロセスが終わっていれば
+ * 取り直す。プロセスが分からないロック（起動の結果が不明なもの）は自動で消さず、人が確かめる。
+ */
+export function acquireCloneLock(stateDir, { isAlive = processAlive } = {}) {
+  mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+  const path = join(stateDir, LOCK_NAME);
+  if (existsSync(path)) {
+    let previous = null;
+    try { previous = JSON.parse(readFileSync(path, 'utf8')); } catch { previous = null; }
+    const pid = previous?.devin_pid;
+    if (!Number.isSafeInteger(pid) || pid <= 0 || isAlive(pid)) throw new Error('専用クローンを使う別の起動があります');
+    rmSync(path, { force: true });
+  }
+  const fd = openSync(path, 'wx', 0o600);
+  try { writeFileSync(fd, JSON.stringify({ wrapper_pid: process.pid, devin_pid: null, at: new Date().toISOString() })); } finally { closeSync(fd); }
+  let held = false;
+  return {
+    /** 起動したDevinのプロセスを書いて、ロックを残す。pidが分からなければnullのまま残す。 */
+    hold(devinPid) {
+      held = true;
+      writeFileSync(path, JSON.stringify({ wrapper_pid: process.pid, devin_pid: Number.isSafeInteger(devinPid) && devinPid > 0 ? devinPid : null, at: new Date().toISOString() }), { mode: 0o600 });
+    },
+    /** 起動しなかったときだけロックを外す。 */
+    finish() {
+      if (!held) rmSync(path, { force: true });
+    },
+  };
 }
 
 function privatePrompt(path) {
@@ -81,7 +179,7 @@ async function spawnDevin({ args, clone, logFd }) {
   return new Promise((resolve, reject) => {
     const child = spawn('devin', args, { cwd: clone, detached: true, stdio: ['ignore', logFd, logFd] });
     child.once('error', reject);
-    child.once('spawn', () => { child.unref(); resolve({ session_id: null, session_url: null, observed_model: 'unknown' }); });
+    child.once('spawn', () => { child.unref(); resolve({ session_id: null, session_url: null, observed_model: 'unknown', pid: child.pid ?? null }); });
   });
 }
 
@@ -91,6 +189,8 @@ export async function launchDelegation(options, dependencies = {}) {
   const config = dependencies.config ?? JSON.parse(readFileSync(CONFIG, 'utf8'));
   if (config.migration_complete !== true || config.cli_launch_verified !== true) return { exitCode: 4, state: 'unknown', reason: '導入確認と移行の完了待ちです' };
   if (!TASK.test(options.taskKey ?? '') || !['local', 'cloud'].includes(options.runner) || !MODELS.includes(options.model)) return { exitCode: 2, state: 'invalid' };
+  // クラウドは内部の再送とURLの形を確かめるまで止める（docs/designs/devin-local-session.md）。
+  if (options.runner === 'cloud' && config.cloud_launch_verified !== true) return { exitCode: 4, state: 'unknown', reason: 'クラウドの起動は確認待ちです' };
   let promptFile;
   let stateDir;
   try {
@@ -101,6 +201,27 @@ export async function launchDelegation(options, dependencies = {}) {
   } catch {
     return { exitCode: 2, state: 'invalid', reason: '非公開ファイルと状態保存先を確認してください' };
   }
+  if (options.runner !== 'local') return launchWithState(options, dependencies, { config, promptFile, stateDir, local: null });
+  let clone;
+  let lock;
+  try {
+    clone = realpathSync(options.clone ?? DEFAULT_CLONE);
+    lock = (dependencies.acquireCloneLock ?? acquireCloneLock)(stateDir, { isAlive: dependencies.isAlive ?? processAlive });
+  } catch {
+    return { exitCode: 4, state: 'unknown', reason: `専用クローンを使う別の起動があるか、専用クローンがありません。${LOCK_NAME}を確かめてください` };
+  }
+  try {
+    const listSessions = dependencies.listSessions ?? listLocalSessions;
+    let before;
+    // 共有状態に触れる前に読む。beginのあとに読めないと、未起動のタスクがlaunchingのまま残るため。
+    try { before = new Set(sessionIdsIn(await listSessions(clone), clone)); } catch { return { exitCode: 5, state: 'unknown', reason: 'セッションの一覧を読めません。共有状態には何も送っていません' }; }
+    return await launchWithState(options, dependencies, { config, promptFile, stateDir, local: { clone, before, listSessions, lock } });
+  } finally {
+    lock.finish();
+  }
+}
+
+async function launchWithState(options, dependencies, { config, promptFile, stateDir, local }) {
   const shared = dependencies.readSnapshot && dependencies.submitRequest && dependencies.waitForResult ? dependencies : await import('./delegation-shared.mjs');
   let client;
   try { client = dependencies.client ?? (await import('./delegation-github.mjs')).createGitHubClient({ repo: config.repository, maxApiCalls: config.limits.api_calls, timeoutMs: config.limits.timeout_ms, jobTimeoutMs: config.limits.job_timeout_ms }); } catch { return { exitCode: 5, state: 'unknown', reason: '共有通信の設定を確認できません' }; }
@@ -136,20 +257,33 @@ export async function launchDelegation(options, dependencies = {}) {
   let spawned = false;
   let log;
   let observed = null;
+  const exportFile = local === null ? null : join(stateDir, 'devin-logs', `export-${activationId}.json`);
   try {
+    if (exportFile !== null && existsSync(exportFile)) throw new Error('書き出し先が既にあります');
     reserveSpent(stateDir, activationId, { request_id: beginRequest.request_id, attempt_id: attemptId, request_comment_id: begin.request_comment_id, source_run_id: receipt.source_run_id, source_run_attempt: receipt.source_run_attempt });
     log = privateLog(stateDir, task.issue);
     if (spawned) throw new Error('起動済みです');
     spawned = true;
-    observed = await (dependencies.spawnOnce ?? spawnDevin)({ args: buildDevinArgs({ runner: options.runner, model: options.model, promptFile }), runner: options.runner, model: options.model, promptFile, clone: options.clone ?? (options.runner === 'local' ? DEFAULT_CLONE : process.cwd()), logFd: log.fd });
+    observed = await (dependencies.spawnOnce ?? spawnDevin)({ args: buildDevinArgs({ runner: options.runner, model: options.model, promptFile, exportFile }), runner: options.runner, model: options.model, promptFile, clone: local?.clone ?? process.cwd(), logFd: log.fd });
   } catch {
     observed = null;
   } finally {
     if (log !== undefined) closeSync(log.fd);
+    // 起動を試みたら、成否が分からなくてもロックを残す（同じクローンで2つ動かさない）。
+    if (spawned && local !== null) local.lock.hold(observed?.pid ?? null);
   }
-  const sessionId = typeof observed?.session_id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(observed.session_id) ? observed.session_id : null;
-  const sessionUrl = typeof observed?.session_url === 'string' && /^https:\/\/app\.devin\.ai\/sessions\/[A-Za-z0-9_-]{1,128}\/?$/.test(observed.session_url) ? observed.session_url : null;
-  const sessionConfirmed = sessionId !== null && sessionUrl !== null && sessionUrl.replace(/\/$/, '').endsWith(`/sessions/${sessionId}`);
+  let sessionId = null;
+  let sessionUrl = null;
+  let sessionConfirmed = false;
+  if (local !== null) {
+    // 手元のセッションにURLは無い。IDは起動の前後の一覧の差で決める。
+    sessionId = observed === null ? null : await observeLocalSession({ before: local.before, clone: local.clone, exportFile, listSessions: local.listSessions, sleep: dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))), now: dependencies.now, observeMs: dependencies.observeMs, intervalMs: dependencies.intervalMs });
+    sessionConfirmed = sessionId !== null;
+  } else {
+    sessionId = typeof observed?.session_id === 'string' && SESSION.test(observed.session_id) ? observed.session_id : null;
+    sessionUrl = typeof observed?.session_url === 'string' && /^https:\/\/app\.devin\.ai\/sessions\/[A-Za-z0-9_-]{1,128}\/?$/.test(observed.session_url) ? observed.session_url : null;
+    sessionConfirmed = sessionId !== null && sessionUrl !== null && sessionUrl.replace(/\/$/, '').endsWith(`/sessions/${sessionId}`);
+  }
   const observedModel = options.runner === 'cloud' ? 'unknown' : MODELS.includes(observed?.observed_model) ? observed.observed_model : 'unknown';
   try {
     const request = { schema_version: 1, operation: 'started', request_id: uuid(), task_key: options.taskKey, attempt_id: attemptId, caller_id: callerId, activation_id: activationId, session_id: sessionConfirmed ? sessionId : null, session_url: sessionConfirmed ? sessionUrl : null, observed_model: observedModel };

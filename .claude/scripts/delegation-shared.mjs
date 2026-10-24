@@ -258,8 +258,10 @@ export function reduceRequest(state, rawRequest, context = {}) {
   } else if (request.operation === 'started') {
     if (!task || task.attempt_id !== request.attempt_id || task.caller_id !== request.caller_id || task.activation_id !== request.activation_id || !['launching', 'launch_unknown', 'running'].includes(task.state)) fail('unauthorized_attempt');
     if (task.state === 'running' && request.session_id !== task.session_id) fail('session_conflict');
-    const known = typeof request.session_id === 'string' && typeof request.session_url === 'string' &&
-      request.session_url.replace(/\/$/, '').split('/').at(-1) === request.session_id && context.session_verified === true;
+    // 手元のセッションにURLは無い（docs/designs/devin-local-session.md）。手元はIDだけ、クラウドはIDとURLで確定する。
+    const known = context.session_verified === true && typeof request.session_id === 'string' && (task.runner === 'local'
+      ? request.session_url === null
+      : typeof request.session_url === 'string' && request.session_url.replace(/\/$/, '').split('/').at(-1) === request.session_id);
     setTask({ ...task, state: known ? 'running' : 'launch_unknown', session_id: known ? request.session_id : null,
       session_url: known ? request.session_url : null, observed_model: known ? request.observed_model : 'unknown' });
     result = { code: known ? 'running' : 'launch_unknown', allowed: false, attempt_id: task.attempt_id, caller_id: task.caller_id, activation_id: task.activation_id };

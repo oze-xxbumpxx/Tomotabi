@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildDevinArgs, consumeBeginReceipt, launchDelegation, parseLaunchArgs, reserveSpent, runLaunchCli } from '../scripts/delegation-launch.mjs';
+import { buildDevinArgs, consumeBeginReceipt, launchDelegation, observeLocalSession, parseLaunchArgs, readExportSessionId, reserveSpent, runLaunchCli, sessionIdsIn } from '../scripts/delegation-launch.mjs';
 
 const id = (n) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
 const baseConfig = JSON.parse(readFileSync(new URL('../config/delegation-review.json', import.meta.url), 'utf8'));
@@ -21,6 +21,10 @@ async function fixture(fn, overrides = {}) {
     writeFileSync(prompt, 'PRIVATE PROMPT sentinel', { mode: 0o600 });
     let counter = 0;
     let spawnCount = 0;
+    const clone = realpathSync(mkdtempSync(join(dir, 'clone-')));
+    // 手元の一覧: 起動の前は空、起動のあとはsession-1だけ。
+    let sessions = [];
+    let clock = 0;
     const submissions = [];
     let begun = false;
     const dependencies = {
@@ -45,8 +49,18 @@ async function fixture(fn, overrides = {}) {
         }
         return { code: request.session_id === null ? 'launch_unknown' : 'running' };
       },
+      listSessions: async (cwd) => {
+        assert.equal(cwd, clone);
+        return structuredClone(sessions);
+      },
+      // 偽の時計。待つたびに進め、一覧を読む時間は0とする。
+      now: () => clock,
+      sleep: async (ms) => { clock += ms; },
+      observeMs: 4,
+      intervalMs: 2,
       spawnOnce: async (input) => {
         spawnCount += 1;
+        sessions = [{ id: 'session-1', working_directory: clone, title: 'PRIVATE TITLE' }];
         assert.ok(existsSync(join(dir, 'delegation-spent', `${id(1)}.spent`)));
         assert.deepEqual(input.args.slice(-2), ['--prompt-file', realpathSync(prompt)]);
         assert.doesNotMatch(JSON.stringify(input.args), /PRIVATE PROMPT/);
@@ -54,8 +68,8 @@ async function fixture(fn, overrides = {}) {
       },
       ...overrides,
     };
-    const options = { taskKey: 'feature:task', callerId: caller, runner: 'local', model: 'swe-2-high', promptFile: prompt, clone: null };
-    await fn({ dir, prompt, dependencies, options, submissions, count: () => spawnCount });
+    const options = { taskKey: 'feature:task', callerId: caller, runner: 'local', model: 'swe-2-high', promptFile: prompt, clone };
+    await fn({ dir, prompt, clone, dependencies, options, submissions, count: () => spawnCount, setSessions: (value) => { sessions = value; } });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -68,6 +82,7 @@ test('I-12: runner/model/prompt fileを明示し、activationの持ち込みを�
   assert.throws(() => parseLaunchArgs(['feature:task', '--runner', 'local', '--model', 'unknown', '--prompt-file', '/p']));
   assert.throws(() => parseLaunchArgs(['feature:task', '--runner', 'local', '--model', 'swe-2-high', '--prompt-file', '/p', '--activation-id', id(1)]));
   assert.deepEqual(buildDevinArgs({ runner: 'cloud', model: 'swe-2-high', promptFile: '/p' }), ['--cloud', '--model', 'swe-2-high', '--permission-mode', 'dangerous', '-p', '--prompt-file', '/p']);
+  assert.deepEqual(buildDevinArgs({ runner: 'local', model: 'swe-2-high', promptFile: '/p', exportFile: '/e' }), ['--model', 'swe-2-high', '--permission-mode', 'dangerous', '--export', '/e', '-p', '--prompt-file', '/p']);
   assert.throws(() => buildDevinArgs({ runner: 'local', model: 'unknown', promptFile: '/p' }));
 });
 
@@ -88,9 +103,10 @@ test('I-01/I-10/I-13: transport生成からspent→1回spawn→startedを通し�
     assert.deepEqual(submissions.map((r) => r.operation), ['claim', 'begin', 'started']);
     assert.equal(submissions[1].activation_id, id(1));
     assert.equal(submissions[2].session_id, 'session-1');
+    assert.equal(submissions[2].session_url, null);
     assert.equal(statSync(join(dir, 'delegation-spent', `${id(1)}.spent`)).mode & 0o777, 0o600);
     assert.equal(statSync(join(dir, 'devin-logs', 'issue-81.log')).mode & 0o777, 0o600);
-    assert.doesNotMatch(JSON.stringify({ result, submissions }), /PRIVATE PROMPT|prompt-file/);
+    assert.doesNotMatch(JSON.stringify({ result, submissions }), /PRIVATE PROMPT|PRIVATE TITLE|prompt-file/);
     const second = await launchDelegation(options, dependencies);
     assert.equal(second.state, 'unknown');
     assert.equal(count(), 1);
@@ -100,6 +116,7 @@ test('I-01/I-10/I-13: transport生成からspent→1回spawn→startedを通し�
 
 test('I-12: Cloudはrequested_modelを運び、実modelをunknownに残す', async () => {
   await fixture(async ({ dependencies, options, submissions }) => {
+    dependencies.config = { ...config, cloud_launch_verified: true };
     const result = await launchDelegation({ ...options, runner: 'cloud' }, dependencies);
     assert.equal(result.state, 'running');
     assert.equal(result.requested_model, 'swe-2-high');
@@ -210,6 +227,8 @@ test('I-08: 実coreの並行claim/beginは同じattemptへ集まり、spawnは1�
     let state = emptyState();
     state.tasks['feature:task'] = { task_key: 'feature:task', task_digest: digest, plan_path: 'docs/implementation-plans/feature.md', plan_sha: 'b'.repeat(40), state: 'issue_ready', issue: 81, pr: null, start_conditions_confirmed: true };
     dependencies.readSnapshot = async () => structuredClone(state);
+    // 並行のclaim/beginの集まり方を見るため、ここでは専用クローンのロックを外す（ロックは別の試験で見る）。
+    dependencies.acquireCloneLock = () => ({ hold() {}, finish() {} });
     dependencies.waitForResult = async (_client, _config, { requestId, commentId }) => {
       const { commentId: _comment, ...request } = submissions.find((r) => r.request_id === requestId);
       const reduced = reduceRequest(state, request, { config, now: '2026-10-09T10:00:00Z', attempt_id: attempt, issue_verified: true, session_verified: true });
@@ -222,5 +241,156 @@ test('I-08: 実coreの並行claim/beginは同じattemptへ集まり、spawnは1�
     assert.equal(state.tasks['feature:task'].attempt_id, attempt);
     assert.equal(state.tasks['feature:task'].state, 'running');
     assert.equal(submissions.filter((r) => r.operation === 'started').length, 1);
+  });
+});
+
+// devin-local-session: 手元のセッションのIDを、起動の前後の一覧の差で決める
+const observe = (lists, extra = {}) => {
+  let i = 0;
+  let clock = 0;
+  return observeLocalSession({ before: new Set(['old-1']), clone: '/clone', exportFile: '/no/such/export.json', listSessions: async () => { const next = lists[Math.min(i, lists.length - 1)]; i += 1; if (next instanceof Error) throw next; return next; }, now: () => clock, sleep: async (ms) => { clock += ms; }, observeMs: 6, intervalMs: 2, ...extra });
+};
+const at = (id, dir = '/clone') => ({ id, working_directory: dir });
+
+test('LS-01: 待つ時間いっぱい読み、最後まで新しいIDがちょうど1つのときだけ返す', async () => {
+  assert.equal(await observe([[at('old-1')], [at('old-1'), at('new-1')], [at('old-1'), at('new-1')]]), 'new-1');
+  assert.equal(await observe([[at('old-1')], [at('old-1')], [at('old-1')]]), null);
+});
+
+test('LS-02: 途中で新しいIDが2つ以上になったら、あとで1つに見えても確定しない', async () => {
+  assert.equal(await observe([[at('a')], [at('a'), at('b')], [at('a')]]), null);
+});
+
+test('LS-03: 別のフォルダのセッションは数えず、一覧を読めない・形が違うときは確定しない', async () => {
+  assert.equal(await observe([[at('new-1', '/other')], [at('new-1', '/other')], [at('new-1', '/other')]]), null);
+  assert.equal(await observe([[at('new-1')], new Error('PRIVATE'), [at('new-1')]]), null);
+  assert.equal(await observe([[at('new-1')], { not: 'array' }, [at('new-1')]]), null);
+  assert.equal(await observe([[at('bad id')], [at('bad id')], [at('bad id')]]), null);
+  assert.throws(() => sessionIdsIn([{ id: '../x', working_directory: '/clone' }], '/clone'));
+});
+
+test('LS-04: 書き出しが出ていれば、そのIDが一覧のIDと違うとき確定しない', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'delegation-export-'));
+  try {
+    const file = join(dir, 'export.json');
+    writeFileSync(file, JSON.stringify({ schema_version: 'ATIF-v1.7', session_id: 'new-1', steps: ['PRIVATE CONVERSATION'] }));
+    assert.equal(readExportSessionId(file), 'new-1');
+    assert.equal(await observe([[at('new-1')]], { exportFile: file }), 'new-1');
+    writeFileSync(file, JSON.stringify({ session_id: 'someone-else' }));
+    assert.equal(await observe([[at('new-1')]], { exportFile: file }), null);
+    writeFileSync(file, '{not json');
+    assert.equal(readExportSessionId(file), null);
+    assert.equal(await observe([[at('new-1')]], { exportFile: file }), 'new-1');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('LS-05: 起動の前の一覧を読めなければ、共有状態に何も送らず起動しない', async () => {
+  await fixture(async ({ dependencies, options, submissions, count }) => {
+    dependencies.listSessions = async () => { throw new Error('PRIVATE'); };
+    const result = await launchDelegation(options, dependencies);
+    assert.equal(result.exitCode, 5);
+    assert.deepEqual(submissions, []);
+    assert.equal(count(), 0);
+    assert.doesNotMatch(JSON.stringify(result), /PRIVATE/);
+  });
+});
+
+test('LS-06: 専用クローンのロックがあれば、共有状態に何も送らず起動しない', async () => {
+  await fixture(async ({ dir, dependencies, options, submissions, count }) => {
+    writeFileSync(join(dir, 'devin-clone.lock'), '{}');
+    const blocked = await launchDelegation(options, dependencies);
+    assert.equal(blocked.exitCode, 4);
+    assert.deepEqual(submissions, []);
+    assert.equal(count(), 0);
+  });
+});
+
+test('LS-06b: 起動したらDevinのプロセスが終わるまでロックを残し、終わっていれば次の起動が取り直す', async () => {
+  await fixture(async ({ dir, dependencies, options, count }) => {
+    const spawnOnce = dependencies.spawnOnce;
+    dependencies.spawnOnce = async (input) => ({ ...(await spawnOnce(input)), pid: 4242 });
+    let alive = true;
+    dependencies.isAlive = (pid) => { assert.equal(pid, 4242); return alive; };
+    assert.equal((await launchDelegation(options, dependencies)).state, 'running');
+    const lock = join(dir, 'devin-clone.lock');
+    assert.equal(JSON.parse(readFileSync(lock, 'utf8')).devin_pid, 4242);
+    assert.equal(statSync(lock).mode & 0o777, 0o600);
+    // Devinが動いているあいだは、次の起動を止める。
+    const busy = await launchDelegation({ ...options, taskKey: 'feature:other' }, dependencies);
+    assert.equal(busy.exitCode, 4);
+    assert.equal(count(), 1);
+    // 終わっていれば取り直せる（共有状態の照合へ進む）。
+    alive = false;
+    const next = await launchDelegation({ ...options, taskKey: 'feature:other' }, dependencies);
+    assert.equal(next.reason, '登録済みタスクの対応を確認できません');
+  });
+});
+
+test('LS-06c: 起動の前に止まったらロックを外し、状態の置き場が無くても作る', async () => {
+  await fixture(async ({ dir, dependencies, options }) => {
+    dependencies.readSnapshot = async () => { throw new Error('down'); };
+    assert.equal((await launchDelegation(options, dependencies)).exitCode, 5);
+    assert.equal(existsSync(join(dir, 'devin-clone.lock')), false);
+    const fresh = join(dir, 'fresh-state');
+    dependencies.stateDir = fresh;
+    dependencies.readSnapshot = async () => { throw new Error('down'); };
+    assert.equal((await launchDelegation(options, dependencies)).exitCode, 5);
+    assert.equal(statSync(fresh).mode & 0o777, 0o700);
+  });
+});
+
+test('LS-06d: 一覧を読むのが遅くても、読む時間を含めて待つ時間の上限で止める', async () => {
+  let clock = 0;
+  let reads = 0;
+  const result = await observeLocalSession({
+    before: new Set(), clone: '/clone', exportFile: '/no/such/export.json',
+    listSessions: async (_clone, remaining) => { reads += 1; assert.ok(remaining > 0); clock += 9_000; return []; },
+    now: () => clock, sleep: async (ms) => { clock += ms; }, observeMs: 60_000, intervalMs: 2_000,
+  });
+  assert.equal(result, null);
+  assert.ok(clock <= 60_000 + 9_000);
+  assert.ok(reads <= 6);
+});
+
+test('LS-07: 起動のあとに別のセッションも出たら、IDを空にしてlaunch_unknownにし、起動し直さない', async () => {
+  await fixture(async ({ clone, dependencies, options, submissions, count, setSessions }) => {
+    const spawnOnce = dependencies.spawnOnce;
+    dependencies.spawnOnce = async (input) => {
+      const result = await spawnOnce(input);
+      setSessions([{ id: 'session-1', working_directory: clone }, { id: 'desktop-app', working_directory: clone }]);
+      return result;
+    };
+    const result = await launchDelegation(options, dependencies);
+    assert.equal(result.state, 'launch_unknown');
+    assert.equal(count(), 1);
+    assert.equal(submissions.at(-1).session_id, null);
+  });
+});
+
+test('LS-08: 手元の起動は非公開の書き出し先を--exportで渡し、既にあれば起動しない', async () => {
+  await fixture(async ({ dir, dependencies, options, count }) => {
+    const spawnOnce = dependencies.spawnOnce;
+    let exportArg = null;
+    dependencies.spawnOnce = async (input) => { exportArg = input.args[input.args.indexOf('--export') + 1]; return spawnOnce(input); };
+    await launchDelegation(options, dependencies);
+    assert.equal(exportArg, join(dir, 'devin-logs', `export-${id(1)}.json`));
+    assert.equal(count(), 1);
+  });
+  await fixture(async ({ dir, dependencies, options, count }) => {
+    mkdirSync(join(dir, 'devin-logs'), { recursive: true });
+    writeFileSync(join(dir, 'devin-logs', `export-${id(1)}.json`), '{}');
+    assert.equal((await launchDelegation(options, dependencies)).state, 'launch_unknown');
+    assert.equal(count(), 0);
+  });
+});
+
+test('LS-09: クラウドは確認の設定が無ければ、共有状態に何も送らず起動しない', async () => {
+  await fixture(async ({ dependencies, options, submissions, count }) => {
+    const result = await launchDelegation({ ...options, runner: 'cloud' }, dependencies);
+    assert.equal(result.exitCode, 4);
+    assert.deepEqual(submissions, []);
+    assert.equal(count(), 0);
   });
 });

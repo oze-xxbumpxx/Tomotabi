@@ -205,3 +205,29 @@ test('既存タスクはimportで予約・稼働・終端を巻き戻さず、�
   assert.equal(reduceRequest(state, request, context).result.code, 'imported');
   assert.throws(() => reduceRequest(state, { ...request, request_id: newRequestId() }, context), /import_conflict/);
 });
+
+// devin-local-session: 手元のセッションはIDだけ、クラウドはIDとURLで確定する
+function launching(runner) {
+  let state = ready();
+  const claim = base('claim', { task_key: 'feature:task', task_digest: 'b'.repeat(64), caller_id: CALLER, runner, requested_model: 'swe-2-high' });
+  state = applyChanges(state, reduceRequest(state, claim, context).changes);
+  const begin = base('begin', { task_key: 'feature:task', attempt_id: ATTEMPT, caller_id: CALLER, activation_id: ACT });
+  return applyChanges(state, reduceRequest(state, begin, context).changes);
+}
+const started = (fields) => base('started', { task_key: 'feature:task', attempt_id: ATTEMPT, caller_id: CALLER, activation_id: ACT, observed_model: 'unknown', ...fields });
+
+test('LS-10: 手元のセッションは、URLが空でIDが形に合えばrunningにし、URLが来たらlaunch_unknown', () => {
+  const state = launching('local');
+  const ok = reduceRequest(state, started({ session_id: 'aloud-seed', session_url: null }), { ...context, session_verified: true });
+  assert.equal(ok.result.code, 'running');
+  assert.equal(ok.changes.tasks['feature:task'].session_url, null);
+  assert.equal(reduceRequest(state, started({ session_id: 'aloud-seed', session_url: 'https://app.devin.ai/sessions/aloud-seed' }), { ...context, session_verified: true }).result.code, 'launch_unknown');
+  assert.equal(reduceRequest(state, started({ session_id: null, session_url: null }), { ...context, session_verified: false }).result.code, 'launch_unknown');
+  assert.equal(reduceRequest(state, started({ session_id: 'aloud-seed', session_url: null }), { ...context, session_verified: false }).result.code, 'launch_unknown');
+});
+
+test('LS-11: クラウドのセッションは、今どおりIDとURLの両方が要る', () => {
+  const state = launching('cloud');
+  assert.equal(reduceRequest(state, started({ session_id: 's1', session_url: 'https://app.devin.ai/sessions/s1' }), { ...context, session_verified: true }).result.code, 'running');
+  assert.equal(reduceRequest(state, started({ session_id: 's1', session_url: null }), { ...context, session_verified: true }).result.code, 'launch_unknown');
+});

@@ -333,7 +333,7 @@ export function ItineraryScreen({
     );
   }
 
-  const etag = `"${trip.version}"`;
+  const version = trip.version;
   const plans = data !== undefined ? data.plans : null;
 
   // 「今 · 次まで」の線と次の予定の強調。表示中の日が日本時間の
@@ -437,7 +437,7 @@ export function ItineraryScreen({
       {layer === "menu" && (
         <TripMenu
           trip={trip}
-          etag={etag}
+          version={version}
           displayName={displayName}
           start={start}
           startPending={startCheck}
@@ -451,7 +451,7 @@ export function ItineraryScreen({
           signOutPending={signOutPending}
           signOutFailure={signOutFailure}
           onClose={() => {
-            // 拒否のあとに開き直すときは、取り直した最新のETagで送る。
+            // 拒否のあとに開き直すときは、取り直した最新の版で送る。
             if (start.state.status === "rejected") {
               void itinerary.refetch();
             }
@@ -462,7 +462,7 @@ export function ItineraryScreen({
       {layer === "edit" && (
         <TripEditSheet
           trip={trip}
-          etag={etag}
+          version={version}
           userId={userId}
           onClose={() => setLayer(null)}
           onSaved={() => {
@@ -482,7 +482,7 @@ export function ItineraryScreen({
       {layer === "finish" && (
         <FinishTripDialog
           trip={trip}
-          etag={etag}
+          version={version}
           finish={finish}
           finishPending={finishCheck}
           onClose={() => {

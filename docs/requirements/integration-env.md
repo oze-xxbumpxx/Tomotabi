@@ -41,7 +41,7 @@
 | ID | 確かめること |
 | --- | --- |
 | OPS-03 | 公開URLと転送: `/api`が抜けたり二重になったりせず、固定のAPIに届く。転送先を要求から指定できない |
-| OPS-04 | Cookieとヘッダー: 複数の`Set-Cookie`、`Origin`、`If-Match`、`Idempotency-Key`、本文が転送で保たれる。ログアウトでCookieが消える |
+| OPS-04 | Cookieとヘッダー: 複数の`Set-Cookie`、`Origin`、`X-Expected-Version`、`Idempotency-Key`、本文が転送で保たれる。ログアウトでCookieが消える |
 | OPS-05 | キャッシュ: APIと、認証・個人ごとの画面が、共有のキャッシュに載らない。一人の結果がもう一人に見えない |
 | OPS-06 | Googleと二人の制限: 二人がログインできる。登録していないGoogleアカウント、APIへの直接の要求、別の旅行への要求を断る。公開URLでVercelのログインを求めない |
 | OPS-07 | DBの接続: Neonのpooledの接続で、TLSの検証と認証が通る。管理用の接続と実行用の接続が分かれている |

@@ -33,7 +33,7 @@ function isNotAvailableState(state: PlanSaveState): state is RejectedState {
  */
 export function CancelPlanDialog({
   plan,
-  etag,
+  version,
   cancel,
   cancelPending,
   onClose,
@@ -41,7 +41,7 @@ export function CancelPlanDialog({
   onNotAvailable,
 }: {
   plan: Plan;
-  etag: string;
+  version: string;
   cancel: PlanSave;
   /** 「予定の取りやめ」の保留の照合結果（再読み込みつき）。 */
   cancelPending: { check: PendingRequestCheck; reload: () => void };
@@ -68,7 +68,7 @@ export function CancelPlanDialog({
   }, [state, onSessionExpired, onNotAvailable]);
 
   const submit = () => {
-    void cancel.submit(cancelPlanDraft(plan.tripId, plan.id, etag));
+    void cancel.submit(cancelPlanDraft(plan.tripId, plan.id, version));
   };
 
   const tryClose = () => {
@@ -167,8 +167,8 @@ export function CancelPlanDialog({
               type="button"
               className="btn-danger"
               onClick={submit}
-              // 拒否のあとに同じ古いETagで再送するボタンは出さない。
-              // 閉じて開き直すと最新のETagで送れる。
+              // 拒否のあとに同じ古い版で再送するボタンは出さない。
+              // 閉じて開き直すと最新の版で送れる。
               disabled={
                 state.status === "saving" ||
                 !online ||

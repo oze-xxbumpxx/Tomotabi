@@ -325,7 +325,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
   }
 
   const trip = data.trip;
-  const etag = `"${trip.version}"`;
+  const version = trip.version;
   const mode = data.context.mode;
   const showSchedule = mode === "before" || mode === "during";
   const showOrder = mode === "completed" || mode === "after_dates";
@@ -452,7 +452,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
       {layer === "menu" && (
         <TripMenu
           trip={trip}
-          etag={etag}
+          version={version}
           displayName={displayName}
           start={start}
           startPending={startCheck}
@@ -466,7 +466,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
           signOutPending={signOutPending}
           signOutFailure={signOutFailure}
           onClose={() => {
-            // 拒否のあとに開き直すときは、取り直した最新のETagで送る。
+            // 拒否のあとに開き直すときは、取り直した最新の版で送る。
             if (start.state.status === "rejected") {
               void home.refetch();
             }
@@ -477,7 +477,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
       {layer === "edit" && (
         <TripEditSheet
           trip={trip}
-          etag={etag}
+          version={version}
           userId={userId}
           onClose={() => setLayer(null)}
           onSaved={() => {
@@ -497,7 +497,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
       {layer === "finish" && (
         <FinishTripDialog
           trip={trip}
-          etag={etag}
+          version={version}
           finish={finish}
           finishPending={finishCheck}
           onClose={() => {

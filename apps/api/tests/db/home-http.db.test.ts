@@ -144,7 +144,7 @@ async function startTrip(
     cookie,
   )
     .set("Idempotency-Key", newKey())
-    .set("If-Match", `"${version}"`);
+    .set("X-Expected-Version", `${version}`);
   expect(response.status).toBe(200);
   return response.body.version as string;
 }
@@ -159,7 +159,7 @@ async function finishTrip(
     cookie,
   )
     .set("Idempotency-Key", newKey())
-    .set("If-Match", `"${version}"`);
+    .set("X-Expected-Version", `${version}`);
   expect(response.status).toBe(200);
   return response.body.version as string;
 }

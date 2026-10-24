@@ -48,7 +48,7 @@ function rejectedMessage(state: RejectedState): string {
 export function PlanMoveSheet({
   trip,
   plan,
-  etag,
+  version,
   move,
   movePending,
   onClose,
@@ -57,7 +57,7 @@ export function PlanMoveSheet({
 }: {
   trip: Trip;
   plan: Plan;
-  etag: string;
+  version: string;
   move: PlanSave;
   /** 「日の移動」の保留の照合結果（再読み込みつき）。 */
   movePending: { check: PendingRequestCheck; reload: () => void };
@@ -72,10 +72,10 @@ export function PlanMoveSheet({
   const pendingFound = movePending.check.status === "found";
   const pendingUnavailable = movePending.check.status === "unavailable";
 
-  const etagNow =
+  const versionNow =
     state.status === "conflict" && state.latest !== null
-      ? state.latest.etag
-      : etag;
+      ? state.latest.version
+      : version;
 
   // C-1 / C-2は呼び出し側の全面表示に切り替える。
   useEffect(() => {
@@ -95,7 +95,7 @@ export function PlanMoveSheet({
     if (sameDay) {
       return;
     }
-    void move.submit(movePlanDraft(trip.id, plan.id, selected, etagNow));
+    void move.submit(movePlanDraft(trip.id, plan.id, selected, versionNow));
   };
 
   const tryClose = () => {
@@ -121,7 +121,7 @@ export function PlanMoveSheet({
               type="button"
               className="btn-ink"
               onClick={submit}
-              // 止めるのは428（ETagが古い）のときだけ。ほかの拒否は
+              // 止めるのは428（版が古い）のときだけ。ほかの拒否は
               // 別の日を選び直せば編集に戻り、新しいキーで送り直せる。
               disabled={
                 sameDay ||
@@ -220,7 +220,7 @@ export function PlanMoveSheet({
             onSelect={(date) => {
               setSelected(date);
               // 拒否（期間外など）のあと別の日を選び直したら編集に戻す。
-              // 拒否した要求でサーバーは予定を変えないのでETagは
+              // 拒否した要求でサーバーは予定を変えないので版は
               // そのまま使え、送り直しは新しいキーになる。428だけは
               // 取り直すまで送らせない。
               if (

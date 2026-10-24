@@ -5,7 +5,7 @@ import { TripPeriod } from "./trip-period.js";
 export type TripStatus = "planning" | "traveling" | "finished";
 
 /**
- * 旅行。versionはETag / If-Matchと対応する正の整数（wireでは10進の文字列）。
+ * 旅行。versionはX-Expected-Versionと対応する正の整数（wireでは10進の文字列）。
  * 状態はplanning → traveling → finishedで、戻す遷移は存在しない。
  */
 export type Trip = Readonly<{
@@ -60,7 +60,7 @@ export const Trip = {
 
   /**
    * planning → traveling。既にtravelingのときは変化なしのまま返す。
-   * 同じ状態への遷移でversion・日時を変えないのは、ETagが一致する別キーの要求を
+   * 同じ状態への遷移でversion・日時を変えないのは、版が一致する別キーの要求を
    * 「既に目的の状態」として扱うため（B-07。versionを増やすとその後の再送が
    * VERSION_CONFLICTになる）。
    * @throws finishedからの遷移はInvalidTripTransitionError。

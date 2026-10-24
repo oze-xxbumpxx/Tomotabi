@@ -124,11 +124,11 @@ async function patchPlan(
   tripId: string,
   planId: string,
   body: unknown,
-  ifMatch = '"1"',
+  version = "1",
 ): Promise<request.Response> {
   return authed(http().patch(`/api/trips/${tripId}/plans/${planId}`), cookie)
     .set("Idempotency-Key", newKey())
-    .set("If-Match", ifMatch)
+    .set("X-Expected-Version", version)
     .send(body);
 }
 
@@ -136,14 +136,14 @@ async function cancelPlan(
   cookie: string,
   tripId: string,
   planId: string,
-  ifMatch = '"1"',
+  version = "1",
 ): Promise<request.Response> {
   return authed(
     http().post(`/api/trips/${tripId}/plans/${planId}/cancel`),
     cookie,
   )
     .set("Idempotency-Key", newKey())
-    .set("If-Match", ifMatch);
+    .set("X-Expected-Version", version);
 }
 
 type EventKind = "achievement" | "booking";

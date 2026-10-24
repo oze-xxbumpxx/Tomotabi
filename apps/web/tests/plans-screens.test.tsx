@@ -684,7 +684,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       date: "2026-10-14",
     });
-    expect(new Headers(init?.headers).get("if-match")).toBe('"3"');
+    expect(new Headers(init?.headers).get("x-expected-version")).toBe("3");
     expect(
       new Headers(init?.headers).get("idempotency-key"),
     ).toMatch(
@@ -754,7 +754,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     ).toBeInTheDocument();
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/plans/${planId}/cancel`);
-    expect(new Headers(init?.headers).get("if-match")).toBe('"2"');
+    expect(new Headers(init?.headers).get("x-expected-version")).toBe("2");
   });
 
   it("RW-03: 移動の保留があれば「保存されたか確認できません」を出し、同じキーで送り直す", async () => {
@@ -766,7 +766,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
         url: `/api/trips/${tripId}/plans/${planId}/move`,
         method: "POST",
         body: { date: "2026-10-14" },
-        ifMatch: '"1"',
+        expectedVersion: "1",
       }),
     });
     await savePendingRequest(record);
@@ -801,7 +801,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     expect(new Headers(init?.headers).get("idempotency-key")).toBe(
       record.idempotencyKey,
     );
-    expect(new Headers(init?.headers).get("if-match")).toBe('"1"');
+    expect(new Headers(init?.headers).get("x-expected-version")).toBe("1");
     expect(JSON.parse(String(init?.body))).toEqual({
       date: "2026-10-14",
     });
@@ -1093,7 +1093,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       name: "錦市場で昼食と買い物",
     });
-    expect(new Headers(init?.headers).get("if-match")).toBe('"1"');
+    expect(new Headers(init?.headers).get("x-expected-version")).toBe("1");
   });
 
   it("何も変えずに保存すると送らずに閉じる", async () => {
@@ -1176,7 +1176,7 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
     expect(JSON.parse(String(writes[1][1]?.body))).toEqual({
       name: "錦市場で昼食",
     });
-    expect(new Headers(writes[1][1]?.headers).get("if-match")).toBe('"5"');
+    expect(new Headers(writes[1][1]?.headers).get("x-expected-version")).toBe("5");
   });
 
   it("W-19: 記録がある予定は種類を固定して理由を出す", async () => {
@@ -1559,11 +1559,11 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     expect(key1).not.toBeNull();
     expect(key2).not.toBeNull();
     expect(key2).not.toBe(key1);
-    // サーバーは拒否した要求で予定を変えないので同じETagでよい。
-    expect(new Headers(writes[1][1]?.headers).get("if-match")).toBe('"3"');
+    // サーバーは拒否した要求で予定を変えないので同じ版でよい。
+    expect(new Headers(writes[1][1]?.headers).get("x-expected-version")).toBe("3");
   });
 
-  it("編集で 428 のあとは取り直すまで送れず、取り直すと新しい ETag で送れる", async () => {
+  it("編集で 428 のあとは取り直すまで送れず、取り直すと新しい版で送れる", async () => {
     let planCalls = 0;
     let patchCalls = 0;
     const fetchMock = stubApi({
@@ -1596,13 +1596,13 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     expect(
       await screen.findByText("画面を更新してからやり直してください"),
     ).toBeInTheDocument();
-    // 欄を変えても送り直せない（ETagが古い）。
+    // 欄を変えても送り直せない（版が古い）。
     fireEvent.change(nameInput, { target: { value: "もう一度直す" } });
     expect(
       screen.getByRole("button", { name: "保存" }),
     ).toBeDisabled();
 
-    // 最新を取り直すと予定を再取得し、新しいETagで送れる。
+    // 最新を取り直すと予定を再取得し、新しい版で送れる。
     await userEvent.click(
       screen.getByRole("button", { name: "最新を取り直す" }),
     );
@@ -1618,7 +1618,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     );
     const writes = writeCalls(fetchMock);
     expect(writes).toHaveLength(2);
-    expect(new Headers(writes[1][1]?.headers).get("if-match")).toBe('"5"');
+    expect(new Headers(writes[1][1]?.headers).get("x-expected-version")).toBe("5");
   });
 
   it("移動で期間外に拒否されたあと別の日を選ぶと送り直せる", async () => {

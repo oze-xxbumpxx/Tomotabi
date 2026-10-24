@@ -21,13 +21,13 @@ import { TRIP_STATUS_LABEL } from "./trip-status-badge";
  */
 export function FinishTripDialog({
   trip,
-  etag,
+  version,
   finish,
   finishPending,
   onClose,
 }: {
   trip: Trip;
-  etag: string;
+  version: string;
   finish: TripSave;
   /** 「旅行を終了する」の保留の照合結果（再読み込みつき）。 */
   finishPending: { check: PendingRequestCheck; reload: () => void };
@@ -41,7 +41,7 @@ export function FinishTripDialog({
     state.status === "editing" && finishPending.check.status === "unavailable";
 
   const submit = () => {
-    void finish.submit(finishTripDraft(trip.id, etag));
+    void finish.submit(finishTripDraft(trip.id, version));
   };
 
   return (

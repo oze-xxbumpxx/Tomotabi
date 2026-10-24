@@ -16,7 +16,7 @@ import type { Response } from "express";
 import type { z as zod } from "zod";
 import type { UserId } from "../../../common/domain/user-id.js";
 import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
-import { parseIfMatch, toStrongETag } from "../../../common/http/etag.js";
+import { parseExpectedVersion } from "../../../common/http/expected-version.js";
 import {
   parseIdempotencyKey,
   type IdempotencyKey,
@@ -147,7 +147,6 @@ export class TripsController {
       userId,
       tripId: params.tripId,
     });
-    response.setHeader("ETag", toStrongETag(trip.version));
     response.setHeader("Cache-Control", "private, no-store");
     return trip;
   }
@@ -157,11 +156,11 @@ export class TripsController {
     @CurrentUser() userId: UserId,
     @Param(new ZodBodyPipe(RenameTripParams)) params: TripParams,
     @Headers("idempotency-key") keyHeader: string | undefined,
-    @Headers("if-match") ifMatchHeader: string | undefined,
+    @Headers("x-expected-version") versionHeader: string | undefined,
     @Body(new ZodBodyPipe(RenameTripBody)) body: RenameTripBodyInput,
     @Res({ passthrough: true }) response: Response,
   ): Promise<Trip> {
-    const command = this.commandHeaders(keyHeader, ifMatchHeader);
+    const command = this.commandHeaders(keyHeader, versionHeader);
     const requestHash = computeRequestHash({
       operation: RENAME_TRIP_OPERATION,
       tripId: params.tripId,
@@ -185,11 +184,11 @@ export class TripsController {
     @CurrentUser() userId: UserId,
     @Param(new ZodBodyPipe(UpdateTripPeriodParams)) params: TripParams,
     @Headers("idempotency-key") keyHeader: string | undefined,
-    @Headers("if-match") ifMatchHeader: string | undefined,
+    @Headers("x-expected-version") versionHeader: string | undefined,
     @Body(new ZodBodyPipe(UpdateTripPeriodBody)) body: UpdateTripPeriodBodyInput,
     @Res({ passthrough: true }) response: Response,
   ): Promise<Trip> {
-    const command = this.commandHeaders(keyHeader, ifMatchHeader);
+    const command = this.commandHeaders(keyHeader, versionHeader);
     const requestHash = computeRequestHash({
       operation: CHANGE_TRIP_PERIOD_OPERATION,
       tripId: params.tripId,
@@ -214,10 +213,10 @@ export class TripsController {
     @CurrentUser() userId: UserId,
     @Param(new ZodBodyPipe(StartTripParams)) params: TripParams,
     @Headers("idempotency-key") keyHeader: string | undefined,
-    @Headers("if-match") ifMatchHeader: string | undefined,
+    @Headers("x-expected-version") versionHeader: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<Trip> {
-    const command = this.commandHeaders(keyHeader, ifMatchHeader);
+    const command = this.commandHeaders(keyHeader, versionHeader);
     const requestHash = computeRequestHash({
       operation: START_TRIP_OPERATION,
       tripId: params.tripId,
@@ -240,10 +239,10 @@ export class TripsController {
     @CurrentUser() userId: UserId,
     @Param(new ZodBodyPipe(FinishTripParams)) params: TripParams,
     @Headers("idempotency-key") keyHeader: string | undefined,
-    @Headers("if-match") ifMatchHeader: string | undefined,
+    @Headers("x-expected-version") versionHeader: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<Trip> {
-    const command = this.commandHeaders(keyHeader, ifMatchHeader);
+    const command = this.commandHeaders(keyHeader, versionHeader);
     const requestHash = computeRequestHash({
       operation: FINISH_TRIP_OPERATION,
       tripId: params.tripId,
@@ -263,19 +262,17 @@ export class TripsController {
 
   private commandHeaders(
     keyHeader: string | undefined,
-    ifMatchHeader: string | undefined,
+    versionHeader: string | undefined,
   ): { key: IdempotencyKey; ifMatch: string } {
     return {
       key: parseIdempotencyKey(keyHeader),
-      ifMatch: parseIfMatch(ifMatchHeader),
+      ifMatch: parseExpectedVersion(versionHeader),
     };
   }
 
   /**
-   * 書き込みの応答にはETagを付けない（次のIf-Matchは本文のversionから作る）。
-   * VercelのCDNは、関数の応答のETagと要求のIf-Matchを比べ、違えば保存の
-   * 成功を412に置き換える。書き込みが成功すると版は必ず進むので、付けると
-   * 成功した保存が412に見える（結合検証環境で発生）。
+   * 応答にETagを付けない。版は本文のversionだけで渡し、画面は次の書き込みで
+   * それをX-Expected-Versionに送る。
    */
   private writeResult(response: Response, result: TripWriteResult): Trip {
     response.setHeader("Cache-Control", "private, no-store");

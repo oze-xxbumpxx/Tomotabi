@@ -296,14 +296,6 @@
                   "$ref": "#/components/schemas/Trip"
                 }
               }
-            },
-            "headers": {
-              "ETag": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "引用付きversion"
-              }
             }
           }
         },
@@ -322,7 +314,7 @@
             "$ref": "#/components/parameters/IdempotencyKey"
           },
           {
-            "$ref": "#/components/parameters/IfMatch"
+            "$ref": "#/components/parameters/ExpectedVersion"
           }
         ],
         "responses": {
@@ -444,7 +436,7 @@
             "$ref": "#/components/parameters/IdempotencyKey"
           },
           {
-            "$ref": "#/components/parameters/IfMatch"
+            "$ref": "#/components/parameters/ExpectedVersion"
           }
         ],
         "responses": {
@@ -556,7 +548,7 @@
             "$ref": "#/components/parameters/IdempotencyKey"
           },
           {
-            "$ref": "#/components/parameters/IfMatch"
+            "$ref": "#/components/parameters/ExpectedVersion"
           }
         ],
         "responses": {
@@ -1071,15 +1063,15 @@
         },
         "description": "利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。"
       },
-      "IfMatch": {
-        "name": "If-Match",
+      "ExpectedVersion": {
+        "name": "X-Expected-Version",
         "in": "header",
         "required": true,
         "schema": {
           "type": "string",
-          "pattern": "^\"[1-9][0-9]*\"$"
+          "pattern": "^[1-9][0-9]*$"
         },
-        "description": "単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。"
+        "description": "取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。"
       }
     },
     "securitySchemes": {

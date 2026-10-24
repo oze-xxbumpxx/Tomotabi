@@ -78,7 +78,7 @@ export function getPayment(
 
 // ---- 変更要求の組み立て（MutationDraft） ----
 
-/** POST /api/trips/{tripId}/payments。If-Matchは付けない。 */
+/** POST /api/trips/{tripId}/payments。版（X-Expected-Version）は付けない。 */
 export function createPaymentDraft(
   tripId: string,
   body: PaymentCreate,
@@ -91,7 +91,7 @@ export function createPaymentDraft(
   };
 }
 
-/** POST /api/trips/{tripId}/payments/{paymentId}/cancel。If-Matchは付けない。 */
+/** POST /api/trips/{tripId}/payments/{paymentId}/cancel。版（X-Expected-Version）は付けない。 */
 export function cancelPaymentDraft(
   tripId: string,
   paymentId: string,

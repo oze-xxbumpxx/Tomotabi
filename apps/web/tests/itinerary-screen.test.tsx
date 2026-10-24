@@ -308,7 +308,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     ).toBeInTheDocument();
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/start`);
-    expect(new Headers(init?.headers).get("if-match")).toBe('"1"');
+    expect(new Headers(init?.headers).get("x-expected-version")).toBe("1");
     expect(
       new Headers(init?.headers).get("idempotency-key"),
     ).toMatch(
@@ -362,7 +362,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     ).toBeInTheDocument();
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/finish`);
-    expect(new Headers(init?.headers).get("if-match")).toBe('"1"');
+    expect(new Headers(init?.headers).get("x-expected-version")).toBe("1");
   });
 
   it("W-23: 名前と期間の両方を変えると PATCH → PUT の順に送る", async () => {
@@ -405,14 +405,14 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     const [patchUrl, patchInit] = writes[0];
     expect(patchUrl).toBe(`/api/trips/${tripId}`);
     expect(patchInit?.method).toBe("PATCH");
-    expect(new Headers(patchInit?.headers).get("if-match")).toBe('"1"');
+    expect(new Headers(patchInit?.headers).get("x-expected-version")).toBe("1");
     expect(JSON.parse(String(patchInit?.body))).toEqual({ name: "石垣島" });
 
     const [putUrl, putInit] = writes[1];
     expect(putUrl).toBe(`/api/trips/${tripId}/period`);
     expect(putInit?.method).toBe("PUT");
-    // 期間のIf-Matchは名前の保存が返した新しいETag。
-    expect(new Headers(putInit?.headers).get("if-match")).toBe('"2"');
+    // 期間の版は名前の保存が返した新しい版。
+    expect(new Headers(putInit?.headers).get("x-expected-version")).toBe("2");
     expect(JSON.parse(String(putInit?.body))).toEqual({
       startsOn: "2026-10-20",
       endsOn: "2026-10-22",
@@ -622,7 +622,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     },
   );
 
-  it("開始が 428 なら古い ETag で再送せず、閉じると最新を取り直す", async () => {
+  it("開始が 428 なら古い版で再送せず、閉じると最新を取り直す", async () => {
     let itineraryCalls = 0;
     const fetchMock = stubApi({
       itinerary: () => {
@@ -642,7 +642,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(
       await screen.findByText("画面を更新してからやり直してください"),
     ).toBeInTheDocument();
-    // 古いETagのままの再送ボタンは出さない。
+    // 古い版のままの再送ボタンは出さない。
     expect(
       screen.queryByRole("button", { name: "やり直す" }),
     ).not.toBeInTheDocument();
@@ -656,7 +656,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(writes).toHaveLength(1);
   });
 
-  it("W-23: 期間が 422 のあと期間だけ直して再保存すると直近の応答の ETag で送る", async () => {
+  it("W-23: 期間が 422 のあと期間だけ直して再保存すると直近の応答の版で送る", async () => {
     let periodCalls = 0;
     const fetchMock = stubApi({
       rename: () => json(trip({ name: "石垣島", version: "2" })),
@@ -731,8 +731,8 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     ).toBeInTheDocument();
     const puts = periodPuts();
     expect(puts).toHaveLength(2);
-    // 2回目のPUTは、名前の保存が返したETag（しおりの再取得を待たない）。
-    expect(new Headers(puts[1][1]?.headers).get("if-match")).toBe('"2"');
+    // 2回目のPUTは、名前の保存が返した版（しおりの再取得を待たない）。
+    expect(new Headers(puts[1][1]?.headers).get("x-expected-version")).toBe("2");
   });
 
   it("RW-03: 開始の保留があれば「保存されたか確認できません」を出し、同じキーで送り直す", async () => {
@@ -744,7 +744,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
         url: `/api/trips/${tripId}/start`,
         method: "POST",
         body: null,
-        ifMatch: '"1"',
+        expectedVersion: "1",
       }),
     });
     await savePendingRequest(record);
@@ -783,10 +783,10 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     ).toBeInTheDocument();
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/start`);
-    // 同じ要求（同じ冪等キー・同じETag）をそのまま送り直す。
+    // 同じ要求（同じ冪等キー・同じ版）をそのまま送り直す。
     expect(new Headers(init?.headers).get("idempotency-key")).toBe(
       record.idempotencyKey,
     );
-    expect(new Headers(init?.headers).get("if-match")).toBe('"1"');
+    expect(new Headers(init?.headers).get("x-expected-version")).toBe("1");
   });
 });

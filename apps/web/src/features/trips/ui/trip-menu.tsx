@@ -65,7 +65,7 @@ function StartStateBlock({ start }: { start: TripSave }) {
     case "saving":
       return <StatusText>開始しています</StatusText>;
     case "rejected":
-      // 拒否のあとは同じETagで再送しない。閉じると最新を取り直す。
+      // 拒否のあとは同じ版で再送しない。閉じると最新を取り直す。
       return (
         <div className="menu-status">
           <StatusText tone="error">
@@ -139,7 +139,7 @@ function StartConflict({ start }: { start: TripSave }) {
  */
 export function TripMenu({
   trip,
-  etag,
+  version,
   displayName,
   start,
   startPending,
@@ -152,7 +152,7 @@ export function TripMenu({
   onClose,
 }: {
   trip: Trip;
-  etag: string;
+  version: string;
   displayName: string | null;
   start: TripSave;
   /** 「旅行を開始する」の保留の照合結果（再読み込みつき）。 */
@@ -211,7 +211,7 @@ export function TripMenu({
               icon={<Flag size={22} />}
               label="旅行を開始する"
               disabled={!online || startPending.check.status !== "none"}
-              onClick={() => void start.submit(startTripDraft(trip.id, etag))}
+              onClick={() => void start.submit(startTripDraft(trip.id, version))}
             />
           )}
           {trip.status === "traveling" && (

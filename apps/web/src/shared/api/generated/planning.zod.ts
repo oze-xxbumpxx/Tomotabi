@@ -216,20 +216,20 @@ export const GetPlanResponse = zod.object({
 
 
 /**
- * 日付は更新不可。種類変更は達成・予約の全履歴がない場合のみ。Idempotency-Key・If-Match 必須。
+ * 日付は更新不可。種類変更は達成・予約の全履歴がない場合のみ。Idempotency-Key・X-Expected-Version 必須。
  */
 export const UpdatePlanParams = zod.object({
   "tripId": zod.uuid(),
   "planId": zod.uuid()
 })
 
-export const updatePlanHeaderIfMatchRegExp = new RegExp('^"[1-9][0-9]*"$');
+export const updatePlanHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const UpdatePlanHeader = zod.object({
   "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
   "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
-  "If-Match": zod.string().regex(updatePlanHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
+  "X-Expected-Version": zod.string().regex(updatePlanHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
 })
 
 
@@ -291,20 +291,20 @@ export const UpdatePlanResponse = zod.object({
 
 
 /**
- * 予定の日の移動。移動先は旅行期間内。Idempotency-Key・If-Match 必須。
+ * 予定の日の移動。移動先は旅行期間内。Idempotency-Key・X-Expected-Version 必須。
  */
 export const MovePlanParams = zod.object({
   "tripId": zod.uuid(),
   "planId": zod.uuid()
 })
 
-export const movePlanHeaderIfMatchRegExp = new RegExp('^"[1-9][0-9]*"$');
+export const movePlanHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const MovePlanHeader = zod.object({
   "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
   "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
-  "If-Match": zod.string().regex(movePlanHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
+  "X-Expected-Version": zod.string().regex(movePlanHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
 })
 
 export const movePlanBodyDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
@@ -362,20 +362,20 @@ export const MovePlanResponse = zod.object({
 
 
 /**
- * 予定の取りやめ。既存の達成・予約は取り消さない。取りやめ済みは 409 PLAN_CANCELLED。Idempotency-Key・If-Match 必須。
+ * 予定の取りやめ。既存の達成・予約は取り消さない。取りやめ済みは 409 PLAN_CANCELLED。Idempotency-Key・X-Expected-Version 必須。
  */
 export const CancelPlanParams = zod.object({
   "tripId": zod.uuid(),
   "planId": zod.uuid()
 })
 
-export const cancelPlanHeaderIfMatchRegExp = new RegExp('^"[1-9][0-9]*"$');
+export const cancelPlanHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const CancelPlanHeader = zod.object({
   "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
   "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
-  "If-Match": zod.string().regex(cancelPlanHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
+  "X-Expected-Version": zod.string().regex(cancelPlanHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
 })
 
 
@@ -426,19 +426,19 @@ export const CancelPlanResponse = zod.object({
 
 
 /**
- * 旅行期間の変更。取りやめ済みを含む全予定が新期間内であることを検証（外れは 422 PLAN_OUTSIDE_TRIP_PERIOD）。Idempotency-Key・If-Match 必須。
+ * 旅行期間の変更。取りやめ済みを含む全予定が新期間内であることを検証（外れは 422 PLAN_OUTSIDE_TRIP_PERIOD）。Idempotency-Key・X-Expected-Version 必須。
  */
 export const UpdateTripPeriodParams = zod.object({
   "tripId": zod.uuid()
 })
 
-export const updateTripPeriodHeaderIfMatchRegExp = new RegExp('^"[1-9][0-9]*"$');
+export const updateTripPeriodHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
 export const UpdateTripPeriodHeader = zod.object({
   "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
   "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
-  "If-Match": zod.string().regex(updateTripPeriodHeaderIfMatchRegExp).describe('単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。')
+  "X-Expected-Version": zod.string().regex(updateTripPeriodHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
 })
 
 export const updateTripPeriodBodyStartsOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');

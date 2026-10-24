@@ -15,7 +15,7 @@ import type { Response } from "express";
 import type { z as zod } from "zod";
 import type { UserId } from "../../../common/domain/user-id.js";
 import { CurrentUser } from "../../../common/guard/current-user.decorator.js";
-import { parseIfMatch, toStrongETag } from "../../../common/http/etag.js";
+import { parseExpectedVersion } from "../../../common/http/expected-version.js";
 import {
   parseIdempotencyKey,
   type IdempotencyKey,
@@ -145,7 +145,6 @@ export class PlansController {
       tripId: params.tripId,
       planId: params.planId,
     });
-    response.setHeader("ETag", toStrongETag(plan.version));
     response.setHeader("Cache-Control", "private, no-store");
     return plan;
   }
@@ -155,14 +154,14 @@ export class PlansController {
     @CurrentUser() userId: UserId,
     @Param(new ZodBodyPipe(UpdatePlanParams)) params: PlanParams,
     @Headers("idempotency-key") keyHeader: string | undefined,
-    @Headers("if-match") ifMatchHeader: string | undefined,
+    @Headers("x-expected-version") versionHeader: string | undefined,
     @Body(
       new ZodBodyPipe(UpdatePlanBody, { nonEmptyObject: true }),
     )
     body: UpdatePlanBodyInput,
     @Res({ passthrough: true }) response: Response,
   ): Promise<Plan> {
-    const command = this.commandHeaders(keyHeader, ifMatchHeader);
+    const command = this.commandHeaders(keyHeader, versionHeader);
     const requestHash = computeRequestHash({
       operation: UPDATE_PLAN_OPERATION,
       tripId: params.tripId,
@@ -190,11 +189,11 @@ export class PlansController {
     @CurrentUser() userId: UserId,
     @Param(new ZodBodyPipe(MovePlanParams)) params: PlanParams,
     @Headers("idempotency-key") keyHeader: string | undefined,
-    @Headers("if-match") ifMatchHeader: string | undefined,
+    @Headers("x-expected-version") versionHeader: string | undefined,
     @Body(new ZodBodyPipe(MovePlanBody)) body: MovePlanBodyInput,
     @Res({ passthrough: true }) response: Response,
   ): Promise<Plan> {
-    const command = this.commandHeaders(keyHeader, ifMatchHeader);
+    const command = this.commandHeaders(keyHeader, versionHeader);
     const requestHash = computeRequestHash({
       operation: MOVE_PLAN_OPERATION,
       tripId: params.tripId,
@@ -219,10 +218,10 @@ export class PlansController {
     @CurrentUser() userId: UserId,
     @Param(new ZodBodyPipe(CancelPlanParams)) params: PlanParams,
     @Headers("idempotency-key") keyHeader: string | undefined,
-    @Headers("if-match") ifMatchHeader: string | undefined,
+    @Headers("x-expected-version") versionHeader: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<Plan> {
-    const command = this.commandHeaders(keyHeader, ifMatchHeader);
+    const command = this.commandHeaders(keyHeader, versionHeader);
     const requestHash = computeRequestHash({
       operation: CANCEL_PLAN_OPERATION,
       tripId: params.tripId,
@@ -243,19 +242,17 @@ export class PlansController {
 
   private commandHeaders(
     keyHeader: string | undefined,
-    ifMatchHeader: string | undefined,
+    versionHeader: string | undefined,
   ): { key: IdempotencyKey; ifMatch: string } {
     return {
       key: parseIdempotencyKey(keyHeader),
-      ifMatch: parseIfMatch(ifMatchHeader),
+      ifMatch: parseExpectedVersion(versionHeader),
     };
   }
 
   /**
-   * 書き込みの応答にはETagを付けない（次のIf-Matchは本文のversionから作る）。
-   * VercelのCDNは、関数の応答のETagと要求のIf-Matchを比べ、違えば保存の
-   * 成功を412に置き換える。書き込みが成功すると版は必ず進むので、付けると
-   * 成功した保存が412に見える（結合検証環境で発生）。
+   * 応答にETagを付けない。版は本文のversionだけで渡し、画面は次の書き込みで
+   * それをX-Expected-Versionに送る。
    */
   private writeResult(response: Response, result: PlanWriteResult): Plan {
     response.setHeader("Cache-Control", "private, no-store");

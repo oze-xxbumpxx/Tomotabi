@@ -25,11 +25,7 @@ import {
   UPDATE_TRIP_PERIOD_OPERATION,
   updateTripPeriodDraft,
 } from "../api/trips-api";
-import {
-  etagOf,
-  useTripMutation,
-  type TripSaveState,
-} from "../model/trip-save";
+import { useTripMutation, type TripSaveState } from "../model/trip-save";
 import { TripFormFields } from "./trip-form-fields";
 
 type RejectedState = Extract<TripSaveState, { status: "rejected" }>;
@@ -87,7 +83,7 @@ function sessionExpiredOf(
  */
 export function TripEditSheet({
   trip,
-  etag,
+  version,
   userId,
   onClose,
   onSaved,
@@ -95,7 +91,7 @@ export function TripEditSheet({
   onNotAvailable,
 }: {
   trip: Trip;
-  etag: string;
+  version: string;
   /** 保留の照合に使う利用者のID（呼び出し側の`useMe`）。 */
   userId: string | null;
   onClose: () => void;
@@ -126,15 +122,15 @@ export function TripEditSheet({
     startsOn: trip.startsOn,
     endsOn: trip.endsOn,
   });
-  // 直近の書き込み応答が返したETag。次の送信ではpropのetagよりこちらを優先する
+  // 直近の書き込み応答が返した版。次の送信ではpropのversionよりこちらを優先する
   //（名前の保存が成功したあとはversionが進むため）。
-  const etagRef = useRef(etag);
+  const versionRef = useRef(version);
 
   const periodChanged = () =>
     startsOn !== savedRef.current.startsOn || endsOn !== savedRef.current.endsOn;
 
-  const periodDraft = (ifMatch: string | null) =>
-    updateTripPeriodDraft(trip.id, { startsOn, endsOn }, ifMatch);
+  const periodDraft = (expectedVersion: string | null) =>
+    updateTripPeriodDraft(trip.id, { startsOn, endsOn }, expectedVersion);
 
   const renameCheck = usePendingRequestCheck({
     userId,
@@ -153,7 +149,7 @@ export function TripEditSheet({
     userId,
     check: periodCheck.check,
     onSucceeded: (result) => {
-      etagRef.current = etagOf(result);
+      versionRef.current = result.data.version;
       savedRef.current = {
         ...savedRef.current,
         startsOn: result.data.startsOn,
@@ -169,11 +165,11 @@ export function TripEditSheet({
     userId,
     check: renameCheck.check,
     onSucceeded: (result) => {
-      etagRef.current = etagOf(result);
+      versionRef.current = result.data.version;
       savedRef.current = { ...savedRef.current, name: result.data.name };
       // 名前の保存が済んでから期間を送る（変わった方だけを送る順序）。
       if (periodChanged()) {
-        void period.submit(periodDraft(etagOf(result)));
+        void period.submit(periodDraft(result.data.version));
       } else {
         onSaved();
       }
@@ -218,12 +214,12 @@ export function TripEditSheet({
     }
     if (name.trim() !== savedRef.current.name) {
       void rename.submit(
-        renameTripDraft(trip.id, name.trim(), etagRef.current),
+        renameTripDraft(trip.id, name.trim(), versionRef.current),
       );
       return;
     }
     if (periodChanged()) {
-      void period.submit(periodDraft(etagRef.current));
+      void period.submit(periodDraft(versionRef.current));
       return;
     }
     // 未変更なら送らずに閉じる。

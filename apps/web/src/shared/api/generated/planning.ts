@@ -282,9 +282,9 @@ export type OriginParameter = string;
 export type IdempotencyKeyParameter = string;
 
 /**
- * 単一の強いETag。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。
+ * 取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。
  */
-export type IfMatchParameter = string;
+export type ExpectedVersionParameter = string;
 
 export type GetItineraryParams = {
 date?: string;
@@ -605,7 +605,7 @@ export const getUpdatePlanUrl = (tripId: string,
 }
 
 /**
- * 日付は更新不可。種類変更は達成・予約の全履歴がない場合のみ。Idempotency-Key・If-Match 必須。
+ * 日付は更新不可。種類変更は達成・予約の全履歴がない場合のみ。Idempotency-Key・X-Expected-Version 必須。
  */
 export const updatePlan = async (tripId: string,
     planId: string,
@@ -700,7 +700,7 @@ export const getMovePlanUrl = (tripId: string,
 }
 
 /**
- * 予定の日の移動。移動先は旅行期間内。Idempotency-Key・If-Match 必須。
+ * 予定の日の移動。移動先は旅行期間内。Idempotency-Key・X-Expected-Version 必須。
  */
 export const movePlan = async (tripId: string,
     planId: string,
@@ -790,7 +790,7 @@ export const getCancelPlanUrl = (tripId: string,
 }
 
 /**
- * 予定の取りやめ。既存の達成・予約は取り消さない。取りやめ済みは 409 PLAN_CANCELLED。Idempotency-Key・If-Match 必須。
+ * 予定の取りやめ。既存の達成・予約は取り消さない。取りやめ済みは 409 PLAN_CANCELLED。Idempotency-Key・X-Expected-Version 必須。
  */
 export const cancelPlan = async (tripId: string,
     planId: string, options?: Parameters<typeof httpClient>[1]): Promise<cancelPlanResponse> => {
@@ -864,7 +864,7 @@ export const getUpdateTripPeriodUrl = (tripId: string,) => {
 }
 
 /**
- * 旅行期間の変更。取りやめ済みを含む全予定が新期間内であることを検証（外れは 422 PLAN_OUTSIDE_TRIP_PERIOD）。Idempotency-Key・If-Match 必須。
+ * 旅行期間の変更。取りやめ済みを含む全予定が新期間内であることを検証（外れは 422 PLAN_OUTSIDE_TRIP_PERIOD）。Idempotency-Key・X-Expected-Version 必須。
  */
 export const updateTripPeriod = async (tripId: string,
     period: Period, options?: Parameters<typeof httpClient>[1]): Promise<updateTripPeriodResponse> => {

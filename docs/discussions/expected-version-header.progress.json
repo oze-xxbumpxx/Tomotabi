@@ -10,19 +10,26 @@
       "reason": "L2なので要件定義書は作らない"
     },
     "design": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/designs/expected-version-header.md"
-      ]
+      ],
+      "approved": {
+        "pr": 264,
+        "at": "2026-10-24"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/expected-version-header.md"
+      ]
     },
     "implement": {
-      "state": "pending"
+      "state": "done"
     },
     "review": {
-      "state": "pending"
+      "state": "active"
     },
     "merge": {
       "state": "pending"
@@ -31,5 +38,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-23T12:43:31.269Z"
+  "updated_at": "2026-10-24T02:05:44.689Z"
 }

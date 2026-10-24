@@ -66,7 +66,7 @@ CREATE TRIGGER reject_mutation BEFORE UPDATE OR DELETE ON record.plan_events
 CREATE TRIGGER reject_mutation BEFORE UPDATE OR DELETE ON record.plan_event_cancellations
  FOR EACH ROW EXECUTE FUNCTION infra.reject_history_mutation();
 
--- 再送管理の種別を追加。ハッシュにはIf-Matchも含める。
+-- 再送管理の種別を追加。ハッシュには版（X-Expected-Version）も含める。
 -- 変更可能な予定・旅行の成功時DTOを保持し、後の変更後も元の結果を再送できるようにする。
 ALTER TABLE infra.command_receipts ADD COLUMN response_body jsonb;
 ALTER TABLE infra.command_receipts ADD CONSTRAINT mutable_resource_receipt_snapshot

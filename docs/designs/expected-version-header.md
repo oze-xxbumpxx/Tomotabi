@@ -54,14 +54,14 @@ Vercelは、画面とAPIのどちらのプロジェクトでも、2xxの応答�
 - ヘッダーが無ければ428 `EXPECTED_VERSION_REQUIRED`。If-Matchだけを送っても、無いものとして428にする。
 - 画面は`X-Expected-Version`だけを送り、If-Matchは送らない。版は本文の`version`から取る。
 - 予定と旅行のGETはETagヘッダーを返さない。版は本文の`version`だけで渡す。
-- 端末に残った古い形の送信中の要求（`ifMatch: "3"`）は、読むときに`3`に直して新しいヘッダーで送る。
+- 端末に残った古い形の送信中の要求は、読むときに直して送る。`ifMatch: "3"`は`3`に、版の確認を使わない操作の`ifMatch: null`は`expectedVersion: null`にする。
 - `request_hash`に入れる版の数字は今と同じなので、デプロイの前に受けた要求の再送も、元の結果を返す。
 
 ## 対象範囲
 
 - API: 版の読み方（`apps/api/src/common/http/etag.ts`の置き換え）、予定と旅行のコントローラー、エラーの一覧（`api-error.filter.ts`）、Expressの設定のコメント。
 - 契約: `packages/contracts/openapi/planning.json`・`trips.json`の、ヘッダーの定義・428の説明・GETのETag。`packages/contracts/src/plan.ts`・`trip.ts`のコメント。生成コード（`npm run api:generate`）。
-- 画面: 書き込みの要求の形（`mutation-request.ts`）、送信中の要求の記録（`pending-requests.ts`）、エラーの型（`api-failure.ts`）、予定と旅行の保存（`plan-save.ts`・`trip-save.ts`・各APIの関数・各画面の部品の`etag`）。
+- 画面: 書き込みの要求の形（`mutation-request.ts`）、送信中の要求の記録（`pending-requests.ts`）、共通の保存の状態（`save-state.ts`）と成功の結果（`api-result.ts`）、エラーの型（`api-failure.ts`）、予定と旅行の保存（`plan-save.ts`・`trip-save.ts`・各APIの関数・各画面の部品の`etag`）。
 - 試験: APIの単体とDBを使う試験、画面の単体の試験。
 - 資料: 設計資料（詳細設計「予定・達成・予約」「旅行とホーム」「画面状態と入力操作」「デプロイと無料枠運用」「運用設定と公開チェック」とOpenAPI）、要件（m2・integration-env）、試験計画（m2・integration-env）、ADR-0004の1行、`docs/glossary.md`。
 
@@ -136,7 +136,8 @@ OpenAPIでは、`components.parameters.IfMatch`を`ExpectedVersion`（`name: X-E
 - `MutationRequest`と`MutationDraft`の`ifMatch`（`"3"`）を`expectedVersion`（`"3"`。引用符なしの文字列）に変える。`sendMutationRequest`は`x-expected-version`を付け、`if-match`は付けない。
 - 予定と旅行の各`…Draft`関数と画面の部品の`etag`は`version`に名前を変え、本文の`version`をそのまま渡す。`etagOf`は消し、`result.data.version`を使う。
 - `conflict`のあとの取り直し（`fetchLatest`）は、ETagを見ずに本文の`version`を使う。`getPlanWithMeta`・`getTripWithMeta`のETagの受け渡しは消す。
-- `pending-requests.ts`は、`expectedVersion`を書く。読むときに古い`ifMatch`があれば、引用符を外して`expectedVersion`にする。形が合わなければ、今の「壊れた記録」と同じ扱いにする。
+- 共通の保存の状態（`save-state.ts`）の「あなたの入力で保存」（`saveMineOverLatest`）は、今は取り直した最新のETagを次のIf-Matchにしている。取り直した最新に`version`を持たせ、それを`expectedVersion`にする。成功の結果（`ApiSuccess`）からはETagの欄を消す。
+- `pending-requests.ts`は、`expectedVersion`を書く。読むときに`expectedVersion`が無く古い`ifMatch`があれば、次のように直す。`"3"`は`3`にする。`null`（支払い・達成・予約・精算など、版の確認を使わない操作の記録）は`expectedVersion: null`にして、そのまま送り直せるようにする。それ以外の形は、今の「壊れた記録」と同じ扱いにする。
 - `api-failure.ts`のエラーの名前の一覧で、`IF_MATCH_REQUIRED`を`EXPECTED_VERSION_REQUIRED`に変える。画面は428の状態コードで見分けているので、表示は変わらない。
 
 ## バックエンド設計
@@ -172,7 +173,7 @@ OpenAPIでは、`components.parameters.IfMatch`を`ExpectedVersion`（`name: X-E
 
 - API: `parseExpectedVersion`の単体試験（数字・0・負・引用符・空白・複数値・欠落）。DBを使うHTTPの試験で、7つの操作が`X-Expected-Version`で通ること、無いと428 `EXPECTED_VERSION_REQUIRED`、If-Matchだけでも428、違うと409になること。GETにETagが付かないこと。
 - 画面: `sendMutationRequest`が`x-expected-version`を付け、`if-match`を付けないこと。`pending-requests`が古い`ifMatch`の記録を読み直せること。予定と旅行の保存が本文の`version`を次に送ること。
-- 結合検証環境: 出したあと、予定の編集・日の移動・取りやめと、旅行の名前・期間の変更が成功として閉じることを実機で確かめる。試験計画（`docs/tests/integration-env.md`）の転送の点検（IE-03）を、`X-Expected-Version`が届くことに書き換える。
+- 結合検証環境: 出したあと、7つの書き込み（予定の編集・日の移動・取りやめ、旅行の名前・期間の変更、開始、終了）がすべて成功として閉じることを実機で確かめる。試験計画（`docs/tests/integration-env.md`）の転送の点検（IE-03）を、`X-Expected-Version`が届くことに書き換える。
 - 今の手元とCIの試験はVercelを通らないので、この不具合を見つけられなかった。Vercelの層の動きは結合検証環境でしか確かめられない。
 
 ## 移行とリリース

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "@phosphor-icons/react";
+import { CaretRight, Check } from "@phosphor-icons/react";
 import Link from "next/link";
 import type { Trip } from "@tomotabi/contracts";
 import { formatTripPeriod } from "@/shared/lib/local-date";
@@ -34,6 +34,12 @@ export function TripRow({
           </>
         )}
       </span>
+      <CaretRight
+        size={16}
+        weight="bold"
+        className="trip-row-caret"
+        aria-hidden="true"
+      />
     </Link>
   );
 }

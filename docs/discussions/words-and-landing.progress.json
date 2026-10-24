@@ -1,0 +1,35 @@
+{
+  "feature": "words-and-landing",
+  "title": "画面の言葉をそろえ、旅行を開いたときの画面と受け渡しの確認のボタンを直す",
+  "level": "L2",
+  "page": "https://claude.ai/artifact/Tj3kxZGbxceys6xXP65vtW",
+  "round": 1,
+  "stages": {
+    "requirements": {
+      "state": "done",
+      "approved": {
+        "pr": 278,
+        "at": "2026-10-24"
+      }
+    },
+    "design": {
+      "state": "waiting"
+    },
+    "plan": {
+      "state": "pending"
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-10-24T12:21:25.292Z"
+}

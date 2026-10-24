@@ -26,7 +26,7 @@
       ]
     },
     "implement": {
-      "state": "active"
+      "state": "done"
     },
     "review": {
       "state": "pending"
@@ -38,5 +38,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-24T02:37:50.686Z"
+  "updated_at": "2026-10-24T02:44:36.690Z"
 }

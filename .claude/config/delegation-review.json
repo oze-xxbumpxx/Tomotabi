@@ -26,8 +26,8 @@
     "devin": 158243242,
     "actions": 41898282
   },
-  "migration_complete": false,
-  "cli_launch_verified": false,
+  "migration_complete": true,
+  "cli_launch_verified": true,
   "cloud_launch_verified": false,
   "limits": {
     "tasks": 100,

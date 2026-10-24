@@ -168,7 +168,7 @@ test('register→Issue→claim→初回begin→started→link-prを同じ履歴�
   assert.equal((await waitForResult(client, config, { requestId: begin.request_id, commentId: replayReceipt.request_comment_id, activationId: activation })).allowed, false);
   const wrongActivation = await waitForResult(client, config, { requestId: begin.request_id, commentId: beginReceipt.request_comment_id, activationId: randomUUID() });
   assert.equal(wrongActivation.allowed, false);
-  client.add({ schema_version: 1, request_id: randomUUID(), operation: 'started', task_key: request.task_key, attempt_id: claimed.attempt_id, caller_id: caller, activation_id: activation, session_id: 'session123', session_url: 'https://app.devin.ai/sessions/session123', observed_model: 'unknown' });
+  client.add({ schema_version: 1, request_id: randomUUID(), operation: 'started', task_key: request.task_key, attempt_id: claimed.attempt_id, caller_id: caller, activation_id: activation, session_id: 'session123', session_url: null, observed_model: 'unknown' });
   await control(client);
   assert.equal((await readSnapshot(client, config)).tasks[request.task_key].state, 'running');
   client.add({ schema_version: 1, request_id: randomUUID(), operation: 'link-pr', task_key: request.task_key, pr: 20 });

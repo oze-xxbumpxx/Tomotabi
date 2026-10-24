@@ -28,6 +28,7 @@
   },
   "migration_complete": false,
   "cli_launch_verified": false,
+  "cloud_launch_verified": false,
   "limits": {
     "tasks": 100,
     "request_bytes": 8192,

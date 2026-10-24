@@ -162,7 +162,12 @@ async function processRequest(client, config, state, run, comment, request, { no
       context.plan_verified = true;
     }
     if (request.operation === 'claim') context.issue_verified = await issueVerified(client, config, state.tasks[request.task_key]);
-    if (request.operation === 'started') context.session_verified = typeof request.session_id === 'string' && typeof request.session_url === 'string' && request.session_url.replace(/\/$/, '').split('/').at(-1) === request.session_id;
+    if (request.operation === 'started') {
+      const local = state.tasks[request.task_key]?.runner === 'local';
+      context.session_verified = typeof request.session_id === 'string' && (local
+        ? request.session_url === null
+        : typeof request.session_url === 'string' && request.session_url.replace(/\/$/, '').split('/').at(-1) === request.session_id);
+    }
     if (request.operation === 'link-pr') {
       const task = state.tasks[request.task_key];
       if (!task) fail('pr_unverified');

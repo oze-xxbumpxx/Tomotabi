@@ -10,16 +10,23 @@
       "reason": "L2なので要件定義書は作らない"
     },
     "design": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/designs/devin-local-session.md"
-      ]
+      ],
+      "approved": {
+        "pr": 270,
+        "at": "2026-10-24"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/devin-local-session.md"
+      ]
     },
     "implement": {
-      "state": "pending"
+      "state": "done"
     },
     "review": {
       "state": "pending"
@@ -31,5 +38,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-24T02:58:49.252Z"
+  "updated_at": "2026-10-24T03:18:45.479Z"
 }

@@ -81,6 +81,32 @@ describe("httpClient", () => {
     }
   });
 
+  it("times out a GET whose body stops after the headers arrived", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_url: string, init: RequestInit) => {
+          // ヘッダーは返すが、本文は中断されるまで終わらない。
+          const body = new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('{"items":'));
+              init.signal?.addEventListener("abort", () =>
+                controller.error(new DOMException("aborted", "AbortError")),
+              );
+            },
+          });
+          return Promise.resolve(new Response(body, { status: 200 }));
+        }),
+      );
+      const pending = failureOf(httpClient("/api/trips", { method: "GET" }));
+      await vi.advanceTimersByTimeAsync(READ_TIMEOUT_MS);
+      expect(await pending).toEqual({ kind: "network" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not time out a write, so its result is not guessed", async () => {
     vi.useFakeTimers();
     try {

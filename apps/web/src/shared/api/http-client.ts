@@ -57,52 +57,61 @@ export async function httpClient<T>(url: string, options: RequestInit): Promise<
     headers.set("content-type", "application/json");
   }
 
+  // 時間切れは本文を読み終えるまで保つ。ヘッダーのあとに本文の転送が止まっても
+  // 読み込み中のままにしないため。
   const timeout =
     method === "GET" || method === "HEAD" ? withReadTimeout(options.signal) : null;
-  let response: Response;
   try {
-    response = await fetch(url, {
-      ...options,
-      method,
-      headers,
-      credentials: "include",
-      cache: "no-store",
-      ...(timeout === null ? {} : { signal: timeout.signal }),
-    });
-  } catch {
-    throw new ApiRequestError({ kind: "network" });
-  } finally {
-    timeout?.clear();
-  }
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        method,
+        headers,
+        credentials: "include",
+        cache: "no-store",
+        ...(timeout === null ? {} : { signal: timeout.signal }),
+      });
+    } catch {
+      throw new ApiRequestError({ kind: "network" });
+    }
 
-  if (!response.ok) {
-    const code = await readErrorCode(response);
-    throw new ApiRequestError({ kind: "http", status: response.status, code });
-  }
+    if (!response.ok) {
+      const code = await readErrorCode(response);
+      throw new ApiRequestError({ kind: "http", status: response.status, code });
+    }
 
-  // 204は本文を持たない応答（購読の無効化など）。空本文として扱う。
-  if (response.status === 204) {
+    // 204は本文を持たない応答（購読の無効化など）。空本文として扱う。
+    if (response.status === 204) {
+      return {
+        data: null,
+        status: response.status,
+        headers: response.headers,
+      } as T;
+    }
+
+    let text: string;
+    try {
+      text = await response.text();
+    } catch {
+      throw new ApiRequestError({ kind: "network" });
+    }
+    if (text === "") {
+      throw new ApiRequestError({ kind: "invalid-json" });
+    }
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new ApiRequestError({ kind: "invalid-json" });
+    }
+
     return {
-      data: null,
+      data,
       status: response.status,
       headers: response.headers,
     } as T;
+  } finally {
+    timeout?.clear();
   }
-
-  const text = await response.text();
-  if (text === "") {
-    throw new ApiRequestError({ kind: "invalid-json" });
-  }
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new ApiRequestError({ kind: "invalid-json" });
-  }
-
-  return {
-    data,
-    status: response.status,
-    headers: response.headers,
-  } as T;
 }

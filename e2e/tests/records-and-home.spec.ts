@@ -76,7 +76,7 @@ async function recordPayment(page: Page, input: PaymentInput): Promise<void> {
 /** 下のタブバーからタブを開く。 */
 async function openTab(
   page: Page,
-  label: "ホーム" | "しおり" | "記録" | "精算",
+  label: "ホーム" | "しおり" | "履歴" | "精算",
 ): Promise<void> {
   await page
     .getByRole("navigation", { name: "タブ" })
@@ -140,8 +140,8 @@ test("RE-01: ホームから達成を付け、記録で取り消して付け直�
   await expect(page.locator(".main-action")).toContainText("支払いを記録");
 
   // 記録の一覧 → 達成の行を押す → 小さな詳細 → 取り消す → 確認。
-  await openTab(page, "記録");
-  await expect(page.getByRole("heading", { name: "記録" })).toBeVisible();
+  await openTab(page, "履歴");
+  await expect(page.getByRole("heading", { name: "履歴" })).toBeVisible();
   const achieveRow = recordRow(page, "厳島神社");
   await expect(achieveRow).toBeVisible();
   await expect(achieveRow.locator(".rrow-meta")).toContainText("達成");
@@ -187,7 +187,7 @@ test("RE-01: ホームから達成を付け、記録で取り消して付け直�
   ).toBeVisible();
 
   // 記録の一覧には有効な達成・取り消し済みの達成・取り消しの3行が並ぶ。
-  await openTab(page, "記録");
+  await openTab(page, "履歴");
   await expect(recordRow(page, "厳島神社")).toHaveCount(2);
   await expect(recordRow(page, "厳島神社を取り消し")).toHaveCount(1);
 });
@@ -272,7 +272,7 @@ test("RE-02: 終了すると予定の欄が消えて精算が上に出る。終�
   await expect(page.getByRole("heading", { name: "精算", exact: true })).toBeVisible();
   await expect(page.getByText("まだ精算していない明細 3 件")).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("1,000 円");
-  await page.getByRole("button", { name: "受け渡しを確認する" }).click();
+  await page.getByRole("button", { name: "受け渡しの内容を確かめる" }).click();
   await page.waitForURL(
     new RegExp(`/trips/${tripId}/settlement/previews/[^/]+$`),
   );
@@ -310,7 +310,7 @@ test("RE-03: 確認を作ったあと支払いを取り消し、了承して記�
   await recordPayment(page, { amount: "2000", label: "美観地区カフェ" });
   await openTab(page, "精算");
   await expect(page.getByRole("heading", { name: "精算", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "受け渡しを確認する" }).click();
+  await page.getByRole("button", { name: "受け渡しの内容を確かめる" }).click();
   await page.waitForURL(
     new RegExp(`/trips/${tripId}/settlement/previews/[^/]+$`),
   );
@@ -321,9 +321,9 @@ test("RE-03: 確認を作ったあと支払いを取り消し、了承して記�
   const previewUrl = page.url();
 
   // 対象の支払いを、記録の一覧 → 支払いの詳細から取り消す。
-  // （受け渡しの確認の画面にはタブバーが無いためURLで記録へ戻る）
+  // （受け渡しの確認の画面にはタブバーが無いためURLで履歴へ戻る）
   await page.goto(`/trips/${tripId}/records`);
-  await expect(page.getByRole("heading", { name: "記録" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "履歴" })).toBeVisible();
   await recordRow(page, "美観地区カフェ").click();
   await page.waitForURL(/\/trips\/[^/]+\/payments\/[^/?]+$/);
   await page.getByRole("button", { name: "取り消す" }).click();

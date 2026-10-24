@@ -346,7 +346,7 @@ export function RecordsScreen({
       {!online && <OfflineBanner at={null} />}
       {/* v3の10: 見出しの上に旅行名 */}
       {tripName !== null && <p className="page-eyebrow">{tripName}</p>}
-      <h1 className="page-title">記録</h1>
+      <h1 className="page-title">履歴</h1>
 
       {/* 送り直しの確認（この画面で始める操作の保留が残っていれば出す） */}
       {cancelAchievementPending.check.status === "found" && (

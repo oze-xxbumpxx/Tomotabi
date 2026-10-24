@@ -779,9 +779,9 @@ describe("取り消しの確認と支払いの詳細（RW-09・RW-10）", () => 
     expect(
       await screen.findByRole("link", { name: /錦市場で昼食/ }),
     ).toHaveAttribute("href", `/trips/${tripId}/plans/${planId}`);
-    // 記録の一覧へ戻るリンク
+    // 履歴の一覧へ戻るリンク
     expect(
-      screen.getByRole("link", { name: "記録" }),
+      screen.getByRole("link", { name: "履歴" }),
     ).toBeInTheDocument();
     // 有効な支払いでは、下の主ボタン「支払いを記録」をいつもどおり出す（RW-01）
     expect(
@@ -852,7 +852,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
       await screen.findByRole("button", { name: "達成を記録" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "予約済みを記録" }),
+      screen.getByRole("button", { name: "予約を記録" }),
     ).toBeInTheDocument();
     // F-08: 予約はこのアプリの中の記録であることを添える
     expect(
@@ -869,7 +869,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
       await screen.findByRole("button", { name: "達成を記録" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "予約済みを記録" }),
+      screen.queryByRole("button", { name: "予約を記録" }),
     ).not.toBeInTheDocument();
 
     cleanup();
@@ -877,7 +877,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     stubApi({ plan: () => json(plan({ kind: "lodging" })) });
     renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
     expect(
-      await screen.findByRole("button", { name: "予約済みを記録" }),
+      await screen.findByRole("button", { name: "予約を記録" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "達成を記録" }),
@@ -901,7 +901,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
       ).not.toBeInTheDocument(),
     );
     expect(
-      await screen.findByRole("button", { name: "予約済みを記録" }),
+      await screen.findByRole("button", { name: "予約を記録" }),
     ).toBeInTheDocument();
   });
 
@@ -917,7 +917,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     );
   });
 
-  it("関連する支払いは最大3件と「記録で見る」、無ければ「まだありません」（RW-11）", async () => {
+  it("関連する支払いは最大3件と「履歴で見る」、無ければ「まだありません」（RW-11）", async () => {
     const paymentIds = [
       "0e1e2e3e-0000-4000-8000-000000000001",
       "0e1e2e3e-0000-4000-8000-000000000002",
@@ -945,7 +945,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     expect(screen.getByText("支払い2")).toBeInTheDocument();
     expect(screen.queryByText("支払い3")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "記録で見る" }),
+      screen.getByRole("link", { name: "履歴で見る" }),
     ).toHaveAttribute(
       "href",
       `/trips/${tripId}/records?planId=${planId}`,
@@ -955,9 +955,9 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     stubApi({});
     renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
     expect(await screen.findByText("まだありません")).toBeInTheDocument();
-    // 0件でも「記録で見る」は出す（行き先は予定で絞った一覧で、達成・予約も見られる）
+    // 0件でも「履歴で見る」は出す（行き先は予定で絞った一覧で、達成・予約も見られる）
     expect(
-      screen.getByRole("link", { name: "記録で見る" }),
+      screen.getByRole("link", { name: "履歴で見る" }),
     ).toHaveAttribute("href", `/trips/${tripId}/records?planId=${planId}`);
   });
 

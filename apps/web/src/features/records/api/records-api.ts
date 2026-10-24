@@ -59,7 +59,7 @@ export type {
 export const CREATE_ACHIEVEMENT_OPERATION = "create-achievement";
 /** 達成の取り消しの操作名（保留中の要求の照合に使う）。 */
 export const CANCEL_ACHIEVEMENT_OPERATION = "cancel-achievement";
-/** 予約済みを記録する操作名（保留中の要求の照合に使う）。 */
+/** 予約を記録する操作名（保留中の要求の照合に使う）。 */
 export const CREATE_BOOKING_OPERATION = "create-booking";
 /** 予約の取り消しの操作名（保留中の要求の照合に使う）。 */
 export const CANCEL_BOOKING_OPERATION = "cancel-booking";

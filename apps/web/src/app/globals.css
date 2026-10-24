@@ -2676,6 +2676,13 @@ a.pay-plan-row-locked {
   margin-top: var(--space-2);
 }
 
+/* 主ボタンの下の一行。文字の大きさはカードの件数の文にそろえる */
+.settle-action-note {
+  margin: var(--space-2) 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
 .settle-card-title {
   margin: 0;
   font-size: 15px;

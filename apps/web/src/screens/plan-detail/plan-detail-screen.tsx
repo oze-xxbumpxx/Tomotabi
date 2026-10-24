@@ -386,7 +386,7 @@ export function PlanDetailScreen({
   const version = plan.version;
   const canCancel = plan.cancelledAt === null;
 
-  // 「達成を記録」「予約済みを記録」は種類と取りやめで条件が分かれる
+  // 「達成を記録」「予約を記録」は種類と取りやめで条件が分かれる
   // （F-10）。すでに記録があるときは代わりに記録行が記録の絞り込みへ
   // つながる（F-11・PlanDetailBody側）。
   const canAchieve =
@@ -429,7 +429,7 @@ export function PlanDetailScreen({
       }
     : canBook
       ? {
-          label: "予約済みを記録",
+          label: "予約を記録",
           icon: (
             <CalendarCheck size={20} weight="fill" aria-hidden="true" />
           ),
@@ -563,7 +563,7 @@ export function PlanDetailScreen({
             }}
           >
             <CalendarCheck size={18} aria-hidden="true" />
-            予約済みを記録
+            予約を記録
           </button>
         )}
         {/* 予約はこのアプリの中の記録であることを添える（F-08） */}
@@ -623,7 +623,7 @@ export function PlanDetailScreen({
           className="btn-outline plan-payments-more"
           href={`/trips/${tripId}/records?planId=${planId}`}
         >
-          記録で見る
+          履歴で見る
         </Link>
       </section>
       {layer === "move" &&

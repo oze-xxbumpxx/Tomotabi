@@ -13,13 +13,21 @@
       }
     },
     "design": {
-      "state": "waiting"
+      "state": "done",
+      "docs": [
+        "docs/designs/words-and-landing.md"
+      ],
+      "approved": {
+        "pr": 278,
+        "at": "2026-10-25"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "skipped",
+      "reason": "L2で文言とリンク先だけなので実装計画は作らない"
     },
     "implement": {
-      "state": "pending"
+      "state": "active"
     },
     "review": {
       "state": "pending"
@@ -31,5 +39,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-24T12:21:25.292Z"
+  "updated_at": "2026-10-24T22:39:07.297Z"
 }

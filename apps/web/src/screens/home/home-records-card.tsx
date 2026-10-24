@@ -75,7 +75,7 @@ function recordMeta(
 }
 
 /**
- * ホームの最近の記録の欄（v3のrecentカード。最大3件はAPIの並びのまま）。
+ * ホームの最近の履歴の欄（v3のrecentカード。最大3件はAPIの並びのまま）。
  * - 元の記録が取り消されている行は取消線と「取り消し済み」（F-24）
  * - 取り消しの行は「〇〇を取り消し」（F-20）
  * - 0件は「記録はまだありません」。欄の失敗はこの欄だけ
@@ -105,10 +105,10 @@ export function HomeRecordsCard({
   return (
     <section className="home-card">
       <header className="home-card-head">
-        <h2 className="home-card-title">最近の記録</h2>
+        <h2 className="home-card-title">最近の履歴</h2>
         {items !== null && items.length > 0 && (
           <Link className="home-card-link" href={`/trips/${tripId}/records`}>
-            記録一覧へ
+            履歴へ
           </Link>
         )}
       </header>

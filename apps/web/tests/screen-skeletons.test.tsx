@@ -50,7 +50,7 @@ describe("ホームの骨組みの予定のカード", () => {
 describe("記録の画面全体の骨組み", () => {
   it("見出し・絞り込み・一覧の骨組みの順に並ぶ", () => {
     render(<RecordsPageSkeleton />);
-    expect(screen.getByRole("heading", { name: "記録" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "履歴" })).toBeInTheDocument();
     const main = screen.getByRole("main");
     expect(main.querySelector(".page-title + .record-filters + .record-card")).not.toBeNull();
   });

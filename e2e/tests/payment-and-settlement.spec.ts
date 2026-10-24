@@ -69,8 +69,8 @@ test("FE-01: 支払いを2件記録して受け渡しを確認・記録する", 
   await expect(page.getByText("ランチ")).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("2,000 円");
 
-  // 受け渡しを確認する → 確認の作成 → 表示の全額を受け渡した → 記録する。
-  await page.getByRole("button", { name: "受け渡しを確認する" }).click();
+  // 受け渡しの内容を確かめる → 確認の作成 → 表示の全額を受け渡した → 記録する。
+  await page.getByRole("button", { name: "受け渡しの内容を確かめる" }).click();
   await page.waitForURL(new RegExp(`/trips/${tripId}/settlement/previews/[^/]+$`));
   await expect(page.getByRole("heading", { name: "受け渡しの確認" })).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("2,000 円");
@@ -109,8 +109,8 @@ test("FE-02: 互いに同額を立て替えたときは 0 円として精算を�
   await expect(page.locator(".settle-amount")).toHaveText("0 円");
   await expect(page.getByText("受け渡しは不要です")).toBeVisible();
 
-  // 受け渡し不要の対象を確認する → 確認の作成 → 記録する。
-  await page.getByRole("button", { name: "受け渡し不要の対象を確認する" }).click();
+  // 受け渡し不要の内容を確かめる → 確認の作成 → 記録する。
+  await page.getByRole("button", { name: "受け渡し不要の内容を確かめる" }).click();
   await page.waitForURL(new RegExp(`/trips/${tripId}/settlement/previews/[^/]+$`));
   await expect(page.getByRole("heading", { name: "受け渡しの確認" })).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("0 円");
@@ -147,7 +147,7 @@ test("FE-03: 確認を作ったあとの支払いは確認の金額を変えな�
   await recordPayment(page, { amount: "1000", label: "入場料" });
   await openSettlement(page);
   await expect(page.getByText("まだ精算していない明細 1 件")).toBeVisible();
-  await page.getByRole("button", { name: "受け渡しを確認する" }).click();
+  await page.getByRole("button", { name: "受け渡しの内容を確かめる" }).click();
   await page.waitForURL(new RegExp(`/trips/${tripId}/settlement/previews/[^/]+$`));
   await expect(page.locator(".settle-amount")).toHaveText("500 円");
 

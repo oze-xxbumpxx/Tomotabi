@@ -137,7 +137,7 @@ describe("TripsScreen (/trips)", () => {
     const selected = await screen.findByRole("link", { name: /沖縄/ });
     expect(selected).toHaveAttribute(
       "href",
-      `/trips/${tripId}/itinerary`,
+      `/trips/${tripId}/home`,
     );
     expect(selected).toHaveTextContent("前回開いた旅行");
     expect(

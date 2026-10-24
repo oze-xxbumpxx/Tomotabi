@@ -102,7 +102,7 @@ describe("notificationContentOf（通知の表示の内容）", () => {
     ["plan_moved", "plan", "予定の日を移しました"],
     ["achievement_added", "achievement", "達成を記録しました"],
     ["achievement_cancelled", "achievement", "達成の記録を取り消しました"],
-    ["booking_added", "booking", "予約済みを記録しました"],
+    ["booking_added", "booking", "予約を記録しました"],
     ["booking_cancelled", "booking", "予約済みの記録を取り消しました"],
     ["payment_added", "payment", "支払いを記録しました"],
     ["payment_cancelled", "payment", "支払いの記録を取り消しました"],

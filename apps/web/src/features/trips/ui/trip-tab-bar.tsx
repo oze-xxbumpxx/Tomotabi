@@ -42,7 +42,7 @@ const TABS: ReadonlyArray<{
   },
   {
     key: "records",
-    label: "記録",
+    label: "履歴",
     icon: ListBullets,
     href: (tripId) => `/trips/${tripId}/records`,
   },

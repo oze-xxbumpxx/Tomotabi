@@ -16,7 +16,7 @@ const TABS: { current: TripTab; name: string; href: string }[] = [
     name: "しおり",
     href: `/trips/${tripId}/itinerary`,
   },
-  { current: "records", name: "記録", href: `/trips/${tripId}/records` },
+  { current: "records", name: "履歴", href: `/trips/${tripId}/records` },
   {
     current: "settlement",
     name: "精算",

@@ -16,7 +16,7 @@ export function TripRow({
 }) {
   return (
     <Link
-      href={`/trips/${trip.id}/itinerary`}
+      href={`/trips/${trip.id}/home`}
       className="trip-row"
     >
       <span className="trip-row-main">

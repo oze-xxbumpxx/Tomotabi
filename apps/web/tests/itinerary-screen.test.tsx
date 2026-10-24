@@ -214,7 +214,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     const nav = screen.getByRole("navigation", { name: "タブ" });
     for (const [label, href] of [
       ["ホーム", `/trips/${tripId}/home`],
-      ["記録", `/trips/${tripId}/records`],
+      ["履歴", `/trips/${tripId}/records`],
       ["精算", `/trips/${tripId}/settlement`],
     ] as const) {
       expect(

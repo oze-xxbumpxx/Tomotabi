@@ -149,7 +149,7 @@ export function PaymentDetailScreen({
           onGoToParent={
             itemGone
               ? {
-                  label: "記録に戻る",
+                  label: "履歴に戻る",
                   onClick: () => router.push(`/trips/${tripId}/records`),
                 }
               : null
@@ -182,7 +182,7 @@ export function PaymentDetailScreen({
       <header className="plan-detail-header">
         <Link className="plan-back" href={`/trips/${tripId}/records`}>
           <CaretLeft size={18} weight="bold" aria-hidden="true" />
-          記録
+          履歴
         </Link>
       </header>
       <p className="payment-detail-kind">支払い</p>

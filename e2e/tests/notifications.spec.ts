@@ -185,7 +185,7 @@ test("PE-03: 通知から開くパス（記録の1件・予定の詳細・精算
     .getByRole("link", { name: "精算", exact: true })
     .click();
   await expect(page.getByRole("heading", { name: "精算", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "受け渡しを確認する" }).click();
+  await page.getByRole("button", { name: "受け渡しの内容を確かめる" }).click();
   await expect(
     page.getByRole("heading", { name: "受け渡しの確認" }),
   ).toBeVisible();

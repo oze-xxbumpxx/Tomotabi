@@ -16,7 +16,7 @@ const ACTION_TEXT: Record<PushAction, string> = {
   plan_moved: "予定の日を移しました",
   achievement_added: "達成を記録しました",
   achievement_cancelled: "達成の記録を取り消しました",
-  booking_added: "予約済みを記録しました",
+  booking_added: "予約を記録しました",
   booking_cancelled: "予約済みの記録を取り消しました",
   payment_added: "支払いを記録しました",
   payment_cancelled: "支払いの記録を取り消しました",

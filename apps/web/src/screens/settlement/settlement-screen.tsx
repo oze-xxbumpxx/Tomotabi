@@ -3,7 +3,7 @@
 import { ArrowsLeftRight } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useMe } from "@/features/auth";
 import {
   BalanceBreakdown,
@@ -58,7 +58,7 @@ function isNotAvailableFailure(error: unknown): boolean {
 /**
  * `/trips/{tripId}/settlement`の精算（v3の14・14f・14g・14i）。
  * 残額・内訳・対象の明細・自分の未完了の確認・精算の履歴を欄ごとに出す。
- * 「受け渡しを確認する」はその時点の対象と金額を固定した確認を作り、
+ * 「受け渡しの内容を確かめる」はその時点の対象と金額を固定した確認を作り、
  * 受け渡しの確認の画面へ進む。作成は保留中の要求を通す（ADR-0006）。
  */
 export function SettlementScreen({
@@ -77,6 +77,7 @@ export function SettlementScreen({
   const previews = usePendingSettlementPreviews(tripId);
   const settlements = useSettlements(tripId);
   const [toast, setToast] = useState<string | null>(null);
+  const actionNoteId = useId();
 
   const userId = meState.status === "ready" ? meState.me.user.id : null;
 
@@ -194,8 +195,11 @@ export function SettlementScreen({
     return <SettlementSkeleton />;
   }
 
-  /** 確認の作成の主操作。保留がある・確認中・確認できないあいだは新しい要求を送らない。 */
-  const createAction = (label: string) => {
+  /**
+   * 確認の作成の主操作。保留がある・確認中・確認できないあいだは新しい要求を送らない。
+   * 押しても精算にならないことを、ボタンのすぐ下の一行で先に伝える（#248）。
+   */
+  const createAction = (label: string, note: string) => {
     if (check.status === "found") {
       return (
         <SaveUnknown
@@ -229,6 +233,7 @@ export function SettlementScreen({
         <button
           type="button"
           className="btn-ink settle-action"
+          aria-describedby={actionNoteId}
           disabled={
             check.status === "checking" ||
             create.state.status === "saving" ||
@@ -242,6 +247,9 @@ export function SettlementScreen({
           <ArrowsLeftRight size={16} weight="bold" aria-hidden="true" />
           {create.state.status === "saving" ? "確認を作成中" : label}
         </button>
+        <p id={actionNoteId} className="settle-action-note">
+          {note}
+        </p>
       </>
     );
   };
@@ -277,8 +285,11 @@ export function SettlementScreen({
                 ? undefined
                 : createAction(
                     balanceData.transfer.requiresTransfer
-                      ? "受け渡しを確認する"
-                      : "受け渡し不要の対象を確認する",
+                      ? "受け渡しの内容を確かめる"
+                      : "受け渡し不要の内容を確かめる",
+                    balanceData.transfer.requiresTransfer
+                      ? "金額を決めて確認の画面を開きます。まだ精算にはなりません。送金もしません。"
+                      : "対象を決めて確認の画面を開きます。まだ精算にはなりません。",
                   )
             }
           />

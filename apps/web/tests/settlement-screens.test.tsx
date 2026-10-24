@@ -476,7 +476,7 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(0));
   });
 
-  it("FW-05: 非 0 円は向きと金額・内訳・明細を出し、「受け渡しを確認する」で確認を作って開く", async () => {
+  it("FW-05: 非 0 円は向きと金額・内訳・明細を出し、「受け渡しの内容を確かめる」で確認を作って開く", async () => {
     const createCalls: RequestInit[] = [];
     const fetchMock = stubApi({
       createPreview: (init) => {
@@ -520,8 +520,12 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     ).toBeInTheDocument();
 
     const createButton = await screen.findByRole("button", {
-      name: "受け渡しを確認する",
+      name: "受け渡しの内容を確かめる",
     });
+    // 押しても精算にならないことを、ボタンの説明として読み上げる（#248）
+    expect(createButton).toHaveAccessibleDescription(
+      "金額を決めて確認の画面を開きます。まだ精算にはなりません。送金もしません。",
+    );
     await waitFor(() => expect(createButton).toBeEnabled());
     await user.click(createButton);
 
@@ -601,9 +605,11 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", {
-        name: "受け渡し不要の対象を確認する",
+        name: "受け渡し不要の内容を確かめる",
       }),
-    ).toBeInTheDocument();
+    ).toHaveAccessibleDescription(
+      "対象を決めて確認の画面を開きます。まだ精算にはなりません。",
+    );
   });
 
   it("FW-05: 残額の取得失敗はその欄だけ失敗にして再試行し、確認へは進めない", async () => {
@@ -636,7 +642,7 @@ describe("精算の画面（14・14f・14g・14i）", () => {
       (await screen.findAllByText("1,285 円")).length,
     ).toBeGreaterThan(0);
     expect(
-      await screen.findByRole("button", { name: "受け渡しを確認する" }),
+      await screen.findByRole("button", { name: "受け渡しの内容を確かめる" }),
     ).toBeInTheDocument();
   });
 
@@ -785,7 +791,7 @@ describe("精算の画面（14・14f・14g・14i）", () => {
       await screen.findByText("保存されたか確認できません"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "受け渡しを確認する" }),
+      screen.queryByRole("button", { name: "受け渡しの内容を確かめる" }),
     ).not.toBeInTheDocument();
 
     await user.click(
@@ -810,7 +816,7 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     renderSettlement();
     try {
       const button = await screen.findByRole("button", {
-        name: "受け渡しを確認する",
+        name: "受け渡しの内容を確かめる",
       });
       await waitFor(() => expect(button).toBeEnabled());
       await user.click(button);

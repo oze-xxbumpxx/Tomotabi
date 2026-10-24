@@ -26,7 +26,7 @@ export function RecordListSkeleton() {
 export function RecordsPageSkeleton() {
   return (
     <main className="records-page">
-      <h1 className="page-title">記録</h1>
+      <h1 className="page-title">履歴</h1>
       <div className="record-filters" aria-hidden="true">
         <Skeleton width="64px" height={36} />
         <Skeleton width="64px" height={36} />

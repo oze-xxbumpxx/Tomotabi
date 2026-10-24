@@ -389,12 +389,12 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       screen.getByRole("link", { name: "精算へ" }),
     ).toHaveAttribute("href", `/trips/${tripId}/settlement`);
 
-    // 最近の記録: 支払いの行（用途・時刻・誰・折半・金額）と記録一覧へ。
+    // 最近の履歴: 支払いの行（用途・時刻・誰・折半・金額）と履歴へ。
     expect(screen.getByText("昼食代")).toBeInTheDocument();
     expect(screen.getByText(/あおい が支払い · 折半/)).toBeInTheDocument();
     expect(screen.getByText("1,285 円")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "記録一覧へ" }),
+      screen.getByRole("link", { name: "履歴へ" }),
     ).toHaveAttribute("href", `/trips/${tripId}/records`);
 
     // 下のタブは「ホーム」が現在地。「支払いを記録」は予定を選ばない（F-49）。
@@ -935,7 +935,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
 
     await screen.findByRole("heading", { name: "沖縄" });
     // 用途の無い支払いは「支払い」。取り消し済みは取消線の印を出す。
-    const records = screen.getByText("最近の記録").closest("section")!;
+    const records = screen.getByText("最近の履歴").closest("section")!;
     const voidedRow = within(records).getByRole("link", {
       name: /^支払い /,
     });

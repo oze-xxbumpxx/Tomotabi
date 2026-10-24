@@ -68,8 +68,8 @@ sequenceDiagram
   participant L as delegation-launch
   participant D as devin（専用クローン）
   participant S as 共有状態
-  L->>S: begin（今どおり1回だけ）
   L->>D: devin list --format json（前のIDの集合）
+  L->>S: begin（今どおり1回だけ）
   L->>D: devin -p --prompt-file（切り離して起動）
   loop 2秒おき・最大60秒
     L->>D: devin list --format json
@@ -78,7 +78,7 @@ sequenceDiagram
   S-->>L: running / launch_unknown
 ```
 
-- 前の一覧を読めなければ、起動せずに止める（どれが新しいか分からなくなるため）。この時点ではbeginの許可を使っていないので、`launch_unknown`ではなく起動前の失敗として返す。
+- 前の一覧は、起動許可（begin）を取る前に読む。読めなければ、beginを送らずに起動前の失敗として止める（どれが新しいか分からなくなるため）。beginのあとに読むと、一覧が読めずに止まったときもタスクが`launching`のまま残り、同じタスクの次のbeginは許可されず、起動していないのに再開できなくなる。
 - 後の一覧は、新しいIDが1つ見つかった時点で読むのをやめる。2つ以上見つかったら、その時点でIDを空にしてやめる。
 - 一覧を読むコマンドは、専用クローンを作業フォルダにして、読み取りだけで動かす（`devin list --format json`）。
 
@@ -102,7 +102,8 @@ controllerの`session_verified`も同じ分け方にする。
 1. 一時フォルダ（例: `$TMPDIR/devin-probe-<日時>`）を作る。リポジトリではないフォルダにする。
 2. そのフォルダで`devin list --format json`を読み、`devin --model swe-2-medium --permission-mode accept-edits -p --prompt-file <依頼>`を起動する。依頼は「このフォルダに`probe.txt`を作って、中身に`ok`と書いて終わる」だけ。
 3. 2秒おきに一覧を読み、新しいIDが出るまでの秒数と、IDの形を記録する。
-4. 結果をこの設計書の「確かめの結果」と、試験計画に書く。手順書の「起動する試験はしない」に、この1回を例外として書き足す。
+4. CLIの中で起動の要求を送り直していないかを確かめる。依頼が終わってからさらに2分待って一覧を読み、このフォルダに新しいセッションが1つだけあることを記録する。2つ以上あれば、`cli_launch_verified`は外さない。
+5. 結果をこの設計書の「確かめの結果」と、試験計画に書く。手順書の「起動する試験はしない」に、この1回を例外として書き足す。
 
 この起動は共有状態を通さない（register・beginを使わない）。委譲の記録には残らない。
 
@@ -158,7 +159,7 @@ controllerの`session_verified`も同じ分け方にする。
 
 1. この設計の承認（このPRのマージ）。
 2. 実装のPR（起動ラッパー・決まり・`cloud_launch_verified: false`・試験・手順書）。
-3. 確かめの起動を1回して、結果を記録する。
+3. 確かめの起動を1回して、結果を記録する。一覧に出るまでの秒数、IDの形、2つ目のセッションができないこと（CLIの中での再送が無いこと）の3つがそろったときだけ、次に進む。
 4. 設定のPRで`cli_launch_verified`と`migration_complete`を`true`にする。
 5. 第1波の委譲（#251・#247・#250）を始める。前に、専用クローンをmainに戻す。
 

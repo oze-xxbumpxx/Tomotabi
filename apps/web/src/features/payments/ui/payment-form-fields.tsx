@@ -197,6 +197,7 @@ export function PaymentFormFields({
 
       <div className="field">
         <span className="field-label">二人の負担</span>
+        {shareNote !== null && <p className="pay-share-note">{shareNote}</p>}
         <div className="pay-share">
           {ordered.map((participant) => {
             const isMe = participant.userId === meUserId;
@@ -250,11 +251,11 @@ export function PaymentFormFields({
                   </span>
                 ) : (
                   <span className="pay-share-percent tabular-nums">
-                    {percent === null ? "—" : `${percent}%`}
+                    {percent === null ? "未入力" : `${percent}%`}
                   </span>
                 )}
                 <span className="pay-share-yen tabular-nums">
-                  {burden === null ? "—" : formatYen(burden)}
+                  {burden === null ? "未入力" : formatYen(burden)}
                 </span>
               </div>
             );
@@ -265,7 +266,6 @@ export function PaymentFormFields({
             {errors.myPercent}
           </p>
         )}
-        {shareNote !== null && <p className="pay-share-note">{shareNote}</p>}
       </div>
 
       <Field

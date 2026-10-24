@@ -443,9 +443,27 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     expect(rows).toHaveLength(2);
     expect(screen.getByText("3,500 円")).toBeInTheDocument();
     expect(screen.getByText("3,501 円")).toBeInTheDocument();
+    // #247: 端数の寄り方を、結果を見る前に例の数字で読めるように、負担の欄の上に出す。
+    const note = screen.getByText(/割り切れない 1 円は払った人の負担になります/);
+    expect(note).toHaveTextContent("3,001 円を折半すると、払った人が 1,501 円、もう一人が 1,500 円");
+    const share = document.querySelector(".pay-share");
     expect(
-      screen.getByText("割り切れない 1 円は払った人の負担になります"),
-    ).toBeInTheDocument();
+      share !== null &&
+        (note.compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+    ).toBe(true);
+  });
+
+  it("金額や割合がまだ無い欄は、横線ではなく「未入力」と出す（#247）", async () => {
+    stubApi({});
+    renderForm();
+    await waitForForm();
+    const user = userEvent.setup();
+    expect(screen.getAllByText("未入力", { selector: ".pay-share-yen" })).toHaveLength(2);
+    await user.click(screen.getByRole("radio", { name: "割合を指定" }));
+    expect(screen.getByText(/もう一人は残りの割合になります/)).toBeInTheDocument();
+    await user.clear(await screen.findByLabelText("自分の負担の割合"));
+    expect(screen.getByText("未入力", { selector: ".pay-share-percent" })).toBeInTheDocument();
+    expect(screen.queryByText("—")).not.toBeInTheDocument();
   });
 
   it("二人の負担は払った人の名前の下に小さく「払った人」を出し、名前横の札は出さない", async () => {

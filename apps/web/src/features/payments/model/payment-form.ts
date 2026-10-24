@@ -214,12 +214,16 @@ export function paymentCreateOf(
 }
 
 /** 分け方に添える注記（v3のshareNote）。 */
+/**
+ * 負担の欄の上に出す注記。端数がどちらに寄るかを、結果を見る前に分かるように
+ * 例の数字で書く（#247）。数字は`burdensOf`と同じ計算になる例にしている。
+ */
 export function shareNoteOf(mode: PaymentSplitMode): string | null {
   switch (mode) {
     case "half":
-      return "割り切れない 1 円は払った人の負担になります";
+      return "割り切れない 1 円は払った人の負担になります。例: 3,001 円を折半すると、払った人が 1,501 円、もう一人が 1,500 円。";
     case "ratio":
-      return "払っていない人の負担は円未満切り捨て";
+      return "自分の負担の割合を入れると、もう一人は残りの割合になります。払っていない人の負担は円未満を切り捨て、残りは払った人の負担になります。";
     default:
       return null;
   }

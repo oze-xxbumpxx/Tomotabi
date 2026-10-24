@@ -380,7 +380,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       expect(settle).toHaveTextContent(/あおい から ひなた へ/),
     );
     expect(settle).toHaveTextContent("1,285");
-    expect(settle).toHaveTextContent("対象 2 件");
+    expect(settle).toHaveTextContent("まだ精算していない明細 2 件");
     expect(
       screen.getByRole("link", { name: "精算へ" }),
     ).toHaveAttribute("href", `/trips/${tripId}/settlement`);
@@ -440,6 +440,14 @@ describe("HomeScreen (/trips/{id}/home)", () => {
     expect(screen.getByText(/10\/13 火 · 2 \/ 3 日目/)).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /今日の予定/ }),
+    ).toBeInTheDocument();
+
+    // #250: 期間の帯は、過ぎた日・今日・これからを言葉でも出し、読み上げから外さない。
+    expect(
+      screen.getByRole("img", { name: "3日のうち 過ぎた日 1日 · 今日 · これから 1日" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("3日のうち 過ぎた日 1日 · 今日 · これから 1日", { selector: ".home-bars-caption" }),
     ).toBeInTheDocument();
 
     // まだ開始していない日は「旅行を開始」への案内（メニューを開く）。
@@ -843,7 +851,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       await screen.findByText("受け渡しは不要です"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("未処理の対象が 3 件あります"),
+      screen.getByText("まだ精算していない明細が 3 件あります"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "精算へ" }),

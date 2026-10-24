@@ -72,6 +72,6 @@ test("FE-04: 応答の届かなかった支払いの記録は同じ内容で確�
     .getByRole("link", { name: "精算" })
     .click();
   await expect(page.getByRole("heading", { name: "精算", exact: true })).toBeVisible();
-  await expect(page.getByText("対象 1 件")).toBeVisible();
+  await expect(page.getByText("まだ精算していない明細 1 件")).toBeVisible();
   await expect(page.getByText("夕食代")).toBeVisible();
 });

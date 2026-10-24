@@ -493,14 +493,18 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     expect(
       (await screen.findAllByText("1,285 円")).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText("対象 2 件")).toBeInTheDocument();
+    expect(screen.getByText("まだ精算していない明細 2 件")).toBeInTheDocument();
     expect(screen.getByText("から")).toBeInTheDocument();
     expect(screen.getByText("へ")).toBeInTheDocument();
 
-    // 内訳: あおいが多く払ったので受け取り、ひなたは渡す。
+    // 内訳: あおいが多く払ったので受け取り、ひなたは渡す（閉じた内訳の中に出す）。
     expect(screen.getAllByText("支払った額")).toHaveLength(2);
-    expect(screen.getByText("受け取る 1,285 円")).toBeInTheDocument();
-    expect(screen.getByText("渡す 1,285 円")).toBeInTheDocument();
+    expect(
+      screen.getByText(/支払った額のほうが 1,285 円 多いので、ひなた から受け取ります/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/負担額のほうが 1,285 円 多いので、あおい に渡します/),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         "支払いの合計 2,570 円 ＝ 二人の負担額の合計 2,570 円",
@@ -541,29 +545,19 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     expect(previewFetches.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("内訳の「差」は符号なしで出し、札と説明の行に向きの矢印を付ける", async () => {
+  it("内訳は閉じておき、差を二人分の欄や札で並べない（#250）", async () => {
     stubApi({});
     const { container } = renderSettlement();
     await screen.findAllByText("1,285 円");
 
-    // ひなたの差は-1,285だが、差の欄はどちらも符号なし（向きは札が示す）。
+    const details = container.querySelector("details.settle-breakdown-details");
+    expect(details).not.toBeNull();
+    expect(details?.hasAttribute("open")).toBe(false);
+    expect(within(details as HTMLElement).getByText("内訳を見る")).toBeInTheDocument();
+    // 差の欄と「受け取る」「渡す」の札は出さない（向きと金額は上の結果のカードが出す）。
+    expect(screen.queryByText("差")).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".settle-badge")).toHaveLength(0);
     expect(screen.queryByText("-1,285 円")).not.toBeInTheDocument();
-    const diffTiles = screen
-      .getAllByText("差")
-      .map((label) => label.closest(".settle-tile"));
-    expect(diffTiles).toHaveLength(2);
-    for (const tile of diffTiles) {
-      expect(
-        within(tile as HTMLElement).getByText("1,285 円"),
-      ).toBeInTheDocument();
-    }
-
-    // 「渡す」「受け取る」の札に向きの矢印が付く。
-    const badges = container.querySelectorAll(".settle-badge");
-    expect(badges).toHaveLength(2);
-    for (const badge of badges) {
-      expect(badge.querySelector("svg")).not.toBeNull();
-    }
 
     // 説明の行の頭に折れ曲がった矢印が付く。
     for (const sentence of container.querySelectorAll(
@@ -603,7 +597,7 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText("受け渡しは不要です")).toBeInTheDocument();
     expect(
-      screen.getByText("未処理の対象が 1 件あります"),
+      screen.getByText("まだ精算していない明細が 1 件あります"),
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", {
@@ -851,7 +845,7 @@ describe("受け渡しの確認（14c・14d・14e・14f・14h）", () => {
     expect(
       (await screen.findAllByText("1,285 円")).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText(/対象 2 件/)).toBeInTheDocument();
+    expect(screen.getByText(/この確認の明細 2 件/)).toBeInTheDocument();
     expect(
       screen.getByText("作成した時点の対象と金額で固定しています"),
     ).toBeInTheDocument();

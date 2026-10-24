@@ -74,6 +74,21 @@ export function homeBarsOf(context: Home["context"], trip: Trip): HomeBar[] {
 }
 
 /**
+ * 帯の読み方を言葉にしたもの（#250）。帯の下に出し、読み上げにも使う。
+ * 例: `3日のうち 過ぎた日 1日 · 今日 · これから 1日`。
+ */
+export function homeBarsSummaryOf(bars: HomeBar[]): string {
+  const past = bars.filter((bar) => bar === "past").length;
+  const future = bars.filter((bar) => bar === "future").length;
+  const parts = [
+    ...(past > 0 ? [`過ぎた日 ${past}日`] : []),
+    ...(bars.includes("today") ? ["今日"] : []),
+    ...(future > 0 ? [`これから ${future}日`] : []),
+  ];
+  return `${bars.length}日のうち ${parts.join(" · ")}`;
+}
+
+/**
  * 予定の欄の「ほか N 件」。`totalCount`から達成済み（「達成済み N 件」の
  * 行にまとめる分）と出した未達成の予定を除いた残り。APIが`items`に
  * 達成済みを入れても入れなくても同じ数になるよう、0未満にはしない

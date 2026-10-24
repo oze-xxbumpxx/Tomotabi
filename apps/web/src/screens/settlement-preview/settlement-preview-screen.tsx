@@ -278,7 +278,7 @@ export function SettlementPreviewScreen({
       </header>
       <h1 className="page-title">受け渡しの確認</h1>
       <p className="settle-preview-meta tabular-nums">
-        {`${formatDateTime(data.createdAt)} に作成 · 対象 ${data.items.length} 件`}
+        {`${formatDateTime(data.createdAt)} に作成 · この確認の明細 ${data.items.length} 件`}
       </p>
 
       {addedCount !== null && addedCount > 0 && (

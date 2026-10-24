@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   headerDateTextOf,
   homeBarsOf,
+  homeBarsSummaryOf,
   type Home,
 } from "@/features/trips";
 import { tokyoTimeOf } from "@/shared/lib/local-date";
@@ -35,6 +36,7 @@ export function HomeHeader({
   onOpenMenu: () => void;
 }) {
   const bars = homeBarsOf(home.context, home.trip);
+  const barsSummary = homeBarsSummaryOf(bars);
   const percent = todayPercent(now);
   return (
     <>
@@ -58,7 +60,7 @@ export function HomeHeader({
           <CaretDown size={14} weight="bold" aria-hidden="true" />
         </Link>
       </header>
-      <div className="home-bars" aria-hidden="true">
+      <div className="home-bars" role="img" aria-label={barsSummary}>
         {bars.map((bar, index) =>
           bar === "today" ? (
             <span
@@ -76,6 +78,9 @@ export function HomeHeader({
           ),
         )}
       </div>
+      <p className="home-bars-caption tabular-nums" aria-hidden="true">
+        {barsSummary}
+      </p>
     </>
   );
 }

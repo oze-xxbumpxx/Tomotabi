@@ -270,7 +270,7 @@ test("RE-02: 終了すると予定の欄が消えて精算が上に出る。終�
   // 精算（受け渡しの確認と記録）もできる。
   await openTab(page, "精算");
   await expect(page.getByRole("heading", { name: "精算", exact: true })).toBeVisible();
-  await expect(page.getByText("対象 3 件")).toBeVisible();
+  await expect(page.getByText("まだ精算していない明細 3 件")).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("1,000 円");
   await page.getByRole("button", { name: "受け渡しを確認する" }).click();
   await page.waitForURL(
@@ -377,7 +377,7 @@ test("RE-03: 確認を作ったあと支払いを取り消し、了承して記�
   ).toBeVisible();
   // 取り消した支払いの戻しは次回の調整として対象に残る（F-25）。
   // 方向は「ひなた → あおい」（名前は別のspanに分かれるため要素で見る）。
-  await expect(page.getByText("対象 1 件")).toBeVisible();
+  await expect(page.getByText("まだ精算していない明細 1 件")).toBeVisible();
   await expect(page.locator(".settle-amount")).toHaveText("1,000 円");
   await expect(
     page.locator(".settle-transfer .settle-person-name").first(),

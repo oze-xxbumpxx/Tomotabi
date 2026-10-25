@@ -50,12 +50,12 @@ export function daysFromToday(offsetDays: number): string {
 }
 
 /**
- * `YYYY-MM-DD`を`11/7 土`の形にする。
+ * `YYYY-MM-DD`を`11/7(土)`の形にする。
  * 予定の日付の選択肢と同じ表示（アプリ側のformatLocalDateと同じ組み立て）。
  */
 export function formatDayLabel(isoDate: string): string {
   const { month, day } = partsOf(isoDate);
   const weekday =
     WEEKDAYS[new Date(`${isoDate}T00:00:00.000Z`).getUTCDay()] ?? "";
-  return `${month}/${day} ${weekday}`;
+  return `${month}/${day}(${weekday})`;
 }

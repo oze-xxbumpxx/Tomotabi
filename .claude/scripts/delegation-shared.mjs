@@ -406,7 +406,9 @@ export async function readSnapshot(client, config) {
   });
   const knownRuns = RUN_CACHE.get(client) ?? new Map();
   if (sourceEvents.some(({ event }) => !knownRuns.has(`${config.repository_id}:${config.controller_workflow_id}:${event.source_run_id}:${event.source_run_attempt}`)) && !RUN_LIST_CACHE.has(client)) {
-    const runs = await client.paginate(`/repos/${config.repository}/actions/workflows/${config.controller_workflow_id}/runs`, { key: 'workflow_runs', maxPages: config.limits?.max_pages ?? 10, maxItems: config.limits?.comments ?? 1000 });
+    // 一覧は新しい順の先読みで、無い実行はverifyControlRunが1件ずつ取りに行く。
+    // 実行が1000回を超えると全件は読めないので、上限で打ち切って新しい分だけ使う。
+    const runs = await client.paginate(`/repos/${config.repository}/actions/workflows/${config.controller_workflow_id}/runs`, { key: 'workflow_runs', maxPages: config.limits?.max_pages ?? 10, maxItems: config.limits?.comments ?? 1000, truncate: true });
     RUN_LIST_CACHE.set(client, runs);
   }
   for (const entry of sourceEvents) {

@@ -84,8 +84,8 @@ function memoryGitHub({ anchor = true, failure = null } = {}) {
       if (injected && injected.when === 'after') { injected.used = true; issuedFailure = true; throw new Error('SECRET_TRANSPORT_FAILURE'); }
       return copy(result);
     },
-    async paginate(path) {
-      calls.push({ method: 'PAGINATE', path });
+    async paginate(path, options = {}) {
+      calls.push({ method: 'PAGINATE', path, options: copy(options) });
       if (path.includes('/comments')) return copy(comments);
       if (path.includes('/actions/workflows/')) return copy(runs);
       if (path.includes('/check-runs')) return copy([...checks.values()]);
@@ -174,6 +174,13 @@ test('register→Issue→claim→初回begin→started→link-prを同じ履歴�
   client.add({ schema_version: 1, request_id: randomUUID(), operation: 'link-pr', task_key: request.task_key, pr: 20 });
   await control(client);
   assert.equal((await readSnapshot(client, config)).prs[20].target, true);
+  // 実行の一覧は先読みなので、1000件を超えても打ち切って読み続ける。
+  // 別の実行と同じく、確かめた実行の覚えが無い状態から読み直す。
+  const before = client.calls.length;
+  await readSnapshot({ ...client }, config);
+  const runLists = client.calls.slice(before).filter((call) => call.method === 'PAGINATE' && call.path.includes('/actions/workflows/') && !call.path.includes('event='));
+  assert.ok(runLists.length > 0);
+  assert.ok(runLists.every((call) => call.options.truncate === true));
 });
 
 test('Issue POSTの応答喪失は1件だけ照合し、0件でも再作成しない', async () => {

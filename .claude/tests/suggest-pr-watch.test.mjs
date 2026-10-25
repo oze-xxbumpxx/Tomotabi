@@ -30,11 +30,10 @@ test('gh issue create の出力に Issue の URL があれば、待機コマン�
   assert.equal(out.hookSpecificOutput.hookEventName, 'PostToolUse');
   assert.match(out.hookSpecificOutput.additionalContext, /wait-for-pr\.mjs 37/);
   assert.match(out.hookSpecificOutput.additionalContext, /review-devin-pr/);
-  // H-01: 委譲の記録（docs/designs/devin-delegation-loop.md）
-  assert.match(out.hookSpecificOutput.additionalContext, /delegation\.mjs import --request-file/);
-  // 直接起票を起動許可にせず、承認済み計画の共通受付へ案内する
-  assert.match(out.hookSpecificOutput.additionalContext, /delegation\.mjs request --request-file/);
-  assert.doesNotMatch(out.hookSpecificOutput.additionalContext, /delegation\.mjs init|devin --cloud|devin --model/);
+  // 承認済み計画のタスクはopen-taskで作り、起動はロックを取るラッパーに限る（ADR-0010）
+  assert.match(out.hookSpecificOutput.additionalContext, /delegation\.mjs open-task/);
+  assert.match(out.hookSpecificOutput.additionalContext, /delegation-launch\.mjs 37 --runner local/);
+  assert.doesNotMatch(out.hookSpecificOutput.additionalContext, /request-file|devin --cloud|devin --model/);
   // U-10: Issueに紐づかないDevinのPRの待機（docs/designs/devin-unlinked-pr-review.md）
   assert.match(out.hookSpecificOutput.additionalContext, /wait-for-devin-pr\.mjs --since \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/);
 });

@@ -12,7 +12,7 @@ description: >
 
 ## 1. 着手する前
 
-呼び出し側は共通受付で登録・claim・beginを照合してから起動する。直接のIssue起票やCLI起動は使わない。task_key、attempt_id、runner、requested_modelを明示し、Cloudの実モデルが不明ならunknownを保つ。Devinから別セッションを作らず、起動結果不明やstallは呼び出し側へ渡す。
+呼び出し側（Claude Code）は、承認済み計画のタスクからIssueを作り、専用クローンのロックを取って起動する。Devinから別セッションを作らず、起動結果不明やstallは呼び出し側へ渡す。
 
 1. `AGENTS.md`と、`logs/`の最新の日付ファイルを読む。
 2. `.agents/skills/classify-change/SKILL.md`で変更レベル（L0〜L3）を判定する。
@@ -63,7 +63,7 @@ npm run build
 PRを出したらセッションを終了せず、コメントとCIを監視して自分で対応する（クラウドのDevinと同じく、ローカルでもコメントとCIの失敗に反応するため）。
 
 - `sleep 300`程度の間隔で`gh pr view <n> --comments`を実行し、前回確認時以降の新しいコメントを見る。
-- 同じ確認でquality・build・api-dbなど既存CIも見る。agent-reviewはCIの待機から外す。CIが失敗していれば、コメントが無くても原因を調べて修正し、pushする。
+- 同じ確認でquality・build・api-dbなど既存CIも見る。CIが失敗していれば、コメントが無くても原因を調べて修正し、pushする。
 - 指摘（`<!-- claude-review -->`のコメントを含む）は修正をcommitして同じブランチにpushする。質問にはPRへのコメントで返信する。
 - 修正のたびに §3の品質確認を通してからpushする。Claudeの新しい完了は呼び出し側が確かめる。Codexのレビューは最初の1回だけで、修正のたびには頼まない。短いSHAや旧レビューの印を成功の証拠にしない。
 - 終了条件: PRがマージ・クローズされた、または最後に活動（新しいコメント・自分のpush）があってから4時間経過。

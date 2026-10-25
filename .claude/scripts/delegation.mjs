@@ -8,6 +8,12 @@
 //       --runnerはDevinを動かした場所。既定はlocal（2026-09-26ユーザー指示: 既定はローカル、出先の指示時だけクラウド）。
 //       記録を作る。--titleと --delegated-atを省くとghからIssueの題と作成日時を取る。
 //       --follow-up-ofは、前の委譲のPRの指摘を直す後続の委譲のとき、その前の委譲を指す（複数ならいちばん古いもの）。
+//   node .claude/scripts/delegation.mjs open-task <計画のpath> <機能名>:<タスク名> --title <題> --model <m>
+//     [--runner <local|cloud>] [--level 0-3]
+//       承認済みの計画（origin/mainにあるもの）から<!-- delegation-task:<タスク名> -->の区間を取り出し、
+//       Issueを作って記録を作る。本文の先頭に印（タスク名と本文のdigest）を入れ、同じ印の開いたIssueが
+//       あれば作らずにその番号を返す（同じタスクを二重に作らない）。digestが違えば止める。
+//       Issueの番号を出力する。
 //   node .claude/scripts/delegation.mjs review <issue> --round <n> --sha <sha> --verdict <merge|fix|escalate>
 //     [--posted] [--finding '<must|nit|security|decision>:<category>:<summary>' ...] [--reviewed-at <ISO 8601>]
 //       roundの結果を追記する。reviewed_atの既定は今の時刻。
@@ -36,7 +42,9 @@
 //   読むときは正と写しをkeyでまとめ、reviewsの多い方 → outcomeのある方 → 正の順で選ぶ。写しの失敗は警告だけ。
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
@@ -639,6 +647,71 @@ function fetchFinalize(record, prNumber) {
   return buildGhSection(pr, record.issue, runs);
 }
 
+// ---------------------------------------------------------------- 計画からIssueを作る
+
+const TASK_KEY = /^[a-z0-9-]{1,64}:[a-z0-9-]{1,64}$/;
+const MARK = /^<!-- delegation-task-key: ([a-z0-9-]{1,64}:[a-z0-9-]{1,64}) digest: ([0-9a-f]{64}) -->$/m;
+
+/** 計画から`<!-- delegation-task:<タスク名> -->`の区間を1つだけ取り出す。digestは本文（LF）のSHA-256。 */
+export function extractPlanTask(plan, taskKey) {
+  if (!TASK_KEY.test(taskKey ?? '') || typeof plan !== 'string') throw new UsageError('タスクは <機能名>:<タスク名>（小文字英数字とハイフン）で指定する');
+  const text = plan.replace(/\r\n?/g, '\n');
+  const start = `<!-- delegation-task:${taskKey.split(':')[1]} -->`;
+  const from = text.indexOf(start);
+  if (from < 0 || text.indexOf(start, from + 1) >= 0) throw new UsageError(`計画に ${start} がちょうど1つありません`);
+  const to = text.indexOf('<!-- /delegation-task -->', from);
+  const body = to < 0 ? '' : text.slice(from + start.length, to).replace(/^\n/, '').replace(/\n$/, '');
+  if (body.trim() === '' || body.includes('<!-- delegation-task:')) throw new UsageError('タスクの区間が閉じていないか、空です');
+  return { body, digest: createHash('sha256').update(body).digest('hex') };
+}
+
+/** Issueの本文。先頭の印で同じタスクのIssueを見分ける。 */
+export function taskIssueBody(taskKey, digest, body) {
+  return [
+    `<!-- delegation-task-key: ${taskKey} digest: ${digest} -->`,
+    body,
+    '',
+    '## 進め方',
+    '',
+    '`.agents/skills/devin-workflow/SKILL.md`に従う。ブランチは`devin/<内容>-<このIssueの番号>`。PR本文に`Closes #<このIssueの番号>`を書く。',
+    '',
+  ].join('\n');
+}
+
+/** 開いたIssueの中から同じタスクの印を探す。digestが違うものがあれば止める。 */
+export function findTaskIssue(issues, taskKey, digest) {
+  const same = issues.filter((issue) => MARK.exec(issue.body ?? '')?.[1] === taskKey);
+  if (same.length > 1) throw new UsageError(`同じタスクの開いたIssueが${same.length}件あります: ${same.map((i) => `#${i.number}`).join(' ')}`);
+  if (same.length === 0) return null;
+  if (MARK.exec(same[0].body)[2] !== digest) throw new UsageError(`#${same[0].number} は同じタスクだが本文が計画と違う（計画を変えたなら、そのIssueを閉じてから作り直す）`);
+  return same[0].number;
+}
+
+export function openTask({ planPath, taskKey, title, model, runner = 'local', level = null }, { dir = DEFAULT_DIR, mirrorDir = null, run = gh, git = (args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), now = nowIso } = {}) {
+  if (typeof planPath !== 'string' || !/^docs\/implementation-plans\/[a-z0-9-]+\.md$/.test(planPath)) throw new UsageError('計画は docs/implementation-plans/<機能名>.md を指定する');
+  if (typeof title !== 'string' || title.trim() === '') throw new UsageError('--title が必要です');
+  if (!MODELS.includes(model ?? '')) throw new UsageError(`--model は ${MODELS.join(' | ')} のどれか`);
+  // 承認済みの計画はmainにマージされたもの。手元の未マージの版からは作らない。
+  git(['fetch', '--quiet', 'origin', 'main']);
+  const { body, digest } = extractPlanTask(git(['show', `origin/main:${planPath}`]), taskKey);
+  const open = JSON.parse(run(['issue', 'list', '--state', 'open', '--limit', '200', '--search', `"delegation-task-key: ${taskKey}" in:body`, '--json', 'number,body']));
+  const existing = findTaskIssue(open, taskKey, digest);
+  if (existing !== null) return existing;
+  const tmp = mkdtempSync(join(tmpdir(), 'delegation-task-'));
+  let url;
+  try {
+    const file = join(tmp, 'body.md');
+    writeFileSync(file, taskIssueBody(taskKey, digest, body), { mode: 0o600 });
+    url = run(['issue', 'create', '--title', title, '--body-file', file]).trim();
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+  const issue = Number(/\/issues\/(\d+)$/.exec(url)?.[1]);
+  if (!Number.isSafeInteger(issue) || issue <= 0) throw new GhError(`作ったIssueの番号を読めません: ${url}`);
+  writeRecord(dir, { ...newRecord({ issue, title, model, runner, level, delegatedAt: now() }), task_key: taskKey }, { mirrorDir });
+  return issue;
+}
+
 // ---------------------------------------------------------------- CLI
 
 export function parseOptions(argv, spec) {
@@ -713,6 +786,13 @@ export function runCli(argv) {
     console.log(formatSummary(summary));
     return;
   }
+  if (command === 'open-task') {
+    const [planPath, taskKey, ...taskArgs] = rest;
+    const opts = parseOptions(taskArgs, { values: ['title', 'model', 'runner', 'level'] });
+    console.log(openTask({ planPath, taskKey, title: opts.title, model: opts.model, runner: opts.runner ?? 'local',
+      level: opts.level === undefined ? null : toInt(opts.level, '--level') }, { dir: opts.dir ?? DEFAULT_DIR, mirrorDir: mirrorOf(opts) }));
+    return;
+  }
   const [issueText, ...optArgs] = rest;
   if (command === 'init') {
     const target = targetArg(issueText);
@@ -767,7 +847,7 @@ export function runCli(argv) {
     console.log(writeRecord(dir, { ...record, ...fetchFinalize(record, prNumber) }, { mirrorDir }));
     return;
   }
-  throw new UsageError('usage: delegation.mjs <init|review|finalize|summary|status> …（詳細はファイル先頭のコメント）');
+  throw new UsageError('usage: delegation.mjs <open-task|init|review|finalize|summary|status> …（詳細はファイル先頭のコメント）');
 }
 
 function initSelf(pr, optArgs) {
@@ -789,87 +869,13 @@ function initSelf(pr, optArgs) {
   console.log(writeRecord(dir, newSelfRecord({ pr, title, model: opts.model ?? 'unknown', runner, level, createdAt }), { mirrorDir }));
 }
 
-export async function readSharedSnapshot(dependencies = {}) {
-  const config = dependencies.config ?? JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../config/delegation-review.json'), 'utf8'));
-  const shared = dependencies.readSnapshot ? dependencies : await import('./delegation-shared.mjs');
-  const client = dependencies.client ?? (await import('./delegation-github.mjs')).createGitHubClient({ repo: config.repository, maxApiCalls: config.limits.api_calls, timeoutMs: config.limits.timeout_ms, jobTimeoutMs: config.limits.job_timeout_ms });
-  return shared.readSnapshot(client, config);
-}
-
-/** 共有状態を履歴用の写しへ保存する。レビュー記録を消さず、起動許可には使わない。 */
-export function cacheSharedSnapshot(snapshot, { dir = DEFAULT_DIR, mirrorDir = defaultMirrorDir() } = {}) {
-  if (mirrorDir === null) return false;
-  if (!Number.isSafeInteger(snapshot.seq) || snapshot.seq < 0 || Number.isNaN(Date.parse(snapshot.fetched_at))) throw new UsageError('共有状態の取得情報を確認できません');
-  for (const task of Object.values(snapshot.tasks ?? {})) {
-    const issue = Number.isSafeInteger(task.issue) && task.issue > 0 ? task.issue : null;
-    const pr = Number.isSafeInteger(task.pr) && task.pr > 0 ? task.pr : null;
-    if (issue === null && pr === null) continue;
-    const key = issue ?? `pr-${pr}`;
-    const previous = existingRecordPath(dir, key, mirrorDir) === null ? null : readRecordMerged(dir, key, mirrorDir);
-    if (previous && Number.isSafeInteger(previous.shared_seq) && previous.shared_seq > snapshot.seq) continue;
-    const base = previous ?? (issue === null
-      ? newSelfRecord({ pr, title: `委譲 ${task.task_key}`, runner: 'local', createdAt: snapshot.fetched_at })
-      : newRecord({ issue, title: `委譲 ${task.task_key}`, model: 'unknown', delegatedAt: snapshot.fetched_at }));
-    const record = { ...base, task_key: task.task_key, shared_seq: snapshot.seq, shared_fetched_at: snapshot.fetched_at,
-      shared_state: task.state, pr, runner: task.runner ?? previous?.runner ?? 'unknown',
-      model: task.observed_model ?? previous?.model ?? 'unknown', requested_model: task.requested_model ?? 'unknown',
-      attempt_id: task.attempt_id ?? null, activation_id: task.activation_id ?? null,
-      session_id: task.session_id ?? null, session_url: task.session_url ?? null };
-    writeAtomic(mirrorDir, record, 0o700);
-  }
-  return true;
-}
-
-export async function runSharedRequestCli(argv, dependencies = {}) {
-  const [command, ...args] = argv;
-  if (!['request', 'import'].includes(command)) throw new UsageError('request又はimportを指定してください');
-  const opts = parseOptions(args, { values: ['request-file'] });
-  if (!opts['request-file']) throw new UsageError('--request-fileが必要です');
-  const config = dependencies.config ?? JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../config/delegation-review.json'), 'utf8'));
-  let request;
-  try {
-    const text = readFileSync(opts['request-file'], 'utf8');
-    if (Buffer.byteLength(text, 'utf8') > (config.limits?.request_bytes ?? 8192)) throw new UsageError('要求JSONが上限を超えています');
-    request = JSON.parse(text);
-    if (request === null || typeof request !== 'object' || Array.isArray(request)) throw new UsageError('要求JSONを確認してください');
-    if (command === 'import' && request.operation !== 'import') throw new UsageError('import要求が必要です');
-  } catch (error) {
-    if (error instanceof UsageError) throw error;
-    throw new UsageError('公開要求JSONを確認してください');
-  }
-  try { (await import('./delegation-shared.mjs')).validateRequest(request, { maxBytes: config.limits?.request_bytes ?? 8192 }); } catch { return { exitCode: 2, code: 'invalid_request' }; }
-  if (config.migration_complete !== true && ['register', 'claim', 'begin'].includes(request.operation)) return { exitCode: 4, code: 'migration_required' };
-  try {
-    const shared = dependencies.readSnapshot && dependencies.submitRequest && dependencies.waitForResult ? dependencies : await import('./delegation-shared.mjs');
-    const client = dependencies.client ?? (await import('./delegation-github.mjs')).createGitHubClient({ repo: config.repository, maxApiCalls: config.limits.api_calls, timeoutMs: config.limits.timeout_ms, jobTimeoutMs: config.limits.job_timeout_ms });
-    await shared.readSnapshot(client, config);
-    const sent = await shared.submitRequest(client, config, request);
-    const result = await shared.waitForResult(client, config, { requestId: sent.request_id, commentId: sent.request_comment_id });
-    try { cacheSharedSnapshot(await shared.readSnapshot(client, config), { dir: opts.dir ?? DEFAULT_DIR, mirrorDir: mirrorOf(opts) }); } catch {
-      // 写しの失敗で、共有側の確定済み要求を送り直さない。
-    }
-    const code = result.code ?? 'unknown';
-    const confirmed = new Set(['confirmed', 'issue_ready', 'already_registered', 'reserved', 'already_reserved', 'running', 'linked', 'imported', 'reconciled', 'review_refreshed']);
-    const exitCode = ['pending', 'unprocessed', 'registered', 'issue_creating', 'review_pending'].includes(code) ? 3
-      : /conflict|invalid|denied/.test(code) ? 2
-      : confirmed.has(code) ? 0 : 4;
-    return { exitCode, code, request_id: sent.request_id, request_comment_id: sent.request_comment_id, ...(Number.isSafeInteger(result.seq) ? { seq: result.seq } : {}) };
-  } catch (error) {
-    if (error?.code === 'result_pending') return { exitCode: 3, code: 'pending' };
-    if (/^(?:invalid_|request_limit|content_conflict|request_conflict)/.test(error?.code ?? '')) return { exitCode: 2, code: 'invalid_request' };
-    return { exitCode: 5, code: 'shared_unavailable' };
-  }
-}
-
 function exitWith(error) {
   console.error(error.message);
   process.exit(error instanceof UsageError ? 2 : error instanceof GhError ? 3 : 1);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (['request', 'import'].includes(process.argv[2])) {
-    runSharedRequestCli(process.argv.slice(2)).then((result) => { console.log(JSON.stringify(result)); process.exitCode = result.exitCode; }).catch(exitWith);
-  } else if (process.argv[2] === 'status') {
+  if (process.argv[2] === 'status') {
     // statusはwait-for-devin-pr.mjsを使い、あちらがこのファイルを読むため、静的に読み込むと循環する。
     // ここでawaitすると、このファイルの評価が終わらないまま相手の読み込みを待ち、止まってしまう。
     // 評価を終えてからthenで実行する。

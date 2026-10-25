@@ -1,6 +1,6 @@
 # ADR-0007: GitHubで委譲状態を共有し、最終版のレビューを必須にする
 
-- Status: Accepted（2026-10-09のチャットで設計に沿う次工程を承認。PR #186は未マージ）
+- Status: Superseded by ADR-0010（2026-10-25。管理Issueの共通受付とagent-reviewをやめた）
 - Date: 2026-10-09
 - 関連 feature: delegation-review-reliability
 

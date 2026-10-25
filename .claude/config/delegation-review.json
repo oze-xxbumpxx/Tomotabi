@@ -1,49 +1,6 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "repository": "oze-xxbumpxx/Tomotabi",
-  "repository_id": 1359576461,
-  "default_branch": "main",
-  "management_issue": 267,
-  "anchor_comment_id": 6378901164,
-  "controller_workflow_id": 380285943,
-  "controller_workflow_path": ".github/workflows/delegation-control.yml",
-  "listener_workflow_id": 380164771,
-  "listener_workflow_path": ".github/workflows/delegation-events.yml",
-  "allowed_controller_events": [
-    "issue_comment",
-    "workflow_dispatch",
-    "schedule",
-    "workflow_run"
-  ],
-  "actor_ids": {
-    "request": [
-      109064833
-    ],
-    "claude": [
-      109064833
-    ],
-    "codex": 199175422,
-    "devin": 158243242,
-    "actions": 41898282
-  },
-  "migration_complete": true,
   "cli_launch_verified": true,
-  "cloud_launch_verified": false,
-  "limits": {
-    "tasks": 100,
-    "request_bytes": 8192,
-    "event_bytes": 49152,
-    "comments": 1000,
-    "open_prs": 1000,
-    "reviews": 1000,
-    "threads": 1000,
-    "thread_comments": 5000,
-    "api_calls": 200,
-    "requests_per_run": 20,
-    "timeout_ms": 10000,
-    "job_timeout_ms": 300000,
-    "wait_ms": 120000,
-    "max_pages": 10,
-    "page_size": 100
-  }
+  "cloud_launch_verified": false
 }

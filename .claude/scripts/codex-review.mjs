@@ -26,8 +26,8 @@
 // - 判定はcodexStateとrequestDecisionに閉じ込め、テストで固定する。ghの呼び出しは薄くする。
 // - Codexの状態は、Codexの要約コメント（`<!-- codex-pull-request-review-summary -->`）の表から読む。
 //   行の形は「| 📝 **Code Review** | ✅ **Completed** … | `3141aca` | Draft marked ready |」。
-// - 完了の判定はここで閉じる。agent-reviewが求める完了の証拠（作者・編集者・完全SHA）の照合は
-//   agent-review.mjsの役目で、このスクリプトは待つきっかけを作るだけ。
+// - 完了の判定はここで閉じる。このスクリプトは待つきっかけを作るだけで、マージの判断には
+//   review-devin-prの「レビュー完了のコメント」の手順で現在headを確かめる。
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';

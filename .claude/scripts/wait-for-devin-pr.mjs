@@ -28,7 +28,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readKnownRecords, readSharedSnapshot } from './delegation.mjs';
+import { readKnownRecords } from './delegation.mjs';
 import { findLinkedPr } from './wait-for-pr.mjs';
 
 const DEFAULT_INTERVAL_SEC = 60;
@@ -56,17 +56,13 @@ export function findUnlinkedDevinPrs(prs, { since = null, delegatedIssues = [], 
 }
 
 /** 記録から「委譲したIssue」と「記録があるPR」を取り出す。 */
-export function knownFromRecords(records, snapshot = null) {
+export function knownFromRecords(records) {
   const delegatedIssues = [];
   const knownPrs = [];
   for (const rec of records) {
     if (Number.isInteger(rec.issue)) delegatedIssues.push(rec.issue);
     if (Number.isInteger(rec.pr)) knownPrs.push(rec.pr);
     if (Number.isInteger(rec.gh?.pr)) knownPrs.push(rec.gh.pr);
-  }
-  for (const task of Object.values(snapshot?.tasks ?? {})) {
-    if (Number.isInteger(task.issue) && !delegatedIssues.includes(task.issue)) delegatedIssues.push(task.issue);
-    if (Number.isInteger(task.pr) && !knownPrs.includes(task.pr)) knownPrs.push(task.pr);
   }
   return { delegatedIssues, knownPrs };
 }
@@ -156,11 +152,9 @@ async function main() {
   console.log(`${args.since} 以降に作られた、Issue に紐づかない Devin の PR を待っています（${args.interval} 秒ごと）`);
   for (;;) {
     try {
-      let snapshot = null;
-      try { snapshot = await readSharedSnapshot(); } catch { /* 未確認の旧履歴は発見用だけに使う。 */ }
       const candidates = findUnlinkedDevinPrs(listOpenDevinPrs(args.since), {
         since: args.since,
-        ...knownFromRecords(readKnownRecords(), snapshot),
+        ...knownFromRecords(readKnownRecords()),
       });
       const { pending: found, unchecked } = filterUnreviewed(candidates, (n) => prComments(n));
       if (unchecked.length > 0) {

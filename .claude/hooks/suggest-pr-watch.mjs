@@ -46,14 +46,13 @@ export function createdIssues(input) {
 const isoSeconds = (date) => date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 export function buildContext(issues, now = new Date()) {
-  const lines = issues.map((n) => `- Issue #${n}: 公開メタデータを照合し、\`node .claude/scripts/delegation.mjs import --request-file <公開JSON>\`で共通受付へ登録する。起動前に共有状態を確かめる。\`node .claude/scripts/wait-for-pr.mjs ${n}\`はPRの確認に使う`);
+  const lines = issues.map((n) => `- Issue #${n}: Devinに渡すなら、委譲の記録を確かめてから\`node .claude/scripts/delegation-launch.mjs ${n} --runner local --model swe-2-<effort> --prompt-file <非公開ファイル>\`で起動し、\`node .claude/scripts/wait-for-pr.mjs ${n}\`をrun_in_backgroundでPRを待つ`);
   return [
-    '委譲は共通受付を使う。直接作ったIssueを起動許可にはしない。',
+    '承認済み計画のタスクは、delegation.mjs open-taskでIssueと委譲の記録を作る（同じタスクの二重起票を防ぐため）。',
     ...lines,
-    '承認済み計画のタスクはdelegation.mjs request --request-file <公開JSON>で登録し、delegation-launch.mjsでrunner/modelと非公開prompt fileを明示する。',
     `IssueなしPRは\`node .claude/scripts/wait-for-devin-pr.mjs --since ${isoSeconds(now)}\`で確認する。`,
     'このIssueを自分で実装する場合は、委譲の登録も待機もしない。',
-    'PRが見つかったらreview-devin-prの手順で現在headの両レビューを照合する。unknownを自動再起動で解除しない。',
+    'PRが見つかったらreview-devin-prの手順でレビューする。起動結果不明を自動再起動で解除しない。',
   ].join('\n');
 }
 

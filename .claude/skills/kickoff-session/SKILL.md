@@ -36,9 +36,9 @@ description: >
 5. **当日ログの雛形を作成**: `logs/YYYY-MM-DD.md`が無ければ`logs/_template.md`から作成し、
    「今日のタスク」（テーマ・Sprint・作業ブランチ）だけ先に埋める。既にあれば
    「セッション2」等の見出しで追記準備をする（write-work-log Skillと同じ規則）。
-6. **変更レベルと実装ルートを宣言**: タスクごとにclassify-change SkillでL0〜L3を判定し、
-   実装ルートを宣言する。Codex委譲スキルは未導入のため、実装はimplementer経路を使う。
-   L2/L3ならorchestrator起動へ進む。
+6. **変更レベルを宣言**: タスクごとにclassify-changeスキルでL0〜L3を判定する。
+   実装はこのセッションで行う（Codex委譲スキルは未導入）。
+   L2/L3は`develop-feature`スキルに進む。orchestratorは起動しない。
 
 ## 完了条件
 

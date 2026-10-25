@@ -7,7 +7,7 @@
 
 ## 変更レベルの判定
 
-Orchestratorは作業開始時にレベルを判定し、判定理由を簡潔に提示する。
+このセッションが作業開始時にレベルを判定し、判定理由を簡潔に提示する（`classify-change`）。
 
 ### Level 0：調査・相談
 
@@ -81,7 +81,7 @@ docs/reviews/<feature-name>.md
 
 `feature-name`は成果物ファイル名を貫く識別子（kebab-case、例`recipe-tag`）。
 
-Orchestratorは作業開始時に`.claude/state/current-feature`へ現在のfeature-nameを
+L2/L3では、このセッションが作業開始時に`.claude/state/current-feature`へ現在のfeature-nameを
 1行で書き込む。Hookはこの値を使い、L2/L3のソース変更に対して対応する設計書・
 実装計画・試験計画の存在と必須セクションの非空を**警告として**チェックする
 （ブロックはしない）。詳細は

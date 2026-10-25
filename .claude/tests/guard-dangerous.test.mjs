@@ -78,7 +78,7 @@ test('構成ファイルの変更はフックでは妨げない（承認境界�
     for (const path of [
       '.claude/hooks/guard-dangerous.mjs',
       '.claude/settings.json',
-      '.claude/agents/implementer.md',
+      '.claude/agents/reviewer.md',
       '.claude/rules/coding-standards.md',
       '.claude/skills/quality-gates/SKILL.md',
       '.claude/lib/harness-state.mjs',

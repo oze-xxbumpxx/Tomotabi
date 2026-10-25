@@ -1,10 +1,8 @@
-# 開発ワークフロー（Orchestrator主導）
+# 開発ワークフロー（一つのセッション）
 
-このプロジェクトの機能追加・修正は、**Orchestratorが指揮**し、専門Subagentに
-調査・設計・計画・実装・試験・レビューを委譲する形で進める。
+機能の追加と修正は、メインのセッションが`develop-feature`スキルで進める。設計、計画、実装、試験計画は同じ文脈で書く。子に渡すのは検証と広い探索だけ。
 
-CLAUDE.mdには常時必要な原則だけを置き、工程の詳細はこの文書と各Subagent定義
-（`.claude/agents/`）、各Skill（`.claude/skills/`）に分離している。
+常時の原則は`CLAUDE.md`と`AGENTS.md`。工程の詳細はスキル、検証の条件は[orchestration-policy.md](./orchestration-policy.md)。
 
 ## 標準フロー
 
@@ -12,21 +10,18 @@ CLAUDE.mdには常時必要な原則だけを置き、工程の詳細はこの�
 ユーザー要求
   │
   ▼
-Orchestrator … 変更レベル判定（L1/L2/L3）・タスク分解・委譲計画
+このセッション … classify-change でレベルを決める
   │
-  ├─(L2/L3)→ architecture-designer …（L3 は requirements も）技術設計 → docs/designs/<feature>.md
-  ├─(契約変更時)→ architecture-designer の設計書 Contract 節（専用 Agent は未定義）
-  ├─(L2/L3)→ implementation-planner … 実装計画 → docs/implementation-plans/<feature>.md
-  ├─(L2/L3)→ test-designer … 試験観点 → docs/tests/<feature>.md
-  ├────────→ implementer … 実装 + 単体テスト +〔L3・基盤ありなら E2E〕+ lint/型チェック/テスト
-  │           （実装ルートが Codex 委譲の場合はこの工程のみ Codex + review-codex-implementation
-  │             で代替する。正典は orchestration-policy.md §実装ルートの分岐）
-  ├─(L2/L3)→ reviewer … 整合性・品質・文書観点のレビュー
-  ├─(L2/L3)→ security-reviewer … セキュリティ専門レビュー（L2 は省略条件あり・正典は orchestration-policy）
-  └─(L2/L3)→ reflection-agent … 振り返り → improvements/candidates/<task-id>.md
+  ├─(L0)→ 読んで答える。広い探索だけ Explore
+  ├─(L1)→ implement-change。振る舞いが変わるなら reviewer
+  ├─(L2/L3)→ ask-questions → 〔L3は要件〕設計 → ユーザーの承認
+  │         → 実装計画と試験計画 → implement-change
+  │         → reviewer
+  │         →〔security-reviewer。条件は orchestration-policy〕
+  └─(頼まれたとき)→ reflect-task。改善サイクルは休眠
   │
   ▼
-Orchestrator … 成果物の統合・矛盾解消・完了条件確認 → ユーザー報告
+このセッション … 矛盾を解消し、完了条件を見てユーザーへ報告
 ```
 
 L2/L3の機能は、分類の直後に論点の記録と進み具合（`docs/discussions/<feature>.md`・`<feature>.progress.json`）を作り、
@@ -42,9 +37,7 @@ L2/L3の機能は、分類の直後に論点の記録と進み具合（`docs/dis
 | そのPRがマージされた | その工程を`done --pr <番号>`、次の工程を`active` |
 | 実装・レビュー・マージ・振り返り | それぞれ`active` → `done`。行わない工程は`skipped --reason` |
 
-Level 1（軽微）は設計書・計画を省略し、implementer（または直接修正）→ 必要なら
-reviewerの最小フローで進める。レベルの定義は
-[document-policy.md](./document-policy.md)を参照。
+Level 1（軽微）は設計書と計画を省略し、このセッションが直す。必要なら`reviewer`だけを起動する。レベルの定義は[document-policy.md](./document-policy.md)。
 
 ## 人間レビューを二つのゲートへ分ける
 
@@ -99,12 +92,11 @@ L2/L3の実装に着手する前に、以下が揃っていることを確認す
 - `docs/designs/<feature-name>.md`（確定済み設計）
 - `docs/implementation-plans/<feature-name>.md`（実装計画）
 
-これらが無い、または必須セクションが空のまま実装に入らない。設計から逸脱する必要が
-生じた場合、implementerは独断で変更せずOrchestratorへ差し戻す。
+これらが無い、または必須セクションが空のまま実装に入らない。設計から逸脱する必要が生じた場合、このセッションは実装を止め、ユーザーに確認する。
 
 ## feature-nameの扱い
 
-1つの作業単位を識別する`feature-name`（kebab-case）をOrchestratorが最初に決める。
+1つの作業単位を識別する`feature-name`（kebab-case）を、このセッションが最初に決める。
 全成果物のファイル名にこの名前を使い、横断的な追跡を可能にする。
 
 作業中のfeature-nameは`.claude/state/current-feature`に記録する（Hookがこの値を
@@ -112,17 +104,15 @@ L2/L3の実装に着手する前に、以下が揃っていることを確認す
 
 ## 完了条件
 
-Orchestratorは以下をすべて確認してから「完了」とユーザーへ報告する。
+このセッションは、次を確認してから「完了」とユーザーへ報告する。
 
-- 要求 → 設計 → 実装計画 → 実装 → 試験 の間に矛盾がない
+- 要求、設計、実装計画、実装、試験の間に矛盾がない
 - L2/L3で必要な成果物が存在し、必須セクションが埋まっている
-- `pnpm lint` / `pnpm type-check` / `pnpm test`（Vitest。全層導入済み — 2026-07-01 PR #21）が通っている
+- `npm run lint` / `npm run type-check` / `npm test`が通っている（未導入のゲートは`unknown`）
 - スコープ外の変更が混入していない
 - L2/L3の新規review packetがcurrentで、open `BLOCK`と高影響の未検証が0
 - Gate Bへ渡す人間項目が3件以下で、各項目に推奨と証拠参照がある
-- 人間引き渡し対象では
-  `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature>`が成功し、
-  PR/チャット要約は`handoff-blurb`を使う（承認語禁止）
+- `review-readiness`の機械チェックは`AGENTS.md`で休眠。指摘と検証結果はPRと日次ログに残す。承認を意味する語は書かない
 - ユーザー確認が必要な判断（下記）が解決済み
 
 ## ユーザーへ確認すべき条件
@@ -161,7 +151,7 @@ usageリミット・分類器障害・ユーザー都合などでセッション
 | --------------------------- | --------------------------------------------------------------------- |
 | usageリミット等の強制終了  | チェックポイントコミットがリモートにある前提。無い工程だけ再実行      |
 | 計画的なセッション分割      | ログの「次回やること」をkickoffのタスク案の起点にする（従来どおり） |
-| 分類器障害・Hook誤ブロック | 復旧後、期待成果物の有無で冪等判定してから再委譲（二重起動防止）      |
+| 分類器障害・Hook誤ブロック | 復旧後、期待するファイルの有無を見てから再開する（同じ工程を二重にやらない） |
 
 kickoff-sessionは手順に「強制中断からの再開か」を確認する項を持つ。
 close-sessionは強制終了が近いと判断したとき、フェーズ境界のチェックポイントコミットと

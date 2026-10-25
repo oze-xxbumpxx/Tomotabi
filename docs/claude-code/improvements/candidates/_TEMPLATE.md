@@ -1,6 +1,6 @@
 # 改善候補: <task-id>
 
-> reflection-agentが起票。1タスクの振り返りから抽出した知見をまとめる。
+> メインのセッションが`reflect-task`で起票。1タスクの振り返りから抽出した知見をまとめる。
 > 設定は変更しない。昇格判断は[../../memory-policy.md](../../memory-policy.md)の昇格条件に従う。
 
 - **task-id**: <kebab-case>

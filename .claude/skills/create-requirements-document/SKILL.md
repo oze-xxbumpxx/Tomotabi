@@ -2,19 +2,19 @@
 name: create-requirements-document
 description: >
   要件定義書をdocs/requirements/<feature-name>.mdに作成する手順とテンプレート。
-  architecture-designerがLevel 3（および必要なLevel 2）で使う（IMP-2026-031）。
+  L3（必要なL2を含む）をこのセッションで書くときに使う。コードは変えない。
   対象外項目は削除せず「対象外」と明記する。
 ---
 
 # 要件定義書作成スキル
 
-architecture-designerが`docs/requirements/<feature-name>.md`を作成するための手順と雛形
+`docs/requirements/<feature-name>.md`をこのセッションで書く手順と雛形
 （旧requirements-analystの責務を吸収。IMP-2026-031）。
 **コードは変更しない。** 既存の要件文書があれば新規作成せず更新する（重複作成しない）。
 
 ## 進め方
 
-1. Orchestratorから渡された目的・対象範囲・参照ファイルを確認する。
+1. このセッションの依頼（目的・対象範囲・参照ファイル）を確認する。
 2. プロジェクト前提は`AGENTS.md`で押さえる。未作成の`docs/01`〜`04`は読まない。
    既存実装・既存仕様があればGrep/Glob/Readで調査する。
 3. 書く前に問いを出す。[checklist.md](checklist.md)の観点で決まっていないことを探し、
@@ -23,7 +23,7 @@ architecture-designerが`docs/requirements/<feature-name>.md`を作成するた�
 4. 答えを論点の記録に写し、下記テンプレートを埋める。本文には決めた結果だけを書き、理由と選ばなかった案は論点の記録に残す。
    残りの問いは論点の記録で「仮決定」か「後の工程へ」にしておく。
    対象外項目は削除せず「対象外」「該当なし」と書く。
-5. L3で最初のWrite担当のときはOrchestratorの指示により`.claude/state/current-feature`に
+5. L3で`.claude/state/current-feature`がまだ無ければ、このセッションが
    feature-nameを1行で書く。
 
 ## テンプレート
@@ -69,6 +69,6 @@ architecture-designerが`docs/requirements/<feature-name>.md`を作成するた�
 
 ## 禁止事項
 
-- コードの変更・設計の確定（設計はarchitecture-designer）。
+- コードの変更。設計の確定は`create-design-document`で、承認はユーザーが行う。
 - 推測での仕様確定（未決は「未決事項」に残す）。
 - 調べている途中で見つけた既存の不具合を直すこと（ask-questionsの「既存の不具合を見つけたとき」で報告する）。

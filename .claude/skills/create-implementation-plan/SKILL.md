@@ -2,7 +2,7 @@
 name: create-implementation-plan
 description: >
   確定設計から実装計画をdocs/implementation-plans/<feature-name>.mdに作成する手順と
-  テンプレート。implementation-plannerが使う。各ステップに対象ファイル・変更内容・完了条件を含める。
+  テンプレート。設計の承認後、このセッションで書く。各ステップに対象ファイル・変更内容・完了条件を含める。
 ---
 
 # 実装計画作成スキル
@@ -35,7 +35,7 @@ description: >
 
 - 前提となる設計書: docs/designs/<feature-name>.md
 - レベル: L2 | L3
-- 実装ルート: Orchestrator（implementer）| Codex 委譲
+- 実装ルート: メインのセッション | Codex 委譲（未導入）
 - 判断理由: （既定どおりなら「既定」。特殊判断・切替があれば理由 1 行）
 
 ## 変更対象ファイル
@@ -82,7 +82,7 @@ description: >
 - すべてのステップに対象ファイル・変更内容・完了条件が揃っている。
 - 変更/新規ファイルのパスが実在のリポジトリ構成と整合している。
 - 粒度が実装ルートに整合している:
-  - Orchestrator経路: implementerがこの計画だけで実装に着手できる粒度。
+  - メインのセッション: この計画だけで`implement-change`に着手できる粒度。
   - Codex委譲経路: create-codex-briefがこの計画からブリーフを生成できる分解粒度
     （ファイル別の完成コードは持たない。それはブリーフが正本）。
 - ドメインモデル変更を含み、かつドメインモデル文書が実在する場合、「ドキュメント更新対象」に

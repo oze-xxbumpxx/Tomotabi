@@ -4,9 +4,9 @@
 // 方針（docs/claude-code/improvement-cycle.md）:
 // - 成果物の存在はcheck-deliverables.mjsが見る。本フックは「改善ループ」固有の観点だけを見る。
 // - `.claude/state/current-feature`が設定された作業単位（= L2/L3相当）で、複数Subagentが
-//   動いた（subagent-logにエントリがある）のにreflection-agentの振り返り候補が無い場合に
+//   動いた（subagent-logにエントリがある）のに振り返り候補が無い場合に
 //   注意喚起する。L1（feature未設定）では沈黙し誤検知を出さない。
-// - 強制はしない（常にexit 0）。改善ループの起動判断はOrchestrator / 人間に委ねる。
+// - 強制はしない（常にexit 0）。改善ループを実行するかは、メインのセッションと人間が決める。
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -167,7 +167,7 @@ function main() {
 
     if (subagentLogHasEntries() && !existsSync(candidatePath)) {
       warnings.push(
-        `reflection-agent の振り返り候補が未作成: docs/claude-code/improvements/candidates/${feature}.md`,
+        `振り返り候補が未作成（reflect-task スキル）: docs/claude-code/improvements/candidates/${feature}.md`,
       );
     }
     // CodexルートfeatureはTask単位の網羅を見る（存在だけではTask 2/3欠落を見逃す。pantry-core事象2）

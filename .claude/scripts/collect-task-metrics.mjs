@@ -33,7 +33,7 @@
 //     --writeでYAMLへ固定化する（machine.sessions / machine.gate_historyは
 //     session_id / tsでマージするため再実行・環境替えをまたいで累積できる）。
 //   - 意味的な手戻り（requirement/design_rework・user_corrections等）は機械判定しない。
-//     従来どおりreflection-agent / 人間がYAMLの該当欄を埋める。
+//     振り返りを頼まれたセッションか人間がYAMLの該当欄を埋める。
 
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';

@@ -49,15 +49,15 @@ description: >
    - **利用できない環境ではスキップし、ログにスキップした旨を書く。** セッション終了作業を
      メトリクスの都合で止めない（出典: cookpit/harness-plugin-split要件E-02）。
    - L0/L1はそもそも対象外（過剰工程にしない）。
-5. **レビュー引き渡しゲート**（L2/L3のみ）: `.claude/state/current-feature`のfeatureについて、
-   次のいずれかに該当するなら
+5. **レビュー引き渡しゲート**（L2/L3のみ）: `review-readiness`は`AGENTS.md`で休眠のため、
+   `.claude/state/current-feature`のfeatureで`docs/reviews/<feature>.md`をstructured packetで
+   作ったときだけ
    `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
-   を実行し、exit 0を確認する。
-   - `docs/reviews/<feature>.md`が存在する
-   - L3（`docs/requirements/<feature>.md`が存在する）
+   を実行し、exit 0を確認する。packetを作っていないL2/L3は、レビュー指摘と検証結果がPRと
+   日次ログにあることを確かめてスキップする。
    - 失敗したら「人間レビュー待ち / PR準備完了」とは報告せず、packet生成または指摘解消を
      持ち越し（次回やること）へ書く。legacyのままcloseしてマージ判断へ渡さない。
-   - L0/L1、および上記に該当しないL2（review文書なし）はスキップ可。
+   - L0/L1はスキップする。
 6. **コミット & プッシュ**: 指定の作業ブランチへコミットし`git push -u origin <branch>`する
    （CLAUDE.mdの行動制約どおり、作業ブランチへは事前承認不要。構成ファイル
    （CLAUDE.md / agents / hooks / skills / rules / settings.json）を含む変更は、

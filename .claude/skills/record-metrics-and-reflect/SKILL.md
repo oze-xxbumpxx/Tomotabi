@@ -27,7 +27,7 @@ description: >
 
 - `.claude/scripts/record-task-metrics.sh` / `collect-task-metrics.mjs`
 - `.claude/scripts/check-review-coverage.mjs`
-- `reflection-agent`と`reflect-task` Skill
+- `reflect-task`スキル（改善サイクルが休眠のあいだは、ユーザーが頼んだときだけ）
 - `docs/claude-code/improvements/`の構造
 
 ## 手順
@@ -46,17 +46,18 @@ description: >
      `node .claude/scripts/collect-task-metrics.mjs --feature <feature> --branch <ブランチ部分一致> --task-id <task-id> --write`
      で対象ブランチを明示して再実行する。
    - 意味的な値（quality/processの手戻り・4軸レビュー指摘・ユーザー修正数）は自動化対象外。
-     タスク完了時にreflection-agentがpacket / auditから埋める（不明値はunknownのまま）。
+     タスク完了時に、このセッションがpacketとauditから埋める（不明値はunknownのまま）。
    - `review.active_time_bucket/confidence/full_diff_opened`だけは人間の任意回答。計時や回答を
      完了条件にせず、未回答を推測しない。
-2. **振り返り**（L2/L3のみ）: reflection-agentへ委譲しreflect-task Skillで
-   candidateを作成する。L0/L1はスキップ（過剰工程にしない）。
+2. **振り返り**（L2/L3で、ユーザーが頼んだとき）: `reflect-task`スキルをこのセッションで読み、
+   candidateを作成する。改善サイクルが休眠のあいだ、およびL0/L1はスキップする。
 3. **レビュー記録の網羅確認**: 複数TaskのCodex委譲featureでは、mainマージ済み
    Task分の`docs/reviews/<feature>.md`記録が揃っているか
    `node .claude/scripts/check-review-coverage.mjs <feature>`で確認する
    （空配列 = 網羅済み。出典: cookpit/pantry-core事象2 / IMP-2026-020適用後の再発）。
 4. **引き渡しpacket確認**（人間マージ判断へ渡すL2/L3）:
-   `docs/reviews/<feature>.md`がある、またはL3なら
+   `docs/reviews/<feature>.md`をstructured packetで作ったときだけ
+   （`review-readiness`は`AGENTS.md`で休眠）
    `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
    を実行する。失敗時はメトリクス記録自体は続けてよいが、完了報告では
    「人間レビュー待ち」と書かず持ち越しにする（正典: close-session手順5）。

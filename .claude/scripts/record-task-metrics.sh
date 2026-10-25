@@ -120,4 +120,4 @@ else
   echo "⚠ collect-task-metrics.mjs の自動集計に失敗（machine セクションはテンプレのまま。手動で再実行可）" >&2
 fi
 
-echo "（意味的な数値 = quality/process は reflection-agent / 人間が埋める。自動取得できない値は unknown のままにする）"
+echo "（意味的な数値 = quality/process は、振り返りを頼まれたセッションか人間が埋める。自動取得できない値は unknown のままにする）"

@@ -16,7 +16,7 @@ Codexのスキルが一覧に出なければ再起動する。
 
 両ツールの共通ルールは`AGENTS.md`。Claude Codeは`CLAUDE.md`から同じファイルを読む。
 Claude Codeのフックは`.claude/settings.json`で動作する。Codexには同じフックを登録していないため、共通スキルの手順に従って検証・ログ記録を実行する。
-`.claude/agents/`の役割定義はCodexのネイティブなサブエージェント設定には変換していない。
+`.claude/agents/`に残っているのは検証役（`reviewer`と`security-reviewer`）だけ。Codexのサブエージェントには変換していない。Codexは同じスキルをこのセッションで読む。
 
 状態を扱うコマンドはリポジトリルートで実行する。
 

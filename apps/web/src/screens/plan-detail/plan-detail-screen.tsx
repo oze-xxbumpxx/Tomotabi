@@ -11,7 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useMe } from "@/features/auth";
 import {
   CANCEL_PLAN_OPERATION,
@@ -27,10 +27,12 @@ import {
 } from "@/features/plans";
 import {
   actorNameOf,
+  ConfirmRecordDialog,
   CREATE_ACHIEVEMENT_OPERATION,
   CREATE_BOOKING_OPERATION,
   createAchievementDraft,
   createBookingDraft,
+  RECORD_NOTES,
   RecordRowView,
   sendCreateAchievement,
   sendCreateBooking,
@@ -99,6 +101,12 @@ export function PlanDetailScreen({
   const online = useOnlineStatus();
   const [layer, setLayer] = useState<Layer | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // 達成・予約は押すと確認を開き、確認の決定で保存する（#252）。
+  const [confirming, setConfirming] = useState<
+    "achievement" | "booking" | null
+  >(null);
+  const achieveNoteId = useId();
+  const bookNoteId = useId();
   const [sheetExpired, setSheetExpired] = useState<boolean | null>(null);
   const [notAvailable, setNotAvailable] = useState<"trip" | "item" | null>(
     null,
@@ -420,12 +428,9 @@ export function PlanDetailScreen({
         icon: (
           <CheckCircle size={20} weight="fill" aria-hidden="true" />
         ),
-        onPress: () => {
-          void createAchievement.submit(
-            createAchievementDraft(tripId, planId),
-          );
-        },
+        onPress: () => setConfirming("achievement"),
         disabled: achieveBlocked || !online,
+        describedBy: achieveNoteId,
       }
     : canBook
       ? {
@@ -433,10 +438,9 @@ export function PlanDetailScreen({
           icon: (
             <CalendarCheck size={20} weight="fill" aria-hidden="true" />
           ),
-          onPress: () => {
-            void createBooking.submit(createBookingDraft(tripId, planId));
-          },
+          onPress: () => setConfirming("booking"),
           disabled: bookBlocked || !online,
+          describedBy: bookNoteId,
         }
       : undefined;
 
@@ -543,6 +547,18 @@ export function PlanDetailScreen({
         meName={displayName}
       />
       <div className="plan-detail-actions">
+        {/* 出ているボタンの分だけ、何を記録して誰に知らせるかを先に書く。
+            主ボタンは下のタブの上にあるので、説明の先頭にボタンの名前を置く（#252）。 */}
+        {canAchieve && (
+          <p id={achieveNoteId} className="record-note">
+            {`達成を記録: ${RECORD_NOTES.achievement}`}
+          </p>
+        )}
+        {canBook && (
+          <p id={bookNoteId} className="record-note">
+            {`予約を記録: ${RECORD_NOTES.booking}`}
+          </p>
+        )}
         {/* 予定を選んだ状態で支払いを記録のシートを開く（F-60）。 */}
         <Link
           className="btn-outline"
@@ -558,19 +574,12 @@ export function PlanDetailScreen({
             type="button"
             className="btn-outline"
             disabled={bookBlocked || !online}
-            onClick={() => {
-              void createBooking.submit(createBookingDraft(tripId, planId));
-            }}
+            aria-describedby={bookNoteId}
+            onClick={() => setConfirming("booking")}
           >
             <CalendarCheck size={18} aria-hidden="true" />
             予約を記録
           </button>
-        )}
-        {/* 予約はこのアプリの中の記録であることを添える（F-08） */}
-        {canBook && (
-          <p className="record-note">
-            このアプリの中の記録です。お店の予約は変わりません
-          </p>
         )}
         <button
           type="button"
@@ -626,6 +635,24 @@ export function PlanDetailScreen({
           履歴で見る
         </Link>
       </section>
+      {confirming !== null && (
+        <ConfirmRecordDialog
+          kind={confirming}
+          planName={plan.name}
+          online={online}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => {
+            setConfirming(null);
+            if (confirming === "achievement") {
+              void createAchievement.submit(
+                createAchievementDraft(tripId, planId),
+              );
+            } else {
+              void createBooking.submit(createBookingDraft(tripId, planId));
+            }
+          }}
+        />
+      )}
       {layer === "move" &&
         (tripQuery.data !== undefined ? (
           <PlanMoveSheet

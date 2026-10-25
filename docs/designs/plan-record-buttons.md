@@ -1,6 +1,6 @@
 # 設計書: plan-record-buttons（予定の詳細の達成・予約のボタンに説明と押す前の確認を足す）
 
-- ステータス: draft
+- ステータス: approved（#281）
 - レベル: L2（予定の詳細で、保存の前に確認が1回入る。APIとDBは変えない）
 - 関連: 論点の記録 `docs/discussions/plan-record-buttons.md`、#252
 

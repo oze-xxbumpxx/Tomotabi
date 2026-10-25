@@ -133,6 +133,11 @@ test("RE-01: ホームから達成を付け、記録で取り消して付け直�
     page.getByRole("heading", { name: "厳島神社" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "達成を記録" }).click();
+  // 押す前の確認で、もう一度「達成を記録」を押して保存する。
+  await page
+    .getByRole("dialog", { name: "厳島神社を達成にしますか？" })
+    .getByRole("button", { name: "達成を記録" })
+    .click();
   await expect(
     page.getByRole("status").filter({ hasText: "達成を記録しました" }),
   ).toBeVisible();
@@ -178,6 +183,11 @@ test("RE-01: ホームから達成を付け、記録で取り消して付け直�
   await eventSheetAgain.getByRole("link", { name: "予定を開く" }).click();
   await page.waitForURL(/\/trips\/[^/]+\/plans\/[^/?]+$/);
   await page.getByRole("button", { name: "達成を記録" }).click();
+  // 押す前の確認で、もう一度「達成を記録」を押して保存する。
+  await page
+    .getByRole("dialog", { name: "厳島神社を達成にしますか？" })
+    .getByRole("button", { name: "達成を記録" })
+    .click();
   await expect(
     page.getByRole("status").filter({ hasText: "達成を記録しました" }),
   ).toBeVisible();

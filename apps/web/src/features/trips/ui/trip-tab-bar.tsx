@@ -65,6 +65,8 @@ export type TripMainAction = {
   onPress: () => void;
   /** 保存中・保留の照合中など、今は押せないときtrue。 */
   disabled?: boolean;
+  /** 画面の中に置いた説明の要素のid（`aria-describedby`で結ぶ）。 */
+  describedBy?: string;
 };
 
 export function TripTabBar({
@@ -93,6 +95,7 @@ export function TripTabBar({
             className="main-action"
             onClick={action.onPress}
             disabled={action.disabled}
+            aria-describedby={action.describedBy}
           >
             {action.icon}
             {action.label}

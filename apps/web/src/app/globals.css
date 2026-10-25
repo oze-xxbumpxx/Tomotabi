@@ -979,7 +979,7 @@ dialog.dialog[open] {
   gap: var(--space-3);
 }
 
-/* 見出しの右に通知の設定への入口を置く（first-use-decisions） */
+/* 見出しの右に通知の設定へのリンクを置く（first-use-decisions） */
 .trips-head {
   display: flex;
   align-items: baseline;

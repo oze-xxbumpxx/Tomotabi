@@ -50,9 +50,9 @@ Devinは、**既定でローカル**（手元のMacのDevin CLI）で動かす�
 
 |                | ローカル（既定）                                                                                                                                                                                                                                                                               | クラウド（指示時のみ）                                                     |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 起動           | 共通受付で登録し、`delegation-launch.mjs`へ`--runner local --model swe-2-<effort> --prompt-file <非公開ファイル> --clone <専用クローン>`を渡す                                                                                                                                                 | 同じラッパーへ`--runner cloud`とrequested_modelを明示する                  |
+| 起動           | `delegation.mjs open-task`でIssueを作り、`delegation-launch.mjs <Issue番号>`へ`--runner local --model swe-2-<effort> --prompt-file <非公開ファイル> --clone <専用クローン>`を渡す                                                                                                            | 起動の確かめが済むまで使わない（`cloud_launch_verified:false`）            |
 | モデル         | `--model`で依頼ごとにSWE-2のeffortを選べる                                                                                                                                                                                                                                                     | requested_modelとobserved_modelを分ける。実値が確認できない場合は`unknown` |
-| PRの監視       | する。プロンプトで`devin-workflow` §4.5を指示すると、PRを出したあともコメントとCIを5分ごとに見て直す。反応が無ければ共有状態と既存セッションを照合し、復旧の判断はユーザーへ渡す                                                                                                               | PRのコメントとCIの失敗に自動で対応する                                     |
+| PRの監視       | する。プロンプトで`devin-workflow` §4.5を指示すると、PRを出したあともコメントとCIを5分ごとに見て直す。反応が無ければ既存セッションを確かめ、復旧の判断はユーザーへ渡す                                                                                                               | PRのコメントとCIの失敗に自動で対応する                                     |
 | 進み具合の見方 | ラッパーが生ログを状態ディレクトリの`devin-logs/issue-<n>.log`へ0600で保存し、見張り画面（`.claude/scripts/devin-watch.mjs`。`--install`で`~/.local/state/tomotabi-harness/bin/devin-watch`にリンク）をターミナルで開く。実行中のコマンド・変更中のファイル・PRとCI・最近の発言を5秒ごとに出す | Devin Webのセッション画面                                                  |
 | 注意           | 同じクローンで2つ同時に動かさない。`--sandbox`を付けると途中で止まる。書き込みは強制ではなくプロンプトでクローン内に限る                                                                                                                                                                       | Macを閉じても進む                                                          |
 
@@ -80,23 +80,10 @@ GitHub側の設定。
 
 - DevinのVMでDocker（`npm run test:api-db`）が動くか。
 
-## 共有受付と両レビューの導入
+## 委譲の受付とレビューの完了
 
-`.claude/config/delegation-review.json`の管理Issue・先頭コメント・workflow IDは、導入時に実環境で固定する。初期値の`migration_complete:false`と`cli_launch_verified:false`では新規登録と起動を止める。進行中の計画／Issue／PR／Local・Cloudセッションは固定担当者がimportで照合し、未確認はunknownに残す。importしたタスクは起動許可を持たず、申告した状態や開始条件だけでclaim／beginを許可しない。
+管理Issueの共通受付とagent-reviewのチェックは、2026-10-25にやめた（ADR-0010）。Issueは`delegation.mjs open-task`で直接作り、本文の先頭の印で同じタスクの二重起票を防ぐ。起動は専用クローンのロックを取る`delegation-launch.mjs`だけで行う。
 
-初期anchorはActions自身が作成する。管理Issue番号とcontroller workflow IDを設定した後、main限定のworkflow_dispatchでoperation=initializeを指定する。固定要求作者IDを認証し、作成済みanchorを全件照合してからIDを設定へ反映する。POSTの結果不明ではinitializeを自動再送しない。
-
-controllerは保護されたdefault branchの制御コードだけを実行する。PRイベントのlistenerはcheckoutせず、固定artifactの通知JSONだけを渡す。要求に指定されたref・コード・npmスクリプトは実行しない。
-
-必須チェックのquality・build・api-dbを保つ。agent-reviewはChecks APIでPR headに明示作成し、同じSHAを使う対象PR全件のレビューを照合する。Claude完了は固定作者の未編集の新規投稿で、現在headに対するものだけを使う。Codex完了と指摘は作者／編集者のIDと完全SHAを確認し、完了はPR内のどのコミットへのものでもよい。修正push後に要るのはClaudeの新しい完了だけで、Codexには頼み直さない（2026-10-11 ユーザーの指示）。CodexはボットのPR（Devin）を自動ではレビューしないので、最初のレビューでClaude Codeが`.claude/scripts/codex-review.mjs`でユーザーのアカウントから`@codex review`を投稿し、完了を待つ。
+レビューの完了は、現在headの完全SHAを入れたClaudeのコメント（`<!-- claude-review-done sha=... -->`）で示す。Codexのレビューは最初の1回で足り、修正push後に頼み直さない（2026-10-11 ユーザーの指示）。CodexはボットのPR（Devin）を自動ではレビューしないので、最初のレビューでClaude Codeが`.claude/scripts/codex-review.mjs`でユーザーのアカウントから`@codex review`を投稿し、完了を待つ。
 
 手元のセッションの形は2026-10-24に確かめた（`docs/designs/devin-local-session.md`の「確かめの結果」）。手元のセッションにURLは無く、IDは`aloud-seed`のような単語の組で、`devin list --format json`と書き出し（`--export`）の`session_id`に同じものが出る。書き出しは作業が終わってから出る見込みなので、起動の確定は専用クローンのロックと一覧の読み比べで行う。CLIの中での起動の再送は見られなかった（依頼のあと2分たっても新しいセッションは1つ）。
-
-次の実機確認は未実施であり、stub試験で代用しない。
-
-- CLIのsession ID／URL形式、内部の起動POST再送設定。結果不明で自動再起動しないこと。
-- controller各イベントのmain実行元、固定workflow ID、通知artifactの対応。
-- 確認PRで明示checkの関連付け、両レビュー後のsuccess、不足failure、head更新と同じSHAの全件判定。
-- CodexのAll PRs／push設定と、指摘なし完了。
-
-実機確認が済むまでagent-reviewの必須化と移行完了を宣言しない。設定変更とPRのマージはユーザーが判断する。マージ前にはreview-refreshで最新の証拠と未処理通知を確かめる。

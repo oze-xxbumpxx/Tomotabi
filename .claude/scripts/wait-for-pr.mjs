@@ -46,15 +46,6 @@ export function findLinkedPr(prs, issue, since = null) {
   return linked.length === 1 ? linked[0] : null;
 }
 
-export function registeredPrForIssue(snapshot, prs, issue) {
-  const tasks = Object.values(snapshot.tasks ?? {}).filter((task) => task.issue === issue);
-  if (tasks.length === 0) return { known: false, pr: null };
-  if (tasks.length !== 1) return { known: true, pr: null };
-  if (tasks[0].pr === null || tasks[0].pr === undefined) return { known: false, pr: null };
-  if (!Number.isSafeInteger(tasks[0].pr) || tasks[0].pr <= 0) return { known: true, pr: null };
-  return { known: true, pr: prs.find((pr) => pr.number === tasks[0].pr) ?? null };
-}
-
 function parseArgs(argv) {
   const [issueArg, ...rest] = argv;
   const issue = Number(issueArg);
@@ -109,14 +100,7 @@ async function main() {
     try {
       since ??= issueCreatedAt(args.issue);
       const prs = listPrs(since);
-      let registered = { known: false, pr: null };
-      try {
-        const { readSharedSnapshot } = await import('./delegation.mjs');
-        registered = registeredPrForIssue(await readSharedSnapshot(), prs, args.issue);
-      } catch {
-        // 旧経路はPRの発見だけに使う。起動や両レビューの成功証拠にはしない。
-      }
-      const pr = registered.known ? registered.pr : findLinkedPr(prs, args.issue, since);
+      const pr = findLinkedPr(prs, args.issue, since);
       if (pr !== null) {
         console.log(`PR #${pr.number} が見つかりました: ${pr.url}`);
         console.log(JSON.stringify({ issue: args.issue, number: pr.number, url: pr.url, title: pr.title, headRefName: pr.headRefName }));

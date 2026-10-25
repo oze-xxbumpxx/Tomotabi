@@ -9,6 +9,7 @@ import type { Me, Participant } from "@tomotabi/contracts";
 import {
   displayNameOf,
   type HomeBalance,
+  PartnerTag,
 } from "@/features/trips";
 import { formatYenDigits, yenFromDecimalString } from "@/shared/lib/yen";
 
@@ -107,7 +108,19 @@ export function HomeBalanceCard({
       </span>
       <span className="home-settle-main">
         <span className="home-settle-label">
-          <b>{fromName}</b> から <b>{toName}</b> へ
+          <b>{fromName}</b>
+          <PartnerTag
+            userId={transfer.fromUserId}
+            meUserId={me?.user.id ?? null}
+            participants={participants}
+          />{" "}
+          から <b>{toName}</b>
+          <PartnerTag
+            userId={transfer.toUserId}
+            meUserId={me?.user.id ?? null}
+            participants={participants}
+          />{" "}
+          へ
         </span>
         <span className="home-settle-amount tabular-nums">
           {amount === null ? "— —" : formatYenDigits(amount)}

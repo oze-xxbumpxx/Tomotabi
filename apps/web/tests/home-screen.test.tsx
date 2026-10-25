@@ -381,7 +381,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       .closest("section")!;
     // 参加者の名前は残額の取得を待ってから出る。
     await waitFor(() =>
-      expect(settle).toHaveTextContent(/あおい から ひなた へ/),
+      expect(settle).toHaveTextContent(/あおい（相手） から ひなた へ/),
     );
     expect(settle).toHaveTextContent("1,285");
     expect(settle).toHaveTextContent("まだ精算していない明細 2 件");
@@ -1016,6 +1016,78 @@ describe("HomeScreen (/trips/{id}/home)", () => {
     expect(
       await screen.findByRole("heading", { name: "沖縄" }),
     ).toBeInTheDocument();
+  });
+
+  it("相手の印: 精算のカードは相手の名前にだけ（相手）を付け、履歴の行には付けない", async () => {
+    stubApi({
+      home: () =>
+        json(
+          home({
+            balance: {
+              status: "ok",
+              data: {
+                transfer: {
+                  signedTotalYen: "1285",
+                  amountYen: "1285",
+                  fromUserId: partnerId,
+                  toUserId: userId,
+                  requiresTransfer: true,
+                },
+                targetCount: 2,
+              },
+            },
+            recentRecords: { status: "ok", data: [record()] },
+          }),
+        ),
+    });
+    renderScreen();
+
+    const settle = (await screen.findByRole("link", { name: "精算へ" }))
+      .closest("section")!;
+    // 相手（あおい）にだけ（相手）が付き、自分（ひなた）には付かない。
+    await waitFor(() =>
+      expect(settle).toHaveTextContent("あおい（相手） から ひなた へ"),
+    );
+    expect(within(settle).getAllByText("（相手）")).toHaveLength(1);
+    expect(settle).not.toHaveTextContent("ひなた（相手）");
+
+    // 名前が1つだけ出る履歴の行は変えない（「（相手）」を付けない）。
+    expect(
+      screen.getByText(/あおい が支払い · 折半/),
+    ).toBeInTheDocument();
+  });
+
+  it("相手の印: 参加者が取れず「相手」と出す所には（相手）を付けない", async () => {
+    stubApi({
+      home: () =>
+        json(
+          home({
+            balance: {
+              status: "ok",
+              data: {
+                transfer: {
+                  signedTotalYen: "1285",
+                  amountYen: "1285",
+                  fromUserId: partnerId,
+                  toUserId: userId,
+                  requiresTransfer: true,
+                },
+                targetCount: 2,
+              },
+            },
+          }),
+        ),
+      balance: () => notFound(),
+    });
+    renderScreen();
+
+    const settle = (await screen.findByRole("link", { name: "精算へ" }))
+      .closest("section")!;
+    // 相手の名前が取れないので「相手」とだけ出し、「相手（相手）」にしない。
+    await waitFor(() =>
+      expect(settle).toHaveTextContent("相手 から ひなた へ"),
+    );
+    expect(within(settle).queryByText("（相手）")).not.toBeInTheDocument();
   });
 
   it("URL の tripId が UUID でなければ notFound", async () => {

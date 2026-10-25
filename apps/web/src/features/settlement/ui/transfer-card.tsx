@@ -4,6 +4,7 @@ import type {
   Participant,
   Transfer,
 } from "../api/settlement-api";
+import { PartnerTag } from "@/features/trips";
 import { formatYen } from "@/shared/lib/yen";
 import { slotOf, transferDirectionOf } from "../model/breakdown";
 import { PersonAvatar } from "./person-avatar";
@@ -19,11 +20,13 @@ export function TransferCard({
   participants,
   transfer,
   targetCount,
+  meUserId = null,
   action,
 }: {
   participants: Participant[];
   transfer: Transfer;
   targetCount: number;
+  meUserId?: string | null;
   action?: ReactNode;
 }) {
   const direction = transferDirectionOf(transfer, participants);
@@ -69,7 +72,14 @@ export function TransferCard({
             name={direction.fromName}
             slot={from !== undefined ? slotOf(participants, from.userId) : null}
           />
-          <span className="settle-person-name">{direction.fromName}</span>
+          <span className="settle-person-name">
+            {direction.fromName}
+            <PartnerTag
+              userId={transfer.fromUserId}
+              meUserId={meUserId}
+              participants={participants}
+            />
+          </span>
           <span className="settle-person-role">から</span>
         </div>
         <ArrowRight
@@ -83,7 +93,14 @@ export function TransferCard({
             name={direction.toName}
             slot={to !== undefined ? slotOf(participants, to.userId) : null}
           />
-          <span className="settle-person-name">{direction.toName}</span>
+          <span className="settle-person-name">
+            {direction.toName}
+            <PartnerTag
+              userId={transfer.toUserId}
+              meUserId={meUserId}
+              participants={participants}
+            />
+          </span>
           <span className="settle-person-role">へ</span>
         </div>
       </div>

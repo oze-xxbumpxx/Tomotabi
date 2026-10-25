@@ -549,6 +549,20 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     expect(previewFetches.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("相手の印: 受け渡しのカードは相手の名前にだけ（相手）を付ける", async () => {
+    stubApi({});
+    const { container } = renderSettlement();
+    await screen.findAllByText("1,285 円");
+
+    // 向きは自分（ひなた）→ 相手（あおい）。相手の名前にだけ（相手）が付く。
+    const transfer = container.querySelector(".settle-transfer")!;
+    const names = [...transfer.querySelectorAll(".settle-person-name")].map(
+      (el) => el.textContent,
+    );
+    expect(names).toEqual(["ひなた", "あおい（相手）"]);
+    expect(screen.getAllByText("（相手）")).toHaveLength(1);
+  });
+
   it("内訳は閉じておき、差を二人分の欄や札で並べない（#250）", async () => {
     stubApi({});
     const { container } = renderSettlement();

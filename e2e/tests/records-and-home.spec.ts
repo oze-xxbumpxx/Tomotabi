@@ -264,7 +264,7 @@ test("RE-02: 終了すると予定の欄が消えて精算が上に出る。終�
     /home-settle/,
   );
   await expect(page.locator(".home-settle")).toContainText(
-    "あおい から ひなた へ",
+    "あおい（相手） から ひなた へ",
   );
   await expect(
     page.locator(".home-settle .home-settle-amount"),
@@ -394,7 +394,7 @@ test("RE-03: 確認を作ったあと支払いを取り消し、了承して記�
   ).toHaveText("ひなた");
   await expect(
     page.locator(".settle-transfer .settle-person-name").nth(1),
-  ).toHaveText("あおい");
+  ).toHaveText("あおい（相手）");
   await expect(page.getByText(/取り消し済みの戻し/)).toBeVisible();
 });
 

@@ -41,6 +41,7 @@ vi.mock("@/shared/lib/use-now", () => ({
 }));
 
 import { PaymentFormScreen } from "@/screens/payment-form/payment-form-screen";
+import { PaymentDetailScreen } from "@/screens/payment-detail/payment-detail-screen";
 import {
   burdensOf,
   CREATE_PAYMENT_OPERATION,
@@ -187,6 +188,7 @@ function stubApi(handlers: {
   trip?: Handler;
   balance?: Handler;
   plan?: Handler;
+  payment?: Handler;
   createPayment?: Handler;
 }): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -209,6 +211,13 @@ function stubApi(handlers: {
         handlers.balance !== undefined
           ? handlers.balance(init)
           : json(balanceBody()),
+      );
+    }
+    if (url === `/api/trips/${tripId}/payments/${paymentId}` && method === "GET") {
+      return Promise.resolve(
+        handlers.payment !== undefined
+          ? handlers.payment(init)
+          : json(paymentResponse()),
       );
     }
     if (url === `/api/trips/${tripId}/payments` && method === "POST") {
@@ -786,5 +795,45 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     } finally {
       putSpy.mockRestore();
     }
+  });
+});
+
+describe("支払いの詳細の相手の印（#300）", () => {
+  it("払った人と負担の内訳で、相手の名前にだけ（相手）を付ける", async () => {
+    stubApi({
+      payment: () =>
+        json(
+          paymentResponse({
+            payerUserId: otherUserId,
+            createdBy: otherUserId,
+          }),
+        ),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PaymentDetailScreen tripId={tripId} paymentId={paymentId} />
+      </QueryClientProvider>,
+    );
+
+    // 払った人は相手（あおい）→（相手）が付く。
+    const payerRow = (await screen.findByText("払った人")).closest(
+      ".payment-detail-row",
+    )!;
+    expect(payerRow).toHaveTextContent("あおい（相手）");
+
+    // 負担の内訳は、相手にだけ付き自分（ひなた）には付かない。
+    const sharesRow = screen
+      .getByText("二人の負担")
+      .closest(".payment-detail-row")!;
+    expect(sharesRow).toHaveTextContent("あおい（相手） 50% · 3,500");
+    expect(sharesRow).toHaveTextContent("ひなた 50% · 3,501");
+    expect(sharesRow).not.toHaveTextContent("ひなた（相手）");
+
+    // 名前が1つだけ出る「記録」の行は変えない。
+    const recordRow = screen
+      .getByText("記録", { selector: "dt" })
+      .closest(".payment-detail-row")!;
+    expect(recordRow).toHaveTextContent(/あおい が /);
+    expect(recordRow).not.toHaveTextContent("（相手）");
   });
 });

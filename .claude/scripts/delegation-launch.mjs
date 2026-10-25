@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile, spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +36,17 @@ export function buildDevinArgs({ runner, model, promptFile, exportFile = null })
 
 const SESSION = /^[A-Za-z0-9_-]{1,128}$/;
 const LOCK_NAME = 'devin-clone.lock';
+
+/**
+ * 専用クローンごとのロックの名前。既定のクローンは前からの`devin-clone.lock`のままにし、
+ * 変更の前に起動したDevinのロックも効くようにする。ほかのクローンは実パスの要約値で分ける。
+ */
+export function lockNameFor(clone, defaultClone = DEFAULT_CLONE) {
+  let base = defaultClone;
+  try { base = realpathSync(defaultClone); } catch { /* 既定のクローンが無くても名前は決められる */ }
+  if (clone === base) return LOCK_NAME;
+  return `devin-clone-${createHash('sha256').update(clone).digest('hex').slice(0, 16)}.lock`;
+}
 export const OBSERVE_MS = 60_000;
 export const OBSERVE_INTERVAL_MS = 2_000;
 
@@ -102,13 +113,23 @@ function processAlive(pid) {
 }
 
 /**
- * 専用クローンを使う起動を1つに絞る。起動したら、Devinのプロセスが終わるまでロックを残す
+ * 1つの専用クローンを使う起動を1つに絞る（クローンが違えば並行で起動できる）。起動したら、Devinのプロセスが終わるまでロックを残す
  * （同じクローンで2つの作業が混ざらないため）。記録したDevinのプロセスが終わっていれば
  * 取り直す。プロセスが分からないロック（起動の結果が不明なもの）は自動で消さず、人が確かめる。
  */
-export function acquireCloneLock(stateDir, { isAlive = processAlive } = {}) {
+export function acquireCloneLock(stateDir, { clone, isAlive = processAlive } = {}) {
   mkdirSync(stateDir, { recursive: true, mode: 0o700 });
-  const path = join(stateDir, LOCK_NAME);
+  const name = lockNameFor(clone);
+  const path = join(stateDir, name);
+  // クローンごとに分ける前のロックには、どのクローンかの記録が無い。既定以外のクローンで
+  // 取られたかもしれないので、そのDevinが動いているかもしれないあいだは、どのクローンでも起動しない。
+  const legacy = join(stateDir, LOCK_NAME);
+  if (name !== LOCK_NAME && existsSync(legacy)) {
+    let previous = null;
+    try { previous = JSON.parse(readFileSync(legacy, 'utf8')); } catch { previous = null; }
+    const pid = previous?.devin_pid;
+    if (typeof previous?.clone !== 'string' && (!Number.isSafeInteger(pid) || pid <= 0 || isAlive(pid))) throw new Error('クローンの記録が無いロックがあります');
+  }
   if (existsSync(path)) {
     let previous = null;
     try { previous = JSON.parse(readFileSync(path, 'utf8')); } catch { previous = null; }
@@ -117,13 +138,13 @@ export function acquireCloneLock(stateDir, { isAlive = processAlive } = {}) {
     rmSync(path, { force: true });
   }
   const fd = openSync(path, 'wx', 0o600);
-  try { writeFileSync(fd, JSON.stringify({ wrapper_pid: process.pid, devin_pid: null, at: new Date().toISOString() })); } finally { closeSync(fd); }
+  try { writeFileSync(fd, JSON.stringify({ clone, wrapper_pid: process.pid, devin_pid: null, at: new Date().toISOString() })); } finally { closeSync(fd); }
   let held = false;
   return {
     /** 起動したDevinのプロセスを書いて、ロックを残す。pidが分からなければnullのまま残す。 */
     hold(devinPid) {
       held = true;
-      writeFileSync(path, JSON.stringify({ wrapper_pid: process.pid, devin_pid: Number.isSafeInteger(devinPid) && devinPid > 0 ? devinPid : null, at: new Date().toISOString() }), { mode: 0o600 });
+      writeFileSync(path, JSON.stringify({ clone, wrapper_pid: process.pid, devin_pid: Number.isSafeInteger(devinPid) && devinPid > 0 ? devinPid : null, at: new Date().toISOString() }), { mode: 0o600 });
     },
     /** 起動しなかったときだけロックを外す。 */
     finish() {
@@ -177,9 +198,9 @@ export async function launchDelegation(options, dependencies = {}) {
   let lock;
   try {
     clone = realpathSync(options.clone ?? DEFAULT_CLONE);
-    lock = (dependencies.acquireCloneLock ?? acquireCloneLock)(stateDir, { isAlive: dependencies.isAlive ?? processAlive });
+    lock = (dependencies.acquireCloneLock ?? acquireCloneLock)(stateDir, { clone, isAlive: dependencies.isAlive ?? processAlive });
   } catch {
-    return { exitCode: 4, state: 'unknown', reason: `専用クローンを使う別の起動があるか、専用クローンがありません。${LOCK_NAME}を確かめてください` };
+    return { exitCode: 4, state: 'unknown', reason: `このクローンを使う別の起動があるか、クローンがありません。状態の置き場の${clone === undefined ? LOCK_NAME : lockNameFor(clone)}を確かめてください` };
   }
   const listSessions = dependencies.listSessions ?? listLocalSessions;
   let spawned = false;

@@ -82,7 +82,7 @@ GitHub側の設定。
 
 ## 委譲の受付とレビューの完了
 
-管理Issueの共通受付とagent-reviewのチェックは、2026-10-25にやめた（ADR-0010）。Issueは`delegation.mjs open-task`で直接作り、本文の先頭の印で同じタスクの二重起票を防ぐ。起動は専用クローンのロックを取る`delegation-launch.mjs`だけで行う。
+管理Issueの共通受付とagent-reviewのチェックは、2026-10-25にやめた（ADR-0010）。Issueは`delegation.mjs open-task`で直接作り、本文の先頭の印で同じタスクの二重起票を防ぐ。起動は専用クローンのロックを取る`delegation-launch.mjs`だけで行う。ロックはクローンごとなので、クローンを足せば並行で起動できる（`--clone`で渡す）。
 
 レビューの完了は、現在headの完全SHAを入れたClaudeのコメント（`<!-- claude-review-done sha=... -->`）で示す。Codexのレビューは最初の1回で足り、修正push後に頼み直さない（2026-10-11 ユーザーの指示）。CodexはボットのPR（Devin）を自動ではレビューしないので、最初のレビューでClaude Codeが`.claude/scripts/codex-review.mjs`でユーザーのアカウントから`@codex review`を投稿し、完了を待つ。
 

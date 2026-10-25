@@ -162,7 +162,7 @@ Devinに委譲したIssueのレビュー指摘は、上の11ステップ（振�
 ## 回帰評価の方法
 
 1. このセッションが`improve-harness`を読み、提案ごとに確認一覧（`.claude/evals/folded-loop-checklist.md`）から対象の依頼を選ぶ。古い`.claude/evals/cases/`は配布元向けで休眠のため使わない。
-2. before（現状）とafter（差分適用後）で同じ依頼を2回ずつ渡し、読んだスキル・起動した検証役・止めたフックが表と合うかを比べる。採点の軸が要るときは`.claude/evals/rubrics/scoring-rubric.md`を両方に使う。
+2. before（現状）とafter（差分適用後）で同じ依頼を2回ずつ渡し、読んだスキル・起動した検証役・止めたフックが表と合うかを比べる。Claude CodeとCodexは別々に評価する。役をスキルへ移す変更は、同じ一覧の「成果物まで確かめる比較」も行い、承認・実装・レビューまでの証拠を残す。未実行と静的点検を実測から分ける。採点の軸が要るときは`.claude/evals/rubrics/scoring-rubric.md`を両方に使う。
 3. **1軸でも悪化（スコア低下・劣化指標増・質問/トークン増のみ）があれば採用しない。**
 4. 結果を`evaluations/<IMP-...>.md`に残し、proposalの「評価結果」へ反映する。
 

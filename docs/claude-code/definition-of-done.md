@@ -13,7 +13,7 @@
 | Format check       | `unavailable`        | Prettier未導入                                                                                         |
 | Unit / Integration | `npm test`           | Vitest（web / api）。実DBの結合は`npm run test:api-db`（Dockerが必要）                              |
 | Contract / Schema  | `npm run api:check` / `npm run db:check` | API契約を変えたら`api:check`、DBスキーマを変えたら`db:check`                            |
-| Harness            | `npm run test:harness` | `.claude/`か`.agents/`を変えたときに実行。CIでは実行されない                                      |
+| Harness            | `npm run test:harness` | `.claude/`か`.agents/`を変えたときに実行。CIのharnessジョブでも実行する                                      |
 | E2E                | `unavailable`        | Playwright未導入                                                                                       |
 | 依存脆弱性         | `npm audit`          | security-reviewerが、起動条件に当たるとき実行する                                                      |
 

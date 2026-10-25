@@ -17,7 +17,7 @@ description: >
 
 - `reviewer`。実装のあと。品質と整合性。コードは直させない。
 - `security-reviewer`。orchestration-policyの「必ず起動する」に当たるとき。`reviewer`と並行してよい。
-- `Explore`。ファイルを広く探すときだけ。`model`は`haiku`。当たった場所と結論だけを持ち帰らせる。
+- 広い探索。ファイルを広く探すときだけ。当たった場所と結論だけを持ち帰らせる。起動方法は下の「ツールごとの起動方法」に従う。
 
 `orchestrator`、`architecture-designer`、`implementation-planner`、`test-designer`、`implementer`、`reflection-agent`、`agent-evaluator`、`agent-improvement-manager`は定義が無い。起動しない。
 
@@ -25,7 +25,7 @@ description: >
 
 1. [classify-change](../classify-change/SKILL.md)でレベルを決める。判定、理由、ユーザー承認の要否、作らない成果物を短く示す。
 2. `feature-name`（kebab-case）を決める。L2/L3だけ`.claude/state/current-feature`に1行で書く。続けて`node .claude/scripts/discussion.mjs init <feature-name> --level L2|L3 --title <機能の名前>`を実行する。
-3. L0は読んで答える。実装しない。広い探索だけ`Explore`。
+3. L0は読んで答える。実装しない。子に渡せるのは広い探索だけ。
 4. L1は[implement-change](../implement-change/SKILL.md)を読んで直す。設計書・計画・試験計画は作らない。振る舞いが変わる修正なら`reviewer`を起動する。`security-reviewer`は起動しない。
 5. L2/L3はコードを変える前に、次をこのセッションで書く。
    - [ask-questions](../ask-questions/SKILL.md)。優先度が高い問いを出して、答えが来るまで該当の節を書かない。
@@ -43,6 +43,10 @@ description: >
 
 目的、対象範囲、対象外、参照ファイル、返してほしい形（指摘の表と、見なかった範囲）だけを渡す。設計の全文や調査の経過は貼らない。検証役はコードを直さない。
 
-## モデル
+## ツールごとの起動方法
 
-検証役のモデルは各定義ファイルの`model`。広い検索を検証役にやらせない。L3の方針決めでは、メインをFableへ切り替える提案をしてよい。切り替えはユーザーが行う。`CLAUDE_CODE_SUBAGENT_MODEL`は設定しない。
+- Claude Codeは`.claude/agents/reviewer.md`と`security-reviewer.md`の定義を起動し、モデルは各定義の`model`に従う。広い探索は組み込みの`Explore`を`haiku`で起動する。`CLAUDE_CODE_SUBAGENT_MODEL`は設定しない。L3の方針決めではFableへの切り替えを提案してよい。切り替えはユーザーが行う。
+- Codexは利用可能な子エージェント機能で検証・探索を依頼する。検証では該当する`.claude/agents/`の本文を指示として渡す。このファイル群はCodexの登録済みエージェントではない。`model`、`tools`などClaude Code用のfrontmatterは起動設定として渡さず、Codexの既定モデルを使う。実装の経過を含む会話全体を渡さず、目的・範囲・参照パス・返却形式だけで別の文脈を作る。探索も同じ方法で依頼する。
+- 子エージェント機能が利用できなければ、その制約と自己点検の範囲を報告する。独立レビュー済みとは扱わない。広い検索を検証役にやらせない。
+
+Claude Codeのフックと`permissions.deny`はCodexでは自動実行されない。Codexは`AGENTS.md`の破壊的操作の事前確認を守り、必要な成果物と品質コマンドをこのセッションで確認する。ハーネスの状態を扱うコマンドには`HARNESS_NAMESPACE=tomotabi-harness`を付ける。

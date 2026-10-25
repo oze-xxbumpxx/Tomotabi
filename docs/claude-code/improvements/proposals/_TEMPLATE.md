@@ -1,11 +1,11 @@
 # <IMP-YYYY-NNN>: <タイトル>
 
-> agent-improvement-managerが複数候補を横断分析して起票。重要設定は本適用せず差分を残す。
+> メインのセッションが`improve-harness`で複数候補を横断して起票。重要設定は本適用せず差分を残す。
 > 承認境界は[../../improvement-cycle.md](../../improvement-cycle.md) §承認境界 を参照。
 
 - **ステータス**: proposal / evaluated / accepted / rejected
-- **対象AgentまたはSkill**: <reflection-agent / Skill: create-design-document / Rule: ... / CLAUDE.md / Hook: ...>
-- **承認区分**: 自動反映可 / managerレビュー後可（非破壊・軽微）/ 人間承認必須
+- **対象AgentまたはSkill**: <Skill: reflect-task / Skill: create-design-document / Rule: ... / CLAUDE.md / Hook: ...>
+- **承認区分**: 自動反映可 / 提案書つき軽微/ 人間承認必須
 - **起票日**: YYYY-MM-DD
 - **元候補**: candidates/<task-id>.md（複数可）
 
@@ -50,16 +50,16 @@
 
 ## 評価方法
 
-- 対象evalケース: `.claude/evals/cases/<...>.md`
+- 対象evalケース: `.claude/evals/folded-loop-checklist.md`の対象ケース（役の移行は成果物までの比較も含む）
 - 観測軸: 要件理解 / 設計品質 / 実装整合性 / テスト網羅 / レビュー品質 / 不要作業量 / トークン効率
 
 ## 評価結果
 
-<agent-evaluatorのレポートevaluations/<IMP-...>.mdの要約。before→afterの改善・悪化>
+<このセッションがまとめたevaluations/<IMP-...>.mdへの参照。移行前後の改善・悪化、実行済みと未実行、成果物・承認・レビューの証拠>
 
 ## 採用または却下理由
 
-<回帰評価で悪化なし → 採用 / 1軸でも悪化 → 却下。判断者（manager / 人間）を明記>
+<回帰評価で悪化なし → 採用 / 1軸でも悪化 → 却下。判断者（メインのセッション / ユーザー）を明記>
 
 ## ロールバック方法
 

@@ -61,7 +61,7 @@ description: >
 
 | Level | このセッションで読むもの | 検証役 | 必須成果物 |
 | ----- | --- | --- | --- |
-| 0 | コードを読む。広ければ`Explore` | なし | なし（必要なら提案） |
+| 0 | コードを読む。広ければ探索を子に渡す（Claude Codeは`Explore`、Codexは利用可能な子エージェント機能） | なし | なし（必要なら提案） |
 | 1 | `implement-change` | 振る舞いが変わるなら`reviewer` | なし（報告に変更理由） |
 | 2 | `ask-questions`、`create-design-document`、`create-implementation-plan`、`create-test-plan`、承認後`implement-change` | `reviewer`。`security-reviewer`は条件付き | designs / implementation-plans / tests |
 | 3 | L2に加え`create-requirements-document`。ADR級なら`create-adr` | `reviewer`と`security-reviewer` | requirements / designs / implementation-plans / tests / decisions(ADR) |

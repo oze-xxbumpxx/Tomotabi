@@ -1,5 +1,6 @@
 "use client";
 
+import { CaretLeft } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,7 @@ import {
   type PushSubscription,
 } from "@/features/notifications";
 import { useBalance } from "@/features/settlement";
+import { Dialog } from "@/shared/ui/dialog";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
@@ -59,6 +61,7 @@ export function NotificationSettingsScreen({
   const [disablingId, setDisablingId] = useState<string | null>(null);
   const [flowMessage, setFlowMessage] = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
 
   const me = meState.status === "ready" ? meState.me : null;
   const userId = me?.user.id ?? null;
@@ -278,8 +281,9 @@ export function NotificationSettingsScreen({
   return (
     <main className="notify-page">
       <div className="notify-head">
-        <Link className="plan-back" href={backHref} aria-label="戻る">
-          ←
+        <Link className="plan-back" href={backHref}>
+          <CaretLeft size={18} weight="bold" aria-hidden="true" />
+          {backHref === "/trips" ? "旅行一覧" : "ホーム"}
         </Link>
         <h1 className="page-title notify-title">この端末の通知</h1>
       </div>
@@ -302,7 +306,7 @@ export function NotificationSettingsScreen({
           partnerName={partnerName}
           busy={busy}
           onEnable={() => void enable()}
-          onStop={() => void stopThisDevice()}
+          onStop={() => setStopConfirmOpen(true)}
         />
         {flowMessage !== null && (
           <p role="alert" className="error">
@@ -344,6 +348,37 @@ export function NotificationSettingsScreen({
       <p className="notify-note">
         ログアウトすると、この端末にはこれから送る通知が届かなくなります。
       </p>
+
+      {stopConfirmOpen && (
+        <Dialog
+          title="この端末の通知を止めますか？"
+          onClose={() => setStopConfirmOpen(false)}
+        >
+          <p className="dialog-body">
+            止めると、この端末には通知が届かなくなります。あとからこの画面でもう一度登録できます。
+          </p>
+          <div className="dialog-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setStopConfirmOpen(false)}
+            >
+              やめる
+            </button>
+            <button
+              type="button"
+              className="btn-danger"
+              disabled={busy}
+              onClick={() => {
+                setStopConfirmOpen(false);
+                void stopThisDevice();
+              }}
+            >
+              止める
+            </button>
+          </div>
+        </Dialog>
+      )}
     </main>
   );
 }

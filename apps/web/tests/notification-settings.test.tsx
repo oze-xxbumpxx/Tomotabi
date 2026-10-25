@@ -448,15 +448,23 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
     ).toBeEnabled();
   });
 
-  it("画面の「←」は検証済みの戻る先へ行く", async () => {
+  it("戻るリンクは行き先の名前を出す。旅行のホームなら「ホーム」", async () => {
     stubPushEnv();
     stubApi({});
     renderScreen({
       backHref: `/trips/${tripId}/home`,
       tripId,
     });
-    const back = await screen.findByRole("link", { name: "戻る" });
+    const back = await screen.findByRole("link", { name: "ホーム" });
     expect(back).toHaveAttribute("href", `/trips/${tripId}/home`);
+  });
+
+  it("戻る先が旅行の一覧なら「旅行一覧」", async () => {
+    stubPushEnv();
+    stubApi({});
+    renderScreen({ backHref: "/trips", tripId: null });
+    const back = await screen.findByRole("link", { name: "旅行一覧" });
+    expect(back).toHaveAttribute("href", "/trips");
   });
 });
 
@@ -757,6 +765,10 @@ describe("PW-06 止める", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "この端末の通知を止める" }),
     );
+    // 確認を出し、「止める」で今までどおり止める。
+    await userEvent.click(
+      await screen.findByRole("button", { name: "止める" }),
+    );
     await waitFor(() => {
       expect(disable).toHaveBeenCalled();
       expect(subscription.unsubscribe).toHaveBeenCalled();
@@ -767,6 +779,36 @@ describe("PW-06 止める", () => {
         "tomotabi:push-subscription:" + userId,
       ),
     ).toBeNull();
+  });
+
+  it("確認で「やめる」なら止める要求を送らない", async () => {
+    const subscription = browserSubscriptionMock();
+    stubPushEnv({ permission: "granted", subscription });
+    window.localStorage.setItem(
+      "tomotabi:push-subscription:" + userId,
+      ownSubscriptionId,
+    );
+    const disable = vi.fn(() => new Response(null, { status: 204 }));
+    stubApi({
+      subscriptions: () => json({ items: [subscriptionRow()] }),
+      disable,
+    });
+    renderScreen();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "この端末の通知を止める" }),
+    );
+    expect(
+      await screen.findByText("この端末の通知を止めますか？"),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "やめる" }),
+    );
+    expect(disable).not.toHaveBeenCalled();
+    expect(subscription.unsubscribe).not.toHaveBeenCalled();
+    // 閉じるともとの画面に戻り、もう一度開ける。
+    expect(
+      screen.queryByText("この端末の通知を止めますか？"),
+    ).not.toBeInTheDocument();
   });
 
   it("同じセッションに有効な行が新旧並ぶときは、記憶した購読の行を止める", async () => {
@@ -797,6 +839,9 @@ describe("PW-06 止める", () => {
     renderScreen();
     await userEvent.click(
       await screen.findByRole("button", { name: "この端末の通知を止める" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "止める" }),
     );
     // 先頭の古い行ではなく、記憶した新しい購読の行を止める。
     await waitFor(() => {

@@ -95,9 +95,12 @@ test("PE-01: 旅行のメニューから設定を開き、この端末の通知�
     page.getByRole("heading", { name: /通知を受け取る端末（1 \/ 3台）/ }),
   ).toBeVisible();
 
-  // この端末の通知を止める → 一覧が空になる。
+  // この端末の通知を止める → 確認を出し、「止める」で一覧が空になる。
   await page
     .getByRole("button", { name: "この端末の通知を止める" })
+    .click();
+  await page
+    .getByRole("button", { name: "止める", exact: true })
     .click();
   await expect(
     page.getByText("登録されている端末はありません"),

@@ -2,12 +2,13 @@
 name: reflect-task
 description: >
   タスク完了後の振り返りを行い、再利用可能な知見と改善候補を抽出する手順とチェックリスト。
-  reflection-agentがdocs/claude-code/improvements/candidates/<task-id>.mdを作成するときに使う。
+  ユーザーが振り返りを頼んだとき、このセッションで
+  docs/claude-code/improvements/candidates/<task-id>.mdを書く。毎タスクでは使わない。
 ---
 
 # タスク振り返りスキル
 
-reflection-agentがタスク完了後の振り返りを行い、Memory候補・改善候補を抽出する手順。
+タスク完了後の振り返りを、このセッションで行い、Memory候補と改善候補を抽出する手順。
 **設定ファイルは変更しない。** 出力は`docs/claude-code/improvements/candidates/<task-id>.md`。
 正典は[improvement-cycle.md](../../../docs/claude-code/improvement-cycle.md)と
 [memory-policy.md](../../../docs/claude-code/memory-policy.md)。

@@ -15,7 +15,7 @@
 | Contract / Schema  | `npm run api:check` / `npm run db:check` | API契約を変えたら`api:check`、DBスキーマを変えたら`db:check`                            |
 | Harness            | `npm run test:harness` | `.claude/`か`.agents/`を変えたときに実行。CIでは実行されない                                      |
 | E2E                | `unavailable`        | Playwright未導入                                                                                       |
-| 依存脆弱性         | `npm audit`          | security-reviewerが実行                                                                                |
+| 依存脆弱性         | `npm audit`          | security-reviewerが、起動条件に当たるとき実行する                                                      |
 
 > ゲートは`bash .claude/scripts/run-quality-gates.sh`で実行する。ロックファイルから
 > パッケージマネージャー（本リポジトリではnpm）を検出し、既定では休眠中の試験を除いて回る。
@@ -91,7 +91,7 @@ Level 2に加えて：
 
 - `docs/requirements/<feature>.md`を作成・更新。
 - 必要なADR（`docs/decisions/ADR-<番号>-<タイトル>.md`）を作成。
-- 契約の後方互換性を確認（architecture-designerの設計に対しreviewerが確認）。
+- 契約の後方互換性を確認（設計書のContract節に対しreviewerが確認）。
 - データ移行・ロールバック手順を確認。
 - セキュリティ確認（秘密情報・権限・入力検証）。
 - 性能確認（明らかな劣化が無いか）。
@@ -100,7 +100,7 @@ Level 2に加えて：
   - Codex委譲ルートでも同じ。受け入れレビュー結果はPR本文だけでは足りず、
     `docs/reviews/<feature>.md`への記録が完了条件（正本。PR要約は任意）。
 - review tier `R3`のtriggerと、専門レビュー・rollbackの証拠を記録。
-- `docs/claude-code/improvements/candidates/<task-id>.md`に振り返り（reflection-agent）。
+- 振り返り（`docs/claude-code/improvements/candidates/<task-id>.md`）は、改善サイクルが休眠のあいだは完了条件にしない。ユーザーが頼んだとき、このセッションが`reflect-task`で書く。
 
 ## 判定の原則
 

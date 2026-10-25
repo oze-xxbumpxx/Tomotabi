@@ -2,9 +2,8 @@
 
 @AGENTS.md
 
-共通の開発ルールと現在のプロジェクト状態はAGENTS.mdに従う。
-前回の作業はlogs/ の最新の日付ファイルを参照する。
-日常のスキルは .claude/skills/、役割定義は .claude/agents/ に配置している。
-人が読む文章（docs・ログ・Issue・PR・報告）を書くときは`shizen-nihongo`スキルを読み込み、`.claude/rules/writing-style.md`と合わせて使う。
-ハーネスのフックは`.claude/settings.json`で設定済み。
-他のエージェント（Devinなど）に渡すIssueを`gh issue create`したら、`.claude/scripts/wait-for-pr.mjs`でPRを待ち、`review-devin-pr`スキルでレビューする（フックが促す）。
+共通の開発ルールと現在の状態はAGENTS.md。前回の作業はlogs/の最新。
+機能の追加・修正は`develop-feature`スキルをこのセッションで進める。子エージェントは検証（`reviewer`、条件を満たすとき`security-reviewer`）と、広い探索（`Explore`）だけ。
+人が読む文章は`shizen-nihongo`スキルと`.claude/rules/writing-style.md`。
+フックは`.claude/settings.json`。危険な操作はフックが止める。
+Devinへ渡したIssueのあとは`.claude/scripts/wait-for-pr.mjs`と`review-devin-pr`スキル。

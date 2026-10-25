@@ -21,8 +21,8 @@ import { join, basename } from 'node:path';
 
 const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-// Agent()ツールの保持を許可するAgent（指揮・改善統括。IMP-2026-031でreviewerから除去）
-const AGENT_TOOL_ALLOWED = new Set(['orchestrator', 'agent-improvement-manager']);
+// プロジェクト内のAgentは検証役だけ。Agent()でさらに子を起動しない。
+const AGENT_TOOL_ALLOWED = new Set();
 // Claude Code組み込みAgent（.claude/agents/ に定義ファイルが無い。存在チェックから除外）
 const BUILTIN_AGENTS = new Set(['Explore']);
 // 公式エイリアスとclaude-<family>-... 形式。Cursorのinheritも含む。
@@ -263,9 +263,11 @@ function main() {
         if (fm.tools) {
           const refs = referencedAgents(fm.tools);
           if (refs.length > 0 && fm.name && !AGENT_TOOL_ALLOWED.has(fm.name)) {
-            warns.push(
-              `${rel}: Agent() ツールは ${[...AGENT_TOOL_ALLOWED].join(' / ')} のみ想定（過剰権限の疑い）`,
-            );
+            const allowed =
+              AGENT_TOOL_ALLOWED.size > 0
+                ? [...AGENT_TOOL_ALLOWED].join(' / ')
+                : 'なし（検証役は他のエージェントを起動しない）';
+            warns.push(`${rel}: Agent() ツールの保持は ${allowed}（過剰権限の疑い）`);
           }
           for (const r of refs) {
             if (BUILTIN_AGENTS.has(r)) continue;

@@ -16,16 +16,16 @@ CLAUDE.md / Hook）を**半自動型**で段階的に改善するための記録
 2. **毎タスクAgent定義を変更しない。** 1回の失敗で直すと特定事例へ過剰適応する。
    `単発 → Memory` / `繰り返す → 改善候補` / `検証済み → Agent・Skill・Rule`の段階を守る。
 3. **改善前後を評価する。** 指示を増やすだけでは改善しない。不要な指示の削除・移動も改善に
-   含む。`agent-evaluator`の回帰評価で悪化しないことを確認してから採用する。
+   含む。`.claude/evals/folded-loop-checklist.md`で、期待するスキルとフックが壊れていないことを確認してから採用する。
 
 ## ディレクトリ
 
 | パス                     | 内容                                         | 主担当                     |
 | ------------------------ | -------------------------------------------- | -------------------------- |
-| `improvement-backlog.md` | 全候補・提案の一覧（ID・ステータス）         | reflection-agent / manager |
-| `candidates/`            | タスクごとの改善候補（`<task-id>.md`）       | reflection-agent           |
-| `proposals/`             | 横断分析後の改善提案書（`<proposal-id>.md`） | agent-improvement-manager  |
-| `evaluations/`           | 提案の回帰評価レポート（`<proposal-id>.md`） | agent-evaluator            |
+| `improvement-backlog.md` | 全候補・提案の一覧（ID・ステータス）         | `reflect-task` / `improve-harness` |
+| `candidates/`            | タスクごとの改善候補（`<task-id>.md`）       | `reflect-task`             |
+| `proposals/`             | 横断分析後の改善提案書（`<proposal-id>.md`） | `improve-harness`          |
+| `evaluations/`           | 提案の回帰評価レポート（`<proposal-id>.md`） | `improve-harness`          |
 | `accepted/`              | 承認・適用済み提案                           | （承認後に移動）           |
 | `rejected/`              | 却下・不採用提案（理由付き）                 | manager / 人間             |
 | `incidents/`             | 重大インシデント記録（改善トリガー）         | 検知者                     |

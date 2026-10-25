@@ -1,6 +1,8 @@
 # 改善サイクル（半自動型Agent改善）
 
-タスク実行で得た知見を蓄積し、Agent構成を段階的に改善する仕組みの全体像。保存先分類は
+2026-10-25以降、`reflection-agent`、`agent-improvement-manager`、`agent-evaluator`は子エージェントではない。振り返りは`reflect-task`、横断の提案と確認一覧は`improve-harness`を、メインのセッションが読む。下の手順はそのときの仕事の順。`AGENTS.md`で休眠のあいだは、ユーザーが頼んだときだけ実行する。
+
+タスク実行で得た知見を蓄積し、スキルとフックを段階的に直す仕組みの全体像。保存先分類は
 [memory-policy.md](./memory-policy.md)、記録の置き場は
 [improvements/README.md](./improvements/README.md)を参照。
 
@@ -13,14 +15,14 @@
 
 ## サイクル（11ステップ）
 
-1. タスクを実行する（Orchestrator主導の通常開発フロー）。
-2. Reviewerが成果物を評価する。
-3. reflection-agentが振り返りを作成する。
+1. タスクを実行する（`develop-feature`の通常の流れ）。
+2. `reviewer`が成果物を評価する。
+3. このセッションが`reflect-task`で振り返りを作成する（休眠中はユーザーが頼んだときだけ）。
 4. 再利用可能な知見をMemory候補として抽出する。
 5. 改善候補を`improvements/candidates/<task-id>.md`とbacklogへ保存する。
-6. 複数タスクの候補をagent-improvement-managerが横断分析する。
-7. Agent / Skill / Rule / CLAUDE.md / Hookの変更案（提案書）を作成する。
-8. agent-evaluatorが過去の代表タスク（`.claude/evals`）で回帰評価する。
+6. 複数タスクの候補を、このセッションが`improve-harness`で横断して見る。
+7. スキル、ルール、CLAUDE.md、フックの変更案（提案書）を作成する。
+8. `.claude/evals/folded-loop-checklist.md`で、期待するスキルとフックに届くかを見る。
 9. 改善前後（before / after）の結果を比較する。
 10. 承認された変更だけを正式に反映する（`accepted/`へ移動）。
 11. 変更理由と評価結果を記録する（proposal・backlog・必要ならCLAUDE.md/Ruleのコメント）。
@@ -35,17 +37,18 @@
    PR レビュー ──→ ブランチへ適用 → レビュー後 accepted/ へ移動
 ```
 
-## 登場エージェント
+## 読むスキル
 
-| Agent                     | モデル   | 役割                     | 変更権限                                             |
-| ------------------------- | -------- | ------------------------ | ---------------------------------------------------- |
-| reflection-agent          | sonnet-5 | 振り返り・候補抽出       | 設定変更不可（candidatesのみWrite）                |
-| agent-improvement-manager | opus-5   | 横断分析・提案・軽微反映 | 重要設定は不可（提案のみ）。軽微はproposal付きで可 |
-| agent-evaluator           | sonnet-5 | 回帰評価                 | 変更不可（evaluationsのみWrite）                   |
+子エージェントとしては起動しない。変更権限は以前と同じ。
+
+| スキル | 役割 | 変更権限 |
+| --- | --- | --- |
+| `reflect-task` | 振り返りと候補の抽出 | 設定は変えない（candidatesだけ書く） |
+| `improve-harness` | 横断の提案と、確認一覧での照合 | 重要な設定は提案のみ。軽微な反映も提案書を残す |
 
 ## 実行タイミング
 
-agent-improvement-managerを起動するのは次のいずれか。**毎タスクは起動しない。**
+`improve-harness`を読むのは次のいずれか。**毎タスクは読まない。**
 
 - 5タスク完了ごと
 - 同種の問題が3件蓄積した場合
@@ -54,8 +57,8 @@ agent-improvement-managerを起動するのは次のいずれか。**毎タス�
 - Agent設定を変更する前 / 変更後の回帰評価時
 
 > 短期的事象に過剰適応せず、複数タスクで再現した傾向だけを正式設定へ反映する。
-> reflection-agentはfeature完了時に動いてよい（候補を貯めるだけで設定は変えない）。
-> 個人開発ライトモードでは毎セッション必須にしない（usage-guide §1.1）。
+> `reflect-task`は、ユーザーが頼んだときに候補を貯めるだけにする。設定は変えない。
+> 休眠中は毎セッション必須にしない。
 
 ### 減速ルール（IMP-2026-030）
 
@@ -87,7 +90,7 @@ Devinに委譲したIssueのレビュー指摘は、上の11ステップ（refle
 - **承認**: 既存の承認境界どおり、ハーネスのPRでユーザーがレビュー・マージする。
 - **事後評価**: evalsの代わりに、昇格後の3委譲でその`category`が0件かを`summary`で見る。再発したらproposalに追記する。
 - **減速ルールとの関係**: 早期昇格はしない（例外は「確証あり・修正極小」だけ）。閾値は機械で数えるため、判断の揺れで早まらない。
-  委譲が増えTomotabi用のevalsが整ったら、記録をreflection-agentの入力にして11ステップに合流させる。
+  委譲が増えたら、記録を`reflect-task`の入力にして上の手順に合流させる。
 
 ## 計測の原則（セッション内確定 / IMP-2026-019方針A）
 
@@ -97,10 +100,10 @@ Devinに委譲したIssueのレビュー指摘は、上の11ステップ（refle
 
 - 転記先の正は`improvements/metrics/<task-id>.yml`。横断集計・振り返り・改善評価の入力は
   **コミット済みのmetrics YAMLのみ**とする（subagent-logを過去に遡って読む前提を置かない）。
-- 転記タイミング: orchestratorはL2/L3の委譲完了後（L3では主要委譲の完了ごとでもよい）、
+- 転記タイミング: L2/L3は検証が終わったあと（大きい変更は区切りごとでもよい）、
   close-sessionは毎セッション（feature未完了でも`machine:`セクションは転記する）。
 - 相関の前提2件（2026-07-09実地トライアルで確認）: ①`.claude/state/current-feature`は
-  **Sub-agent委譲より前**に設定されていること（SubagentStop Hookが記録時点の値を読むため）。
+  **検証役を起動するより前**に設定されていること（SubagentStopフックが記録時点の値を読むため）。
   ②リモートの自動命名ブランチ（feature名を含まない）では
   `collect-task-metrics.mjs --branch <実ブランチ部分一致>`を明示すること。
 - **フェーズ比較**: 機械集計の既定はセッション全体。設計フェーズ限定のbefore/afterなど

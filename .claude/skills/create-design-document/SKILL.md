@@ -2,7 +2,8 @@
 name: create-design-document
 description: >
   機能の技術設計書をdocs/designs/<feature-name>.mdに作成する手順とテンプレート。
-  architecture-designerがL2/L3の設計時に使う。対象外項目は削除せず「対象外」と明記する。
+  L2/L3の設計をこのセッションで書くときに使う。実装コードは変えない。
+  対象外項目は削除せず「対象外」と明記する。
 ---
 
 # 設計書作成スキル
@@ -12,7 +13,7 @@ description: >
 
 ## 手順
 
-1. 入力を確認する：要求メモ（Orchestrator）、`AGENTS.md`、関連する既存実装。
+1. 入力を確認する：このセッションの依頼、`AGENTS.md`、関連する既存実装。
    未作成のアーキテクチャ / ドメイン文書は読まない。
 2. 既存の`docs/designs/<feature-name>.md`があれば**更新**する（重複作成しない）。
    書く前に[ask-questions](../ask-questions/SKILL.md)で「工程: 設計・優先度: 高」の問いを出す。

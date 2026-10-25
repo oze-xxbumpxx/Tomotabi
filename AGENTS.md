@@ -14,12 +14,13 @@ Claude CodeとCodexは、このリポジトリの同じハーネス・成果物�
 **現行（今すぐ使う）**
 
 - 作業分担、変更レベル分類、日次ログ、危険操作ガード、実在する品質コマンド、ハーネス試験（日常は`bash .claude/scripts/run-quality-gates.sh`。全件は`node --test .claude/tests/*.test.mjs`）。
+- 機能の進め方は`develop-feature`スキル。畳んだあとに正しいスキルへ届くかの確認一覧は`.claude/evals/folded-loop-checklist.md`。
 
 **休眠（アプリのL2 / L3が複数回回るまで必須にしない）**
 
 - `review-readiness` / Gate B / structured packetのhard stop（`docs/reviews/README.md`は未作成）。
-- 改善サイクル3 Agent（reflection / manager / evaluator）とevals。evalsは配布元ドメイン向けで、Tomotabi用ケースは未整備。
-- Codex委譲ルート（`create-codex-brief`等は未導入）。実装はimplementer経路を使う。
+- 改善サイクル（振り返り、横断の提案、回帰評価）。手順は`reflect-task`と`improve-harness`。ユーザーが頼むまで必須にしない。古い`.claude/evals/cases/`は配布元向けのまま使わない。
+- Codex委譲ルート（`create-codex-brief`等は未導入）。実装はこのセッションで行う。
 
 層別ルール（`.claude/rules/domain-layer.md`等）や`docs/01`〜`07`は未作成。参照せず、必要になったときに新設する。
 
@@ -27,7 +28,7 @@ Claude CodeとCodexは、このリポジトリの同じハーネス・成果物�
 
 Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは要件提示・設計判断・レビュー・マージを担う。
 
-- 既定でAIが設計案の提示から実装・テスト・PR作成まで行う。ユーザーは要件提示・設計判断・レビュー・マージを担う。
+- 既定でAIが設計案の提示から実装・テスト・PR作成まで、このセッションの一つのループで行う。設計・計画・実装はスキルを読んで進め、子エージェントに分けない。検証（`reviewer`、条件を満たすとき`security-reviewer`）と広い探索（`Explore`）だけ別の文脈に渡す。手順は`develop-feature`スキル。ユーザーは要件提示・設計判断・レビュー・マージを担う。
 - L2 / L3では設計書（`docs/designs/`）をユーザーが承認してから実装に入る。L0 / L1は承認なしで進める。
 - L2 / L3の問いと答え・選ばなかった理由は`docs/discussions/<機能名>.md`（論点の記録）に、工程の状態は`<機能名>.progress.json`に残す（`docs/discussions/README.md`）。Claude Codeは問いと設計の承認依頼を、図つきの確認のページ（claude.aiの非公開のページ）で出す。Codexはページを使わず、同じ記録の形で問いをチャットに出す。
 - 技術スタック・アーキテクチャなどADR級の決定はAIが候補と比較を示し、決定はユーザーが行う。
@@ -61,8 +62,8 @@ Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは
 
 ## ツールごとの入口
 
-- Claude Code: `CLAUDE.md`、`.claude/skills/`、`.claude/agents/`、`.claude/settings.json`のフックを使う。
-- Codex: 本ファイルと`.agents/skills/`から共通スキルを読む。`.claude/agents/`は役割の参考資料であり、Codexのエージェント登録ではない。Claude CodeのフックはCodexでは自動実行されない。
+- Claude Code: `CLAUDE.md`、`.claude/skills/`、検証用の`.claude/agents/`（`reviewer`と`security-reviewer`）、`.claude/settings.json`のフックを使う。
+- Codex: 本ファイルと`.agents/skills/`から共通スキルを読む。`.claude/agents/`はClaude Codeの検証役であり、Codexのエージェント登録ではない。Claude CodeのフックはCodexでは自動実行されない。Codexは同じスキルをこのセッションで読む。
 - Codexでハーネスの状態を扱うコマンドには`HARNESS_NAMESPACE=tomotabi-harness`を付け、リポジトリルートで実行する。Claude Codeには同じ値をsettingsのenvで設定している。
 - スキルから参照されるCookpit専用文書・専用スキルが無い場合は、本ファイルと実際の構成を使う。未採用の技術や架空の成果物を補わない。
 - CodexにはClaude Codeのフック（危険操作の遮断・成果物チェック）が無い。代替として、本ファイルの作業分担・ブランチ運用・破壊的操作の事前確認を守る。履歴改変・データ削除・本番操作は、ユーザー確認なしに実行しない。

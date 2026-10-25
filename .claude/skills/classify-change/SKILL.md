@@ -1,13 +1,14 @@
 ---
 name: classify-change
 description: >
-  ユーザー要求を変更レベル（Level 0〜3）へ分類し、判定理由・必須Agent・必須成果物・省略工程を
-  決める手順。Orchestratorがタスク開始時に使う。小規模変更を過剰工程にしないための判断に用いる。
+  ユーザー要求を変更レベル（Level 0〜3）へ分類し、判定理由・このセッションで読むスキル・
+  起動する検証役・必須成果物・省略工程を決める。機能追加や修正の最初に使う。
+  小規模変更を過剰工程にしないための判断に用いる。
 ---
 
 # 変更レベル分類スキル
 
-Orchestratorがタスク開始時に変更レベルを判定するための手順。レベル定義の正典は
+タスク開始時に変更レベルを判定する手順。レベル定義の決まりは
 [docs/claude-code/document-policy.md](../../../docs/claude-code/document-policy.md)、完了条件は
 [definition-of-done.md](../../../docs/claude-code/definition-of-done.md)。
 
@@ -52,28 +53,26 @@ Orchestratorがタスク開始時に変更レベルを判定するための手�
   - L0 / L1: 不要。小さな修正は直接進める。
   - L2 / L3: 必要。設計書の承認後に実装へ進む。ADR級の決定（スタック・アーキテクチャ・後方互換）もユーザーが決める。
   - 正典は`AGENTS.md`の「作業分担（AI駆動開発）」。
-- **必要Agent**（このレベルで起動するSubagent）
+- **このセッションで読むスキルと、起動する検証役**
 - **必要成果物**（document-policyのレベル別成果物）
 - **省略する工程と理由**（過剰工程を避けるため、何を作らないか）
 
-### レベル別の必要Agent・成果物（早見）
+### レベル別のスキル・検証役・成果物（早見）
 
-| Level | 必要Agent                                                                                                                                                           | 必須成果物                                                                                  |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 0     | （調査のみ。読み取りで完結）                                                                                                                                         | なし（必要なら提案書）                                                                      |
-| 1     | implementer（必要ならreviewer）                                                                                                                                     | なし（最終報告に変更理由）                                                                  |
-| 2     | architecture-designer → (planner ∥ test-designer) → implementer → reviewer →〔security-reviewer（省略条件あり）〕→〔reflection-agent※〕 | designs / implementation-plans / tests                                                      |
-| 3     | architecture-designer（requirements + design）→ 上記 + ADR。E2Eはimplementerが条件付きで担当                                                                      | requirements / designs / implementation-plans / tests / decisions(ADR) / reviews / 振り返り |
+| Level | このセッションで読むもの | 検証役 | 必須成果物 |
+| ----- | --- | --- | --- |
+| 0 | コードを読む。広ければ`Explore` | なし | なし（必要なら提案） |
+| 1 | `implement-change` | 振る舞いが変わるなら`reviewer` | なし（報告に変更理由） |
+| 2 | `ask-questions`、`create-design-document`、`create-implementation-plan`、`create-test-plan`、承認後`implement-change` | `reviewer`。`security-reviewer`は条件付き | designs / implementation-plans / tests |
+| 3 | L2に加え`create-requirements-document`。ADR級なら`create-adr` | `reviewer`と`security-reviewer` | requirements / designs / implementation-plans / tests / decisions(ADR) |
 
-※ `reflection-agent`は改善サイクルを運用しているときだけ起動する。契約の設計は
-architecture-designerが担う（専用のcontract-designerは未定義）。無い工程は飛ばし、
-飛ばした旨を報告に書く。
+契約の形は設計書のContract節に書く。専用の契約役は無い。改善サイクルの振り返りは、ユーザーが頼んだときだけ`reflect-task`。無い工程は飛ばし、飛ばした旨を報告に書く。
 
 ## 注意
 
 - 小規模変更にLevel 3相当の工程を当てない。
-- 判定後、L2/L3では最初のWrite担当Subagentが`.claude/state/current-feature`に
-  feature-nameを書く。L0/L1では設定しない（Hook誤検知防止）。
-- L2/L3と判定したら、Orchestratorが論点の記録と進み具合を作る:
+- 判定後、L2/L3ではこのセッションが`.claude/state/current-feature`に
+  feature-nameを書く。L0/L1では設定しない（Hookの誤検知を防ぐ）。
+- L2/L3と判定したら、論点の記録と進み具合を作る:
   `node .claude/scripts/discussion.mjs init <feature-name> --level L2|L3 --title <機能の名前>`。
   以降、工程が変わるたびに`discussion.mjs stage`で進み具合を更新する（`docs/discussions/README.md`）。

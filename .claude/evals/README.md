@@ -1,10 +1,8 @@
 # Agent回帰評価セット
 
-Agent構成（Agent / Skill / Rule / CLAUDE.md / Hook）を変更する前後で品質が悪化していないかを
-確認するための、代表的なタスクセットと採点基準。
+Agent構成（スキル / ルール / CLAUDE.md / フック / 残した検証役）を変える前後で、正しいスキルとフックに届くかを見る。
 
-改善サイクルの位置づけは[docs/claude-code/improvement-cycle.md](../../docs/claude-code/improvement-cycle.md)
-を参照。評価は`agent-evaluator`が実施する。
+いま使う一覧は[folded-loop-checklist.md](./folded-loop-checklist.md)（10件）。改善サイクルの位置づけは[docs/claude-code/improvement-cycle.md](../../docs/claude-code/improvement-cycle.md)。評価はメインのセッションが`improve-harness`スキルで行う。`agent-evaluator`は起動しない。
 
 ## 構成
 
@@ -18,10 +16,8 @@ Agent構成（Agent / Skill / Rule / CLAUDE.md / Hook）を変更する前後で
 
 ## 使い方
 
-1. 改善提案（`docs/claude-code/improvements/proposals/<IMP-...>.md`）の変更対象に応じ、
-   managerが関連する`cases/*.md`を選ぶ。
-2. `agent-evaluator`が **before（現状構成）** と **after（差分適用後の想定）** の両方で、
-   各ケースを`rubrics/scoring-rubric.md`の軸で採点する。
+1. まず[folded-loop-checklist.md](./folded-loop-checklist.md)で、依頼が期待するスキル、検証役、フックに届くかを見る。
+2. 古い`cases/*.md`は配布元向けで休眠。Tomotabiの判定には使わない。採点の軸が要るときは`rubrics/scoring-rubric.md`を、beforeとafterの両方に使う。
 3. 1軸でも悪化（スコア低下・劣化指標の増加・質問/トークンの増加のみ）があれば採用しない。
 4. 結果を`results/`に残し、`evaluations/<IMP-...>.md`に集約する。
 

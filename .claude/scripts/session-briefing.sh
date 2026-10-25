@@ -54,6 +54,6 @@ cat <<'EOF'
 
 - [ ] AGENTS.md と logs/ の最新ファイルを読み込む
 - [ ] 変更レベル（L0〜L3）を判定する（classify-change Skill）
-- [ ] 実装ルートを宣言する（implementer 経路。Codex 委譲スキルは未導入）
+- [ ] 実装はこのセッションで行う（develop-feature。Codex 委譲スキルは未導入）
 - [ ] Sprint / roadmap 文書があれば確認する（未作成ならスキップ）
 EOF

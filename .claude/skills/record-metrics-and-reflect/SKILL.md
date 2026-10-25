@@ -27,7 +27,7 @@ description: >
 
 - `.claude/scripts/record-task-metrics.sh` / `collect-task-metrics.mjs`
 - `.claude/scripts/check-review-coverage.mjs`
-- `reflection-agent`と`reflect-task` Skill
+- `reflect-task`スキル（改善サイクルが休眠のあいだは、ユーザーが頼んだときだけ）
 - `docs/claude-code/improvements/`の構造
 
 ## 手順
@@ -46,11 +46,11 @@ description: >
      `node .claude/scripts/collect-task-metrics.mjs --feature <feature> --branch <ブランチ部分一致> --task-id <task-id> --write`
      で対象ブランチを明示して再実行する。
    - 意味的な値（quality/processの手戻り・4軸レビュー指摘・ユーザー修正数）は自動化対象外。
-     タスク完了時にreflection-agentがpacket / auditから埋める（不明値はunknownのまま）。
+     タスク完了時に、このセッションがpacketとauditから埋める（不明値はunknownのまま）。
    - `review.active_time_bucket/confidence/full_diff_opened`だけは人間の任意回答。計時や回答を
      完了条件にせず、未回答を推測しない。
-2. **振り返り**（L2/L3のみ）: reflection-agentへ委譲しreflect-task Skillで
-   candidateを作成する。L0/L1はスキップ（過剰工程にしない）。
+2. **振り返り**（L2/L3で、ユーザーが頼んだとき）: `reflect-task`スキルをこのセッションで読み、
+   candidateを作成する。改善サイクルが休眠のあいだ、およびL0/L1はスキップする。
 3. **レビュー記録の網羅確認**: 複数TaskのCodex委譲featureでは、mainマージ済み
    Task分の`docs/reviews/<feature>.md`記録が揃っているか
    `node .claude/scripts/check-review-coverage.mjs <feature>`で確認する

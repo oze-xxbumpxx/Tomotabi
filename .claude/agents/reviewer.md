@@ -5,7 +5,7 @@ description: >
   セキュリティ・性能・テスト不足・ドキュメント更新漏れをレビューする。
   文書成果物の品質レビュー（事実整合・矛盾・参照生存・鮮度）も担当する
   （旧document-reviewer吸収）。原則コードは変更しない。
-model: claude-opus-5
+model: claude-opus-5-5
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -172,7 +172,7 @@ Must / Should / Niceを人間UIの主語彙にしない（使うなら監査ロ�
   ],
   "reviewer": {
     "agent": "reviewer",
-    "model": "claude-opus-5",
+    "model": "claude-opus-5-5",
     "reviewedAt": "2026-08-11T00:00:00Z"
   }
 }

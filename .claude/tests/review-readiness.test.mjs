@@ -96,7 +96,7 @@ function baseAssessment(overrides = {}) {
     ],
     reviewer: {
       agent: 'reviewer',
-      model: 'claude-opus-5',
+      model: 'claude-opus-5-5',
       reviewedAt: '2026-08-11T00:00:00Z',
     },
   };

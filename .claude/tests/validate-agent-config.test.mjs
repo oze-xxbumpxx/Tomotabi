@@ -104,7 +104,7 @@ test('正常な SKILL.md は許可する', () => {
 test('model の公式エイリアスと inherit を許可し、未知の値は拒否する', () => {
   const sb = sandbox();
   try {
-    for (const model of ['inherit', 'sonnet', 'opus', 'haiku', 'fable', 'claude-sonnet-5']) {
+    for (const model of ['inherit', 'sonnet', 'opus', 'haiku', 'fable', 'claude-sonnet-5-5', 'claude-opus-5-5']) {
       writeRel(sb, '.claude/agents/demo.md', AGENT_TEMPLATE(model));
       assert.equal(
         afterWrite(sb, '.claude/agents/demo.md').code,

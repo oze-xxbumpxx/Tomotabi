@@ -110,7 +110,7 @@ L2/L3とも、文書、コメント、表示文言だけの変更は省略して
 | 仕事 | モデル |
 | --- | --- |
 | 広い探索 | Exploreを`haiku`で起動 |
-| 検証（reviewer、security-reviewer） | 各定義の`claude-opus-5` |
+| 検証（reviewer、security-reviewer） | 各定義の`claude-opus-5-5` |
 | 設計、計画、実装 | メインのセッション。L3の方針決めではFableへの切り替えを提案してよい。切り替えはユーザーが行う |
 
 `CLAUDE_CODE_SUBAGENT_MODEL`は設定しない。設定すると検証役の`model`まで一律で上書きされる。

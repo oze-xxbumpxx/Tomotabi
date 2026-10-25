@@ -1,6 +1,6 @@
 # 設計書: first-use-decisions（初めて使った人のレビューの残り7つを直す）
 
-- ステータス: draft
+- ステータス: approved（#296）
 - レベル: L2（6つの画面の見た目と、履歴の取り消しの行の出し方が変わる。APIとDBは変えない）
 - 関連: 論点の記録`docs/discussions/first-use-decisions.md`、#253、実装計画`docs/implementation-plans/first-use-polish.md`（直し方が決まっていた3つ）
 

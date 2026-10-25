@@ -24,17 +24,29 @@
       "reason": "L2で画面1つの変更なので実装計画は作らない"
     },
     "implement": {
-      "state": "active"
+      "state": "done",
+      "approved": {
+        "pr": 282,
+        "at": "2026-10-25"
+      }
     },
     "review": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 282,
+        "at": "2026-10-25"
+      }
     },
     "merge": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 282,
+        "at": "2026-10-25"
+      }
     },
     "reflect": {
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-25T05:01:23.675Z"
+  "updated_at": "2026-10-25T05:15:28.663Z"
 }

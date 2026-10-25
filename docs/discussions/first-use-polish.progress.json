@@ -1,0 +1,46 @@
+{
+  "feature": "first-use-polish",
+  "title": "初めて使った人のレビューの細かい点を直す",
+  "level": "L2",
+  "page": null,
+  "round": 1,
+  "stages": {
+    "requirements": {
+      "state": "skipped",
+      "reason": "L1なので要件定義書は作らない"
+    },
+    "design": {
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/first-use-polish.md"
+      ],
+      "approved": {
+        "pr": 286,
+        "at": "2026-10-25"
+      }
+    },
+    "plan": {
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/first-use-polish.md"
+      ],
+      "approved": {
+        "pr": 286,
+        "at": "2026-10-25"
+      }
+    },
+    "implement": {
+      "state": "active"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-10-25T05:51:02.535Z"
+}

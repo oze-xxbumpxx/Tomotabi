@@ -79,7 +79,8 @@ export async function verifyPlan(client, config, request) {
   const progressPath = `docs/discussions/${request.task_key.split(':')[0]}.progress.json`;
   let progress = null;
   try { progress = JSON.parse(await content(client, config, progressPath, request.plan_sha)); } catch { fail('plan_unverified'); }
-  const approval = progress?.stages?.design;
+  // L1は設計書を作らないので、実装計画の承認（計画のPRのマージ）を読む。
+  const approval = progress?.level === 'L1' ? progress?.stages?.plan : progress?.stages?.design;
   if (progress.feature !== request.task_key.split(':')[0] || approval?.state !== 'done' || !positive(approval?.approved?.pr)) fail('plan_unapproved');
   const pr = await client.rest('GET', `/repos/${config.repository}/pulls/${approval.approved.pr}`);
   if (pr?.merged !== true || pr?.base?.repo?.id !== config.repository_id || typeof pr.merge_commit_sha !== 'string') fail('plan_unapproved');

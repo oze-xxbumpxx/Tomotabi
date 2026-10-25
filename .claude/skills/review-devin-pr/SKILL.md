@@ -36,7 +36,7 @@ description: >
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | E2E  | 日付は今日から数えて作り、年や日を決め打ちしない。要素は役割・見出し・ラベルで探し、クラス名で探さない。APIを模擬したら、外す条件をPRの説明に書く | #100・#128・#152・#158 |
 
-1. 承認済みの公開計画に、一意な`delegation-task`区間を置く。公開JSONに`schema_version:1`、`operation:register`、UUIDの`request_id`、`task_key`、`plan_path`、完全な`plan_sha`、`task_digest`を書く。設計承認・先行タスク・作業場所など開始条件を確かめた場合だけ`start_conditions_confirmed:true`を付ける。本文には秘密や非公開の指摘を入れない。
+1. 承認済みの公開計画に、一意な`delegation-task`区間を置く。公開JSONに`schema_version:1`、`operation:register`、UUIDの`request_id`、`task_key`、`plan_path`、完全な`plan_sha`、`task_digest`を書く。設計承認・先行タスク・作業場所など開始条件を確かめた場合だけ`start_conditions_confirmed:true`を付ける。共通受付は、計画の承認を`docs/discussions/<機能名>.progress.json`から読む。L2 / L3は設計の工程、L1（`level: "L1"`）は実装計画の工程の承認したPRを見るので、L1でも進み具合の記録を置く。本文には秘密や非公開の指摘を入れない。
 2. `HARNESS_NAMESPACE=tomotabi-harness node .claude/scripts/delegation.mjs request --request-file <公開JSON>`で登録する。同じ要求は同じIDと内容で照合する。直接`gh issue create`を使って委譲を始めない。
 3. `status --json`でIssueとタスクの対応を確かめる。既存のIssue・PR・セッションは`import --request-file <公開JSON>`で照合する。移行未完了、共有状態の取得失敗、内容競合では起動しない。
 4. 専用クローンに前のプロセスや変更が残っていないか先に確認する。残っていたら捨てずにユーザーへ渡す。非公開prompt fileを0600で作る。SWE-2のeffortは難しさで選び、依頼時にユーザーへ伝える。起動は`HARNESS_NAMESPACE=tomotabi-harness node .claude/scripts/delegation-launch.mjs <task_key> --runner local --model swe-2-<effort> --prompt-file <非公開ファイル> --clone <専用クローン>`。runner/modelは省かない。ローカルを既定の選択とする（2026-10-12 クラウドの無料期間が終わったため。ユーザーの指示）。Cloudはユーザーが指示したときに`--runner cloud`を使う。Cloudの実モデルは確認できるまで`unknown`とする。

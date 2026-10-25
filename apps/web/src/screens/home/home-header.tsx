@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretDown, DotsThree } from "@phosphor-icons/react";
+import { CaretRight, DotsThree } from "@phosphor-icons/react";
 import Link from "next/link";
 import {
   headerDateTextOf,
@@ -57,7 +57,7 @@ export function HomeHeader({
         </button>
         <Link className="home-switch" href="/trips">
           切り替え
-          <CaretDown size={14} weight="bold" aria-hidden="true" />
+          <CaretRight size={14} weight="bold" aria-hidden="true" />
         </Link>
       </header>
       <div className="home-bars" role="img" aria-label={barsSummary}>

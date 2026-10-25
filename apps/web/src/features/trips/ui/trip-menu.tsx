@@ -1,8 +1,8 @@
 "use client";
 
 import {
+  ArrowsClockwise,
   Bell,
-  CaretDown,
   CaretRight,
   Flag,
   FlagCheckered,
@@ -223,7 +223,7 @@ export function TripMenu({
             />
           )}
           <MenuItem
-            icon={<CaretDown size={22} />}
+            icon={<ArrowsClockwise size={22} />}
             label="旅行を切り替え"
             onClick={onSwitch}
           />
@@ -246,6 +246,9 @@ export function TripMenu({
               aria-hidden="true"
             />
           </Link>
+          {/* ログアウトはほかの項目から離す。divを挟むと
+              .menu-item + .menu-item の区切り線が外れ、sepが境界を担う。 */}
+          <div className="menu-sep" aria-hidden="true" />
           <MenuItem
             icon={<SignOut size={22} />}
             label="ログアウト"

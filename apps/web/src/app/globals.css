@@ -1183,6 +1183,12 @@ dialog.dialog[open] {
   border-top: 1px solid var(--color-line);
 }
 
+/* ログアウトの手前の区切り。ほかの項目から離す（カードの端まで引く）。 */
+.menu-sep {
+  margin: 8px calc(-1 * var(--space-4));
+  border-top: 1px solid var(--color-line-strong);
+}
+
 .menu-item-icon {
   display: flex;
   align-items: center;

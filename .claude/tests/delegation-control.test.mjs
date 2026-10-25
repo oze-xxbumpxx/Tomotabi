@@ -29,7 +29,7 @@ const makeRun = (id = 1) => ({ id, run_attempt: 1, created_at: NOW, repository: 
 const plan = '<!-- delegation-task:task -->\n公開された作業\n<!-- /delegation-task -->';
 const register = () => ({ schema_version: 1, operation: 'register', request_id: randomUUID(), task_key: 'feature:task', plan_path: 'docs/implementation-plans/feature.md', plan_sha: SHA, task_digest: taskDigest('公開された作業'), start_conditions_confirmed: true });
 
-function memoryGitHub({ anchor = true, failure = null } = {}) {
+function memoryGitHub({ anchor = true, failure = null, progress = { feature: 'feature', stages: { design: { state: 'done', approved: { pr: 186 } } } } } = {}) {
   const calls = [];
   let nextComment = 2;
   let nextIssue = 10;
@@ -54,7 +54,7 @@ function memoryGitHub({ anchor = true, failure = null } = {}) {
       else if (method === 'GET' && path.includes('/branches/')) result = { protected: true, commit: { sha: SHA } };
       else if (method === 'GET' && path.includes('/compare/')) result = { status: 'identical' };
       else if (method === 'GET' && path.includes('/contents/')) {
-        const text = path.includes('.progress.json') ? JSON.stringify({ feature: 'feature', stages: { design: { state: 'done', approved: { pr: 186 } } } }) : plan;
+        const text = path.includes('.progress.json') ? JSON.stringify(progress) : plan;
         result = { type: 'file', encoding: 'base64', content: Buffer.from(text).toString('base64'), size: text.length };
       } else if (method === 'GET' && path.endsWith('/pulls/186')) result = { number: 186, merged: true, merge_commit_sha: SHA, base: { repo: { id: config.repository_id } } };
       else if (method === 'GET' && /\/pulls\/\d+$/.test(path)) result = { number: Number(path.split('/').at(-1)), state: 'open', head: { sha: SHA }, base: { repo: { id: config.repository_id } } };
@@ -138,6 +138,17 @@ test('承認済みmainの公開計画とdigestを照合する', async () => {
   await assert.rejects(verifyPlan(client, config, { ...request, task_digest: '0'.repeat(64) }), /content_conflict/);
   await verifyMainCommit(client, config, SHA);
   assert.equal(client.calls.filter((call) => call.path.includes('/branches/')).length, 1);
+});
+
+test('L1は設計書を作らないので、実装計画の承認を読む', async () => {
+  const { taskDigest } = await import('../scripts/delegation-shared.mjs');
+  const request = { ...register(), task_digest: taskDigest('公開された作業') };
+  const l1 = (plan) => memoryGitHub({ progress: { feature: 'feature', level: 'L1', stages: { design: { state: 'skipped' }, plan } } });
+  assert.equal((await verifyPlan(l1({ state: 'done', approved: { pr: 186 } }), config, request)).body, '公開された作業');
+  await assert.rejects(verifyPlan(l1({ state: 'active' }), config, request), /plan_unapproved/);
+  // L2以上は今までどおり設計の承認を見る（計画だけが承認済みでも通さない）。
+  const l2 = memoryGitHub({ progress: { feature: 'feature', level: 'L2', stages: { design: { state: 'active' }, plan: { state: 'done', approved: { pr: 186 } } } } });
+  await assert.rejects(verifyPlan(l2, config, request), /plan_unapproved/);
 });
 
 test('register→Issue→claim→初回begin→started→link-prを同じ履歴で結ぶ', async () => {

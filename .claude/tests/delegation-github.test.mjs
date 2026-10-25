@@ -65,6 +65,9 @@ test('全ページを集め、件数・ページ上限や不完全な検索で�
   const full = createGitHubClient({ repo, execute: async () => ({ status: 200, data: [1, 2] }) });
   await assert.rejects(full.paginate('repos/test/issues', { pageSize: 2, maxItems: 2 }), /item_limit/);
   await assert.rejects(full.paginate('repos/test/issues', { pageSize: 2, maxPages: 1, maxItems: 10 }), /page_limit/);
+  // 先読みに限り、上限で打ち切って先頭の分だけを返せる（実行の一覧が1000件を超えたため）。
+  assert.deepEqual(await full.paginate('repos/test/runs', { pageSize: 2, maxItems: 3, truncate: true }), [1, 2, 1]);
+  assert.deepEqual(await full.paginate('repos/test/runs', { pageSize: 2, maxPages: 1, maxItems: 10, truncate: true }), [1, 2]);
   const malformed = createGitHubClient({ repo, execute: async () => ({ status: 200, data: { items: [1], incomplete_results: true } }) });
   await assert.rejects(malformed.paginate('repos/test/search', { key: 'items' }), /pagination_incomplete/);
   await assert.rejects(full.paginate('repos/test', { pageSize: 101 }), /invalid_limit/);

@@ -124,7 +124,11 @@ export function createGitHubClient({
     return response.data;
   }
 
-  async function paginate(path, { maxPages = 10, maxItems = 1000, key = null, pageSize = 100 } = {}) {
+  /**
+   * 全ページを集める。上限に当たったら既定では失敗にする（部分集合を全体と取り違えないため）。
+   * `truncate: true`は、先頭からmaxItems件だけで足りる先読みに限って使う。
+   */
+  async function paginate(path, { maxPages = 10, maxItems = 1000, key = null, pageSize = 100, truncate = false } = {}) {
     if (![maxPages, maxItems, pageSize].every((x) => Number.isInteger(x) && x > 0) || pageSize > 100) throw new GitHubError('invalid_limit');
     const items = [];
     for (let page = 1; page <= maxPages; page += 1) {
@@ -133,9 +137,13 @@ export function createGitHubClient({
       const batch = key === null ? data : data?.[key];
       if (!Array.isArray(batch) || data?.incomplete_results === true) throw new GitHubError('pagination_incomplete');
       items.push(...batch);
-      if (items.length >= maxItems) throw new GitHubError('item_limit');
+      if (items.length >= maxItems) {
+        if (truncate) return items.slice(0, maxItems);
+        throw new GitHubError('item_limit');
+      }
       if (batch.length < pageSize) return items;
     }
+    if (truncate) return items;
     throw new GitHubError('page_limit');
   }
 

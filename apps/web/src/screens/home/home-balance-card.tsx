@@ -9,9 +9,9 @@ import type { Me, Participant } from "@tomotabi/contracts";
 import {
   displayNameOf,
   type HomeBalance,
-  PartnerTag,
 } from "@/features/trips";
 import { formatYenDigits, yenFromDecimalString } from "@/shared/lib/yen";
+import { PartnerTag } from "@/shared/ui/partner-tag";
 
 /**
  * ホームの精算の欄（v3のsettleカード）。

@@ -17,7 +17,8 @@ import {
   usePayment,
 } from "@/features/payments";
 import { usePlan } from "@/features/plans";
-import { PartnerTag, TripTabBar } from "@/features/trips";
+import { TripTabBar } from "@/features/trips";
+import { PartnerTag } from "@/shared/ui/partner-tag";
 import { useMe } from "@/features/auth";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";

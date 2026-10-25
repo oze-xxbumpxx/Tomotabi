@@ -74,7 +74,6 @@ export {
   type TripSaveState,
 } from "./model/trip-save";
 export { FinishTripDialog } from "./ui/finish-trip-dialog";
-export { PartnerTag } from "./ui/partner-tag";
 export { TripEditSheet } from "./ui/trip-edit-sheet";
 export { TripFormFields } from "./ui/trip-form-fields";
 export { TripHeader } from "./ui/trip-header";

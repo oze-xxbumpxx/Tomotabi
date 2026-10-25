@@ -836,4 +836,37 @@ describe("支払いの詳細の相手の印（#300）", () => {
     expect(recordRow).toHaveTextContent(/あおい が /);
     expect(recordRow).not.toHaveTextContent("（相手）");
   });
+
+  it("表示名が空の相手は「相手」とだけ出し、「相手（相手）」にしない", async () => {
+    stubApi({
+      payment: () =>
+        json(
+          paymentResponse({
+            payerUserId: otherUserId,
+            createdBy: otherUserId,
+          }),
+        ),
+      balance: () =>
+        json({
+          ...balanceBody(),
+          participants: [
+            { ...meParticipant },
+            { ...otherParticipant, displayName: "" },
+          ],
+        }),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PaymentDetailScreen tripId={tripId} paymentId={paymentId} />
+      </QueryClientProvider>,
+    );
+
+    const payerRow = (await screen.findByText("払った人")).closest(
+      ".payment-detail-row",
+    )!;
+    // 名前が取れないので「相手」とだけ出る。印は付けない。
+    expect(payerRow).toHaveTextContent("相手");
+    expect(payerRow).not.toHaveTextContent("（相手）");
+    expect(screen.queryByText("（相手）")).not.toBeInTheDocument();
+  });
 });

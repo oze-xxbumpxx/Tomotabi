@@ -17,7 +17,7 @@ import {
   usePendingSettlementPreviews,
   useSettlements,
 } from "@/features/settlement";
-import { PartnerTag, TripTabBar } from "@/features/trips";
+import { TripTabBar } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { takePendingToast } from "@/shared/lib/pending-toast";
@@ -280,13 +280,7 @@ export function SettlementScreen({
             participants={balanceData.participants}
             transfer={balanceData.transfer}
             targetCount={balanceData.targetCount}
-            nameTag={(id) => (
-              <PartnerTag
-                userId={id}
-                meUserId={userId}
-                participants={balanceData.participants}
-              />
-            )}
+            meUserId={userId}
             action={
               balanceData.targetCount === 0
                 ? undefined

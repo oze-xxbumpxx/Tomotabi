@@ -12,13 +12,18 @@ export function PartnerTag({
 }: {
   userId: string | null;
   meUserId: string | null;
-  participants: readonly { userId: string }[] | null | undefined;
+  participants:
+    | readonly { userId: string; displayName: string }[]
+    | null
+    | undefined;
 }) {
   const isKnownPartner =
     userId !== null &&
     meUserId !== null &&
     userId !== meUserId &&
-    (participants?.some((p) => p.userId === userId) ?? false);
+    (participants?.some(
+      (p) => p.userId === userId && p.displayName !== "",
+    ) ?? false);
   if (!isKnownPartner) {
     return null;
   }

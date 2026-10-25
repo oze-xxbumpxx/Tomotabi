@@ -407,6 +407,12 @@ async function clickWhenEnabled(name: string | RegExp) {
   return button;
 }
 
+/** 達成・予約の確認で決定のボタンを押す（#252）。 */
+async function confirmRecord(name: "達成を記録" | "予約を記録") {
+  const dialog = await screen.findByRole("dialog", { name: /しますか？$/ });
+  await userEvent.click(within(dialog).getByRole("button", { name }));
+}
+
 /** 読み込み中の表示が消えるまで待つ。 */
 async function waitLoaded() {
   await waitFor(() =>
@@ -848,18 +854,17 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     // food: 達成も予約も付けられる → 主ボタンは達成、副ボタンに予約
     stubApi({});
     renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
+    // 出ているボタンの分だけ説明の一行を出し、ボタンの説明として結ぶ（#252）
     expect(
       await screen.findByRole("button", { name: "達成を記録" }),
-    ).toBeInTheDocument();
+    ).toHaveAccessibleDescription(
+      "達成を記録: 行った・食べた・買ったら押します。相手に通知が届きます。",
+    );
     expect(
       screen.getByRole("button", { name: "予約を記録" }),
-    ).toBeInTheDocument();
-    // F-08: 予約はこのアプリの中の記録であることを添える
-    expect(
-      screen.getByText(
-        "このアプリの中の記録です。お店の予約は変わりません",
-      ),
-    ).toBeInTheDocument();
+    ).toHaveAccessibleDescription(
+      "予約を記録: このアプリの中の印です。お店の予約は変わりません。相手に通知が届きます。",
+    );
 
     cleanup();
     // place: 達成だけ付けられる（予約は付けられない）
@@ -871,6 +876,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     expect(
       screen.queryByRole("button", { name: "予約を記録" }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/^予約を記録: /)).not.toBeInTheDocument();
 
     cleanup();
     // lodging: 予約だけ付けられる → 主ボタンは予約
@@ -878,10 +884,11 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
     expect(
       await screen.findByRole("button", { name: "予約を記録" }),
-    ).toBeInTheDocument();
+    ).toHaveAccessibleDescription(/^予約を記録: /);
     expect(
       screen.queryByRole("button", { name: "達成を記録" }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/^達成を記録: /)).not.toBeInTheDocument();
   });
 
   it("取りやめた予定では達成は付けられないが予約は付けられる（RW-11）", async () => {
@@ -968,6 +975,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     });
     renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
     const button = await clickWhenEnabled("達成を記録");
+    await confirmRecord("達成を記録");
     // 保存の要求は端末に残してから送る（F-70）
     await waitFor(() =>
       expect(
@@ -981,6 +989,59 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     expect(await screen.findByText("達成を記録しました")).toBeInTheDocument();
     // ボタンは記録後に消える（achievementが付く）か押せない
     void button;
+  });
+
+  it("押すと確認が開き、「やめる」なら何も送らない（#252）", async () => {
+    const fetchMock = stubApi({
+      createAchievement: () => json(event(), 200),
+    });
+    renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
+    await clickWhenEnabled("達成を記録");
+    const dialog = await screen.findByRole("dialog", {
+      name: "錦市場で昼食を達成にしますか？",
+    });
+    expect(within(dialog).getByText("相手に通知が届きます。")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "やめる" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(
+      fetchMock.mock.calls.some(
+        ([url]) => String(url) === `/api/trips/${tripId}/achievements`,
+      ),
+    ).toBe(false);
+  });
+
+  it("副ボタンの予約も確認を通して保存する（#252）", async () => {
+    const fetchMock = stubApi({
+      createBooking: () => json(bookingEvent(), 200),
+    });
+    renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
+    await clickWhenEnabled("予約を記録");
+    const dialog = await screen.findByRole("dialog", {
+      name: "錦市場で昼食の予約を記録しますか？",
+    });
+    expect(
+      within(dialog).getByText(
+        "このアプリの中の印です。お店の予約は変わりません。相手に通知が届きます。",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(
+        ([url]) => String(url) === `/api/trips/${tripId}/bookings`,
+      ),
+    ).toBe(false);
+    await confirmRecord("予約を記録");
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) =>
+            String(url) === `/api/trips/${tripId}/bookings` &&
+            (init?.method ?? "GET") === "POST",
+        ),
+      ).toBe(true),
+    );
+    expect(await screen.findByText("予約を記録しました")).toBeInTheDocument();
   });
 
   it("409 RECORD_ALREADY_ACTIVE を受けたら予定を取り直し、もう一度付けるよう促さない（RW-11）", async () => {
@@ -1005,6 +1066,7 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     });
     renderScreen(<PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />);
     await clickWhenEnabled("達成を記録");
+    await confirmRecord("達成を記録");
     // 予定の取り直しが走る
     await waitFor(() => expect(planCalls).toBeGreaterThan(1));
     // 「もう一度送る」の確認は出さない

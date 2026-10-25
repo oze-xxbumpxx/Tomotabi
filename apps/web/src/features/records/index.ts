@@ -65,3 +65,7 @@ export {
   CancelRecordDialog,
   type RecordCancelHandle,
 } from "./ui/cancel-record-dialog";
+export {
+  ConfirmRecordDialog,
+  RECORD_NOTES,
+} from "./ui/confirm-record-dialog";

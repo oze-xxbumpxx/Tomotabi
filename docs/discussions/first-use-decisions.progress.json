@@ -1,0 +1,32 @@
+{
+  "feature": "first-use-decisions",
+  "title": "初めて使った人のレビューで、直し方を決めるもの",
+  "level": "L2",
+  "page": "https://claude.ai/artifact/ND7UXTBywDYeuntAxf3Wan",
+  "round": 1,
+  "stages": {
+    "requirements": {
+      "state": "skipped",
+      "reason": "L2なので要件定義書は作らない"
+    },
+    "design": {
+      "state": "waiting"
+    },
+    "plan": {
+      "state": "pending"
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-10-25T22:47:26.370Z"
+}

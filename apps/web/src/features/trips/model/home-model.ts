@@ -23,9 +23,9 @@ export function scheduleTitleOf(mode: ContextMode): string {
 
 /**
  * ヘッダーの日付の行（v3の`dateText`）。
- * - 期間中: `10/13 日 · 2 / 3 日目`
- * - 出発前: `出発まで 5 日 · 10/12 土 から`
- * - 終了後: `終了 · 10/12 土 – 10/14 月`
+ * - 期間中: `10/13(火) · 2 / 3 日目`
+ * - 出発前: `出発まで 5 日 · 10/12(月) から`
+ * - 終了後: `終了 · 10/12(月) – 10/14(水)`
  * - 期間が過ぎた: 期間（帯が「期間が終わりました」を担う）
  */
 export function headerDateTextOf(home: Home): string {

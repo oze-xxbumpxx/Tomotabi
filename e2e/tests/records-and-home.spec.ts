@@ -12,7 +12,7 @@ type PlanInput = {
   name: string;
   /** 種類の選択肢の読み上げ名（`場所`・`食べ処`など）。 */
   kindLabel: string;
-  /** 期間内の日付の表示（`11/7 土`の形。formatDayLabelで作る）。 */
+  /** 期間内の日付の表示（`11/7(土)`の形。formatDayLabelで作る）。 */
   dateLabel: string;
 };
 

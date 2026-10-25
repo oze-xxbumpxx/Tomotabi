@@ -441,7 +441,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
     expect(
       await screen.findByRole("heading", { name: "沖縄" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/10\/13 火 · 2 \/ 3 日目/)).toBeInTheDocument();
+    expect(screen.getByText(/10\/13\(火\) · 2 \/ 3 日目/)).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /今日の予定/ }),
     ).toBeInTheDocument();
@@ -495,7 +495,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
     expect(
       await screen.findByRole("heading", { name: "沖縄" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/終了 · 10\/12 月/)).toBeInTheDocument();
+    expect(screen.getByText(/終了 · 10\/12\(月\)/)).toBeInTheDocument();
     // 終了した旅行は、期間の途中で終えたこともあるので、帯の日の内訳を言わない（#250）。
     expect(
       screen.getByRole("img", { name: "3日間の旅行は終了しました" }),
@@ -540,7 +540,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
     ).toBeInTheDocument();
     // 青いお知らせ帯（終了日つき）と案内。
     expect(
-      screen.getByText(/旅行の期間が終わりました（10\/14 水 まで）/),
+      screen.getByText(/旅行の期間が終わりました（10\/14\(水\) まで）/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/終了したあとも精算・編集はできます/),
@@ -582,7 +582,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       await screen.findByRole("heading", { name: "沖縄" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/旅行の期間が終わりました（10\/14 水 まで）/),
+      screen.getByText(/旅行の期間が終わりました（10\/14\(水\) まで）/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/旅行を開始してから終了してください/),

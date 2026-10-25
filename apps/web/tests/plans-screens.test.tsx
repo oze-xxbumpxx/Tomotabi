@@ -500,7 +500,7 @@ describe("ItineraryScreen の予定一覧（08）", () => {
     expect(screen.getByText("錦市場で昼食")).toBeInTheDocument();
   });
 
-  it("日の見出しは「{M/D} {曜日} {N} 件」で、取りやめも件数に含める（08）", async () => {
+  it("日の見出しは「{M/D}({曜日}) {N} 件」で、取りやめも件数に含める（08）", async () => {
     const plans = [
       plan({ id: planId, name: "1件目" }),
       plan({ id: secondPlanId, name: "2件目" }),
@@ -524,7 +524,7 @@ describe("ItineraryScreen の予定一覧（08）", () => {
     await screen.findByRole("heading", { name: "沖縄" });
     expect(
       container.querySelector(".itinerary-list-title")?.textContent,
-    ).toBe("10/13 火 5 件");
+    ).toBe("10/13(火) 5 件");
     // 「予定を追加」は青い文字リンクではなく見出し右のpill（墨ボタン）。
     const add = container.querySelector(".itinerary-list-add");
     expect(add).not.toBeNull();
@@ -543,7 +543,7 @@ describe("ItineraryScreen の予定一覧（08）", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByText("終了 · 10/12 月 – 10/14 水");
+    await screen.findByText("終了 · 10/12(月) – 10/14(水)");
     const cells = container.querySelectorAll(".date-cell");
     expect(cells).toHaveLength(3);
     cells.forEach((cell) => {
@@ -673,7 +673,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     expect(submit).toBeDisabled();
 
     await userEvent.click(
-      screen.getByRole("radio", { name: "10/14 水" }),
+      screen.getByRole("radio", { name: "10/14(水)" }),
     );
     await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);
@@ -742,7 +742,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
       dialogEl.getByText(/達成・予約・支払いの記録は残ります/),
     ).toBeInTheDocument();
     expect(dialogEl.getByText(/錦市場で昼食/)).toBeInTheDocument();
-    expect(dialogEl.getByText(/10\/13 火/)).toBeInTheDocument();
+    expect(dialogEl.getByText(/10\/13\(火\)/)).toBeInTheDocument();
     const confirm = dialogEl.getByRole("button", {
       name: "取りやめにする",
     });
@@ -1645,7 +1645,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     );
     await screen.findByRole("heading", { name: "日の移動" });
     await userEvent.click(
-      screen.getByRole("radio", { name: "10/14 水" }),
+      screen.getByRole("radio", { name: "10/14(水)" }),
     );
     await clickWhenEnabled("この日に移動する");
 
@@ -1659,7 +1659,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     // 選んだ日が拒否と同じなら押せない（sameDayは今の日ではなく選択比較
     // なので、別の日に選び直すと編集に戻る）。
     await userEvent.click(
-      screen.getByRole("radio", { name: "10/12 月" }),
+      screen.getByRole("radio", { name: "10/12(月)" }),
     );
     await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);

@@ -682,7 +682,7 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     });
     // 日を10/13に変えるとその日の予定が並ぶ。
     await user.click(
-      within(dialog).getByRole("radio", { name: "10/13 火" }),
+      within(dialog).getByRole("radio", { name: "10/13(火)" }),
     );
     await user.click(
       await within(dialog).findByRole("radio", { name: /錦市場で昼食/ }),

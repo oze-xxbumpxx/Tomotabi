@@ -208,7 +208,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(
       await screen.findByRole("heading", { name: "沖縄" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("10/12 月 – 10/14 水")).toBeInTheDocument();
+    expect(screen.getByText("10/12(月) – 10/14(水)")).toBeInTheDocument();
     expect(screen.getByText("出発前")).toBeInTheDocument();
     // 下部タブは4つと「支払いを記録」。「しおり」にだけ aria-current。
     const nav = screen.getByRole("navigation", { name: "タブ" });

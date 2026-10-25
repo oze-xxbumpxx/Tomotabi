@@ -25,13 +25,13 @@ function weekdayOf(value: string): string {
   return weekday ?? "";
 }
 
-/** `YYYY-MM-DD`を`10/12 土`の形にする。呼び出し側で実在日を確かめてから使う。 */
+/** `YYYY-MM-DD`を`10/12(月)`の形にする。呼び出し側で実在日を確かめてから使う。 */
 export function formatLocalDate(value: string): string {
   const [, month, day] = value.split("-");
-  return `${Number(month)}/${Number(day)} ${weekdayOf(value)}`;
+  return `${Number(month)}/${Number(day)}(${weekdayOf(value)})`;
 }
 
-/** 旅行の期間を`10/12 土 – 10/14 月`の形にする。1日だけなら1つだけ出す。 */
+/** 旅行の期間を`10/12(月) – 10/14(水)`の形にする。1日だけなら1つだけ出す。 */
 export function formatTripPeriod(startsOn: string, endsOn: string): string {
   const start = formatLocalDate(startsOn);
   return startsOn === endsOn ? start : `${start} – ${formatLocalDate(endsOn)}`;

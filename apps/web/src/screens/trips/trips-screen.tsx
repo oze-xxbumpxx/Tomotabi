@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, SuitcaseRolling } from "@phosphor-icons/react";
+import { Bell, Plus, SuitcaseRolling } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -60,7 +60,13 @@ export function TripsScreen() {
 
   return (
     <main className="trips-page">
-      <h1 className="page-title">旅行を切り替え</h1>
+      <div className="trips-head">
+        <h1 className="page-title">旅行を切り替え</h1>
+        <Link href="/settings/notifications" className="trips-notify-link">
+          <Bell size={16} weight="bold" aria-hidden="true" />
+          通知の設定
+        </Link>
+      </div>
       <p className="trips-lead">二人の旅行のしおり・記録・精算をまとめるアプリです。</p>
       {!online && (
         <OfflineBanner

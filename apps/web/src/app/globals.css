@@ -979,6 +979,25 @@ dialog.dialog[open] {
   gap: var(--space-3);
 }
 
+/* 見出しの右に通知の設定への入口を置く（first-use-decisions） */
+.trips-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.trips-notify-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-link);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
 /* 旅行一覧の行（15 の白カードの行） */
 .trip-list-card {
   background: var(--color-surface);

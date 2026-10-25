@@ -208,6 +208,25 @@ function paymentItem(
   };
 }
 
+function paymentCancellationItem(
+  overrides: Partial<TimelineItem> = {},
+): TimelineItem {
+  return {
+    id: paymentId,
+    kind: "payment_cancellation",
+    createdAt: "2026-10-13T06:00:00.000Z",
+    actorId: otherUserId,
+    planId,
+    targetId: paymentId,
+    detail: {
+      targetId: paymentId,
+      cancelledBy: otherUserId,
+      createdAt: "2026-10-13T06:00:00.000Z",
+    },
+    ...overrides,
+  };
+}
+
 function itineraryBody(t: Trip, plans: Plan[]): Itinerary {
   return {
     trip: t,
@@ -686,6 +705,86 @@ describe("記録の一覧（RW-05〜RW-08）", () => {
     // 1件に絞る表示では絞り込みの薬は出さない
     expect(
       screen.queryByRole("button", { name: "支払い" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("支払いの取り消しの行は金額を出さず「精算から外しました」を付ける（first-use-decisions）", async () => {
+    const voidedPayment = payment({
+      cancellation: {
+        targetId: paymentId,
+        cancelledBy: otherUserId,
+        createdAt: "2026-10-13T06:00:00.000Z",
+      },
+    });
+    stubApi({
+      records: () =>
+        json({
+          items: [
+            paymentCancellationItem(),
+            paymentItem({ detail: voidedPayment }),
+          ],
+          nextCursor: null,
+        }),
+      // 取り消しの行の名前の解決（PaymentNameCell）は元の支払いを読む
+      payment: () => json(voidedPayment),
+    });
+    renderScreen(
+      <RecordsScreen
+        tripId={tripId}
+        type={null}
+        planId={null}
+        recordId={null}
+        recordType={null}
+      />,
+    );
+
+    const cancelRow = await screen.findByRole("link", {
+      name: /参道で朝ごはんを取り消し/,
+    });
+    expect(within(cancelRow).getByText(/精算から外しました/)).toBeInTheDocument();
+    expect(within(cancelRow).queryByText(/円/)).not.toBeInTheDocument();
+    // 行を押した先は今のまま支払いの詳細
+    expect(cancelRow).toHaveAttribute(
+      "href",
+      `/trips/${tripId}/payments/${paymentId}`,
+    );
+
+    // 元の支払いの行は金額と「取り消し済み」を今までどおり出す
+    const originalRow = screen.getByText("2,400 円").closest(".rrow");
+    expect(originalRow).not.toBeNull();
+    expect(
+      within(originalRow as HTMLElement).getByText("取り消し済み"),
+    ).toBeInTheDocument();
+  });
+
+  it("達成の取り消しの行には「精算から外しました」を付けない（first-use-decisions）", async () => {
+    const voided = event({
+      cancellation: {
+        targetId: achievementId,
+        cancelledBy: otherUserId,
+        createdAt: "2026-10-13T05:00:00.000Z",
+      },
+    });
+    stubApi({
+      records: () =>
+        json({
+          items: [cancellationItem(), item({ detail: voided })],
+          nextCursor: null,
+        }),
+    });
+    renderScreen(
+      <RecordsScreen
+        tripId={tripId}
+        type={null}
+        planId={null}
+        recordId={null}
+        recordType={null}
+      />,
+    );
+
+    await screen.findByText("錦市場で昼食を取り消し");
+    expect(
+      screen.queryByText(/精算から外しました/),
     ).not.toBeInTheDocument();
   });
 });

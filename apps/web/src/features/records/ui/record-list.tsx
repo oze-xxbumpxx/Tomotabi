@@ -126,6 +126,11 @@ export function RecordRowView({
           : "支払い";
     name = <>{cancelledName}を取り消し</>;
     meta = `${time} · ${actorPart}取り消し`;
+    // 支払いの取り消しは金額を出さず、元の行と2件に見えないよう
+    // 精算から外れたことを補足に添える（first-use-decisions）。
+    if (item.kind === "payment_cancellation") {
+      meta = `${meta} · 精算から外しました`;
+    }
   } else {
     return null;
   }

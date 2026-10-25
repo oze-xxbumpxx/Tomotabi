@@ -90,9 +90,9 @@ description: >
 
 - **トレードオフ併記 + 推奨（手順4の実例）**: `cookpit/test-infra-expansion 設計書` §4 —
   テストDB戦略を比較表（§4.2）で並べ、推奨1案（§4.3 PGlite）を理由つきで提示。
-- **後続Agentへの引き継ぎ**: `cookpit/store-master 設計書` §18「Recipe先例との構造的差分」
-  §19「契約テスト観点（test-designerへの引き継ぎ）」— 既存実装との差分を明示し、
-  試験観点を設計書側からtest-designerへ渡している
+- **試験計画への引き継ぎ**: `cookpit/store-master 設計書` §18「Recipe先例との構造的差分」
+  §19「契約テスト観点（試験計画への引き継ぎ）」— 既存実装との差分を明示し、
+  試験観点を設計書側から`create-test-plan`へ渡している
   （出典: reviewerが設計との整合性を問題なしと確認 — `cookpit/store-master レビュー`）。
 
 ## 悪い例（実タスクで手戻りになったもの）

@@ -8,8 +8,7 @@
 
 ## 設計思想（半自動型）
 
-完全自動型にはしない。**候補の収集と評価は自動化**し、**重要な設定変更はOpus（manager）
-の判断またはPRレビューでの人間の確認**を必要とする。理由はmemory-policy.mdの大前提のとおり：Memoryは学習済み
+完全自動型にはしない。**候補の収集と評価は自動化**し、**重要な設定変更は提案書とPRレビューでの人間の確認**を必要とする。理由はmemory-policy.mdの大前提のとおり：Memoryは学習済み
 モデルではなく永続コンテキストであり、毎タスクの設定変更は過剰適応を生み、指示の追加だけでは
 品質は上がらない（むしろ埋没・競合・トークン増を招く）。
 
@@ -28,12 +27,12 @@
 11. 変更理由と評価結果を記録する（proposal・backlog・必要ならCLAUDE.md/Ruleのコメント）。
 
 ```
-[タスク実行] → [Reviewer] → [reflection-agent: candidates] → backlog
+[タスク実行] → [reviewer] → [reflect-task: candidates] → backlog
         ↓（5タスク / 3件蓄積 / インシデント / 要求 / 設定変更前後）
-[manager: 横断分析 → proposals] → [evaluator: 回帰評価] → before/after 比較
+[improve-harness: 横断分析 → proposals] → [確認一覧: before/after 比較]
         ↓ 承認境界で分岐
    自動反映可 ──→ そのまま適用
-   manager後可 ─→ manager 判断で適用（proposal 必須）
+   提案書つき軽微 → proposal を残して適用
    PR レビュー ──→ ブランチへ適用 → レビュー後 accepted/ へ移動
 ```
 
@@ -70,7 +69,7 @@
 
 ## 委譲ループの軽量サイクル（devin-delegation-loop）
 
-Devinに委譲したIssueのレビュー指摘は、上の11ステップ（reflection → manager → evaluator）を通さず、
+Devinに委譲したIssueのレビュー指摘は、上の11ステップ（振り返り → 横断の提案 → 前後比較）を通さず、
 軽い経路でハーネスに戻す。設計と比較は`docs/designs/devin-delegation-loop.md`。
 
 - **入力**: 委譲ごとの記録`improvements/delegations/<issue>.yml`（`review-devin-pr`がレビューの副産物として残す）。
@@ -118,14 +117,14 @@ Devinに委譲したIssueのレビュー指摘は、上の11ステップ（refle
 - Auto Memory候補の整理 / 振り返り作成 / 改善候補作成 / 評価レポート作成
 - 重複候補の統合 / フォーマット修正 / リンク切れ修正
 
-### agent-improvement-managerのレビュー後に反映可能（非破壊・軽微）
+### 提案書を残せば反映可能（非破壊・軽微）
 
 - Skillのチェック項目追加
 - テンプレートの改善
 - Agent descriptionの軽微な改善
 - 非破壊的なRules追加
 
-> これらはproposalに差分を明記したうえでmanagerが適用してよい。適用後もproposalを残す。
+> これらはproposalに差分を明記したうえで、`improve-harness`を読んだセッションが適用してよい。適用後もproposalを残す。
 
 ### 独断で確定してはいけない（PRレビューで確認する）
 
@@ -162,9 +161,8 @@ Devinに委譲したIssueのレビュー指摘は、上の11ステップ（refle
 
 ## 回帰評価の方法
 
-1. managerが提案ごとに対象evalケース（`.claude/evals/cases/*.md`）を選ぶ。
-2. agent-evaluatorがbefore（現状）/ after（差分適用後）で同じケースを採点する
-   （rubric: `.claude/evals/rubrics/scoring-rubric.md`）。
+1. このセッションが`improve-harness`を読み、提案ごとに確認一覧（`.claude/evals/folded-loop-checklist.md`）から対象の依頼を選ぶ。古い`.claude/evals/cases/`は配布元向けで休眠のため使わない。
+2. before（現状）とafter（差分適用後）で同じ依頼を2回ずつ渡し、読んだスキル・起動した検証役・止めたフックが表と合うかを比べる。採点の軸が要るときは`.claude/evals/rubrics/scoring-rubric.md`を両方に使う。
 3. **1軸でも悪化（スコア低下・劣化指標増・質問/トークン増のみ）があれば採用しない。**
 4. 結果を`evaluations/<IMP-...>.md`に残し、proposalの「評価結果」へ反映する。
 
@@ -176,12 +174,11 @@ Devinに委譲したIssueのレビュー指摘は、上の11ステップ（refle
 
 ## 想定トークン消費（目安）
 
-| 工程                         | 頻度           | 規模感                                  |
-| ---------------------------- | -------------- | --------------------------------------- |
-| reflection-agent（候補抽出） | 毎タスク       | 小（成果物＋ログを読み1ファイル出力） |
-| manager（横断分析・提案）    | 5タスクごと等 | 中（複数候補を読む。opusのため単価高） |
-| evaluator（回帰評価）        | 提案ごと       | 中（提案1件 × 対象evalケース数）    |
+| 工程 | 頻度 | 規模感 |
+| --- | --- | --- |
+| `reflect-task`（候補抽出） | ユーザーが頼んだとき（休眠中） | 小（成果物とログを読み1ファイル出力） |
+| `improve-harness`（横断分析・提案） | 5タスクごと等 | 中（複数候補を読む） |
+| 確認一覧での前後比較 | 提案ごと | 中（提案1件 × 対象の依頼数 × 2回） |
 
-コスト方針：reflectionは安価なsonnetで毎回回し候補を貯める。高コストなmanager(opus)は
-トリガー時のみ。evaluatorは対象ケースを必要最小限に絞る。指示を増やすほどトークンは増えるため、
+コスト方針：どれも子エージェントは起動せず、このセッションで読む。前後比較は対象の依頼を必要最小限に絞る。指示を増やすほどトークンは増えるため、
 **削除・移動を含む改善**でベースのトークンも抑える。

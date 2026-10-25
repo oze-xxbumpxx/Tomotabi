@@ -23,7 +23,7 @@ description: >
 4. 答えを論点の記録に写し、下記テンプレートを埋める。本文には決めた結果だけを書き、理由と選ばなかった案は論点の記録に残す。
    残りの問いは論点の記録で「仮決定」か「後の工程へ」にしておく。
    対象外項目は削除せず「対象外」「該当なし」と書く。
-5. L3で最初のWrite担当のときはOrchestratorの指示により`.claude/state/current-feature`に
+5. L3で`.claude/state/current-feature`がまだ無ければ、このセッションが
    feature-nameを1行で書く。
 
 ## テンプレート

@@ -10,7 +10,7 @@ agents:
   retries: unknown # 再依頼回数
   unnecessary_calls: unknown
 
-# Codex委譲ルートのタスクのみ記入（Orchestratorルートはunknownのまま）。
+# Codex委譲ルートのタスクのみ記入（メインのセッションで実装したタスクはunknownのまま）。
 # IMP-2026-025の効果実測をモデル条件込みで比較するための記録（2026-07-18追加）。
 codex:
   model: unknown # 例: gpt-5-codex（実際に使ったモデル。ブリーフ README の確定値表と一致させる）
@@ -61,7 +61,7 @@ machine:
   # 各セッション末に再実行するとsession_id / ts単位で累積される。
   # 実行: node .claude/scripts/collect-task-metrics.mjs --feature <feature> --task-id <task-id> --write
   # フェーズ比較: machine.totals.agent_calls_by_typeをフェーズの機械プロキシとする
-  # （requirements-analyst / architecture-designer / implementer / reviewer等）。
+  # （2026-10-25以降はreviewer / security-reviewer / Exploreだけ。設計から実装はメインのセッションで数える）。
   # before/afterを設計フェーズ限定で比較するときは、下のphasesを手で埋めるか
   # agent_calls_by_typeから対象Agentだけを抜き出す（セッション全体との混同を避ける）。
 
@@ -70,6 +70,6 @@ machine:
 phases:
   requirements: { tool_uses: unknown, tokens_total: unknown, notes: '' }
   design: { tool_uses: unknown, tokens_total: unknown, notes: '' }
-  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' } # planner + test-designer
+  planning: { tool_uses: unknown, tokens_total: unknown, notes: '' } # 実装計画 + 試験計画
   implementation: { tool_uses: unknown, tokens_total: unknown, notes: '' }
   review: { tool_uses: unknown, tokens_total: unknown, notes: '' }

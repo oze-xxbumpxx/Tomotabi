@@ -41,10 +41,10 @@ candidate → proposal → (evaluation) → accepted / rejected
 
 | ステータス  | 意味                                                    |
 | ----------- | ------------------------------------------------------- |
-| `candidate` | reflection-agentが起票。昇格条件は未確定or単一タスク |
-| `proposal`  | managerが横断分析し変更案を作成。評価待ち              |
-| `evaluated` | agent-evaluatorが回帰評価済み（推奨／非推奨つき）      |
-| `accepted`  | 承認され本適用済み（軽微はmanager、重要は人間承認）    |
+| `candidate` | `reflect-task`で起票。昇格条件は未確定or単一タスク |
+| `proposal`  | `improve-harness`で横断分析し変更案を作成。評価待ち |
+| `evaluated` | 確認一覧で前後比較済み（推奨／非推奨つき） |
+| `accepted`  | 承認され本適用済み（軽微は提案書つきで適用、重要は人間承認） |
 | `rejected`  | 却下。理由とロールバック判断を記録                      |
 
 ## ID採番規約

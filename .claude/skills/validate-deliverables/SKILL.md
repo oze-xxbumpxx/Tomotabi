@@ -52,11 +52,11 @@ Hookは「ファイルの存在」「必須セクションの非空」までし�
 - [ ] ユーザー確認が必要な判断がすべて解決済み
 
 ### 7. 人間引き渡し（Gate B / L2・L3）
-- [ ] L3、または`docs/reviews/<feature>.md`を作成・更新したL2では、
+- [ ] `docs/reviews/<feature>.md`をstructured packetで作成・更新したL2/L3では、
   `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
-  がexit 0
-- [ ] review stateがcurrentな`human_review_requested`（AI承認ではない）
-- [ ] legacy markerなし文書のまま「完了」「PR準備完了」としていない
+  がexit 0（`review-readiness`は休眠のため、packetを作らないL3でも必須にしない）
+- [ ] packetを作った場合、review stateがcurrentな`human_review_requested`（AI承認ではない）
+- [ ] packetを作った場合、legacy markerなし文書のまま「完了」「PR準備完了」としていない
 - [ ] チャット/PR要約が`handoff-blurb`相当で、`受け入れ可` / `APPROVED`を含まない
 - [ ] Gate B文書（`docs/reviews/README.md`）は未作成。休眠中はレビュー指摘と検証結果を
   PR / 日次ログに残す（packet形式は必須にしない）

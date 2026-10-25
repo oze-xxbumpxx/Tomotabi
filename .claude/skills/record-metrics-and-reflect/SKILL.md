@@ -56,7 +56,8 @@ description: >
    `node .claude/scripts/check-review-coverage.mjs <feature>`で確認する
    （空配列 = 網羅済み。出典: cookpit/pantry-core事象2 / IMP-2026-020適用後の再発）。
 4. **引き渡しpacket確認**（人間マージ判断へ渡すL2/L3）:
-   `docs/reviews/<feature>.md`がある、またはL3なら
+   `docs/reviews/<feature>.md`をstructured packetで作ったときだけ
+   （`review-readiness`は`AGENTS.md`で休眠）
    `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
    を実行する。失敗時はメトリクス記録自体は続けてよいが、完了報告では
    「人間レビュー待ち」と書かず持ち越しにする（正典: close-session手順5）。

@@ -73,6 +73,7 @@ export function TripTabBar({
   tripId,
   current,
   action,
+  quiet = false,
 }: {
   tripId: string;
   /** 今の画面のタブ。`aria-current="page"`の印を付ける。 */
@@ -83,8 +84,17 @@ export function TripTabBar({
    * 同じ意味の操作があり、並べると重なるとき）。
    */
   action?: TripMainAction | null;
+  /**
+   * `true`なら既定の主ボタン「支払いを記録」を枠だけの小さな見た目
+   * （`.main-action-quiet`）にする。精算の画面のように、主ボタンが
+   * 脇の操作のときに使う。`action`を指定した画面には付かない。
+   * 行き先と押せる条件（オフラインで押せない）は変わらない。
+   */
+  quiet?: boolean;
 }) {
   const online = useOnlineStatus();
+  // quietは既定の「支払いを記録」にだけ付ける。画面が指定した主ボタンは変えない。
+  const quietClass = quiet && action === undefined ? " main-action-quiet" : "";
 
   return (
     <>
@@ -102,7 +112,7 @@ export function TripTabBar({
           </button>
         ) : (
           <Link
-            className="main-action"
+            className={`main-action${quietClass}`}
             href={`/trips/${tripId}/payments/new`}
           >
             <Plus size={20} weight="bold" aria-hidden="true" />
@@ -110,7 +120,10 @@ export function TripTabBar({
           </Link>
         )
       ) : (
-        <span className="main-action main-action-offline" aria-disabled="true">
+        <span
+          className={`main-action${quietClass} main-action-offline`}
+          aria-disabled="true"
+        >
           <WifiSlash size={18} weight="bold" aria-hidden="true" />
           {action?.label ?? "支払いを記録"}
         </span>

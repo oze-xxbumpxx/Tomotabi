@@ -454,6 +454,20 @@ describe("精算の画面（14・14f・14g・14i）", () => {
     expect(status).toHaveClass("settle-page");
   });
 
+  it("精算では「支払いを記録」が枠だけの小さなボタン（main-action-quiet）で、行き先は変わらない", async () => {
+    stubApi({});
+    renderSettlement();
+
+    const action = await screen.findByRole("link", {
+      name: "支払いを記録",
+    });
+    expect(action).toHaveClass("main-action-quiet");
+    expect(action).toHaveAttribute(
+      "href",
+      `/trips/${tripId}/payments/new`,
+    );
+  });
+
   it("FW-05: 対象 0 件は「現在、精算する対象はありません」で確認は作れない", async () => {
     const fetchMock = stubApi({
       balance: () => json(balanceBody({ targetCount: 0, items: [], transfer: zeroTransfer })),

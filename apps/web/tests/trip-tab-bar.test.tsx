@@ -79,3 +79,46 @@ describe("TripTabBar（RW-01: 共通の下のタブ）", () => {
     ).toHaveAttribute("aria-disabled", "true");
   });
 });
+
+describe("quiet（精算の「支払いを記録」を脇の操作の見た目にする）", () => {
+  it("quiet なら主ボタンに main-action-quiet が付き、行き先は変わらない", () => {
+    render(<TripTabBar tripId={tripId} current="settlement" quiet />);
+    const action = screen.getByRole("link", { name: "支払いを記録" });
+    expect(action).toHaveClass("main-action-quiet");
+    expect(action).toHaveAttribute(
+      "href",
+      `/trips/${tripId}/payments/new`,
+    );
+  });
+
+  it("quiet を渡さない画面（ホーム）の主ボタンは main-action-quiet を持たない", () => {
+    render(<TripTabBar tripId={tripId} current="home" />);
+    const action = screen.getByRole("link", { name: "支払いを記録" });
+    expect(action).toHaveClass("main-action");
+    expect(action).not.toHaveClass("main-action-quiet");
+  });
+
+  it("オフラインでも quiet なら押せない見た目に main-action-quiet が付く", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    render(<TripTabBar tripId={tripId} current="settlement" quiet />);
+    const action = screen
+      .getByText("支払いを記録")
+      .closest("[aria-disabled]");
+    expect(action).toHaveAttribute("aria-disabled", "true");
+    expect(action).toHaveClass("main-action-quiet");
+    expect(action).toHaveClass("main-action-offline");
+  });
+
+  it("画面が指定した主ボタンには quiet を付けても形を変えない", () => {
+    render(
+      <TripTabBar
+        tripId={tripId}
+        current="itinerary"
+        quiet
+        action={{ label: "達成を記録", icon: null, onPress: () => {} }}
+      />,
+    );
+    const action = screen.getByRole("button", { name: "達成を記録" });
+    expect(action).not.toHaveClass("main-action-quiet");
+  });
+});

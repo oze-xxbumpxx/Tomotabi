@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildDevinArgs, launchDelegation, observeLocalSession, parseLaunchArgs, readExportSessionId, runLaunchCli, sessionIdsIn } from '../scripts/delegation-launch.mjs';
+import { buildDevinArgs, launchDelegation, lockNameFor, observeLocalSession, parseLaunchArgs, readExportSessionId, runLaunchCli, sessionIdsIn } from '../scripts/delegation-launch.mjs';
 
 const id = (n) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
 const config = JSON.parse(readFileSync(new URL('../config/delegation-review.json', import.meta.url), 'utf8'));
@@ -131,8 +131,8 @@ test('LS-05: 起動の前の一覧を読めなければ起動しない', async (
 });
 
 test('LS-06: 専用クローンのロックがあれば起動しない', async () => {
-  await fixture(async ({ dir, dependencies, options, count }) => {
-    writeFileSync(join(dir, 'devin-clone.lock'), '{}');
+  await fixture(async ({ dir, clone, dependencies, options, count }) => {
+    writeFileSync(join(dir, lockNameFor(clone)), '{}');
     const blocked = await launchDelegation(options, dependencies);
     assert.equal(blocked.exitCode, 4);
     assert.equal(count(), 0);
@@ -140,14 +140,15 @@ test('LS-06: 専用クローンのロックがあれば起動しない', async (
 });
 
 test('LS-06b: 起動したらDevinのプロセスが終わるまでロックを残し、終わっていれば次の起動が取り直す', async () => {
-  await fixture(async ({ dir, dependencies, options, count }) => {
+  await fixture(async ({ dir, clone, dependencies, options, count }) => {
     const spawnOnce = dependencies.spawnOnce;
     dependencies.spawnOnce = async (input) => ({ ...(await spawnOnce(input)), pid: 4242 });
     let alive = true;
     dependencies.isAlive = (pid) => { assert.equal(pid, 4242); return alive; };
     assert.equal((await launchDelegation(options, dependencies)).state, 'running');
-    const lock = join(dir, 'devin-clone.lock');
+    const lock = join(dir, lockNameFor(clone));
     assert.equal(JSON.parse(readFileSync(lock, 'utf8')).devin_pid, 4242);
+    assert.equal(JSON.parse(readFileSync(lock, 'utf8')).clone, clone);
     assert.equal(statSync(lock).mode & 0o777, 0o600);
     // Devinが動いているあいだは、次の起動を止める。
     const busy = await launchDelegation({ ...options, issue: 82 }, dependencies);
@@ -160,11 +161,43 @@ test('LS-06b: 起動したらDevinのプロセスが終わるまでロックを�
   });
 });
 
+test('LS-06e: クローンが違えば、動いているDevinがあっても別のクローンで起動できる', async () => {
+  await fixture(async ({ dir, clone, dependencies, options, count }) => {
+    dependencies.isAlive = () => true;
+    dependencies.spawnOnce = async () => ({ pid: 4242 });
+    // 1つ目のクローンでDevinが動いている（ロックにプロセス番号が残っている）。
+    dependencies.listSessions = async () => [];
+    await launchDelegation(options, dependencies);
+    assert.equal(JSON.parse(readFileSync(join(dir, lockNameFor(clone)), 'utf8')).devin_pid, 4242);
+    // 2つ目のクローンでは、起動の後に新しいIDが1つだけ現れる。
+    const other = realpathSync(mkdtempSync(join(dir, 'clone-')));
+    let started = false;
+    dependencies.listSessions = async (cwd) => (started && cwd === other ? [{ id: 'session-2', working_directory: other }] : []);
+    dependencies.spawnOnce = async (input) => { assert.equal(input.clone, other); started = true; return { pid: 4343 }; };
+    const second = await launchDelegation({ ...options, issue: 82, clone: other }, dependencies);
+    assert.equal(second.state, 'running');
+    assert.equal(second.session_id, 'session-2');
+    // 1つ目のクローンには、まだ起動しない。
+    assert.equal((await launchDelegation({ ...options, issue: 83 }, dependencies)).exitCode, 4);
+    assert.equal(count(), 0);
+  });
+});
+
+test('LS-06f: 既定のクローンは前からのロックの名前を使う', () => {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'default-clone-')));
+  try {
+    assert.equal(lockNameFor(dir, dir), 'devin-clone.lock');
+    assert.match(lockNameFor(join(dir, 'x'), dir), /^devin-clone-[0-9a-f]{16}\.lock$/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('LS-06c: 起動の前に止まったらロックを外し、状態の置き場が無くても作る', async () => {
-  await fixture(async ({ dir, dependencies, options }) => {
+  await fixture(async ({ dir, clone, dependencies, options }) => {
     dependencies.listSessions = async () => { throw new Error('down'); };
     assert.equal((await launchDelegation(options, dependencies)).exitCode, 5);
-    assert.equal(existsSync(join(dir, 'devin-clone.lock')), false);
+    assert.equal(existsSync(join(dir, lockNameFor(clone))), false);
     const fresh = join(dir, 'fresh-state');
     dependencies.stateDir = fresh;
     assert.equal((await launchDelegation(options, dependencies)).exitCode, 5);
@@ -201,7 +234,7 @@ test('LS-07: 起動のあとに別のセッションも出たら、IDを空に�
 });
 
 test('LS-08: 手元の起動は非公開の書き出し先を--exportで渡し、既にあれば起動しない', async () => {
-  await fixture(async ({ dir, dependencies, options, count }) => {
+  await fixture(async ({ dir, clone, dependencies, options, count }) => {
     const spawnOnce = dependencies.spawnOnce;
     let exportArg = null;
     dependencies.spawnOnce = async (input) => { exportArg = input.args[input.args.indexOf('--export') + 1]; return spawnOnce(input); };

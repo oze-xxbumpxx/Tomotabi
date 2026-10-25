@@ -119,7 +119,17 @@ function processAlive(pid) {
  */
 export function acquireCloneLock(stateDir, { clone, isAlive = processAlive } = {}) {
   mkdirSync(stateDir, { recursive: true, mode: 0o700 });
-  const path = join(stateDir, lockNameFor(clone));
+  const name = lockNameFor(clone);
+  const path = join(stateDir, name);
+  // クローンごとに分ける前のロックには、どのクローンかの記録が無い。既定以外のクローンで
+  // 取られたかもしれないので、そのDevinが動いているかもしれないあいだは、どのクローンでも起動しない。
+  const legacy = join(stateDir, LOCK_NAME);
+  if (name !== LOCK_NAME && existsSync(legacy)) {
+    let previous = null;
+    try { previous = JSON.parse(readFileSync(legacy, 'utf8')); } catch { previous = null; }
+    const pid = previous?.devin_pid;
+    if (typeof previous?.clone !== 'string' && (!Number.isSafeInteger(pid) || pid <= 0 || isAlive(pid))) throw new Error('クローンの記録が無いロックがあります');
+  }
   if (existsSync(path)) {
     let previous = null;
     try { previous = JSON.parse(readFileSync(path, 'utf8')); } catch { previous = null; }

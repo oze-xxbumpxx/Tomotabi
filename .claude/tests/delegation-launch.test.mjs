@@ -183,6 +183,30 @@ test('LS-06e: クローンが違えば、動いているDevinがあっても別�
   });
 });
 
+test('LS-06g: クローンの記録が無い前の形のロックは、Devinが動いているかもしれないあいだ、ほかのクローンの起動も止める', async () => {
+  await fixture(async ({ dir, dependencies, options, count, setSessions }) => {
+    const legacy = join(dir, 'devin-clone.lock');
+    writeFileSync(legacy, JSON.stringify({ wrapper_pid: 1, devin_pid: 4242 }));
+    let alive = true;
+    dependencies.isAlive = () => alive;
+    assert.equal((await launchDelegation(options, dependencies)).exitCode, 4);
+    // プロセス番号の無いロックも止める。
+    writeFileSync(legacy, '{}');
+    assert.equal((await launchDelegation(options, dependencies)).exitCode, 4);
+    assert.equal(count(), 0);
+    // 前の形でもDevinが終わっていれば起動できる。
+    writeFileSync(legacy, JSON.stringify({ wrapper_pid: 1, devin_pid: 4242 }));
+    alive = false;
+    assert.equal((await launchDelegation(options, dependencies)).state, 'running');
+    // 新しい形のロック（クローンの記録あり）は、既定のクローンだけのものなので見ない。
+    writeFileSync(legacy, JSON.stringify({ clone: '/default', wrapper_pid: 1, devin_pid: 4242 }));
+    alive = true;
+    rmSync(join(dir, lockNameFor(options.clone)));
+    setSessions([]);
+    assert.equal((await launchDelegation({ ...options, issue: 82 }, dependencies)).state, 'running');
+  });
+});
+
 test('LS-06f: 既定のクローンは前からのロックの名前を使う', () => {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'default-clone-')));
   try {

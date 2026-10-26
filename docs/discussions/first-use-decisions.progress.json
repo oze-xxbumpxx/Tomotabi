@@ -40,8 +40,11 @@
       }
     },
     "reflect": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/claude-code/improvements/candidates/first-use-decisions.md"
+      ]
     }
   },
-  "updated_at": "2026-10-26T13:20:15.271Z"
+  "updated_at": "2026-10-26T23:14:51.811Z"
 }

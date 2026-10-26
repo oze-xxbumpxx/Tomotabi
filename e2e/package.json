@@ -10,7 +10,7 @@
     "@playwright/test": "^1.63.0",
     "@testcontainers/postgresql": "^12.2.1",
     "@types/pg": "^8.15.5",
-    "better-auth": "1.7.5",
+    "better-auth": "^1.7.5",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0",
     "typescript": "^5.9.2"

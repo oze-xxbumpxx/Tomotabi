@@ -18,6 +18,7 @@ import {
 } from "@/features/payments";
 import { usePlan } from "@/features/plans";
 import { TripTabBar } from "@/features/trips";
+import { PartnerTag } from "@/shared/ui/partner-tag";
 import { useMe } from "@/features/auth";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
@@ -247,7 +248,14 @@ export function PaymentDetailScreen({
           <dl className="payment-detail-rows">
             <div className="payment-detail-row">
               <dt>払った人</dt>
-              <dd>{nameOfUser(paymentData.payerUserId) || "相手"}</dd>
+              <dd>
+                {nameOfUser(paymentData.payerUserId) || "相手"}
+                <PartnerTag
+                  userId={paymentData.payerUserId}
+                  meUserId={userId}
+                  participants={participants}
+                />
+              </dd>
             </div>
             <div className="payment-detail-row">
               <dt>負担の分け方</dt>
@@ -263,7 +271,13 @@ export function PaymentDetailScreen({
               <dd className="payment-detail-shares tabular-nums">
                 {paymentData.allocations.map((a) => (
                   <span key={a.userId}>
-                    {`${nameOfUser(a.userId) || "相手"} ${a.percent}% · ${formatYen(
+                    {nameOfUser(a.userId) || "相手"}
+                    <PartnerTag
+                      userId={a.userId}
+                      meUserId={userId}
+                      participants={participants}
+                    />
+                    {` ${a.percent}% · ${formatYen(
                       yenFromDecimalString(a.burdenYen) ?? 0n,
                     )}`}
                   </span>

@@ -11,6 +11,7 @@ import {
   type HomeBalance,
 } from "@/features/trips";
 import { formatYenDigits, yenFromDecimalString } from "@/shared/lib/yen";
+import { PartnerTag } from "@/shared/ui/partner-tag";
 
 /**
  * ホームの精算の欄（v3のsettleカード）。
@@ -107,7 +108,19 @@ export function HomeBalanceCard({
       </span>
       <span className="home-settle-main">
         <span className="home-settle-label">
-          <b>{fromName}</b> から <b>{toName}</b> へ
+          <b>{fromName}</b>
+          <PartnerTag
+            userId={transfer.fromUserId}
+            meUserId={me?.user.id ?? null}
+            participants={participants}
+          />{" "}
+          から <b>{toName}</b>
+          <PartnerTag
+            userId={transfer.toUserId}
+            meUserId={me?.user.id ?? null}
+            participants={participants}
+          />{" "}
+          へ
         </span>
         <span className="home-settle-amount tabular-nums">
           {amount === null ? "— —" : formatYenDigits(amount)}

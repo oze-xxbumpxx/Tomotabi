@@ -3680,3 +3680,10 @@ a.plan-record-row-link {
   line-height: 1.6;
   color: var(--color-text-secondary);
 }
+
+/* 二人の名前が並ぶ所で相手の名前の後ろに付ける小さな印（#300） */
+.partner-tag {
+  font-size: 12px;
+  font-weight: normal;
+  color: var(--color-text-secondary);
+}

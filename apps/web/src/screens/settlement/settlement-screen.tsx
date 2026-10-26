@@ -280,6 +280,7 @@ export function SettlementScreen({
             participants={balanceData.participants}
             transfer={balanceData.transfer}
             targetCount={balanceData.targetCount}
+            meUserId={userId}
             action={
               balanceData.targetCount === 0
                 ? undefined

@@ -1,0 +1,25 @@
+issue: 291
+title: 'fix(web): 通知の設定の戻るリンクに行き先を出し、この端末の通知を止める前に確認する'
+agent: 'devin'
+model: 'swe-2-medium'
+runner: 'local'
+change_level: null
+delegated_at: '2026-10-25T08:03:48Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-25T10:11:22Z'
+    reviewed_sha: '8a564b92cfb44f24cda06208cef9e3dc15582731'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 294
+  pr_created_at: '2026-10-25T10:09:53Z'
+  merged_at: '2026-10-25T10:17:34Z'
+  closed_at: '2026-10-25T10:17:34Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true
+task_key: 'first-use-polish:notify-back-and-stop'

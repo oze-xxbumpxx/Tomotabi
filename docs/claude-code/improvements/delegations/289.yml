@@ -1,0 +1,28 @@
+issue: 289
+title: 'fix(web): 日付を11/1(日)の形にそろえる'
+agent: 'devin'
+model: 'swe-2-medium'
+runner: 'local'
+change_level: null
+delegated_at: '2026-10-25T08:03:31Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-25T09:10:23Z'
+    reviewed_sha: 'eea595e93e210cb6bb9288f2a15e5e1396c9dee4'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'stale-comment'
+        summary: 'globals.css:3044のコメントに古い日付の形（10/13 日）が残る'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 292
+  pr_created_at: '2026-10-25T08:08:43Z'
+  merged_at: '2026-10-25T10:04:26Z'
+  closed_at: '2026-10-25T10:04:26Z'
+  commits: 1
+  ci_first_pass: true
+  closes_linked: true
+task_key: 'first-use-polish:date-format'

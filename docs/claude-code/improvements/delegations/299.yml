@@ -1,0 +1,25 @@
+issue: 299
+title: 'fix(web): 履歴の取り消しの行から金額を外し、旅行の一覧に通知の設定を足す'
+agent: 'devin'
+model: 'swe-2-medium'
+runner: 'local'
+change_level: null
+delegated_at: '2026-10-25T23:05:46Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-25T23:22:23Z'
+    reviewed_sha: '560436e6973617c64b93b2c09c7ece7d59138a56'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 301
+  pr_created_at: '2026-10-25T23:14:01Z'
+  merged_at: '2026-10-26T13:03:01Z'
+  closed_at: '2026-10-26T13:03:01Z'
+  commits: 2
+  ci_first_pass: false
+  closes_linked: true
+task_key: 'first-use-decisions:cancel-row-and-notify-entry'

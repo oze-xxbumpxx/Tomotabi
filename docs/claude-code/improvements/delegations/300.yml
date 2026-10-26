@@ -1,0 +1,37 @@
+issue: 300
+title: 'fix(web): 二人の名前が並ぶ所で相手の名前に（相手）を付ける'
+agent: 'devin'
+model: 'swe-2-medium'
+runner: 'local'
+change_level: null
+delegated_at: '2026-10-25T23:05:48Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-25T23:21:47Z'
+    reviewed_sha: '14a273957aa3ab8a2d65ab3a094d6629537e8d5d'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'coding-standard'
+        summary: 'transfer-cardがfeatures/tripsのPartnerTagを直接読み、no-cross-featureでlintが止まる'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '表示名が空の相手に「相手（相手）」と出る'
+  - round: 1
+    reviewed_at: '2026-10-26T13:04:52Z'
+    reviewed_sha: '89db054043b7e4b36dd011966221cb7ea9e0e42a'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 302
+  pr_created_at: '2026-10-25T23:17:59Z'
+  merged_at: '2026-10-26T13:08:12Z'
+  closed_at: '2026-10-26T13:08:12Z'
+  commits: 3
+  ci_first_pass: false
+  closes_linked: true
+task_key: 'first-use-decisions:partner-tag'

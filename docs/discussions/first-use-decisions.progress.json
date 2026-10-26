@@ -17,23 +17,31 @@
       }
     },
     "plan": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/implementation-plans/first-use-decisions.md"
-      ]
+      ],
+      "approved": {
+        "pr": 297,
+        "at": "2026-10-26"
+      }
     },
     "implement": {
-      "state": "pending"
+      "state": "done"
     },
     "review": {
-      "state": "pending"
+      "state": "done"
     },
     "merge": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 302,
+        "at": "2026-10-26"
+      }
     },
     "reflect": {
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-25T22:59:03.028Z"
+  "updated_at": "2026-10-26T13:20:15.271Z"
 }

@@ -368,8 +368,9 @@ export function SettlementScreen({
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
-      {/* 「支払いを記録」と4つのタブ（共通の部品）。 */}
-      <TripTabBar tripId={tripId} current="settlement" />
+      {/* 「支払いを記録」と4つのタブ（共通の部品）。この画面では脇の
+          操作なので、quietで枠だけの小さなボタンにする。 */}
+      <TripTabBar tripId={tripId} current="settlement" quiet />
     </main>
   );
 }

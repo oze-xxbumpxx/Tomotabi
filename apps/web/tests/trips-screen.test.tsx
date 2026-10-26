@@ -251,6 +251,49 @@ describe("TripsScreen (/trips)", () => {
     expect(screen.getByText("旅行はまだありません")).toBeInTheDocument();
   });
 
+  it("見出しの右に「通知の設定」のリンクがあり /settings/notifications へ行く", async () => {
+    stubApi({ status: 200, body: meBody }, () =>
+      new Response(JSON.stringify(page([trip()])), { status: 200 }),
+    );
+
+    renderScreen();
+
+    const link = await screen.findByRole("link", { name: "通知の設定" });
+    expect(link).toHaveAttribute("href", "/settings/notifications");
+  });
+
+  it("旅行が 0 件でも「通知の設定」のリンクが出る", async () => {
+    stubApi({ status: 200, body: meBody }, () =>
+      new Response(JSON.stringify(page([])), { status: 200 }),
+    );
+
+    renderScreen();
+
+    expect(
+      await screen.findByText("旅行はまだありません"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "通知の設定" }),
+    ).toHaveAttribute("href", "/settings/notifications");
+  });
+
+  it("一覧の取得に失敗しても「通知の設定」のリンクが出る", async () => {
+    stubApi({ status: 200, body: meBody }, () =>
+      new Response(JSON.stringify({ code: "INTERNAL_ERROR" }), {
+        status: 500,
+      }),
+    );
+
+    renderScreen();
+
+    expect(
+      await screen.findByText("取得できませんでした"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "通知の設定" }),
+    ).toHaveAttribute("href", "/settings/notifications");
+  });
+
   it("/api/me が 401 なら /sign-in へ", async () => {
     stubApi({ status: 401 }, () =>
       new Response(JSON.stringify(page([])), { status: 200 }),

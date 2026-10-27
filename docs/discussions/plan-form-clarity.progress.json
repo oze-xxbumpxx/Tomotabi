@@ -10,7 +10,10 @@
       "reason": "L2なので要件定義書は作らない"
     },
     "design": {
-      "state": "waiting"
+      "state": "approval",
+      "docs": [
+        "docs/designs/plan-form-clarity.md"
+      ]
     },
     "plan": {
       "state": "pending"
@@ -28,5 +31,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-26T23:14:16.347Z"
+  "updated_at": "2026-10-27T10:34:06.596Z"
 }

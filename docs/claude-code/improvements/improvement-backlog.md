@@ -26,4 +26,9 @@ accepted / rejected以外の行がsession-briefing / sprint-summaryの「未決�
 | --- | --- | --- | --- |
 | L3の初回レビューを自分・reviewer・security-reviewerで並行させると、自分だけでは見落とすmustが出る（試行中） | 3本（#183・#184・#185） | `candidates/push-notifications.md`の事象1 | 2026-10-12 |
 | 自分のPRに直しを足している間にユーザーがマージし、直しがmainに入らない | 2回（#196・#200） | `candidates/push-notifications.md`の事象3。Auto Memory`merge-race-own-prs` | 2026-10-12 |
+| 並行で渡すタスクを触るファイルで分け、計画にタスクごとの主なファイルを書くと、3本を同時に動かしても衝突しない（成功手順） | 1回（#301・#302・#303） | `candidates/first-use-decisions.md`の事象1 | 2026-10-27 |
+| 計画で指定した部品の置き場所が`boundaries/no-cross-feature`に当たる。2つ以上の`features/*`から使う部品は`shared/`に置く。2回目なら`create-implementation-plan`に1行足す | 1回（#302） | `candidates/first-use-decisions.md`の事象2 | 2026-10-27 |
+| 名前を出す直しで、`displayNameOf`が「相手」を返す条件（一覧に無い・表示名が空）の一部だけを試験の観点に書いた | 1回（#302） | `candidates/first-use-decisions.md`の事象3 | 2026-10-27 |
+| 結合検証環境で見る項目に、見るために要るデータを書かず、3か所を見られなかった | 1回（first-use-decisions） | `candidates/first-use-decisions.md`の事象4 | 2026-10-27 |
+| 主な操作を消す案を推奨したが、ユーザーは小さく残す案を選んだ。消したときにほかの画面へ移る手間を、欠点に具体的に書く | 1回（精算の「支払いを記録」） | `candidates/first-use-decisions.md`の事象5 | 2026-10-27 |
 

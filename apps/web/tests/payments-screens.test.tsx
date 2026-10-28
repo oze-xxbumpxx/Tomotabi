@@ -765,6 +765,29 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     );
   });
 
+  it("訂正元とURLの予定が違うとき、戻るリンクはしおりへ", async () => {
+    // 訂正元（from）の支払いは予定と結びついていないので、URLの
+    // planIdは確かめられない（確かめたのは別の予定でないため）。
+    stubApi({ payment: () => json(paymentResponse({ planId: null })) });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PaymentFormScreen
+          tripId={tripId}
+          planId={planId}
+          fromPaymentId={paymentId}
+        />
+      </QueryClientProvider>,
+    );
+    await waitForForm();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "閉じる" }),
+    );
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/trips/${tripId}/itinerary`),
+    );
+  });
+
   it("URL の予定が確かめられないとき、戻るリンクはしおりへ", async () => {
     stubApi({ plan: () => notFound() });
     renderForm(planId);

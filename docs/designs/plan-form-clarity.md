@@ -1,6 +1,6 @@
 # 設計書: plan-form-clarity（予定の追加と、予定の詳細の操作を分かりやすくする）
 
-- ステータス: draft
+- ステータス: approved（#309）
 - レベル: L2（予定の追加・編集の時刻の欄の作りと、予定の詳細の操作の見た目・支払いの保存後の戻る先が変わる。APIとDBは変えない）
 - 関連: 論点の記録`docs/discussions/plan-form-clarity.md`、#254
 

@@ -8,7 +8,7 @@ import { PLAN_KINDS } from "./plan-kind";
  * 予定の追加・編集フォームで共通の検証と、編集時のdiff（変更のあった
  * 項目だけを入れるPlanPatch）の組み立て。
  * 名前はコードポイントで1〜100、日付は旅行期間内、時刻は`HH:mm`か
- * 「時刻未定」（null）、メモは2000文字まで（07 §6）。
+ * 空欄（時刻未定。送るときはnull）、メモは2000文字まで（07 §6）。
  */
 
 export const PLAN_NAME_MAX_CODEPOINTS = 100;
@@ -28,9 +28,7 @@ export type PlanFormValues = {
   kind: PlanKind | null;
   /** `YYYY-MM-DD`。追加フォームだけで使う（編集は日の移動で変える）。 */
   date: string;
-  /** 「時刻未定」ならtrue。trueのあいだtimeは送らない。 */
-  timeUndecided: boolean;
-  /** `HH:mm`。timeUndecidedがfalseのときだけ意味を持つ。 */
+  /** `HH:mm`。空文字は時刻未定（送るときはnull）。 */
   time: string;
   memo: string;
 };
@@ -42,7 +40,6 @@ export function valuesOfPlan(plan: Plan): PlanFormValues {
     name: plan.name,
     kind: plan.kind,
     date: plan.date,
-    timeUndecided: plan.time === null,
     time: plan.time ?? "",
     memo: plan.memo ?? "",
   };
@@ -76,12 +73,11 @@ export function validatePlanForm(
     errors.date = "この日付は旅行期間の外です";
   }
 
-  if (!values.timeUndecided) {
-    if (values.time === "") {
-      errors.time = "時刻を入力するか「時刻未定」にしてください";
-    } else if (!isLocalTimeString(values.time)) {
-      errors.time = "時刻を確認してください";
-    }
+  // 空は時刻未定として送るのでエラーにしない。`HH:mm`でない入れかけの
+  // 時刻は「時刻を確認してください」（ブラウザの`validity.badInput`は
+  // 呼び出し側の画面で確かめる）。
+  if (values.time !== "" && !isLocalTimeString(values.time)) {
+    errors.time = "時刻を確認してください";
   }
 
   if (boundedTextLength(values.memo) > PLAN_MEMO_MAX_CODEPOINTS) {
@@ -100,7 +96,7 @@ export function firstInvalidField(
 }
 
 function timeOf(values: PlanFormValues): string | null {
-  return values.timeUndecided ? null : values.time;
+  return values.time === "" ? null : values.time;
 }
 
 function memoOf(values: PlanFormValues): string | null {
@@ -184,7 +180,6 @@ export function planFormValuesFromJson(
     name: candidate.name,
     kind: candidate.kind as PlanKind,
     date: candidate.date,
-    timeUndecided: candidate.time === null || candidate.time === undefined,
     time: typeof candidate.time === "string" ? candidate.time : "",
     memo: typeof candidate.memo === "string" ? candidate.memo : "",
   };

@@ -108,7 +108,7 @@ export function PlanMoveSheet({
 
   return (
     <Sheet
-      title="日の移動"
+      title="別の日に移す"
       onClose={tryClose}
       closable={!(saving || state.status === "unknown")}
       footer={

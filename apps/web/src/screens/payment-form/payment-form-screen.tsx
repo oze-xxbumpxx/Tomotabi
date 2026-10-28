@@ -114,6 +114,11 @@ export function PaymentFormScreen({
   const [urlPlanCheck, setUrlPlanCheck] = useState<
     "pending" | "none" | "failed"
   >(planId !== null ? "pending" : "none");
+  // URLの`planId`をgetPlanで確かめられたあとだけ真。保存したあとと
+  // 戻るリンクは、その予定の詳細へ戻す（確かめられない・無いときは
+  // 今のまましおり）。onSucceededは描画の外で呼ばれるのでrefにも持つ。
+  const [urlPlanVerified, setUrlPlanVerified] = useState(false);
+  const urlPlanVerifiedRef = useRef(false);
 
   const amountRef = useRef<HTMLInputElement>(null);
   const myPercentRef = useRef<HTMLInputElement>(null);
@@ -229,6 +234,8 @@ export function PaymentFormScreen({
         ...current,
         plan: { id: plan.id, date: plan.date, name: plan.name },
       }));
+      setUrlPlanVerified(true);
+      urlPlanVerifiedRef.current = true;
       setUrlPlanCheck("none");
       return;
     }
@@ -243,7 +250,11 @@ export function PaymentFormScreen({
     check,
     onSucceeded: () => {
       setPendingToast("支払いを記録しました");
-      router.replace(`/trips/${tripId}/itinerary`);
+      router.replace(
+        urlPlanVerifiedRef.current && planId !== null
+          ? `/trips/${tripId}/plans/${planId}`
+          : `/trips/${tripId}/itinerary`,
+      );
     },
   });
   const state = save.state;
@@ -300,7 +311,10 @@ export function PaymentFormScreen({
     void save.submit(createPaymentDraft(tripId, body));
   };
 
-  const backHref = `/trips/${tripId}/itinerary`;
+  const backHref =
+    urlPlanVerified && planId !== null
+      ? `/trips/${tripId}/plans/${planId}`
+      : `/trips/${tripId}/itinerary`;
   const tryClose = () => {
     if (state.status === "saving" || state.status === "unknown") {
       return;

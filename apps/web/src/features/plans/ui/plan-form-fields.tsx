@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useId, type RefObject } from "react";
 import type { PlanKind } from "@tomotabi/contracts";
 import { Field } from "@/shared/ui/field";
 import { FieldTextarea } from "@/shared/ui/field";
@@ -16,8 +16,7 @@ import { DatePickerGrid } from "./date-picker-grid";
 
 export type PlanFormChange =
   | { field: "name" | "date" | "time" | "memo"; value: string }
-  | { field: "kind"; value: PlanKind }
-  | { field: "timeUndecided"; value: boolean };
+  | { field: "kind"; value: PlanKind };
 
 const KIND_OPTIONS: SegmentedOption[] = PLAN_KINDS.map((kind) => ({
   value: kind,
@@ -27,8 +26,8 @@ const KIND_OPTIONS: SegmentedOption[] = PLAN_KINDS.map((kind) => ({
 
 /**
  * 予定の追加・編集フォームの入力欄。名前・種類（2列のアイコン付き選択）・
- * 日付（追加のみ、11cの3等分選択）・時刻（「時刻未定」の切り替え +
- * `<input type="time">`）・メモ。種類を変えられないときは選択を固定して
+ * 日付（追加のみ、11cの3等分選択）・時刻（`<input type="time">`。空の
+ * ままなら時刻未定）・メモ。種類を変えられないときは選択を固定して
  * 理由の文を出す（W-19）。
  */
 export function PlanFormFields({
@@ -57,6 +56,8 @@ export function PlanFormFields({
   onChange: (change: PlanFormChange) => void;
 }) {
   const kindLocked = kindLockedReason !== null || locked;
+  const timeHintId = useId();
+  const memoHintId = useId();
   return (
     <div className="trip-form">
       <Field
@@ -73,7 +74,7 @@ export function PlanFormFields({
       <div className="field">
         <Segmented
           ref={kindRef}
-          label="種類"
+          label="種類（どれか1つ）"
           options={KIND_OPTIONS}
           value={values.kind}
           onChange={(kind) =>
@@ -106,22 +107,7 @@ export function PlanFormFields({
       )}
       <div className="field">
         <span className="field-label">時刻</span>
-        <label className="plan-time-toggle">
-          <input
-            type="checkbox"
-            checked={values.timeUndecided}
-            disabled={locked}
-            aria-label="時刻未定"
-            onChange={(event) =>
-              onChange({
-                field: "timeUndecided",
-                value: event.target.checked,
-              })
-            }
-          />
-          時刻未定
-        </label>
-        {!values.timeUndecided && (
+        <div className="plan-time-row">
           <input
             type="time"
             className="field-input"
@@ -130,13 +116,31 @@ export function PlanFormFields({
             readOnly={locked}
             aria-disabled={locked || undefined}
             aria-invalid={errors.time !== undefined ? true : undefined}
+            aria-describedby={timeHintId}
             data-locked={locked || undefined}
             ref={fieldRefs.time}
             onChange={(event) =>
               onChange({ field: "time", value: event.target.value })
             }
           />
-        )}
+          {values.time !== "" && (
+            <button
+              type="button"
+              className="plan-time-clear"
+              aria-label="時刻を消す"
+              disabled={locked}
+              onClick={() => {
+                onChange({ field: "time", value: "" });
+                fieldRefs.time?.current?.focus();
+              }}
+            >
+              消す
+            </button>
+          )}
+        </div>
+        <p id={timeHintId} className="plan-field-hint">
+          空のままなら時刻未定
+        </p>
         {errors.time !== undefined && (
           <p className="field-error" role="alert">
             {errors.time}
@@ -152,7 +156,11 @@ export function PlanFormFields({
         }
         error={errors.memo ?? null}
         locked={locked}
+        describedBy={memoHintId}
       />
+      <p id={memoHintId} className="plan-field-hint">
+        場所やURLはメモに書けます
+      </p>
     </div>
   );
 }

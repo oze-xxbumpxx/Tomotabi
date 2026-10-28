@@ -778,6 +778,31 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     );
   });
 
+  it("予定の詳細から開いた保留を確認したあとも、その予定の詳細へ移る", async () => {
+    await seedPending({
+      amountYen: "500",
+      payerUserId: userId,
+      allocations: [
+        { userId: otherUserId, percent: 50 },
+        { userId, percent: 50 },
+      ],
+      planId,
+    });
+    const fetchMock = stubApi({});
+    renderForm(planId);
+
+    await screen.findByText("保存されたか確認できません");
+    await userEvent.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/plans/${planId}`,
+      ),
+    );
+  });
+
   it("同じ利用者・旅行・操作の保留があれば入力を固定して確認の操作だけ出す（FW-09）", async () => {
     const record = await seedPending({
       amountYen: "7001",

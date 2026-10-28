@@ -224,25 +224,33 @@ export function PaymentFormScreen({
 
   // URLの予定をgetPlanで確かめて選んだ状態にする（別の旅行の予定は
   // 404になりfailedへ。選び直しは選んだ日のgetItineraryを使う）。
+  // 保留の固定中は欄を戻さないが、保留の本文の予定がURLのplanIdと同じ
+  // なら、確かめられたものとして戻り先にも使う。
   useEffect(() => {
-    if (locked || urlPlanCheck !== "pending") {
+    if (urlPlanCheck !== "pending") {
       return;
     }
     if (planQuery.data !== undefined) {
       const plan = planQuery.data;
-      setValues((current) => ({
-        ...current,
-        plan: { id: plan.id, date: plan.date, name: plan.name },
-      }));
-      setUrlPlanVerified(true);
-      urlPlanVerifiedRef.current = true;
+      if (!locked) {
+        setValues((current) => ({
+          ...current,
+          plan: { id: plan.id, date: plan.date, name: plan.name },
+        }));
+      }
+      // 取得した予定がURLの`planId`そのもののときだけ確かめられたとする
+      // （`from`の支払いが別の予定を指すときは戻り先に使わない）。
+      if (plan.id === planId) {
+        setUrlPlanVerified(true);
+        urlPlanVerifiedRef.current = true;
+      }
       setUrlPlanCheck("none");
       return;
     }
     if (planQuery.isError && !planQuery.isFetching) {
       setUrlPlanCheck("failed");
     }
-  }, [locked, urlPlanCheck, planQuery]);
+  }, [locked, urlPlanCheck, planQuery, planId]);
 
   const save = useCreatePayment({
     tripId,

@@ -20,24 +20,33 @@
       }
     },
     "plan": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/implementation-plans/plan-form-clarity.md",
         "docs/tests/plan-form-clarity.md"
-      ]
+      ],
+      "approved": {
+        "pr": 311,
+        "at": "2026-10-28"
+      }
     },
     "implement": {
-      "state": "pending"
+      "state": "done"
     },
     "review": {
-      "state": "pending"
+      "state": "done"
     },
     "merge": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 313,
+        "at": "2026-10-28"
+      }
     },
     "reflect": {
-      "state": "pending"
+      "state": "skipped",
+      "reason": "直しは1回のレビューで済み、新しい知見は委譲の記録312に残した"
     }
   },
-  "updated_at": "2026-10-27T10:48:54.747Z"
+  "updated_at": "2026-10-28T12:38:57.250Z"
 }

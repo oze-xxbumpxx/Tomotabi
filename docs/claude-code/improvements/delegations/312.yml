@@ -1,0 +1,40 @@
+issue: 312
+title: 'fix(web): 予定の追加の時刻の欄と、予定の詳細の操作を分かりやすくする'
+agent: 'devin'
+model: 'swe-2-medium'
+runner: 'local'
+change_level: null
+delegated_at: '2026-10-28T12:01:04Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-10-28T12:14:00Z'
+    reviewed_sha: '84d4d78703025b76c25069c7016aa9e137928fba'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: 'fromとplanIdを併用すると、確かめていない予定のIDで戻る先を組み立てる'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '保留の確認のあとは予定から開いてもしおりへ戻る'
+  - round: 1
+    reviewed_at: '2026-10-28T12:18:56Z'
+    reviewed_sha: '434bfdccf76f468606affe23a03e96de15604583'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'fromとplanIdを併用したときにしおりへ戻る試験が無い'
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 313
+  pr_created_at: '2026-10-28T12:10:13Z'
+  merged_at: '2026-10-28T12:22:50Z'
+  closed_at: '2026-10-28T12:22:50Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true
+task_key: 'plan-form-clarity:form-and-actions'

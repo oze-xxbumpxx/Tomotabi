@@ -114,6 +114,11 @@ export function PaymentFormScreen({
   const [urlPlanCheck, setUrlPlanCheck] = useState<
     "pending" | "none" | "failed"
   >(planId !== null ? "pending" : "none");
+  // URLの`planId`をgetPlanで確かめられたあとだけ真。保存したあとと
+  // 戻るリンクは、その予定の詳細へ戻す（確かめられない・無いときは
+  // 今のまましおり）。onSucceededは描画の外で呼ばれるのでrefにも持つ。
+  const [urlPlanVerified, setUrlPlanVerified] = useState(false);
+  const urlPlanVerifiedRef = useRef(false);
 
   const amountRef = useRef<HTMLInputElement>(null);
   const myPercentRef = useRef<HTMLInputElement>(null);
@@ -219,23 +224,33 @@ export function PaymentFormScreen({
 
   // URLの予定をgetPlanで確かめて選んだ状態にする（別の旅行の予定は
   // 404になりfailedへ。選び直しは選んだ日のgetItineraryを使う）。
+  // 保留の固定中は欄を戻さないが、保留の本文の予定がURLのplanIdと同じ
+  // なら、確かめられたものとして戻り先にも使う。
   useEffect(() => {
-    if (locked || urlPlanCheck !== "pending") {
+    if (urlPlanCheck !== "pending") {
       return;
     }
     if (planQuery.data !== undefined) {
       const plan = planQuery.data;
-      setValues((current) => ({
-        ...current,
-        plan: { id: plan.id, date: plan.date, name: plan.name },
-      }));
+      if (!locked) {
+        setValues((current) => ({
+          ...current,
+          plan: { id: plan.id, date: plan.date, name: plan.name },
+        }));
+      }
+      // 取得した予定がURLの`planId`そのもののときだけ確かめられたとする
+      // （`from`の支払いが別の予定を指すときは戻り先に使わない）。
+      if (plan.id === planId) {
+        setUrlPlanVerified(true);
+        urlPlanVerifiedRef.current = true;
+      }
       setUrlPlanCheck("none");
       return;
     }
     if (planQuery.isError && !planQuery.isFetching) {
       setUrlPlanCheck("failed");
     }
-  }, [locked, urlPlanCheck, planQuery]);
+  }, [locked, urlPlanCheck, planQuery, planId]);
 
   const save = useCreatePayment({
     tripId,
@@ -243,7 +258,11 @@ export function PaymentFormScreen({
     check,
     onSucceeded: () => {
       setPendingToast("支払いを記録しました");
-      router.replace(`/trips/${tripId}/itinerary`);
+      router.replace(
+        urlPlanVerifiedRef.current && planId !== null
+          ? `/trips/${tripId}/plans/${planId}`
+          : `/trips/${tripId}/itinerary`,
+      );
     },
   });
   const state = save.state;
@@ -300,7 +319,10 @@ export function PaymentFormScreen({
     void save.submit(createPaymentDraft(tripId, body));
   };
 
-  const backHref = `/trips/${tripId}/itinerary`;
+  const backHref =
+    urlPlanVerified && planId !== null
+      ? `/trips/${tripId}/plans/${planId}`
+      : `/trips/${tripId}/itinerary`;
   const tryClose = () => {
     if (state.status === "saving" || state.status === "unknown") {
       return;

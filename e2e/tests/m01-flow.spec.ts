@@ -24,7 +24,7 @@ async function addPlan(
     kindLabel: string;
     /** 期間内の日付の表示（`11/7(土)`の形。formatDayLabelで作る）。省略時はフォームの初期値の日。 */
     dateLabel?: string;
-    /** `HH:MM`。nullは「時刻未定」のままにする。 */
+    /** `HH:MM`。未指定なら時刻の欄は空（時刻未定）のままにする。 */
     time?: string;
   },
 ): Promise<void> {
@@ -44,9 +44,6 @@ async function addPlan(
       .click();
   }
   if (plan.time !== undefined) {
-    await page
-      .getByRole("checkbox", { name: "時刻未定" })
-      .uncheck();
     await page.getByLabel("時刻", { exact: true }).fill(plan.time);
   }
   await page.getByRole("button", { name: "保存", exact: true }).click();
@@ -129,16 +126,16 @@ test("M-01: 旅行の作成から終了後の予定の追加まで", async ({
     page.getByRole("heading", { name: "清水寺（早朝参り）" }),
   ).toBeVisible();
 
-  // 日の移動: 1日目 → 2日目
-  await page.getByRole("button", { name: "日の移動" }).click();
-  const moveSheet = page.getByRole("dialog", { name: "日の移動" });
+  // 別の日に移す: 1日目 → 2日目
+  await page.getByRole("button", { name: "別の日に移す" }).click();
+  const moveSheet = page.getByRole("dialog", { name: "別の日に移す" });
   await moveSheet
     .getByRole("radio", { name: DAY_TWO_LABEL, exact: true })
     .click();
   await moveSheet
     .getByRole("button", { name: "この日に移動する" })
     .click();
-  await expect(page.getByRole("status").filter({ hasText: "移動しました" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "別の日に移しました" })).toBeVisible();
 
   // 詳細の日付リンク（`?date=plan.date`行き）から2日目のしおりへ
   const planDateLink = page.getByRole("link", {

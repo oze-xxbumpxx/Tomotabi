@@ -146,7 +146,7 @@ export function PlanDetailScreen({
     check: moveCheck.check,
     onSucceeded: () => {
       setLayer(null);
-      setToast("移動しました");
+      setToast("別の日に移しました");
     },
   });
   const cancel = usePlanMutation({
@@ -587,12 +587,12 @@ export function PlanDetailScreen({
           onClick={() => openLayer("move")}
         >
           <CalendarBlank size={18} aria-hidden="true" />
-          日の移動
+          別の日に移す
         </button>
         {canCancel && (
           <button
             type="button"
-            className="btn-outline"
+            className="btn-outline btn-outline-danger"
             onClick={() => openLayer("cancel")}
           >
             <Prohibit size={18} aria-hidden="true" />
@@ -672,7 +672,7 @@ export function PlanDetailScreen({
             }}
           />
         ) : tripFailure !== null ? (
-          <Sheet title="日の移動" onClose={() => onWriteClose(move)}>
+          <Sheet title="別の日に移す" onClose={() => onWriteClose(move)}>
             <StatusText tone="error">
               旅行の期間を取得できませんでした
             </StatusText>

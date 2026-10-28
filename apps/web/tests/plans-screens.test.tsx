@@ -660,11 +660,11 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
 
     await screen.findByRole("heading", { name: "錦市場で昼食" });
     await userEvent.click(
-      screen.getByRole("button", { name: /日の移動/ }),
+      screen.getByRole("button", { name: /別の日に移す/ }),
     );
 
     expect(
-      await screen.findByRole("heading", { name: "日の移動" }),
+      await screen.findByRole("heading", { name: "別の日に移す" }),
     ).toBeInTheDocument();
     const submit = screen.getByRole("button", {
       name: "この日に移動する",
@@ -678,7 +678,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);
 
-    expect(await screen.findByText("移動しました")).toBeInTheDocument();
+    expect(await screen.findByText("別の日に移しました")).toBeInTheDocument();
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/plans/${planId}/move`);
     expect(JSON.parse(String(init?.body))).toEqual({
@@ -709,6 +709,30 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
         ).length,
       ).toBeGreaterThanOrEqual(2),
     );
+  });
+
+  it("「別の日に移す」の名で出し、「取りやめにする」だけが危険を表す見た目（btn-outline-danger）を持つ", async () => {
+    stubApi({});
+    renderDetail();
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    expect(
+      screen.getByRole("button", { name: "別の日に移す" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "日の移動" }),
+    ).not.toBeInTheDocument();
+
+    const cancelButton = screen.getByRole("button", {
+      name: "取りやめにする",
+    });
+    expect(cancelButton.className).toContain("btn-outline-danger");
+    // ほかのボタンは持たない。
+    for (const other of screen
+      .getAllByRole("button")
+      .filter((button) => button !== cancelButton)) {
+      expect(other.className).not.toContain("btn-outline-danger");
+    }
   });
 
   it("W-21: 取りやめは名前・日付・記録が残ることを確認してから送る", async () => {
@@ -779,9 +803,9 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
 
     await screen.findByRole("heading", { name: "錦市場で昼食" });
     await userEvent.click(
-      screen.getByRole("button", { name: /日の移動/ }),
+      screen.getByRole("button", { name: /別の日に移す/ }),
     );
-    await screen.findByRole("heading", { name: "日の移動" });
+    await screen.findByRole("heading", { name: "別の日に移す" });
 
     // 保留があるあいだは移動のボタンを出さず、確認の案内だけ出す。
     expect(
@@ -795,7 +819,7 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
       screen.getByRole("button", { name: "同じ内容で確認する" }),
     );
 
-    expect(await screen.findByText("移動しました")).toBeInTheDocument();
+    expect(await screen.findByText("別の日に移しました")).toBeInTheDocument();
     const [url, init] = writeCalls(fetchMock)[0];
     expect(url).toBe(`/api/trips/${tripId}/plans/${planId}/move`);
     expect(new Headers(init?.headers).get("idempotency-key")).toBe(
@@ -939,7 +963,7 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     ).toBeInTheDocument();
   });
 
-  it("種類の選択肢と「時刻未定」は表示どおりの名で読み上げる", async () => {
+  it("種類の選択肢は表示どおりの名で読み上げ、種類の見出しは「種類（どれか1つ）」", async () => {
     stubApi({});
     render(
       <QueryClientProvider client={createQueryClient()}>
@@ -965,8 +989,147 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
       ).toHaveAttribute("value", value);
     }
     expect(
-      screen.getByRole("checkbox", { name: "時刻未定" }),
+      screen.getByText("種類（どれか1つ）"),
     ).toBeInTheDocument();
+    // 「時刻未定」のチェックは無い。
+    expect(
+      screen.queryByRole("checkbox", { name: "時刻未定" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("時刻の欄は最初から出ていて、欄の下の補足を`aria-describedby`で結ぶ", async () => {
+    stubApi({});
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen
+          mode="new"
+          tripId={tripId}
+          date="2026-10-13"
+        />
+      </QueryClientProvider>,
+    );
+
+    const timeInput = await screen.findByLabelText("時刻");
+    expect(timeInput).toHaveAttribute("type", "time");
+    expect(timeInput).toHaveValue("");
+    const hintId = timeInput.getAttribute("aria-describedby");
+    expect(hintId).not.toBeNull();
+    expect(document.getElementById(hintId ?? "")).toHaveTextContent(
+      "空のままなら時刻未定",
+    );
+  });
+
+  it("メモの欄の下に「場所やURLはメモに書けます」を`aria-describedby`で結ぶ", async () => {
+    stubApi({});
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen
+          mode="new"
+          tripId={tripId}
+          date="2026-10-13"
+        />
+      </QueryClientProvider>,
+    );
+
+    const memo = await screen.findByLabelText("メモ", { exact: false });
+    const hintId = memo.getAttribute("aria-describedby");
+    expect(hintId).not.toBeNull();
+    expect(document.getElementById(hintId ?? "")).toHaveTextContent(
+      "場所やURLはメモに書けます",
+    );
+  });
+
+  it("時刻を入れると`HH:mm`で送る", async () => {
+    const fetchMock = stubApi({
+      trip: () => json(trip()),
+      create: () => json(plan({ id: planId }), 201),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen
+          mode="new"
+          tripId={tripId}
+          date="2026-10-13"
+        />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByLabelText("名前");
+    await userEvent.type(screen.getByLabelText("名前"), "国際通り");
+    await userEvent.click(
+      screen.getByRole("radio", { name: "買い物" }),
+    );
+    fireEvent.change(screen.getByLabelText("時刻"), {
+      target: { value: "09:30" },
+    });
+    await clickWhenEnabled("保存");
+
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
+    expect(
+      JSON.parse(String(writeCalls(fetchMock)[0][1]?.body)).time,
+    ).toBe("09:30");
+  });
+
+  it("入れかけの時刻（badInput）は送らず「時刻を確認してください」", async () => {
+    const fetchMock = stubApi({ trip: () => json(trip()) });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen
+          mode="new"
+          tripId={tripId}
+          date="2026-10-13"
+        />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByLabelText("名前");
+    await userEvent.type(screen.getByLabelText("名前"), "国際通り");
+    await userEvent.click(
+      screen.getByRole("radio", { name: "買い物" }),
+    );
+    const timeInput = screen.getByLabelText("時刻") as HTMLInputElement;
+    // jsdomは入れかけを作れないのでvalidityだけ差し替える。
+    const validitySpy = vi
+      .spyOn(timeInput, "validity", "get")
+      .mockReturnValue({ ...timeInput.validity, badInput: true });
+    try {
+      await clickWhenEnabled("保存");
+      expect(
+        await screen.findByText("時刻を確認してください"),
+      ).toBeInTheDocument();
+      expect(writeCalls(fetchMock)).toHaveLength(0);
+      expect(timeInput).toHaveFocus();
+    } finally {
+      validitySpy.mockRestore();
+    }
+  });
+
+  it("「時刻を消す」で欄を空にして焦点を戻す。空のときはボタンが無い", async () => {
+    stubApi({});
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen
+          mode="new"
+          tripId={tripId}
+          date="2026-10-13"
+        />
+      </QueryClientProvider>,
+    );
+
+    const timeInput = await screen.findByLabelText("時刻");
+    expect(
+      screen.queryByRole("button", { name: "時刻を消す" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(timeInput, { target: { value: "09:30" } });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "時刻を消す" }),
+    );
+    expect(timeInput).toHaveValue("");
+    expect(timeInput).toHaveFocus();
+    expect(
+      screen.queryByRole("button", { name: "時刻を消す" }),
+    ).not.toBeInTheDocument();
   });
 
   it("RW-02/RW-03: 追加の保留があれば欄を固定して戻し、同じ内容で確認できる", async () => {
@@ -1008,6 +1171,8 @@ describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {
     const nameInput = await screen.findByLabelText("名前");
     expect(nameInput).toHaveAttribute("readonly");
     expect(nameInput).toHaveValue("国際通りで買い物");
+    // 残した本文の`time: null`は、空の時刻の欄に戻す。
+    expect(screen.getByLabelText("時刻")).toHaveValue("");
     expect(
       screen.queryByRole("button", { name: "保存" }),
     ).not.toBeInTheDocument();
@@ -1094,6 +1259,50 @@ describe("PlanFormScreen（編集 /trips/{id}/plans/{planId}/edit）", () => {
       name: "錦市場で昼食と買い物",
     });
     expect(new Headers(init?.headers).get("x-expected-version")).toBe("1");
+  });
+
+  it("時刻のある予定を「時刻を消す」で空にして保存すると time:null を送る", async () => {
+    const fetchMock = stubApi({
+      plan: () => json(plan({ time: "12:00" })),
+      patch: () => json(plan({ version: "2" })),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
+    const timeInput = screen.getByLabelText("時刻");
+    expect(timeInput).toHaveValue("12:00");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "時刻を消す" }),
+    );
+    expect(timeInput).toHaveValue("");
+    await clickWhenEnabled("保存");
+
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
+    expect(JSON.parse(String(writeCalls(fetchMock)[0][1]?.body))).toEqual({
+      time: null,
+    });
+  });
+
+  it("時刻未定の予定の編集は時刻の欄が空で出る", async () => {
+    stubApi({ plan: () => json(plan({ time: null })) });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
+    expect(screen.getByLabelText("時刻")).toHaveValue("");
+    expect(
+      screen.queryByRole("button", { name: "時刻を消す" }),
+    ).not.toBeInTheDocument();
   });
 
   it("何も変えずに保存すると送らずに閉じる", async () => {
@@ -1240,7 +1449,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     );
   });
 
-  it("日の移動で旅行期間の取得が失敗したらシート内で再試行できる", async () => {
+  it("別の日に移す操作で旅行期間の取得が失敗したらシート内で再試行できる", async () => {
     const fetchMock = stubApi({
       plan: () => json(plan()),
       trip: () => json({ code: "INTERNAL_ERROR" }, 500),
@@ -1253,7 +1462,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
 
     await screen.findByRole("heading", { name: "錦市場で昼食" });
     await userEvent.click(
-      screen.getByRole("button", { name: /日の移動/ }),
+      screen.getByRole("button", { name: /別の日に移す/ }),
     );
 
     expect(
@@ -1269,7 +1478,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await waitFor(() => expect(tripCalls().length).toBeGreaterThan(1));
   });
 
-  it("日の移動で旅行期間の取得が 401 なら C-1、403 なら C-2", async () => {
+  it("別の日に移す操作で旅行期間の取得が 401 なら C-1、403 なら C-2", async () => {
     for (const [status, text] of [
       [401, "もう一度ログインしてください"],
       [403, "この旅行を開けません"],
@@ -1291,7 +1500,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
 
       await screen.findByRole("heading", { name: "錦市場で昼食" });
       await userEvent.click(
-        screen.getByRole("button", { name: /日の移動/ }),
+        screen.getByRole("button", { name: /別の日に移す/ }),
       );
 
       expect(await screen.findByText(text)).toBeInTheDocument();
@@ -1641,9 +1850,9 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
 
     await screen.findByRole("heading", { name: "錦市場で昼食" });
     await userEvent.click(
-      screen.getByRole("button", { name: /日の移動/ }),
+      screen.getByRole("button", { name: /別の日に移す/ }),
     );
-    await screen.findByRole("heading", { name: "日の移動" });
+    await screen.findByRole("heading", { name: "別の日に移す" });
     await userEvent.click(
       screen.getByRole("radio", { name: "10/14(水)" }),
     );
@@ -1664,7 +1873,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);
 
-    expect(await screen.findByText("移動しました")).toBeInTheDocument();
+    expect(await screen.findByText("別の日に移しました")).toBeInTheDocument();
     const moves = fetchMock.mock.calls.filter(
       ([url]) => String(url) === `/api/trips/${tripId}/plans/${planId}/move`,
     );

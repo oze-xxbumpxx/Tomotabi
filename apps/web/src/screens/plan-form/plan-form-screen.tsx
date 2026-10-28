@@ -76,7 +76,6 @@ const EMPTY_VALUES = (date: string): PlanFormValues => ({
   name: "",
   kind: null,
   date,
-  timeUndecided: true,
   time: "",
   memo: "",
 });
@@ -267,11 +266,6 @@ export function PlanFormScreen({
     }));
     setErrors((current) => {
       const next = { ...current };
-      if (change.field === "timeUndecided") {
-        // 「時刻未定」に切り替えたら時刻のエラーは消える。
-        delete next.time;
-        return next;
-      }
       if (current[change.field] === undefined) {
         return current;
       }
@@ -289,6 +283,11 @@ export function PlanFormScreen({
       return;
     }
     const nextErrors = validatePlanForm(values, period);
+    // 入れかけの時刻（ブラウザが`badInput`にする。欄のvalueは空のまま）
+    // は「時刻を確認してください」にして送らない。
+    if (timeRef.current?.validity.badInput === true) {
+      nextErrors.time = "時刻を確認してください";
+    }
     setErrors(nextErrors);
     const invalid = firstInvalidField(nextErrors);
     if (invalid !== null) {
@@ -559,11 +558,10 @@ export function PlanFormScreen({
               },
               {
                 label: "時刻",
-                mine: values.timeUndecided ? "未定" : values.time,
+                mine: values.time === "" ? "未定" : values.time,
                 latest:
-                  (values.timeUndecided
-                    ? null
-                    : values.time) === state.latest.data.time
+                  (values.time === "" ? null : values.time) ===
+                  state.latest.data.time
                     ? null
                     : (state.latest.data.time ?? "未定"),
               },

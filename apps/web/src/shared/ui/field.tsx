@@ -101,6 +101,8 @@ type FieldTextareaProps = {
   optional?: boolean;
   error?: string | null;
   locked?: boolean;
+  /** 欄の下に出す補足の要素id。エラーのidとあわせて`aria-describedby`に結ぶ。 */
+  describedBy?: string;
 } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "id">;
 
 export function FieldTextarea({
@@ -108,6 +110,7 @@ export function FieldTextarea({
   optional = false,
   error = null,
   locked = false,
+  describedBy,
   className,
   ...textProps
 }: FieldTextareaProps) {
@@ -133,7 +136,12 @@ export function FieldTextarea({
         aria-disabled={locked || undefined}
         aria-invalid={error !== null && error !== undefined ? true : undefined}
         aria-describedby={
-          error !== null && error !== undefined ? errorId : undefined
+          [
+            error !== null && error !== undefined ? errorId : undefined,
+            describedBy,
+          ]
+            .filter((part) => part !== undefined)
+            .join(" ") || undefined
         }
         data-locked={locked || undefined}
       />

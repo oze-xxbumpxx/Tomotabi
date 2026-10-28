@@ -730,6 +730,79 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     void fetchMock;
   });
 
+  it("予定の詳細から開いたときは、保存したあとその予定の詳細へ移る", async () => {
+    const fetchMock = stubApi({});
+    renderForm(planId);
+    const amountInput = await waitForForm();
+    const user = userEvent.setup();
+    // URLのplanIdを確かめて選んだ状態になるまで待つ。
+    await screen.findByText(/錦市場で昼食/);
+
+    await user.type(amountInput, "500");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/plans/${planId}`,
+      ),
+    );
+    expect(writeCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it("予定の詳細から開いたときは、戻るリンクもその予定の詳細へ", async () => {
+    stubApi({});
+    renderForm(planId);
+    await waitForForm();
+    await screen.findByText(/錦市場で昼食/);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "閉じる" }),
+    );
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/plans/${planId}`,
+      ),
+    );
+  });
+
+  it("URL の予定が確かめられないとき、戻るリンクはしおりへ", async () => {
+    stubApi({ plan: () => notFound() });
+    renderForm(planId);
+    await screen.findByRole("button", { name: "再取得する" });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "閉じる" }),
+    );
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/trips/${tripId}/itinerary`),
+    );
+  });
+
+  it("予定の詳細から開いた保留を確認したあとも、その予定の詳細へ移る", async () => {
+    await seedPending({
+      amountYen: "500",
+      payerUserId: userId,
+      allocations: [
+        { userId: otherUserId, percent: 50 },
+        { userId, percent: 50 },
+      ],
+      planId,
+    });
+    const fetchMock = stubApi({});
+    renderForm(planId);
+
+    await screen.findByText("保存されたか確認できません");
+    await userEvent.click(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    );
+    await waitFor(() => expect(writeCalls(fetchMock)).toHaveLength(1));
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/plans/${planId}`,
+      ),
+    );
+  });
+
   it("同じ利用者・旅行・操作の保留があれば入力を固定して確認の操作だけ出す（FW-09）", async () => {
     const record = await seedPending({
       amountYen: "7001",

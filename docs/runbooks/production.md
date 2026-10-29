@@ -100,7 +100,7 @@ npm run cli:generate-vapid-key -w @tomotabi/api -- "$HOME/tomotabi-vapid-product
    - Required reviewers: 自分
    - Deployment branches and tags: Selected branchesで`main`だけ
 2. Environment variablesに`VERCEL_ORG_ID`・`VERCEL_PROJECT_ID_API`・`VERCEL_PROJECT_ID_WEB`・`API_ORIGIN`（本番のapiのURL）を足す。
-3. Vercelでトークンを作る。名前は`tomotabi-deploy-production`、期限は90日。
+3. Vercelでトークンを作る。名前は`tomotabi-deploy-production`、期限は90日。Vercel Hobbyのトークンはアカウント全体に効く。検証用のトークンでも本番のプロジェクトを操作でき、本番のトークンでも検証用を操作できる。守りはGitHubのEnvironmentの承認とmainだけの制限なので、検証用・本番のどちらの承認も、出すcommitと、直前にワークフローが変わっていればプロジェクトのIDが替わっていないかを見てから押す。
 4. トークンを、1のEnvironmentの**Environment secrets**に`VERCEL_TOKEN`として登録する。
 5. Settings > Secrets and variables > Actionsの「Repository secrets」に`VERCEL_TOKEN`が無いことを確かめる。ここにあると、Environmentに入れ忘れたときに黙ってそちらが使われる。
 

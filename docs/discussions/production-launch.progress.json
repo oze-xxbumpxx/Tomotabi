@@ -35,14 +35,18 @@
       "state": "done"
     },
     "review": {
-      "state": "active"
+      "state": "done"
     },
     "merge": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 320,
+        "at": "2026-10-30"
+      }
     },
     "reflect": {
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-29T13:50:28.519Z"
+  "updated_at": "2026-10-29T22:51:28.036Z"
 }

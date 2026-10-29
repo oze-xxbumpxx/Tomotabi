@@ -1,0 +1,29 @@
+name: deploy-production
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "出すcommitのSHA。空ならmainの最新"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+# 本番のデプロイが同時に走らないようにする。実行中は止めず、続けて起動したものは
+# queue: maxで順に待つ（既定のsingleは待機1件だけで、さらに起動すると前の待機が消える）。
+concurrency:
+  group: deploy-production
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    uses: ./.github/workflows/deploy-vercel.yml
+    with:
+      environment: tomotabi-production
+      sha: ${{ inputs.sha }}
+    secrets: inherit

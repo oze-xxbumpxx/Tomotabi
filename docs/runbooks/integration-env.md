@@ -181,7 +181,7 @@ slot 1も同じように、もう一人のアカウントで行う。二人が�
    - Use workflow from: `main`のまま
    - 出すcommitのSHA: 空ならmainの最新。指定するときは40桁の完全なSHA（短いSHAは止まる）
 2. 承認を求められたら、内容を見て承認する（Review deployments）。
-3. ワークフローは次の順に進み、どこかで失敗したらそこで止まる。自動で再試行はしない。
+3. ワークフローは次の順に進み、どこかで失敗したらそこで止まる。自動で再試行はしない。手順は本番と共通の`deploy-vercel.yml`にあり、実行の画面では「deploy / deploy」のジョブの中に出る。
    1. 入力のSHAの形と、変数`API_ORIGIN`が`https://`で始まるかを確かめる
    2. そのcommitがmainの履歴に入っていて、`ci.yml`が成功しているかを確かめる
    3. apiを出す（`vercel pull`→`vercel build`→`vercel deploy --prebuilt`）

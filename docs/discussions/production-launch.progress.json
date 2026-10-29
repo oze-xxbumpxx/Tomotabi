@@ -32,10 +32,10 @@
       ]
     },
     "implement": {
-      "state": "active"
+      "state": "done"
     },
     "review": {
-      "state": "pending"
+      "state": "active"
     },
     "merge": {
       "state": "pending"
@@ -44,5 +44,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-29T13:33:27.905Z"
+  "updated_at": "2026-10-29T13:50:28.519Z"
 }

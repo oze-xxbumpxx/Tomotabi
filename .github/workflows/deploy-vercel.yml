@@ -35,6 +35,15 @@ jobs:
             echo "sha input must be a full 40-hex commit SHA. Aborting." >&2
             exit 1
           fi
+      - name: Verify VERCEL_TOKEN is set
+        # Environmentに秘密を入れ忘れたとき、Vercelの手順で分かりにくく失敗する前に止める。
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "secrets.VERCEL_TOKEN is not set in this Environment. Aborting." >&2
+            exit 1
+          fi
       - name: Verify API_ORIGIN is set
         env:
           API_ORIGIN: ${{ vars.API_ORIGIN }}

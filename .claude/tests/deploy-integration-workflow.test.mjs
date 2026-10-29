@@ -29,6 +29,8 @@ test('PW-01・02・03: ボタンはworkflow_dispatchだけで、決まったEnvi
     assert.match(button, /cancel-in-progress: false/, name);
     // ボタンは自分で手順を持たない（確かめを1か所にするため）。
     assert.doesNotMatch(button, /steps:/, name);
+    // 承認の画面で、出すcommitが見える。
+    assert.match(button, new RegExp(`run-name: "${expected.group} \\$\\{\\{ inputs\\.sha \\|\\| 'main latest' \\}\\}"`), name);
     assert.match(button, /contents: read/, name);
     assert.match(button, /actions: read/, name);
     assert.doesNotMatch(button, /: write/, name);
@@ -84,6 +86,10 @@ test('PW-05: 必須の変数と入力は先に確かめ、認証情報は残さ�
   const originCheck = workflow.indexOf('case "${API_ORIGIN:-}" in');
   const apiDeploy = workflow.indexOf('Deploy api to Vercel');
   assert.ok(originCheck > -1 && apiDeploy > -1 && originCheck < apiDeploy, 'API_ORIGINの確かめはapiを出す手順より前に置く');
+  // Environmentに秘密を入れ忘れたら、Vercelの手順の前に止める。
+  const tokenCheck = workflow.indexOf('Verify VERCEL_TOKEN is set');
+  assert.ok(tokenCheck > -1 && tokenCheck < apiDeploy, 'VERCEL_TOKENの確かめはapiを出す手順より前に置く');
+  assert.match(workflow, /if \[ -z "\$\{VERCEL_TOKEN:-\}" \]; then[\s\S]{0,200}?exit 1/);
   assert.match(workflow, /case "\$\{API_ORIGIN:-\}" in[\s\S]{0,200}?https:\/\/\*\) ;;[\s\S]{0,200}?exit 1/);
   // 入力のshaは空でなければ40桁の16進数だけを受け付ける。
   assert.match(workflow, /grep -qE '\^\[0-9a-f\]\{40\}\$'/);

@@ -102,6 +102,7 @@ npm run cli:generate-vapid-key -w @tomotabi/api -- "$HOME/tomotabi-vapid-product
 2. Environment variablesに`VERCEL_ORG_ID`・`VERCEL_PROJECT_ID_API`・`VERCEL_PROJECT_ID_WEB`・`API_ORIGIN`（本番のapiのURL）を足す。
 3. Vercelでトークンを作る。名前は`tomotabi-deploy-production`、期限は90日。
 4. トークンを、1のEnvironmentの**Environment secrets**に`VERCEL_TOKEN`として登録する。
+5. Settings > Secrets and variables > Actionsの「Repository secrets」に`VERCEL_TOKEN`が無いことを確かめる。ここにあると、Environmentに入れ忘れたときに黙ってそちらが使われる。
 
 ## 8. 二人を初期登録する
 
@@ -118,7 +119,7 @@ npm run cli:generate-vapid-key -w @tomotabi/api -- "$HOME/tomotabi-vapid-product
 1. 出すcommitを、検証用のボタン（`deploy-integration`）で出し、検証用で確かめる。
 2. DBを変えるcommitなら、[バックアップの手順書](backup-and-restore.md)できっかけ`before-change`のバックアップを取り、戻して照合する。合ってから、migrationを管理者の端末から1回だけ流す（`npm run db:migrate -w @tomotabi/api`、`MIGRATION_DATABASE_URL`は本番のmigrator）。
 3. GitHubのActionsで「deploy-production」を選び、Run workflowを押す。出すcommitのSHAは、1で確かめたcommitの40桁のSHAを入れる。
-4. 承認を求められたら、出すcommitとEnvironmentが`tomotabi-production`であることを見て承認する。
+4. 承認を求められたら、実行の名前（`deploy-production <出すcommitのSHA>`）とEnvironmentが`tomotabi-production`であることを見て承認する。
 5. ワークフローは、SHAの形・`API_ORIGIN`・mainの履歴・CIの成功を確かめ、apiを出してからwebを出す。止まったときの直し方は検証用の手順書の9章の表と同じ。
 6. 本番のwebのURLで、二人のログインとホームの表示を確かめる。
 7. [公開の記録](../releases/README.md)を書く。

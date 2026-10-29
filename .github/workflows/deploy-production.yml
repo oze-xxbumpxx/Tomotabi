@@ -1,4 +1,6 @@
 name: deploy-production
+# 承認の画面と実行の一覧で、どのcommitを出すかが見えるようにする。
+run-name: "deploy-production ${{ inputs.sha || 'main latest' }}"
 
 on:
   workflow_dispatch:

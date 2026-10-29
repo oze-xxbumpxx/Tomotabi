@@ -27,9 +27,11 @@ dumpは`pg_dump`の版をDBと同じ16にそろえるため、Dockerの`postgres
 
 ## 1. 照合の基準の数字を取る（dumpの直前）
 
+`REASON`には、取るきっかけを`weekly`・`before-trip`・`after-trip`・`before-change`・`before-launch`（最初の公開の前）・`incident`（障害のとき）から1つ入れる。ファイル名に入り、5章で残すものを見分けるのに使う。
+
 ```bash
 read -rs "MIGRATION_DATABASE_URL?本番のmigratorの直接の接続: "; echo
-REASON=weekly   # weekly / before-trip / after-trip / before-change / before-launch
+REASON=weekly
 NAME="tomotabi-production-$(date +%Y%m%d-%H%M)-$REASON"
 psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -At -F ' ' -f apps/api/db/admin/verify-restore.sql > ~/TomotabiBackups/$NAME.before.txt
 ```
@@ -54,6 +56,8 @@ diff ~/TomotabiBackups/$NAME.before.txt ~/TomotabiBackups/$NAME.after.txt && ech
 
 違いが出たら、dumpのあいだに二人が書き込んだ。1章からやり直す（できたファイルは消してよい）。
 
+`.before.txt`は暗号化しない。中身は二人の利用者のID（ランダムな文字列）と、表ごとの件数・支払いと精算の合計額だけで、名前・メール・支払いの中身は入っていない。
+
 ## 3. クラウドにも置く
 
 ```bash
@@ -64,15 +68,16 @@ cp ~/TomotabiBackups/$NAME.dump.age ~/TomotabiBackups/$NAME.before.txt "<0章で
 
 `weekly`・`before-trip`・`after-trip`のときは、月に1回だけでよい。`before-change`と`before-launch`のときは毎回行い、照合が合ってから先へ進む。
 
-使い捨てのPostgreSQL 16を立てる。ここで使うパスワードは、このコンテナの中だけのもの。
+使い捨てのPostgreSQL 16を立てる。ここで使うパスワードは、このコンテナの中だけのもの。データの置き場をメモリ（`--tmpfs`）にするので、戻した実データはディスクに書かれず、コンテナを消せば残らない。最初の行は、前回の照合のコンテナが残っていたときに消すためのもの。
 
 ```bash
-docker run -d --name tomotabi-restore-check -e POSTGRES_PASSWORD=restore -p 127.0.0.1:55432:5432 postgres:16-alpine
+docker rm -fv tomotabi-restore-check 2>/dev/null
+docker run -d --name tomotabi-restore-check --tmpfs /var/lib/postgresql/data -e POSTGRES_PASSWORD=restore -p 127.0.0.1:55432:5432 postgres:16-alpine
 until docker exec tomotabi-restore-check pg_isready -h 127.0.0.1 -U postgres >/dev/null; do sleep 1; done
 R_ADMIN="postgresql://postgres:restore@127.0.0.1:55432"
 psql "$R_ADMIN/postgres" -v ON_ERROR_STOP=1 -v migrator_password=restore -v app_runtime_password=restore -f apps/api/db/admin/create-roles.sql
-psql "$R_ADMIN/postgres" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE tomotabi'
-psql "$R_ADMIN/tomotabi" -v ON_ERROR_STOP=1 -f apps/api/db/admin/grant-database.sql
+psql "$R_ADMIN/postgres" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE tomotabi_restored'
+psql "$R_ADMIN/tomotabi_restored" -v ON_ERROR_STOP=1 -f apps/api/db/admin/grant-database.sql
 ```
 
 ロールはクラスタのものでdumpに入らないので、ここで作り直す（OPS-13のロールの作り直し）。
@@ -80,27 +85,30 @@ psql "$R_ADMIN/tomotabi" -v ON_ERROR_STOP=1 -f apps/api/db/admin/grant-database.
 dumpを戻し、後始末をしてから照合する。
 
 ```bash
+setopt pipefail
 age -d ~/TomotabiBackups/$NAME.dump.age \
-  | docker exec -i -e PGPASSWORD=restore tomotabi-restore-check pg_restore -h 127.0.0.1 -U migrator -d tomotabi --no-owner --exit-on-error
-R_URL="postgresql://migrator:restore@127.0.0.1:55432/tomotabi"
-PGOPTIONS='-c tomotabi.restored_copy=yes' psql "$R_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/neutralize-restored.sql
+  | docker exec -i -e PGPASSWORD=restore tomotabi-restore-check pg_restore -h 127.0.0.1 -U migrator -d tomotabi_restored --no-owner --exit-on-error \
+  && echo "復元できた"
+R_URL="postgresql://migrator:restore@127.0.0.1:55432/tomotabi_restored"
+PGOPTIONS='-c tomotabi.restored_copy=tomotabi_restored' psql "$R_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/neutralize-restored.sql
 psql "$R_URL" -v ON_ERROR_STOP=1 -At -F ' ' -f apps/api/db/admin/verify-restore.sql > /tmp/tomotabi-restored.txt
 diff ~/TomotabiBackups/$NAME.before.txt /tmp/tomotabi-restored.txt && echo "照合が合った"
 grep '^settlement.active_claims.mismatch_with_history ' /tmp/tomotabi-restored.txt
 ```
 
-合格の条件は3つ。
+合格の条件は4つ。
 
+- `pg_restore`の行のあとに「復元できた」と出る。
 - `diff`が何も出さず「照合が合った」と出る。
 - 最後の行が`settlement.active_claims.mismatch_with_history 0`。
 - 後始末の表で、`sessions`・`verifications`・`enabled_push_subscriptions`がすべて0。
 
-照合が合わなければ、その先（migration・公開）へ進まず、Claude Codeに「どの行が違ったか」だけを伝える（数字そのものは貼らなくてよい）。
+合わなかったときも、途中でやめたときも、先に下の片付けをする。そのうえで、その先（migration・公開）へ進まず、Claude Codeに「どの行が違ったか」だけを伝える（数字そのものは貼らなくてよい）。
 
-最後に、コンテナと照合の結果を消す。実データを手元のDBに残さない。
+最後に、コンテナと照合の結果を消す。
 
 ```bash
-docker rm -f tomotabi-restore-check
+docker rm -fv tomotabi-restore-check
 rm -f /tmp/tomotabi-restored.txt
 ```
 
@@ -110,14 +118,46 @@ rm -f /tmp/tomotabi-restored.txt
 
 ## 6. 本当の障害で本番に戻す
 
-DBの記録が壊れた・消えたときだけ行う。初回の公開の前には試さない。
+DBの記録が壊れた・消えたときだけ行う。初回の公開の前には試さない。ここでは本番の元のDBと戻した先が同じNeonのプロジェクトにあり、接続文字列の違いはDB名かホスト名だけになる。取り違えないよう、戻した先の接続は別の変数（`RESTORED_URL`）に入れ、本番の変数は先に消す。
 
 1. [本番の手順書](production.md)の14章で、完全停止する。
-2. いまの壊れた状態も、2章のやり方でdumpに残す（きっかけ`incident`）。
-3. 戻す先を、元のDBとは別に作る。元のDBには上書きしない。
-   - Neonの短い復元（最大6時間前まで）で戻せる時点なら、Neonの管理画面でその時点の新しいブランチを作る。
-   - それより前なら、本番の管理者の接続で空のDBを作り（`CREATE DATABASE tomotabi_restored`）、そのDBで`grant-database.sql`を流してから、4章の`pg_restore`の行の宛先をそのDBのmigratorの直接の接続に替えて戻す（ロールはプロジェクトに既にある）。
-4. 戻した先で`verify-restore.sql`を流し、バックアップを取ったときの`.before.txt`と比べる。
-5. 戻した先で`neutralize-restored.sql`を流す（全部のセッションを消し、購読を止める。二人はログインし直し、通知を許可し直す）。
-6. Vercelの`tomotabi-api`の`DATABASE_URL`を、戻した先のapp_runtimeのpooledの接続に替え、本番の手順書の10章の3〜5で同じcommitを出し直す。
-7. 本番の手順書の14章で再開する。二人に、戻した時点より後の支払い・受け渡しを確かめてもらい、必要なものだけ記録し直してもらう。自動で記録し直さない。
+2. いまの壊れた状態も、1〜2章のやり方でdumpに残す（`REASON=incident`）。
+3. 元のDBに、実行用のロールがもうつながらないようにする。14章の再開はロールのログインを全体で戻すので、これをしないと、古いデプロイが元のDBにまた書ける。接続の権限は既定で全員（PUBLIC）にも付いているので、PUBLICからも外す（migratorには個別に付けてあるので、管理の作業は続けられる）。
+
+   ```bash
+   read -rs "ADMIN_URL?本番の管理者の接続: "; echo
+   psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c 'REVOKE CONNECT ON DATABASE neondb FROM PUBLIC, app_runtime'
+   ```
+
+4. 戻す先を、元のDBとは別に作る。元のDBには上書きしない。
+   - Neonの短い復元（最大6時間前まで）で戻せる時点なら、Neonの管理画面でその時点の新しいブランチを作る。元のブランチのcomputeは止めたままにし、再開しない。
+   - それより前なら、本番の管理者の接続で空のDB`tomotabi_restored`を作り、そこへバックアップを戻す（ロールはプロジェクトに既にある）。
+
+     ```bash
+     psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE tomotabi_restored'
+     read -rs "RESTORED_ADMIN_URL?本番の管理者の接続（DB名をtomotabi_restoredにしたもの）: "; echo
+     psql "$RESTORED_ADMIN_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/grant-database.sql
+     unset MIGRATION_DATABASE_URL ADMIN_URL
+     read -rs "RESTORED_URL?migratorの直接の接続（DB名をtomotabi_restoredにしたもの）: "; echo
+     setopt pipefail
+     age -d ~/TomotabiBackups/<戻すファイル>.dump.age \
+       | DB_URL="$RESTORED_URL" docker run --rm -i -e DB_URL postgres:16-alpine sh -c 'exec pg_restore --dbname="$DB_URL" --no-owner --exit-on-error' \
+       && echo "復元できた"
+     ```
+
+5. 戻した先で照合し、バックアップを取ったときの`.before.txt`と比べる。
+
+   ```bash
+   psql "$RESTORED_URL" -v ON_ERROR_STOP=1 -At -F ' ' -f apps/api/db/admin/verify-restore.sql > /tmp/tomotabi-restored.txt
+   diff ~/TomotabiBackups/<戻すファイル>.before.txt /tmp/tomotabi-restored.txt && echo "照合が合った"
+   ```
+
+6. 戻した先で後始末をする（全部のセッションを消し、購読を止める。二人はログインし直し、通知を許可し直す）。設定の値には、つないだ先のDB名を入れる（DBを作って戻したときは`tomotabi_restored`、Neonのブランチに戻したときは`neondb`）。DB名が合わないと止まる。ブランチのときはDB名が本番と同じになるので、`RESTORED_URL`のホスト名が新しいブランチのものかを、流す前に必ず見る。
+
+   ```bash
+   PGOPTIONS='-c tomotabi.restored_copy=tomotabi_restored' psql "$RESTORED_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/neutralize-restored.sql
+   ```
+
+7. Vercelの`tomotabi-api`の`DATABASE_URL`を、戻した先のapp_runtimeのpooledの接続に替え、本番の手順書の10章の3〜5で同じcommitを出し直す。
+8. 本番の手順書の14章で再開する。元のDBは3で、元のブランチは4で止めてあるので、再開しても戻した先にしかつながらない。二人に、戻した時点より後の支払い・受け渡しを確かめてもらい、必要なものだけ記録し直してもらう。自動で記録し直さない。
+9. 作業が済んだら`unset RESTORED_URL RESTORED_ADMIN_URL`とし、`/tmp/tomotabi-restored.txt`を消す。

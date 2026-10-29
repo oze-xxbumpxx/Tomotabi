@@ -19,7 +19,7 @@ const NEUTRALIZE_SQL = script("neutralize-restored.sql");
 const VERIFY_SQL = script("verify-restore.sql");
 
 const MIGRATOR_PASSWORD = "test-migrator";
-const RESTORED_DB = "restored";
+const RESTORED_DB = "tomotabi_restored";
 const DUMP_PATH = "/tmp/tomotabi-test.dump";
 const P256DH = `\\x04${"11".repeat(64)}`;
 const AUTH_SECRET = `\\x${"22".repeat(16)}`;
@@ -193,17 +193,36 @@ describe("stop-runtime.sql / resume-runtime.sql", () => {
 });
 
 describe("neutralize-restored.sql", () => {
-  it("AS-04: 復元したDBだと示す設定が無ければ止まり、何も変えない", async () => {
+  it("AS-04: 設定が無いか、つないだDBの名前と違えば止まり、何も変えない", async () => {
     await expect(restoredMigrator.query(NEUTRALIZE_SQL)).rejects.toThrow(/restored copy/);
-    const { rows } = await restoredMigrator.query<{ count: string }>("SELECT count(*) FROM identity.sessions");
-    expect(Number(rows[0]!.count)).toBe(2);
+    // 本番（元のDB）につないだまま、復元したDBの名前を添えて流しても止まる。
+    const original = await migrator.connect();
+    try {
+      await original.query(`SET tomotabi.restored_copy = '${RESTORED_DB}'`);
+      await expect(original.query(NEUTRALIZE_SQL)).rejects.toThrow(/restored copy/);
+      await original.query("ROLLBACK");
+    } finally {
+      original.release();
+    }
+    const client = await restoredMigrator.connect();
+    try {
+      await client.query("SET tomotabi.restored_copy = 'yes'");
+      await expect(client.query(NEUTRALIZE_SQL)).rejects.toThrow(/restored copy/);
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
+    }
+    for (const pool of [migrator, restoredMigrator]) {
+      const { rows } = await pool.query<{ count: string }>("SELECT count(*) FROM identity.sessions");
+      expect(Number(rows[0]!.count)).toBe(2);
+    }
   });
 
   it("AS-05・06: 後始末でセッションと購読を止め、照合の数字は元のDBと一致する", async () => {
     const before = await verify(migrator);
     const client = await restoredMigrator.connect();
     try {
-      await client.query("SET tomotabi.restored_copy = 'yes'");
+      await client.query(`SET tomotabi.restored_copy = '${RESTORED_DB}'`);
       const result = lastResult(await client.query(NEUTRALIZE_SQL));
       expect(result.rows[0]).toEqual({ sessions: "0", verifications: "0", enabled_push_subscriptions: "0" });
     } finally {

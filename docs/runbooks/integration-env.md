@@ -148,7 +148,7 @@ web-testには登録しない。画面の`/api`の転送先（`API_ORIGIN`）は
    - `VERCEL_ORG_ID`: VercelのチームまたはアカウントのID
    - `VERCEL_PROJECT_ID_API`・`VERCEL_PROJECT_ID_WEB`: それぞれのプロジェクトのSettings > Generalにある
    - `API_ORIGIN`: apiのURL（`https://`で始まり、末尾にスラッシュを付けない）。変えたら画面を出し直す
-3. Vercelの管理画面のAccount Settings > Tokensで、トークンを作る。名前は`tomotabi-deploy-integration`、期限は90日。
+3. Vercelの管理画面のAccount Settings > Tokensで、トークンを作る。名前は`tomotabi-deploy-integration`、期限は90日。Vercel Hobbyのトークンはアカウント全体に効く。検証用のトークンでも本番のプロジェクトを操作でき、本番のトークンでも検証用を操作できる。守りはGitHubのEnvironmentの承認とmainだけの制限なので、検証用・本番のどちらの承認も、出すcommitと、直前にワークフローが変わっていればプロジェクトのIDが替わっていないかを見てから押す。
 4. 作ったトークンを、1のEnvironmentの**Environment secrets**に`VERCEL_TOKEN`として登録する。
 5. トークンの期限が来たら、作り直して`VERCEL_TOKEN`を入れ替える。
 

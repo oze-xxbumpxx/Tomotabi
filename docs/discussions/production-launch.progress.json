@@ -6,7 +6,10 @@
   "round": 1,
   "stages": {
     "requirements": {
-      "state": "waiting"
+      "state": "approval",
+      "docs": [
+        "docs/requirements/production-launch.md"
+      ]
     },
     "design": {
       "state": "pending"
@@ -27,5 +30,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-10-29T00:00:22.255Z"
+  "updated_at": "2026-10-29T00:03:11.164Z"
 }

@@ -130,10 +130,18 @@ DBの記録が壊れた・消えたときだけ行う。初回の公開の前に
    ```
 
 4. 戻す先を、元のDBとは別に作る。元のDBには上書きしない。
-   - Neonの短い復元（最大6時間前まで）で戻せる時点なら、Neonの管理画面でその時点の新しいブランチを作る。元のブランチのcomputeは止めたままにし、再開しない。
+   - Neonの短い復元（最大6時間前まで）で戻せる時点なら、Neonの管理画面でその時点の新しいブランチを作る。元のブランチのcomputeは止めたままにし、再開しない。新しいブランチのmigratorの直接の接続を`RESTORED_URL`に入れる。DB名は本番と同じ`neondb`になる。
+
+     ```bash
+     unset MIGRATION_DATABASE_URL ADMIN_URL
+     read -rs "RESTORED_URL?新しいブランチのmigratorの直接の接続: "; echo
+     RESTORED_DB=neondb
+     ```
+
    - それより前なら、本番の管理者の接続で空のDB`tomotabi_restored`を作り、そこへバックアップを戻す（ロールはプロジェクトに既にある）。
 
      ```bash
+     RESTORED_DB=tomotabi_restored
      psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE tomotabi_restored'
      read -rs "RESTORED_ADMIN_URL?本番の管理者の接続（DB名をtomotabi_restoredにしたもの）: "; echo
      psql "$RESTORED_ADMIN_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/grant-database.sql
@@ -152,12 +160,13 @@ DBの記録が壊れた・消えたときだけ行う。初回の公開の前に
    diff ~/TomotabiBackups/<戻すファイル>.before.txt /tmp/tomotabi-restored.txt && echo "照合が合った"
    ```
 
-6. 戻した先で後始末をする（全部のセッションを消し、購読を止める。二人はログインし直し、通知を許可し直す）。設定の値には、つないだ先のDB名を入れる（DBを作って戻したときは`tomotabi_restored`、Neonのブランチに戻したときは`neondb`）。DB名が合わないと止まる。ブランチのときはDB名が本番と同じになるので、`RESTORED_URL`のホスト名が新しいブランチのものかを、流す前に必ず見る。
+6. 戻した先で後始末をする（全部のセッションを消し、購読を止める。二人はログインし直し、通知を許可し直す）。設定の値には、4で決めたつないだ先のDB名（`RESTORED_DB`）を入れる。DB名が合わないと止まる。ブランチのときはDB名が本番と同じになるので、先にホスト名を表示し、Neonの管理画面にある新しいブランチのホスト名と同じかを見てから流す。
 
    ```bash
-   PGOPTIONS='-c tomotabi.restored_copy=tomotabi_restored' psql "$RESTORED_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/neutralize-restored.sql
+   RESTORED_URL="$RESTORED_URL" python3 -c 'import os,urllib.parse as u; p=u.urlsplit(os.environ["RESTORED_URL"]); print(p.hostname, p.path)'
+   PGOPTIONS="-c tomotabi.restored_copy=${RESTORED_DB:?}" psql "$RESTORED_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/neutralize-restored.sql
    ```
 
 7. Vercelの`tomotabi-api`の`DATABASE_URL`を、戻した先のapp_runtimeのpooledの接続に替え、本番の手順書の10章の3〜5で同じcommitを出し直す。
 8. 本番の手順書の14章で再開する。元のDBは3で、元のブランチは4で止めてあるので、再開しても戻した先にしかつながらない。二人に、戻した時点より後の支払い・受け渡しを確かめてもらい、必要なものだけ記録し直してもらう。自動で記録し直さない。
-9. 作業が済んだら`unset RESTORED_URL RESTORED_ADMIN_URL`とし、`/tmp/tomotabi-restored.txt`を消す。
+9. 作業が済んだら`unset RESTORED_URL RESTORED_ADMIN_URL RESTORED_DB`とし、`/tmp/tomotabi-restored.txt`を消す。

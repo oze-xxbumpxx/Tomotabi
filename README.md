@@ -13,7 +13,7 @@
 | webのAPI通信 | OpenAPIからOrvalでfetch関数とZodスキーマを生成（`apps/web/src/shared/api/generated/`、手編集禁止）。応答はZodで検証し、neverthrowの`ResultAsync`で成功と失敗を返す |
 | DB | Drizzle ORM + `pg`。スキーマは`identity`・`planning`・`record`・`settlement`・`notification`・`infra`（`apps/api/src/infrastructure/database/schema/`） |
 | テスト | Vitest（web / api共通ランナー）。APIは`@nestjs/testing`とSupertest。実PostgreSQLはTestcontainers |
-| CI | GitHub Actionsのquality / build / api-db / harness / e2e。検証用の環境へのデプロイは手動のワークフロー`deploy-integration`（承認つき、mainだけ） |
+| CI | GitHub Actionsのquality / build / api-db / harness / e2e。検証用と本番へのデプロイは手動のワークフロー`deploy-integration`・`deploy-production`（承認つき、mainだけ。確かめとデプロイの手順は共通の`deploy-vercel`） |
 
 **Adapterの意味**: このリポジトリではAdapterは **IF定義の置き場** です。一般的なPorts and Adaptersでいう「外部接続の実装」はInfrastructureに置きます。UseCaseはIFに依存し、Service / Infrastructureの実装はModuleで注入します。
 

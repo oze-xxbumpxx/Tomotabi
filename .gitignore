@@ -20,3 +20,7 @@ e2e/test-results/
 
 # Service Workerのビルド出力（predev・prebuildで毎回作る）
 apps/web/public/sw.js
+
+# 本番のDBのdump（実データ）。リポジトリの外に置く（docs/runbooks/backup-and-restore.md）
+*.dump
+*.dump.age

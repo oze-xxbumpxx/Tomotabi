@@ -153,12 +153,24 @@ DBの記録が壊れた・消えたときだけ行う。初回の公開の前に
        && echo "復元できた"
      ```
 
-5. 戻した先で照合し、バックアップを取ったときの`.before.txt`と比べる。
+5. 戻した先で照合の数字を取る。
 
    ```bash
    psql "$RESTORED_URL" -v ON_ERROR_STOP=1 -At -F ' ' -f apps/api/db/admin/verify-restore.sql > /tmp/tomotabi-restored.txt
-   diff ~/TomotabiBackups/<戻すファイル>.before.txt /tmp/tomotabi-restored.txt && echo "照合が合った"
    ```
+
+   比べ方は、戻す道で違う。
+   - dumpから戻したときは、そのdumpの`.before.txt`と全部の行が同じになる。
+
+     ```bash
+     diff ~/TomotabiBackups/<戻すファイル>.before.txt /tmp/tomotabi-restored.txt && echo "照合が合った"
+     ```
+
+   - Neonのブランチに戻したときは、戻した時点が最後のdumpより後なので、件数と金額は`.before.txt`と同じにならない。次の3つを見る。`settlement.active_claims.mismatch_with_history`が0。`migrations.count`と`migrations.last_hash`が最後のdumpの`.before.txt`以上で、そのあとmigrationを流していなければ同じ。履歴の表（`record.payments`・`record.payment_cancellations`・`settlement.settlements`・`settlement.items`・`settlement.cancellations`）の件数が、最後のdumpの`.before.txt`より少なくない（履歴は消さない作りなので、減っていれば戻した時点が古すぎる）。
+
+     ```bash
+     grep -E '^(settlement.active_claims.mismatch_with_history|migrations|record.payments.count|record.payment_cancellations.count|settlement.settlements.count|settlement.items.count|settlement.cancellations.count) ' /tmp/tomotabi-restored.txt ~/TomotabiBackups/<最後のdump>.before.txt
+     ```
 
 6. 戻した先で後始末をする（全部のセッションを消し、購読を止める。二人はログインし直し、通知を許可し直す）。設定の値には、4で決めたつないだ先のDB名（`RESTORED_DB`）を入れる。DB名が合わないと止まる。ブランチのときはDB名が本番と同じになるので、先にホスト名を表示し、Neonの管理画面にある新しいブランチのホスト名と同じかを見てから流す。
 

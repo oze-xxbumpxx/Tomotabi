@@ -49,4 +49,4 @@
 | 設計の説明 | 設計の承認を頼むとき、確認のページに載せる図と画像つきの説明。設計書（Markdown）が正式な記録 | docs/designs/discussion-workflow.md |
 | 共有受付 | ローカルとCloudの要求を管理Issueへ残し、Actionsが順に照合する仕組み。起票と担当の重複を防ぐ（足した） | docs/designs/delegation-review-reliability.md |
 | 起動許可 | 確保した担当と今回の実行が一致したとき、Devinの起動ラッパーへ1回だけ返す結果。結果不明の再起動には使わない（足した） | docs/designs/delegation-review-reliability.md |
-| 両レビューの照合 | PRの現在のコミットに対するClaudeとCodexの完了、指摘の確認、証拠の変更を確かめること（足した） | docs/requirements/delegation-review-reliability.md |
+| 両レビューの照合 | PRの現在のコミットに対するClaudeの完了、指摘の確認、証拠の変更を確かめること（足した） | docs/requirements/delegation-review-reliability.md |

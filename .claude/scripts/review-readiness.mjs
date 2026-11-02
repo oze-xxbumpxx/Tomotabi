@@ -10,7 +10,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { uncovered as reviewTasksUncovered } from './check-review-coverage.mjs';
 
 export const SUBJECT_ALGORITHM = 'git-raw-v1';
 export const REVIEW_SCHEMA_VERSION = 1;
@@ -738,7 +737,7 @@ export function checkReview({
   baseRef = null,
   source = 'index',
   headRef = 'HEAD',
-  coverageFn = reviewTasksUncovered,
+  coverageFn = () => [],
   requireHandoff = false,
 }) {
   const normalizedFeature = validateFeatureName(feature);

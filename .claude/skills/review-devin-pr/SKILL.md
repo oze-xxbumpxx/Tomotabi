@@ -50,12 +50,7 @@ description: >
 
 ## レビュー（round 0は全体、round 1以降は前回のレビュー以降の差分）
 
-1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。quality・build・api-dbなど既存CIの結果を確認する。Codex完了（PR内のどれかのコミット）を確認する。
-   round 0では、Codexのレビューを頼む: `node .claude/scripts/codex-review.mjs request <n>`。
-   CodexはボットのPR（Devin）を自動ではレビューしないため、Claudeのレビューを始める前に頼む（2026-10-10 ユーザーの指示）。
-   Codexのレビューは最初の1回で足りる。round 1以降の修正のたびには頼まない（2026-10-11 ユーザーの指示）。投稿は手元のghの認証（ユーザーのアカウント）で行う。依頼には対象のheadの印を付け、PRのどれかのコミットで完了済みのとき、今のheadで実行中のとき、自分がそのheadへ依頼済みのときは投稿しない。
-   Codexの完了は待たずに自分のレビューを進め、`merge`の判定の前に`run_in_background`で`node .claude/scripts/codex-review.mjs wait <n> --sha <head> [--since <requestの出力のrequestedAt>]`を起動して待つ（頼み直したときに、前の試行の失敗で終えないため）。
-   Codexの指摘は、自分の指摘と同じ分類（must / nit / security / decision）で扱う。
+1. **状態**: `gh pr view <n> --json files,statusCheckRollup,mergeable,body,headRefOid`。quality・build・api-dbなど既存CIの結果を確認する。ChatGPT（Codex）にはレビューを頼まない（2026-11-02 ユーザーの判断）。
    round 1以降は`gh api repos/{owner}/{repo}/compare/<前回の sha>...<今の head>`で差分を見て、
    前回の指摘が直ったかと、新しい変更に問題が無いかを見る。Devinの返信コメントも読む。
 2. **範囲**: 変更ファイルがIssueの「やること」と範囲内か。範囲外のファイル、並行作業中の他PRが作る
@@ -126,7 +121,7 @@ description: >
 | 前回投稿した`must`が直っていない | `escalate` | 投稿しない。モデルを上げる／Claudeが直す／Issueを分ける、の案を付けてユーザーに渡す                                                                      |
 | `must`がある・round 2以降        | `escalate` | 同上（自動投稿の上限2回に達した）                                                                                                                        |
 | `must`がある・round 0か1         | `fix`      | 下の「自動投稿」→ 更新を待つ                                                                                                                             |
-| `must`なし                       | `merge`    | 下の「レビュー完了のコメント」を付ける。Codexの完了と現在headへのClaudeのレビューを確認してから、ユーザーへマージ判断を渡す（`nit`は後続Issueの案として添える） |
+| `must`なし                       | `merge`    | 下の「レビュー完了のコメント」を付ける。現在headへのClaudeのレビューを確認してから、ユーザーへマージ判断を渡す（`nit`は後続Issueの案として添える） |
 
 どの場合も、記録に追記する:
 `node .claude/scripts/delegation.mjs review <Issue> --round <n> --sha <レビューした head> --verdict <merge|fix|escalate> [--posted] --finding '<severity>:<category>:<summary>' …`。
@@ -149,7 +144,7 @@ description: >
 
 ## レビュー完了のコメント
 
-PR内のコミットへのCodex完了、対象スレッドの解決、行外指摘の確認を全件確かめる。Codexの開始を示す目の反応や、指摘が無いという推測は完了にならない。Codexの完了は古い版へのものでよく、頼み直さない。まだ1回も完了していなければ`codex-review.mjs wait`で完了を待つ（上の「レビュー」の1）。終了コード3（時間切れ）・5（Codexの失敗）はユーザーに伝える。
+対象スレッドの解決と、行外指摘の確認を全件確かめる。
 
 1. 完全な40桁のhead SHAを取得する。
 2. `<!-- claude-review-done sha=<完全なSHA> verdict=<merge|fix|escalate> -->`を先頭に入れたコメントを`gh pr comment <PR> --body-file <ファイル>`で新規投稿する。指摘本文やsecurityの有無は書かない。
@@ -161,12 +156,12 @@ PR内のコミットへのCodex完了、対象スレッドの解決、行外指�
 ユーザーがPRを開いたときに、どの指摘を見終わったかがわかるようにする（2026-10-09 ユーザーの指示）。
 GitHubは、解決済みにしたスレッドをチェックの印で表示する。
 
-1. round 1以降のレビューで、行に付いたレビューのスレッド（Codex・Devinのレビューなど）を読み、直ったことを差分で確かめたものを解決済みにする。
+1. round 1以降のレビューで、行に付いたレビューのスレッド（Devinのレビューなど）を読み、直ったことを差分で確かめたものを解決済みにする。
    直っていないもの、確かめられないものは開いたままにする。ユーザーが自分で書いたスレッドは、ユーザーに任せて触らない。
 2. スレッドの一覧（100件を超えても全部取るため`--paginate`で続きを読む）: `gh api graphql --paginate -f query='query($o:String!,$r:String!,$n:Int!,$endCursor:String){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100,after:$endCursor){pageInfo{hasNextPage endCursor} nodes{id isResolved comments(first:1){nodes{author{login} path body}}}}}}}' -f o=<owner> -f r=<repo> -F n=<PR> --jq '.data.repository.pullRequest.reviewThreads.nodes[]'`。
 3. 解決: `gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<スレッドのid>`。
 4. 自分（Claude Code）のPRで指摘を直して返信したときも、返信のあとに同じ手順で解決済みにする。
-5. 行に付かないCodex指摘は解決済みにできない。全件を読んで確かめたことを、完了のコメントの前に確認する。
+5. 行に付かない指摘は解決済みにできない。全件を読んで確かめたことを、完了のコメントの前に確認する。
 
 ## セキュリティ指摘
 

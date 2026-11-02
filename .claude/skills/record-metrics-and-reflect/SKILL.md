@@ -26,7 +26,6 @@ description: >
 このスキルは以下に依存する。いずれかが無い環境ではスキップしてよい。
 
 - `.claude/scripts/record-task-metrics.sh` / `collect-task-metrics.mjs`
-- `.claude/scripts/check-review-coverage.mjs`
 - `reflect-task`スキル（改善サイクルが休眠のあいだは、ユーザーが頼んだときだけ）
 - `docs/claude-code/improvements/`の構造
 
@@ -51,11 +50,7 @@ description: >
      完了条件にせず、未回答を推測しない。
 2. **振り返り**（L2/L3で、ユーザーが頼んだとき）: `reflect-task`スキルをこのセッションで読み、
    candidateを作成する。改善サイクルが休眠のあいだ、およびL0/L1はスキップする。
-3. **レビュー記録の網羅確認**: 複数TaskのCodex委譲featureでは、mainマージ済み
-   Task分の`docs/reviews/<feature>.md`記録が揃っているか
-   `node .claude/scripts/check-review-coverage.mjs <feature>`で確認する
-   （空配列 = 網羅済み。出典: cookpit/pantry-core事象2 / IMP-2026-020適用後の再発）。
-4. **引き渡しpacket確認**（人間マージ判断へ渡すL2/L3）:
+3. **引き渡しpacket確認**（人間マージ判断へ渡すL2/L3）:
    `docs/reviews/<feature>.md`をstructured packetで作ったときだけ
    （`review-readiness`は`AGENTS.md`で休眠）
    `node .claude/scripts/review-readiness.mjs handoff-check --feature <feature> --base origin/main`
@@ -66,5 +61,4 @@ description: >
 
 - L2/L3タスクでメトリクス・振り返りを飛ばしていない（飛ばした場合は理由を報告に明記）。
 - メトリクスYAMLの`machine:`セクションが当セッション分まで反映されている。
-- `check-review-coverage.mjs`が空配列を返す（該当するfeatureがある場合）。
 - 人間引き渡し対象featureでは`handoff-check`成功、または未充足を報告に明記。

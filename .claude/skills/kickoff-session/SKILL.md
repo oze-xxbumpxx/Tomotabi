@@ -37,7 +37,7 @@ description: >
    「今日のタスク」（テーマ・Sprint・作業ブランチ）だけ先に埋める。既にあれば
    「セッション2」等の見出しで追記準備をする（write-work-log Skillと同じ規則）。
 6. **変更レベルを宣言**: タスクごとにclassify-changeスキルでL0〜L3を判定する。
-   実装はこのセッションで行う（Codex委譲スキルは未導入）。
+   実装はこのセッションで行う。
    L2/L3は`develop-feature`スキルに進む。orchestratorは起動しない。
 
 ## 完了条件

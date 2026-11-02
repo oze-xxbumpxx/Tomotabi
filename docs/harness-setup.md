@@ -61,3 +61,14 @@ Codexのローカルスキルとシンボリックリンクの仕様: https://le
 ## Devinの追加（2026-09-25）
 
 Devinを4つ目のツールとして追加した。ハーネスのプラグインは入れず、`AGENTS.md`と`.agents/skills/`（Devin専用の`devin-workflow`を含む）でルールを共有する。役割分担・環境・未確認事項は`docs/devin-setup.md`を参照。
+
+## Codexを外した（2026-11-02）
+
+ChatGPT（Codex）を、実装にもPRのレビューにも使わないことにした（ユーザーの判断）。レビューはClaude CodeとDevinで足りるため。
+
+- `codex-review.mjs`（DevinのPRへ`@codex review`を投稿して完了を待つもの）とそのテストを消した。`review-devin-pr`とマージ前の確認から、Codexの完了を外した。
+- Codex委譲ルートの名残（`check-review-coverage.mjs`と、`docs/tasks/codex/`を見る警告）を消した。
+- `AGENTS.md`と各スキルから、Codexで作業するときの入口と代わりの手順を消した。上の「使い方」と「配布元との差分と更新」に残るCodexの記述は、導入した当時の記録。
+- `.agents/skills/`はDevinが読むので残した。
+- GitHubでユーザーが開いたPRにCodexが自動で付けるレビューは、ChatGPTのCodexの設定で止める。リポジトリのファイルでは止められない。
+

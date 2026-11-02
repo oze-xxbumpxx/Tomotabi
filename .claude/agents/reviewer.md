@@ -181,7 +181,7 @@ Must / Should / Niceを人間UIの主語彙にしない（使うなら監査ロ�
 制約はhumanItems 20件（handoffは3件以下）、residualRisks 5件、behaviorChanges 1〜5件、
 evidence 8件。人間項目のevidenceRefsは存在するevidence IDだけを参照する。
 
-保存が必要なL3 / Codex委譲レビューでは、メインのセッションが詳細結果を
+保存が必要なL3のレビューでは、メインのセッションが詳細結果を
 `docs/reviews/<feature-name>.md`の監査ログへ追記し、同じassessmentからcurrent-state markerを
 生成する。矛盾を見つけたら、どの成果物を直すべきかを明示して差し戻す。
 

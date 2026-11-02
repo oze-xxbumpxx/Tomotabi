@@ -1,6 +1,6 @@
 # Tomotabi開発ルール
 
-Claude CodeとCodexは、このリポジトリの同じハーネス・成果物・ログを利用する。
+Claude CodeとDevinは、このリポジトリの同じルール・成果物を利用する。ChatGPT（Codex）は実装にもレビューにも使わない（2026-11-02 ユーザーの判断）。
 
 ## 現在の状態
 
@@ -20,7 +20,6 @@ Claude CodeとCodexは、このリポジトリの同じハーネス・成果物�
 
 - `review-readiness` / Gate B / structured packetのhard stop（`docs/reviews/README.md`は未作成）。
 - 改善サイクル（振り返り、横断の提案、回帰評価）。手順は`reflect-task`と`improve-harness`。ユーザーが頼むまで必須にしない。古い`.claude/evals/cases/`は配布元向けのまま使わない。
-- Codex委譲ルート（`create-codex-brief`等は未導入）。実装はこのセッションで行う。
 
 層別ルール（`.claude/rules/domain-layer.md`等）や`docs/01`〜`07`は未作成。参照せず、必要になったときに新設する。
 
@@ -31,7 +30,7 @@ Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは
 - 既定でAIが設計案の提示から実装・テスト・PR作成まで、このセッションの一つのループで行う。設計・計画・実装はスキルを読んで進め、子エージェントに分けない。検証（`reviewer`、条件を満たすとき`security-reviewer`）と広い探索（`Explore`）だけ別の文脈に渡す。手順は`develop-feature`スキル。ユーザーは要件提示・設計判断・レビュー・マージを担う。
 - L2 / L3では設計書（`docs/designs/`）をユーザーが承認してから実装に入る。L0 / L1は承認なしで進める。
 - 誰も求めていない珍しいケースや将来のケースのために設計しないでください。
-- L2 / L3の問いと答え・選ばなかった理由は`docs/discussions/<機能名>.md`（論点の記録）に、工程の状態は`<機能名>.progress.json`に残す（`docs/discussions/README.md`）。Claude Codeは問いと設計の承認依頼を、図つきの確認のページ（claude.aiの非公開のページ）で出す。Codexはページを使わず、同じ記録の形で問いをチャットに出す。
+- L2 / L3の問いと答え・選ばなかった理由は`docs/discussions/<機能名>.md`（論点の記録）に、工程の状態は`<機能名>.progress.json`に残す（`docs/discussions/README.md`）。Claude Codeは問いと設計の承認依頼を、図つきの確認のページ（claude.aiの非公開のページ）で出す。
 - 技術スタック・アーキテクチャなどADR級の決定はAIが候補と比較を示し、決定はユーザーが行う。
 - `main`へ直接コミットしない。変更は作業ブランチ → PR。破壊的操作（履歴改変・データ削除・本番操作）は事前確認する。
 - 実装完了の報告には「何を・なぜそう設計したか・別解との比較」を含め、ユーザーが読んで学べる形にする。L2 / L3は必須、L1は3行以内の要約、L0は省略する。
@@ -53,7 +52,7 @@ Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは
 3. 小さな修正は直接進める。ユーザーが既に依頼した範囲のファイル追加や通常作業で再承認を求めない。
 4. 品質コマンドは実在するものだけ実行し、未導入のゲートは`unknown`と報告する。ハーネス自身のテストは`node --test .claude/tests/*.test.mjs`。
 5. 人が読む文章（報告・ログ・docs・Issue・PR・コメント）は`.claude/rules/writing-style.md`の書き方にする。このルールは文章スキル`shizen-nihongo`の要点を写したもので、Claude Codeは書くときにスキルも読み込む。
-6. 終了時は変更・検証・未完了事項を`logs/YYYY-MM-DD.md`に記録する。他方のツールが残した変更を上書きせず、同じファイルを同時編集しない。Devinは`logs/`を編集せずPRの説明に書く（並行PRの衝突を避けるため。Devinの作業はClaude Codeが委譲の記録からログに書く）。
+6. 終了時は変更・検証・未完了事項を`logs/YYYY-MM-DD.md`に記録する。他のツールが残した変更を上書きせず、同じファイルを同時編集しない。Devinは`logs/`を編集せずPRの説明に書く（並行PRの衝突を避けるため。Devinの作業はClaude Codeが委譲の記録からログに書く）。
 7. `main`へ直接コミットしない。変更は作業ブランチ → PR。ハーネス構成（`.claude/` / `AGENTS.md`）の変更はPRで重点レビューする。
 
 ## Code Review Rules
@@ -66,14 +65,12 @@ Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは
 ## ツールごとの入口
 
 - Claude Code: `CLAUDE.md`、`.claude/skills/`、検証用の`.claude/agents/`（`reviewer`と`security-reviewer`）、`.claude/settings.json`のフックを使う。
-- Codex: 本ファイルと`.agents/skills/`から共通スキルを読む。`.claude/agents/`はClaude Codeの検証役であり、Codexのエージェント登録ではない。Claude CodeのフックはCodexでは自動実行されない。Codexは同じスキルをこのセッションで読む。
-- Codexでハーネスの状態を扱うコマンドには`HARNESS_NAMESPACE=tomotabi-harness`を付け、リポジトリルートで実行する。Claude Codeには同じ値をsettingsのenvで設定している。
+- ハーネスの状態を扱うコマンドをClaude Codeの外で実行するときは`HARNESS_NAMESPACE=tomotabi-harness`を付け、リポジトリルートで実行する。Claude Codeには同じ値をsettingsのenvで設定している。
 - スキルから参照されるCookpit専用文書・専用スキルが無い場合は、本ファイルと実際の構成を使う。未採用の技術や架空の成果物を補わない。
-- CodexにはClaude Codeのフック（危険操作の遮断・成果物チェック）が無い。代替として、本ファイルの作業分担・ブランチ運用・破壊的操作の事前確認を守る。履歴改変・データ削除・本番操作は、ユーザー確認なしに実行しない。
-- Devin: 本ファイルと`.agents/skills/devin-workflow/SKILL.md`（背景は`docs/devin-setup.md`）を使う。担当はIssue起点のL0 / L1とPRレビュー。L2 / L3は設計承認後だけ。ブランチは`devin/<内容>`を使い、他ツールのブランチにpushしない。Claude Codeのフックは動かないため、Codexと同じく破壊的操作の事前確認を守る。
+- Devin: 本ファイルと`.agents/skills/devin-workflow/SKILL.md`（背景は`docs/devin-setup.md`）を使う。担当はIssue起点のL0 / L1とPRレビュー。L2 / L3は設計承認後だけ。ブランチは`devin/<内容>`を使い、他ツールのブランチにpushしない。Claude Codeのフック（危険操作の遮断・成果物チェック）は動かないため、本ファイルの作業分担・ブランチ運用・破壊的操作の事前確認を守る。履歴改変・データ削除・本番操作は、ユーザー確認なしに実行しない。
 - Devinへの委譲は、承認済み計画のタスクから`delegation.mjs open-task`でIssueと記録を作り、`delegation-launch.mjs`で手元のDevinを起動する。管理Issueの共通受付は使わない（2026-10-25 ユーザーの判断。ADR-0010）。既定の選択はローカルのSWE-2（effortは難易度で選ぶ）とし、runner/modelを明示する（2026-10-12 クラウドの無料期間が終わったため。ユーザーの指示）。クラウドはユーザーが指示したときだけ使い、起動の確かめが済むまでは止める。起動結果不明・期限超過・stallで自動再起動しない。手順は`.claude/skills/review-devin-pr/SKILL.md`。
 - DevinのPRはClaude Codeがレビューし、`must`の指摘（と同じ回の`nit`）をPRに自動で投稿して、Devinの修正を再レビューする（自動の投稿は2回まで。超えたらユーザーに渡す）。セキュリティ指摘と設計判断が要る指摘は投稿せず、ユーザーに渡す。委譲ごとの記録は`docs/claude-code/improvements/delegations/`。手順は`.claude/skills/review-devin-pr/SKILL.md`。
-- マージ判断をユーザーへ渡す前に、現在headの完全SHAに対するClaudeの完了のコメントと、PR内のコミットへのCodexの完了を確かめる。短いSHAは完了の印にしない。Codexのレビューは最初の1回で足り、修正push後に頼み直さない（2026-10-11 ユーザーの指示）。修正push後に要るのはClaudeの新しい完了だけ。DevinのPRへのCodexの依頼は、Claude Codeが`codex-review.mjs`で投稿する（CodexはボットのPRを自動でレビューしないため）。マージはユーザーが行う。
+- マージ判断をユーザーへ渡す前に、現在headの完全SHAに対するClaudeの完了のコメントを確かめる。短いSHAは完了の印にしない。修正push後は、新しいheadへのClaudeの完了が要る。PRのレビューはClaude CodeとDevinで足り、ChatGPT（Codex）には頼まない（2026-11-02 ユーザーの判断）。マージはユーザーが行う。
 - Issueに紐づかないDevinのPR（知見・スキル・blueprintを自分から出したもの）も、Claude Codeが見つけて同じ手順でレビューする（`review-devin-pr`の「IssueなしPR」）。
 
 導入元・更新時の注意は`docs/harness-setup.md`を参照。

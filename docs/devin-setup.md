@@ -1,6 +1,6 @@
 # Devinの導入
 
-2026-09-24にDevinを契約した。Tomotabiでは、Claude Code・Codex・Cursorと同じルール（`AGENTS.md`）に従う、非同期でPRを出す担当として使う。
+2026-09-24にDevinを契約した。Tomotabiでは、Claude Code・Cursorと同じルール（`AGENTS.md`）に従う、非同期でPRを出す担当として使う。
 
 ## 役割
 
@@ -20,14 +20,14 @@ DevinのKnowledgeはSkillsに移行し、画面からKnowledgeを登録する入
 | Devinが自動で読むもの                    | 内容                                                                    |
 | ---------------------------------------- | ----------------------------------------------------------------------- |
 | `AGENTS.md` / `CLAUDE.md`                | 全ツール共通のルール                                                    |
-| `.agents/skills/*/SKILL.md`              | Codexと共有する日常のスキル（`.claude/skills/`へのシンボリックリンク）  |
+| `.agents/skills/*/SKILL.md`              | Claude Codeと共有する日常のスキル（`.claude/skills/`へのシンボリックリンク） |
 | `.agents/skills/devin-workflow/SKILL.md` | Devinだけの手順（ブランチ名、品質確認、やってはいけないこと、作業ログ） |
 
-`devin-workflow`はDevin専用のため`.claude/skills/`には置かず、`.agents/skills/`に実体を置く。Codexにも見えるが、説明に「Devinのセッションでだけ使う」と書いて区別する。
+`devin-workflow`はDevin専用のため`.claude/skills/`には置かず、`.agents/skills/`に実体を置く。説明に「Devinのセッションでだけ使う」と書いて区別する。
 
 ## Devinに無い仕組み
 
-Claude Codeのフック（危険操作の遮断・成果物チェック）はDevinでは動かない。Codexと同じく、`devin-workflow`スキルの「やってはいけないこと」で指示して代わりにする。守られたかどうかはPRのレビューで確かめる。
+Claude Codeのフック（危険操作の遮断・成果物チェック）はDevinでは動かない。`devin-workflow`スキルの「やってはいけないこと」で指示して代わりにする。守られたかどうかはPRのレビューで確かめる。
 
 Devinは`.mdc`のルールも読むため、Cursor用の`.cursor/rules/pstack-default.mdc`も取り込まれることがある。Devinにはpstackが無いので、スキルでは従わないよう書いている。画面のRules一覧にpstackが出ていたら無効にする。
 
@@ -84,6 +84,6 @@ GitHub側の設定。
 
 管理Issueの共通受付とagent-reviewのチェックは、2026-10-25にやめた（ADR-0010）。Issueは`delegation.mjs open-task`で直接作り、本文の先頭の印で同じタスクの二重起票を防ぐ。起動は専用クローンのロックを取る`delegation-launch.mjs`だけで行う。ロックはクローンごとなので、クローンを足せば並行で起動できる（`--clone`で渡す）。
 
-レビューの完了は、現在headの完全SHAを入れたClaudeのコメント（`<!-- claude-review-done sha=... -->`）で示す。Codexのレビューは最初の1回で足り、修正push後に頼み直さない（2026-10-11 ユーザーの指示）。CodexはボットのPR（Devin）を自動ではレビューしないので、最初のレビューでClaude Codeが`.claude/scripts/codex-review.mjs`でユーザーのアカウントから`@codex review`を投稿し、完了を待つ。
+レビューの完了は、現在headの完全SHAを入れたClaudeのコメント（`<!-- claude-review-done sha=... -->`）で示す。PRのレビューはClaude CodeとDevinで行い、ChatGPT（Codex）には頼まない（2026-11-02 ユーザーの判断）。
 
 手元のセッションの形は2026-10-24に確かめた（`docs/designs/devin-local-session.md`の「確かめの結果」）。手元のセッションにURLは無く、IDは`aloud-seed`のような単語の組で、`devin list --format json`と書き出し（`--export`）の`session_id`に同じものが出る。書き出しは作業が終わってから出る見込みなので、起動の確定は専用クローンのロックと一覧の読み比べで行う。CLIの中での起動の再送は見られなかった（依頼のあと2分たっても新しいセッションは1つ）。

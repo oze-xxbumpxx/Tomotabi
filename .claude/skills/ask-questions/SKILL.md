@@ -60,7 +60,7 @@ AIに要件定義書を「書かせる」と、決まっていないことを決
 
 ## ユーザーへの出し方
 
-確認のページ（claude.aiのArtifact。非公開）で出す。チャットだけで出すのは、ページが使えないとき（Codexでの作業・claude.aiの障害）に限る。
+確認のページ（claude.aiのArtifact。非公開）で出す。チャットだけで出すのは、ページが使えないとき（claude.aiの障害）に限る。
 
 1. 先に`discussion.mjs stage <機能名> <工程> waiting`で工程を「回答待ち」にする（ページは作った時点の進み具合を埋め込むため、順番を逆にすると帯が古いまま出る）。
    続けて`node .claude/scripts/discussion.mjs page <機能名> --out <scratchpadのpath>`でページを作る。

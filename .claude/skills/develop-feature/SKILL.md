@@ -46,7 +46,4 @@ description: >
 ## ツールごとの起動方法
 
 - Claude Codeは`.claude/agents/reviewer.md`と`security-reviewer.md`の定義を起動し、モデルは各定義の`model`に従う。広い探索は組み込みの`Explore`を`haiku`で起動する。`CLAUDE_CODE_SUBAGENT_MODEL`は設定しない。L3の方針決めではFableへの切り替えを提案してよい。切り替えはユーザーが行う。
-- Codexは利用可能な子エージェント機能で検証・探索を依頼する。検証では該当する`.claude/agents/`の本文を指示として渡す。このファイル群はCodexの登録済みエージェントではない。`model`、`tools`などClaude Code用のfrontmatterは起動設定として渡さず、Codexの既定モデルを使う。実装の経過を含む会話全体を渡さず、目的・範囲・参照パス・返却形式だけで別の文脈を作る。探索も同じ方法で依頼する。
 - 子エージェント機能が利用できなければ、その制約と自己点検の範囲を報告する。独立レビュー済みとは扱わない。広い検索を検証役にやらせない。
-
-Claude Codeのフックと`permissions.deny`はCodexでは自動実行されない。Codexは`AGENTS.md`の破壊的操作の事前確認を守り、必要な成果物と品質コマンドをこのセッションで確認する。ハーネスの状態を扱うコマンドには`HARNESS_NAMESPACE=tomotabi-harness`を付ける。

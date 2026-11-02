@@ -11,7 +11,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { uncovered as reviewTasksUncovered } from '../scripts/check-review-coverage.mjs';
 import { resolveReadablePath, safeStatePath } from '../lib/harness-paths.mjs';
 import { dayInTz } from '../lib/harness-time.mjs';
 
@@ -170,18 +169,7 @@ function main() {
         `振り返り候補が未作成（reflect-task スキル）: docs/claude-code/improvements/candidates/${feature}.md`,
       );
     }
-    // CodexルートfeatureはTask単位の網羅を見る（存在だけではTask 2/3欠落を見逃す。pantry-core事象2）
-    const tasksDir = join(ROOT, `docs/tasks/codex/${feature}`);
-    if (existsSync(tasksDir)) {
-      const uncoveredTasks = reviewTasksUncovered(feature);
-      if (uncoveredTasks.length) {
-        warnings.push(
-          `docs/reviews/${feature}.md に受け入れレビュー記録が無い Codex Task: ` +
-            `${uncoveredTasks.map((n) => `Task ${n}`).join(' / ')}` +
-            `（未着手 Task は無視可。main マージ済みなら記録が完了条件）`,
-        );
-      }
-    } else if (!existsSync(reviewPath)) {
+    if (!existsSync(reviewPath)) {
       warnings.push(
         `reviewer のレビュー記録が見当たりません（L3 など保存対象なら docs/reviews/${feature}.md）`,
       );

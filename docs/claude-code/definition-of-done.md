@@ -96,8 +96,6 @@ Level 2に加えて：
 - 性能確認（明らかな劣化が無いか）。
 - 異常系・部分失敗・冪等性を試験観点に含む。
 - `review-readiness`が休眠のあいだは、レビュー指摘と検証結果をPRと日次ログに残す。packetを作った場合は`docs/reviews/<feature>.md`にcurrentなstructured packetとレビュー監査ログ。
-  - Codex委譲ルートでも同じ。受け入れレビュー結果はPR本文だけでは足りず、
-    `docs/reviews/<feature>.md`への記録が完了条件（正本。PR要約は任意）。
 - review tier `R3`のtriggerと、専門レビュー・rollbackの証拠を記録。
 - 振り返り（`docs/claude-code/improvements/candidates/<task-id>.md`）は、改善サイクルが休眠のあいだは完了条件にしない。ユーザーが頼んだとき、このセッションが`reflect-task`で書く。
 

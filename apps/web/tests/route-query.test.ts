@@ -70,8 +70,22 @@ describe("parseSettlementQuery", () => {
 
 describe("parsePlanNewQuery・parsePlanDetailQuery", () => {
   it("空でなければそのまま渡す（日付の確かめは画面が行う）", () => {
-    expect(parsePlanNewQuery(q("date=abc"))).toEqual({ date: "abc" });
-    expect(parsePlanNewQuery(q("date="))).toEqual({ date: null });
+    expect(parsePlanNewQuery(q("date=abc"))).toEqual({
+      date: "abc",
+      fromTodoId: null,
+    });
+    expect(parsePlanNewQuery(q("date="))).toEqual({
+      date: null,
+      fromTodoId: null,
+    });
+  });
+
+  it("fromTodoはUUIDの形のときだけ渡す（「予定にする」で開いたとき）", () => {
+    expect(parsePlanNewQuery(q(`fromTodo=${ID}`))).toEqual({
+      date: null,
+      fromTodoId: ID,
+    });
+    expect(parsePlanNewQuery(q("fromTodo=abc")).fromTodoId).toBeNull();
     expect(parsePlanDetailQuery(q("from=home"))).toEqual({ from: "home" });
     expect(parsePlanDetailQuery(q(""))).toEqual({ from: null });
   });

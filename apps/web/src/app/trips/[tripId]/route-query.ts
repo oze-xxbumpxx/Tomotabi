@@ -68,9 +68,16 @@ export function parseSettlementQuery(query: QueryReader): {
   return { focusSettlementId: parseFocusSettlementId(query.getAll("settlementId")) };
 }
 
-/** 予定の追加（`?date=`）。空でなければそのまま渡す（日付の確かめは画面が行う）。 */
-export function parsePlanNewQuery(query: QueryReader): { date: string | null } {
-  return { date: first(query, "date") };
+/** 予定の追加（`?date=&fromTodo=`）。空でなければそのまま渡す（日付の確かめは画面が行う）。 */
+export function parsePlanNewQuery(query: QueryReader): {
+  date: string | null;
+  fromTodoId: string | null;
+} {
+  // `?fromTodo=`は「予定にする」で開いたときの元のToDo。UUIDの形のときだけ渡す。
+  return {
+    date: first(query, "date"),
+    fromTodoId: uuidOf(first(query, "fromTodo")),
+  };
 }
 
 /** 予定の詳細（`?from=`）。空でなければそのまま渡す。 */

@@ -2279,9 +2279,9 @@ dialog.dialog[open] {
 .tabbar-inner {
   pointer-events: auto;
   display: grid;
-  /* v3: 4つのタブを等分に並べる（横に並べると狭い画面で項目が縦に伸びて
-     主ボタンに重なる） */
-  grid-template-columns: repeat(4, 1fr);
+  /* タブを等分に並べる（横に並べると狭い画面で項目が縦に伸びて
+     主ボタンに重なる）。ToDoを足して5つ（設計書 trip-todo） */
+  grid-template-columns: repeat(5, 1fr);
   width: min(
     calc(100vw - var(--space-4) * 2),
     calc(var(--content-max) - var(--space-4) * 2)
@@ -3709,4 +3709,209 @@ a.plan-record-row-link {
   font-size: 12px;
   font-weight: normal;
   color: var(--color-text-secondary);
+}
+
+/* ToDoのリストと詳細（設計書 trip-todo。Claude Designの見本「ToDo · 項目がある」
+   「ToDoの詳細」に合わせる。白いカードに行を並べ、丸い完了の印を左に置く） */
+.todo-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* しおり・ホームと同じ。タブとその上の主ボタンのぶん */
+  padding-bottom: calc(var(--space-8) + 168px);
+}
+
+.todo-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.todo-trip,
+.todo-lead {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.todo-trip {
+  font-weight: 600;
+}
+
+.todo-title {
+  margin: 0;
+}
+
+.todo-add {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.todo-add-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-add-button {
+  flex: none;
+  width: auto;
+  padding: 0 var(--space-4);
+}
+
+.todo-add-error {
+  margin: 0;
+}
+
+.todo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.todo-empty-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.todo-empty-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.todo-section {
+  margin-top: var(--space-3);
+}
+
+.todo-section-title {
+  margin: 0 0 var(--space-2);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.todo-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+}
+
+.todo-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 60px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.todo-row:last-child {
+  border-bottom: 0;
+}
+
+.todo-check {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--color-line-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: #ffffff;
+}
+
+.todo-check-done {
+  border: 0;
+  background: var(--color-success);
+}
+
+.todo-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.todo-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.todo-name-done {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.todo-meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.todo-caret {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.todo-plan-link {
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+.todo-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.todo-detail-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.todo-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.todo-badge-done {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+/* 予定の追加をToDoから開いたときの説明（お知らせの色） */
+.todo-source-note {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-info-bg);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-info);
 }

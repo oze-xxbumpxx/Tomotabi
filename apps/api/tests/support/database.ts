@@ -34,8 +34,18 @@ export async function startPostgres(): Promise<TestDatabase> {
     );
   }
 
-  const admin = new Pool({ connectionString: container.getConnectionUri() });
-  const pools: Pool[] = [admin];
+  const pools: Pool[] = [];
+  const track = (pool: Pool): Pool => {
+    // pool.end()は接続を手放した時点で終わり、ソケットが閉じるのを待たない。
+    // そのあとcontainer.stop()で届く57P01は、プールの見張りが外れた接続に届き、
+    // 捕まえる人のいないエラーになる。プールの見張りはそのまま残し、外れたあとの分だけ捨てる。
+    pool.on("connect", (client) => {
+      client.on("error", () => undefined);
+    });
+    pools.push(pool);
+    return pool;
+  };
+  const admin = track(new Pool({ connectionString: container.getConnectionUri() }));
 
   const urlFor = (role: RoleName): string => {
     const url = new URL(container.getConnectionUri());
@@ -49,9 +59,7 @@ export async function startPostgres(): Promise<TestDatabase> {
     admin,
     urlFor,
     poolFor(role) {
-      const pool = new Pool({ connectionString: urlFor(role) });
-      pools.push(pool);
-      return pool;
+      return track(new Pool({ connectionString: urlFor(role) }));
     },
     async stop() {
       await Promise.all(pools.map((pool) => pool.end()));

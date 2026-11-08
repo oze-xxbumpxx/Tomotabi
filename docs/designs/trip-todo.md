@@ -157,9 +157,9 @@ type TodoList = { items: Todo[] }; // 未完了 → 完了、それぞれ追加�
 | `version` / `created_at` / `updated_at` | 今の共通の列       | 予定と同じ                                                                                                                                                   |
 
 - 索引: `(trip_id, created_at, id)`。一覧はこの順に読み、未完了・完了の分け方は読むときに並べ替える。
-- 権限: 実行用のロールに`SELECT, INSERT, UPDATE, DELETE`。削除を許すのはこの表だけ（ToDoは消しても精算や履歴に響かない。要件F-08）。
+- 権限: 実行用のロールに`SELECT, INSERT, DELETE`と、変えてよい列（`name`・`memo`・`done_at`・`done_by`・`plan_id`・`version`・`updated_at`）だけの`UPDATE`。業務の記録の表で行を消せるのはこの表だけ（ToDoは消しても精算や履歴に響かない。要件F-08）。
 - 予定は消さずに取りやめるだけなので、`plan_id`の先が無くなることは無い。外部キーは`ON DELETE`を付けない。
-- 件数の上限（200件）は、追加のときに旅行行をFOR SHAREにして数える。二人が同時に199件目を追加すると201件になりうるが、上限はリストの長さを抑えるためのもので、1件超えても困らないので、ロックを強めない。
+- 件数の上限（200件）は、追加のときに旅行行をFOR SHAREにして数える。追加どうしは互いを待たないので、同時に送った本数だけ200件を超えうる。上限はリストの長さを抑えるためのもので、超えてもほかの旅行や精算には響かないので、ロックを強めない。
 
 ## フロントエンド設計
 
@@ -176,8 +176,8 @@ type TodoList = { items: Todo[] }; // 未完了 → 完了、それぞれ追加�
 
 planningモジュールの中に置く（論点の記録「ToDoの表をどのモジュールに置くか」）。
 
-- Domain: `domain/todo.ts`。`Todo.create`・`rename`・`changeMemo`・`complete(by, at, planId)`・`reopen()`。名前・メモの決まりは予定の`parsePlanName`・`parsePlanMemo`と同じ値型を使う。
-- Repository: `adapter/outbound/todo.repository.ts`と`infrastructure/drizzle-todo.repository.ts`。`listByTrip`・`countByTrip`・`insert`・`lockForUpdate(tripId, todoId)`（FOR NO KEY UPDATE）・`update`・`delete`。`PlanningWorkContext`に`todos`を足す。
+- Domain: `domain/todo.ts`。`Todo.update(todo, patch, at)`（名前・メモ）・`complete(todo, by, at, planId)`・`reopen(todo, at)`。作るのはRepositoryの`insert`。名前・メモの決まりは予定の`parsePlanName`・`parsePlanMemo`と同じ値型を使う。
+- Repository: `adapter/outbound/todo.repository.ts`と`infrastructure/drizzle-todo.repository.ts`。`countByTrip`・`insert`・`lockForUpdate(tripId, todoId)`（FOR NO KEY UPDATE）・`update`・`delete`。`PlanningWorkContext`に`todos`を足す。一覧の読み取りは予定と同じく`PlanningReadPort.listTodos`で、プールから直接読む。
 - UseCase: `list-todos`・`create-todo`・`update-todo`・`complete-todo`・`reopen-todo`・`delete-todo`。書き込みの流れは`plan-write-flow.ts`と同じ（旅行行FOR SHARE → 受領 → ToDoの行のロック → 版の確認（編集だけ） → Domain → 更新と受領を同じトランザクションで保存）。
 - 予定の追加: `CreatePlanUseCase`の入力に`fromTodoId: string | null`を足す。予定をINSERTしたあと、同じトランザクションでToDoをロックし、未完了なら`complete(userId, now, plan.id)`。無い・完了済みなら何もしない。ロックの順は旅行 → 予定 → ToDoで、ほかの書き込みと逆にならない。受領の要求の要約（`computeRequestHash`）は入力全体から作るので、`fromTodoId`の違う再送は別の要求として断られる。
 - 旅行の状態は見ない。旅行が終わったあとも予定と同じく書ける（B-06）。

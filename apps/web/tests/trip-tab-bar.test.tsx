@@ -16,6 +16,7 @@ const TABS: { current: TripTab; name: string; href: string }[] = [
     name: "しおり",
     href: `/trips/${tripId}/itinerary`,
   },
+  { current: "todos", name: "ToDo", href: `/trips/${tripId}/todos` },
   { current: "records", name: "履歴", href: `/trips/${tripId}/records` },
   {
     current: "settlement",
@@ -25,7 +26,7 @@ const TABS: { current: TripTab; name: string; href: string }[] = [
 ];
 
 describe("TripTabBar（RW-01: 共通の下のタブ）", () => {
-  it("4つのタブと「支払いを記録」を出し、今のタブにだけ aria-current を付ける", () => {
+  it("5つのタブ（ホーム・しおり・ToDo・履歴・精算の順）と「支払いを記録」を出し、今のタブにだけ aria-current を付ける", () => {
     render(<TripTabBar tripId={tripId} current="itinerary" />);
     const nav = screen.getByRole("navigation", { name: "タブ" });
 
@@ -42,6 +43,10 @@ describe("TripTabBar（RW-01: 共通の下のタブ）", () => {
         href,
       );
     }
+    // 並びは ホーム・しおり・ToDo・履歴・精算（設計書 trip-todo）。
+    expect(
+      [...nav.querySelectorAll(".tabbar-item")].map((el) => el.textContent),
+    ).toEqual(["ホーム", "しおり", "ToDo", "履歴", "精算"]);
     const currentItem = nav.querySelector('[aria-current="page"]');
     expect(currentItem).toHaveTextContent("しおり");
     expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
@@ -62,8 +67,8 @@ describe("TripTabBar（RW-01: 共通の下のタブ）", () => {
       expect(
         nav.querySelector('[aria-current="page"]'),
       ).toHaveTextContent(name);
-      // ほかの3つはリンクのまま（4つのタブは同じ旅行を向く）。
-      expect(within(nav).getAllByRole("link")).toHaveLength(3);
+      // ほかの4つはリンクのまま（5つのタブは同じ旅行を向く）。
+      expect(within(nav).getAllByRole("link")).toHaveLength(4);
       cleanup();
     },
   );

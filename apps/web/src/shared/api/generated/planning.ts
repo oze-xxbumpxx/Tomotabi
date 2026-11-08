@@ -144,6 +144,11 @@ export interface PlanCreate {
      * @nullable
      */
   memo?: string | null;
+  /**
+     * 「予定にする」で元にしたToDo。予定の保存と同じトランザクションで完了にする。見つからない・完了済みなら何もしない。
+     * @nullable
+     */
+  fromTodoId?: string | null;
 }
 
 export type PlanPatchKind = typeof PlanPatchKind[keyof typeof PlanPatchKind];
@@ -269,6 +274,64 @@ export interface Error {
   requestId: string;
   existingRecordId?: string;
   retryable: boolean;
+}
+
+export interface TodoPlan {
+  id: string;
+  date: string;
+  cancelled: boolean;
+}
+
+export interface Todo {
+  id: string;
+  tripId: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  memo: string | null;
+  createdBy: string;
+  createdAt: string;
+  doneAt: string | null;
+  doneBy: string | null;
+  plan: TodoPlan | null;
+  /** @pattern ^[1-9][0-9]*$ */
+  version: string;
+}
+
+export interface TodoList {
+  /** @maxItems 1000 */
+  items: Todo[];
+}
+
+export interface TodoCreate {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+}
+
+export interface TodoPatch {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name?: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  memo?: string | null;
+}
+
+export interface TodoDeletion {
+  id: string;
 }
 
 /**
@@ -1270,6 +1333,447 @@ export const listRecords = async (tripId: string,
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listTodosResponse200 = {
+  data: TodoList
+  status: 200
+}
+
+export type listTodosResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type listTodosResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type listTodosResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type listTodosResponseSuccess = (listTodosResponse200) & {
+  headers: Headers;
+};
+export type listTodosResponseError = (listTodosResponse401 | listTodosResponse403 | listTodosResponse503) & {
+  headers: Headers;
+};
+
+export type listTodosResponse = (listTodosResponseSuccess | listTodosResponseError)
+
+export const getListTodosUrl = (tripId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todos`
+}
+
+/**
+ * 旅行のToDoの一覧。未完了 → 完了の順、それぞれ追加した順。予定にしたToDoは予定の日付と取りやめを含む。
+ */
+export const listTodos = async (tripId: string, options?: Parameters<typeof httpClient>[1]): Promise<listTodosResponse> => {
+
+  return httpClient<listTodosResponse>(getListTodosUrl(tripId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createTodoResponse201 = {
+  data: Todo
+  status: 201
+}
+
+export type createTodoResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type createTodoResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type createTodoResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type createTodoResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type createTodoResponse422 = {
+  data: Error
+  status: 422
+}
+
+export type createTodoResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type createTodoResponseSuccess = (createTodoResponse201) & {
+  headers: Headers;
+};
+export type createTodoResponseError = (createTodoResponse400 | createTodoResponse401 | createTodoResponse403 | createTodoResponse409 | createTodoResponse422 | createTodoResponse503) & {
+  headers: Headers;
+};
+
+export type createTodoResponse = (createTodoResponseSuccess | createTodoResponseError)
+
+export const getCreateTodoUrl = (tripId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todos`
+}
+
+/**
+ * ToDoの追加。Idempotency-Key 必須。1つの旅行に200件まで。
+ */
+export const createTodo = async (tripId: string,
+    todoCreate: TodoCreate, options?: Parameters<typeof httpClient>[1]): Promise<createTodoResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return httpClient<createTodoResponse>(getCreateTodoUrl(tripId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(todoCreate)
+  }
+);}
+
+
+
+export type updateTodoResponse200 = {
+  data: Todo
+  status: 200
+}
+
+export type updateTodoResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type updateTodoResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type updateTodoResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type updateTodoResponse404 = {
+  data: Error
+  status: 404
+}
+
+export type updateTodoResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type updateTodoResponse422 = {
+  data: Error
+  status: 422
+}
+
+export type updateTodoResponse428 = {
+  data: Error
+  status: 428
+}
+
+export type updateTodoResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type updateTodoResponseSuccess = (updateTodoResponse200) & {
+  headers: Headers;
+};
+export type updateTodoResponseError = (updateTodoResponse400 | updateTodoResponse401 | updateTodoResponse403 | updateTodoResponse404 | updateTodoResponse409 | updateTodoResponse422 | updateTodoResponse428 | updateTodoResponse503) & {
+  headers: Headers;
+};
+
+export type updateTodoResponse = (updateTodoResponseSuccess | updateTodoResponseError)
+
+export const getUpdateTodoUrl = (tripId: string,
+    todoId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todos/${todoId}`
+}
+
+/**
+ * ToDoの名前・メモの変更。Idempotency-Key・X-Expected-Version 必須。
+ */
+export const updateTodo = async (tripId: string,
+    todoId: string,
+    todoPatch: TodoPatch, options?: Parameters<typeof httpClient>[1]): Promise<updateTodoResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return httpClient<updateTodoResponse>(getUpdateTodoUrl(tripId,todoId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(todoPatch)
+  }
+);}
+
+
+
+export type completeTodoResponse200 = {
+  data: Todo
+  status: 200
+}
+
+export type completeTodoResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type completeTodoResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type completeTodoResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type completeTodoResponse404 = {
+  data: Error
+  status: 404
+}
+
+export type completeTodoResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type completeTodoResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type completeTodoResponseSuccess = (completeTodoResponse200) & {
+  headers: Headers;
+};
+export type completeTodoResponseError = (completeTodoResponse400 | completeTodoResponse401 | completeTodoResponse403 | completeTodoResponse404 | completeTodoResponse409 | completeTodoResponse503) & {
+  headers: Headers;
+};
+
+export type completeTodoResponse = (completeTodoResponseSuccess | completeTodoResponseError)
+
+export const getCompleteTodoUrl = (tripId: string,
+    todoId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todos/${todoId}/complete`
+}
+
+/**
+ * ToDoを完了にする。完了済みなら変えずに返す（完了にした人と時刻は最初のまま）。Idempotency-Key 必須。版は要らない。
+ */
+export const completeTodo = async (tripId: string,
+    todoId: string, options?: Parameters<typeof httpClient>[1]): Promise<completeTodoResponse> => {
+
+  return httpClient<completeTodoResponse>(getCompleteTodoUrl(tripId,todoId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type reopenTodoResponse200 = {
+  data: Todo
+  status: 200
+}
+
+export type reopenTodoResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type reopenTodoResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type reopenTodoResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type reopenTodoResponse404 = {
+  data: Error
+  status: 404
+}
+
+export type reopenTodoResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type reopenTodoResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type reopenTodoResponseSuccess = (reopenTodoResponse200) & {
+  headers: Headers;
+};
+export type reopenTodoResponseError = (reopenTodoResponse400 | reopenTodoResponse401 | reopenTodoResponse403 | reopenTodoResponse404 | reopenTodoResponse409 | reopenTodoResponse503) & {
+  headers: Headers;
+};
+
+export type reopenTodoResponse = (reopenTodoResponseSuccess | reopenTodoResponseError)
+
+export const getReopenTodoUrl = (tripId: string,
+    todoId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todos/${todoId}/reopen`
+}
+
+/**
+ * ToDoを未完了に戻す。予定とのつながりも消す。未完了なら変えずに返す。Idempotency-Key 必須。版は要らない。
+ */
+export const reopenTodo = async (tripId: string,
+    todoId: string, options?: Parameters<typeof httpClient>[1]): Promise<reopenTodoResponse> => {
+
+  return httpClient<reopenTodoResponse>(getReopenTodoUrl(tripId,todoId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type deleteTodoResponse200 = {
+  data: TodoDeletion
+  status: 200
+}
+
+export type deleteTodoResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type deleteTodoResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type deleteTodoResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type deleteTodoResponse404 = {
+  data: Error
+  status: 404
+}
+
+export type deleteTodoResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type deleteTodoResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type deleteTodoResponseSuccess = (deleteTodoResponse200) & {
+  headers: Headers;
+};
+export type deleteTodoResponseError = (deleteTodoResponse400 | deleteTodoResponse401 | deleteTodoResponse403 | deleteTodoResponse404 | deleteTodoResponse409 | deleteTodoResponse503) & {
+  headers: Headers;
+};
+
+export type deleteTodoResponse = (deleteTodoResponseSuccess | deleteTodoResponseError)
+
+export const getDeleteTodoUrl = (tripId: string,
+    todoId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todos/${todoId}/delete`
+}
+
+/**
+ * ToDoの削除。元に戻せない。Idempotency-Key 必須。版は要らない。同じキーの再送は、行が無くても同じ本文を返す。
+ */
+export const deleteTodo = async (tripId: string,
+    todoId: string, options?: Parameters<typeof httpClient>[1]): Promise<deleteTodoResponse> => {
+
+  return httpClient<deleteTodoResponse>(getDeleteTodoUrl(tripId,todoId),
+  {
+    ...options,
+    method: 'POST'
 
 
   }

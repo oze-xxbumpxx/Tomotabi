@@ -10,6 +10,7 @@ import type {
   PlanningWorkContext,
 } from "../adapter/outbound/planning-work-context.js";
 import { DrizzlePlanRepository } from "./drizzle-plan.repository.js";
+import { DrizzleTodoRepository } from "./drizzle-todo.repository.js";
 import { DrizzleTripRepository } from "./drizzle-trip.repository.js";
 
 class PgFinanceGuards implements FinanceGuardWriter {
@@ -40,6 +41,7 @@ export class PgPlanningUnitOfWork implements UnitOfWork<PlanningWorkContext> {
       const result = await work({
         trips: new DrizzleTripRepository(db),
         plans: new DrizzlePlanRepository(db),
+        todos: new DrizzleTodoRepository(db),
         participants: this.participantsFactory(db),
         receipts: new PgCommandReceipts(db),
         financeGuards: new PgFinanceGuards(db),

@@ -61,6 +61,11 @@ export type PlanCreate = {
   /** 日本の現地時刻`HH:mm`。未定は省略かnull。 */
   time?: string | null;
   memo?: string | null;
+  /**
+   * 「予定にする」で元にしたToDoのID。予定の保存と同じトランザクションで
+   * そのToDoを完了にして予定とつなぐ。見つからない・完了済みなら何もしない。
+   */
+  fromTodoId?: string | null;
 };
 
 export type PlanPatch = {
@@ -90,4 +95,50 @@ export type Itinerary = {
   plans: Plan[];
   /** ISO 8601の日時。 */
   fetchedAt: string;
+};
+
+/** ToDoを予定にしたときの、つないだ予定。 */
+export type TodoPlan = {
+  id: string;
+  /** `YYYY-MM-DD`。予定の日付。 */
+  date: string;
+  /** 予定を取りやめていればtrue。ToDoは完了のまま。 */
+  cancelled: boolean;
+};
+
+export type Todo = {
+  id: string;
+  tripId: string;
+  name: string;
+  memo: string | null;
+  createdBy: string;
+  /** ISO 8601の日時。 */
+  createdAt: string;
+  /** 完了した日時（ISO 8601）と人。doneAtとdoneByは必ず対。 */
+  doneAt: string | null;
+  doneBy: string | null;
+  /** 「予定にする」でつないだ予定。完了の印を外すとnullに戻る。 */
+  plan: TodoPlan | null;
+  /** 10進の正整数の文字列。編集の`X-Expected-Version`にそのまま送る版番号。 */
+  version: string;
+};
+
+/** 未完了 → 完了の順、それぞれ追加した順。 */
+export type TodoList = {
+  items: Todo[];
+};
+
+export type TodoCreate = {
+  name: string;
+};
+
+export type TodoPatch = {
+  name?: string;
+  /** 消すときはnull。 */
+  memo?: string | null;
+};
+
+/** 削除の結果。同じキーの再送は、行が無くても同じ本文を返す。 */
+export type TodoDeletion = {
+  id: string;
 };

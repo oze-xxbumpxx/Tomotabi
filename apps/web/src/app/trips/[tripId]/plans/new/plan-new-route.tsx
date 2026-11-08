@@ -8,6 +8,11 @@ import { parsePlanNewQuery } from "../../route-query";
 export function PlanNewRoute({ tripId }: { tripId: string }) {
   const query = parsePlanNewQuery(useSearchParams());
   return (
-    <PlanFormScreen mode="new" tripId={tripId} date={query.date} />
+    <PlanFormScreen
+      mode="new"
+      tripId={tripId}
+      date={query.date}
+      fromTodoId={query.fromTodoId}
+    />
   );
 }

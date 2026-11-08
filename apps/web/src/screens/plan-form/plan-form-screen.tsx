@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "@phosphor-icons/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -32,6 +33,7 @@ import {
   type PlanFormValues,
   type PlanSaveState,
 } from "@/features/plans";
+import { invalidateTodos, useTodos } from "@/features/todos";
 import { useTrip } from "@/features/trips";
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
 import { PlanDetailScreen } from "@/screens/plan-detail/plan-detail-screen";
@@ -98,6 +100,7 @@ export function PlanFormScreen({
   tripId,
   planId,
   date,
+  fromTodoId = null,
 }: {
   mode: "new" | "edit";
   tripId: string;
@@ -105,6 +108,11 @@ export function PlanFormScreen({
   planId?: string;
   /** 追加の初期日（URLの`date`）。未指定は期間の初日。 */
   date?: string | null;
+  /**
+   * 「予定にする」で開いたときの元のToDo（URLの`fromTodo`）。名前とメモを入れて開き、
+   * 保存の要求に`fromTodoId`を付ける（設計書 trip-todo「フロントエンド設計」）。
+   */
+  fromTodoId?: string | null;
 }) {
   const router = useRouter();
   const { state: meState, reload: reloadMe } = useMe();
@@ -124,6 +132,25 @@ export function PlanFormScreen({
   const fieldRefs: Partial<
     Record<PlanFormField, RefObject<HTMLInputElement | null>>
   > = { name: nameRef, time: timeRef };
+
+  // 「予定にする」で開いたときは、元のToDoの名前とメモを一度だけ入れる。
+  const queryClient = useQueryClient();
+  const fromTodo = mode === "new" && fromTodoId !== null;
+  const todosQuery = useTodos(tripId, { enabled: fromTodo });
+  const sourceTodo = fromTodo
+    ? (todosQuery.data?.items.find((item) => item.id === fromTodoId) ?? null)
+    : null;
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (sourceTodo !== null && !prefilledRef.current) {
+      prefilledRef.current = true;
+      setValues((current) => ({
+        ...current,
+        name: current.name === "" ? sourceTodo.name : current.name,
+        memo: current.memo === "" ? (sourceTodo.memo ?? "") : current.memo,
+      }));
+    }
+  }, [sourceTodo]);
 
   // 追加は期間の日が要るので旅行を取る。編集は予定を取る。
   const tripQuery = useTrip(tripId, { enabled: mode === "new" });
@@ -195,6 +222,9 @@ export function PlanFormScreen({
     userId: mode === "new" ? userId : null,
     check: mode === "new" ? pendingCheck.check : undefined,
     onSucceeded: (result) => {
+      if (fromTodo) {
+        invalidateTodos(queryClient, tripId);
+      }
       setPendingToast("追加しました");
       router.replace(
         `/trips/${tripId}/itinerary?date=${result.data.date}`,
@@ -303,7 +333,11 @@ export function PlanFormScreen({
         return;
       }
       void create.submit(
-        createPlanDraft(tripId, planCreateOf({ ...values, kind: values.kind })),
+        createPlanDraft(tripId, {
+          ...planCreateOf({ ...values, kind: values.kind }),
+          // 一覧が読めていなくても送る。無い・済んでいるToDoはサーバーが何もしない（F-10）。
+          ...(fromTodo && fromTodoId !== null ? { fromTodoId } : {}),
+        }),
       );
       return;
     }
@@ -526,6 +560,13 @@ export function PlanFormScreen({
           )
         }
       >
+      {sourceTodo !== null && (
+        <p className="todo-source-note">
+          {sourceTodo.doneAt === null
+            ? `ToDoの「${sourceTodo.name}」から作ります。保存すると、ToDoは完了になります。`
+            : `ToDoの「${sourceTodo.name}」はもう済んでいます。予定だけを作ります。`}
+        </p>
+      )}
       {!online && (
         <OfflineBanner
           at={

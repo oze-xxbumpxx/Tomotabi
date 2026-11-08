@@ -147,6 +147,7 @@ describe("予定の書き込みの呼び出し順", () => {
       date: "2026-09-10",
       time: null,
       memo: null,
+      fromTodoId: null,
     });
 
     expect(ctx.calls).toEqual([

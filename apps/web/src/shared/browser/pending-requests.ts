@@ -35,7 +35,7 @@ export const NEW_TRIP_ID = "new-trip";
 /**
  * 送り直せる経路の許可リスト。{tripId} 部はその保留のtripIdと一致させる。
  * 旅行（名前の変更・期間の変更・開始・終了）、予定（追加・編集・日の移動・
- * 取りやめ）、達成・予約（付ける・取り消す）、支払い・精算の書き込みを許す。
+ * 取りやめ）、達成・予約（付ける・取り消す）、支払い・精算、ToDo（追加・編集・完了・戻す・削除）の書き込みを許す。
  * 予定・達成・予約・支払い・精算のレコードID部はUUIDの形だけ許す。
  */
 const ALLOWED_PATHS: readonly RegExp[] = [
@@ -56,6 +56,9 @@ const ALLOWED_PATHS: readonly RegExp[] = [
   /^\/api\/trips\/[^/]+\/settlement-previews$/,
   /^\/api\/trips\/[^/]+\/settlements$/,
   new RegExp(`^/api/trips/[^/]+/settlements/${UUID_SEGMENT}/cancel$`, "i"),
+  /^\/api\/trips\/[^/]+\/todos$/,
+  new RegExp(`^/api/trips/[^/]+/todos/${UUID_SEGMENT}$`, "i"),
+  new RegExp(`^/api/trips/[^/]+/todos/${UUID_SEGMENT}/(complete|reopen|delete)$`, "i"),
 ];
 
 const ALLOWED_METHODS: ReadonlySet<string> = new Set(["POST", "PATCH", "PUT"]);

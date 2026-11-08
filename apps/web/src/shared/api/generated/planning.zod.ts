@@ -110,7 +110,8 @@ export const CreatePlanBody = zod.strictObject({
   "kind": zod.enum(['place', 'food', 'shopping', 'lodging', 'transport']),
   "date": zod.string().regex(createPlanBodyDateRegExp),
   "time": zod.string().regex(createPlanBodyTimeRegExp).nullish(),
-  "memo": zod.string().nullish()
+  "memo": zod.string().nullish(),
+  "fromTodoId": zod.uuid().nullish().describe('「予定にする」で元にしたToDo。予定の保存と同じトランザクションで完了にする。見つからない・完了済みなら何もしない。')
 })
 
 
@@ -650,4 +651,213 @@ export const ListRecordsResponse = zod.object({
 })])
 })),
   "nextCursor": zod.string().nullable()
+})
+
+
+/**
+ * 旅行のToDoの一覧。未完了 → 完了の順、それぞれ追加した順。予定にしたToDoは予定の日付と取りやめを含む。
+ */
+export const ListTodosParams = zod.object({
+  "tripId": zod.uuid()
+})
+
+
+export const listTodosResponseItemsItemVersionRegExp = new RegExp('^[1-9][0-9]*$');
+export const listTodosResponseItemsMax = 1000;
+
+
+
+export const ListTodosResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1),
+  "memo": zod.string().nullable(),
+  "createdBy": zod.uuid(),
+  "createdAt": zod.iso.datetime({"offset":true}),
+  "doneAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "doneBy": zod.union([zod.uuid(),zod.null()]),
+  "plan": zod.union([zod.object({
+  "id": zod.uuid(),
+  "date": zod.iso.date(),
+  "cancelled": zod.boolean()
+}),zod.null()]),
+  "version": zod.string().regex(listTodosResponseItemsItemVersionRegExp)
+})).max(listTodosResponseItemsMax)
+})
+
+
+/**
+ * ToDoの追加。Idempotency-Key 必須。1つの旅行に200件まで。
+ */
+export const CreateTodoParams = zod.object({
+  "tripId": zod.uuid()
+})
+
+export const CreateTodoHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。')
+})
+
+
+
+
+export const CreateTodoBody = zod.strictObject({
+  "name": zod.string().min(1)
+})
+
+
+export const createTodoResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
+
+
+export const CreateTodoResponse = zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1),
+  "memo": zod.string().nullable(),
+  "createdBy": zod.uuid(),
+  "createdAt": zod.iso.datetime({"offset":true}),
+  "doneAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "doneBy": zod.union([zod.uuid(),zod.null()]),
+  "plan": zod.union([zod.object({
+  "id": zod.uuid(),
+  "date": zod.iso.date(),
+  "cancelled": zod.boolean()
+}),zod.null()]),
+  "version": zod.string().regex(createTodoResponseVersionRegExp)
+})
+
+
+/**
+ * ToDoの名前・メモの変更。Idempotency-Key・X-Expected-Version 必須。
+ */
+export const UpdateTodoParams = zod.object({
+  "tripId": zod.uuid(),
+  "todoId": zod.uuid()
+})
+
+export const updateTodoHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
+
+
+export const UpdateTodoHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
+  "X-Expected-Version": zod.string().regex(updateTodoHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
+})
+
+
+
+
+export const UpdateTodoBody = zod.strictObject({
+  "name": zod.string().min(1).optional(),
+  "memo": zod.string().nullish()
+})
+
+
+export const updateTodoResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
+
+
+export const UpdateTodoResponse = zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1),
+  "memo": zod.string().nullable(),
+  "createdBy": zod.uuid(),
+  "createdAt": zod.iso.datetime({"offset":true}),
+  "doneAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "doneBy": zod.union([zod.uuid(),zod.null()]),
+  "plan": zod.union([zod.object({
+  "id": zod.uuid(),
+  "date": zod.iso.date(),
+  "cancelled": zod.boolean()
+}),zod.null()]),
+  "version": zod.string().regex(updateTodoResponseVersionRegExp)
+})
+
+
+/**
+ * ToDoを完了にする。完了済みなら変えずに返す（完了にした人と時刻は最初のまま）。Idempotency-Key 必須。版は要らない。
+ */
+export const CompleteTodoParams = zod.object({
+  "tripId": zod.uuid(),
+  "todoId": zod.uuid()
+})
+
+export const CompleteTodoHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。')
+})
+
+
+export const completeTodoResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
+
+
+export const CompleteTodoResponse = zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1),
+  "memo": zod.string().nullable(),
+  "createdBy": zod.uuid(),
+  "createdAt": zod.iso.datetime({"offset":true}),
+  "doneAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "doneBy": zod.union([zod.uuid(),zod.null()]),
+  "plan": zod.union([zod.object({
+  "id": zod.uuid(),
+  "date": zod.iso.date(),
+  "cancelled": zod.boolean()
+}),zod.null()]),
+  "version": zod.string().regex(completeTodoResponseVersionRegExp)
+})
+
+
+/**
+ * ToDoを未完了に戻す。予定とのつながりも消す。未完了なら変えずに返す。Idempotency-Key 必須。版は要らない。
+ */
+export const ReopenTodoParams = zod.object({
+  "tripId": zod.uuid(),
+  "todoId": zod.uuid()
+})
+
+export const ReopenTodoHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。')
+})
+
+
+export const reopenTodoResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
+
+
+export const ReopenTodoResponse = zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1),
+  "memo": zod.string().nullable(),
+  "createdBy": zod.uuid(),
+  "createdAt": zod.iso.datetime({"offset":true}),
+  "doneAt": zod.union([zod.iso.datetime({"offset":true}),zod.null()]),
+  "doneBy": zod.union([zod.uuid(),zod.null()]),
+  "plan": zod.union([zod.object({
+  "id": zod.uuid(),
+  "date": zod.iso.date(),
+  "cancelled": zod.boolean()
+}),zod.null()]),
+  "version": zod.string().regex(reopenTodoResponseVersionRegExp)
+})
+
+
+/**
+ * ToDoの削除。元に戻せない。Idempotency-Key 必須。版は要らない。同じキーの再送は、行が無くても同じ本文を返す。
+ */
+export const DeleteTodoParams = zod.object({
+  "tripId": zod.uuid(),
+  "todoId": zod.uuid()
+})
+
+export const DeleteTodoHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。')
+})
+
+export const DeleteTodoResponse = zod.object({
+  "id": zod.uuid()
 })

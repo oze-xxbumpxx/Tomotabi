@@ -586,6 +586,24 @@ describe("読み出した保留の検証", () => {
         operation: "cancel-booking",
         url: `/api/trips/${TRIP_ID}/bookings/${crypto.randomUUID()}/cancel`,
       },
+      // ToDoの書き込み（設計書 trip-todo）。
+      { operation: "create-todo", url: `/api/trips/${TRIP_ID}/todos` },
+      {
+        operation: "update-todo",
+        url: `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}`,
+      },
+      {
+        operation: "complete-todo",
+        url: `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/complete`,
+      },
+      {
+        operation: "reopen-todo",
+        url: `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/reopen`,
+      },
+      {
+        operation: "delete-todo",
+        url: `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/delete`,
+      },
       // 許可済みの経路であれば操作名は許可リストに依らない。
       { operation: OPERATION, url: TEST_URL },
     ];
@@ -605,6 +623,27 @@ describe("読み出した保留の検証", () => {
       expect(mutation).not.toBeNull();
       expect(mutation?.url).toBe(url);
       expect(mutation?.idempotencyKey).toBe(record.idempotencyKey);
+    }
+  });
+
+  it("ToDoの経路でも、IDがUUIDでない・知らない動作の保留は送り直さない", () => {
+    for (const url of [
+      `/api/trips/${TRIP_ID}/todos/abc`,
+      `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/archive`,
+      `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/complete/extra`,
+    ]) {
+      const request = createMutationRequest({
+        operation: "complete-todo",
+        url,
+        method: "POST",
+        body: null,
+      });
+      const record = toPendingRequestRecord({
+        userId: USER_ID,
+        tripId: TRIP_ID,
+        request,
+      });
+      expect(pendingRequestToMutation(record)).toBeNull();
     }
   });
 

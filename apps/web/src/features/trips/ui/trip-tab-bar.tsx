@@ -7,6 +7,7 @@ import {
   BookOpenText,
   House,
   ListBullets,
+  ListChecks,
   Plus,
   WifiSlash,
 } from "@phosphor-icons/react";
@@ -20,7 +21,7 @@ import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
  * 選ばない（F-49。`/payments/new`には`planId`を付けない）。
  * オフラインのあいだは「支払いを記録」を押せない見た目にする（C-3）。
  */
-export type TripTab = "home" | "itinerary" | "records" | "settlement";
+export type TripTab = "home" | "itinerary" | "todos" | "records" | "settlement";
 
 const TABS: ReadonlyArray<{
   key: TripTab;
@@ -39,6 +40,12 @@ const TABS: ReadonlyArray<{
     label: "しおり",
     icon: BookOpenText,
     href: (tripId) => `/trips/${tripId}/itinerary`,
+  },
+  {
+    key: "todos",
+    label: "ToDo",
+    icon: ListChecks,
+    href: (tripId) => `/trips/${tripId}/todos`,
   },
   {
     key: "records",

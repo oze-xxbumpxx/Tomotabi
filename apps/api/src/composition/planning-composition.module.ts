@@ -138,6 +138,7 @@ const missingDatabase = (): Promise<never> =>
               listTripsForParticipant: missingDatabase,
               findPlanInTrip: missingDatabase,
               listPlansForDay: missingDatabase,
+              listTodos: missingDatabase,
             },
     },
     { provide: CLOCK, useClass: SystemClock },

@@ -144,3 +144,48 @@ export const plans = planning.table(
     ),
   ],
 );
+
+// ToDo items of a trip (design docs/designs/trip-todo.md "DB 設計"). plan_id is set only
+// when the item was turned into a plan; the composite FK keeps it inside the same trip.
+// Plans are never deleted (only cancelled), so the FK needs no ON DELETE.
+export const todos = planning.table(
+  "todos",
+  {
+    id: id(),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    name: varchar("name", { length: 100 }).notNull(),
+    memo: varchar("memo", { length: 2000 }),
+    createdBy: uuid("created_by").notNull(),
+    doneAt: timestamp("done_at", withTimezone),
+    doneBy: uuid("done_by"),
+    planId: uuid("plan_id"),
+    version: version(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("todos_trip_id_id_unique").on(table.tripId, table.id),
+    check("todos_version_check", sql`${table.version} > 0`),
+    check("todo_name_nonempty", sql`char_length(btrim(${table.name})) > 0`),
+    check("todo_done_pair", sql`(${table.doneAt} IS NULL) = (${table.doneBy} IS NULL)`),
+    check("todo_plan_requires_done", sql`${table.planId} IS NULL OR ${table.doneAt} IS NOT NULL`),
+    foreignKey({
+      name: "todo_creator_member",
+      columns: [table.tripId, table.createdBy],
+      foreignColumns: [tripParticipants.tripId, tripParticipants.userId],
+    }),
+    foreignKey({
+      name: "todo_completer_member",
+      columns: [table.tripId, table.doneBy],
+      foreignColumns: [tripParticipants.tripId, tripParticipants.userId],
+    }),
+    foreignKey({
+      name: "todo_plan_same_trip",
+      columns: [table.tripId, table.planId],
+      foreignColumns: [plans.tripId, plans.id],
+    }),
+    index("todos_list_idx").on(table.tripId, table.createdAt, table.id),
+  ],
+);

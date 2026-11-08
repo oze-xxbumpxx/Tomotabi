@@ -3,6 +3,7 @@ import type { Plan as PlanContract } from "@tomotabi/contracts";
 import { ApiError } from "../../../common/http/api-error.js";
 import type { Clock } from "../../../adapter/clock/clock.js";
 import type { UnitOfWork } from "../../../adapter/transaction/unit-of-work.js";
+import { Todo } from "../domain/todo.js";
 import { TripPeriod } from "../domain/trip-period.js";
 import {
   CREATE_PLAN_OPERATION,
@@ -63,6 +64,27 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
     );
   }
 
+  /**
+   * 「予定にする」の元のToDoを、予定の保存と同じトランザクションで完了にして
+   * 予定とつなぐ（要件F-10）。ロックは旅行 → 予定 → ToDoの順。
+   * 無い（削除済み・別の旅行）・完了済みなら何もしない（E-05・E-06）。
+   */
+  private async completeSourceTodo(
+    ctx: PlanningWorkContext,
+    input: CreatePlanInput,
+    todoId: string,
+    planId: string,
+  ): Promise<void> {
+    const todo = await ctx.todos.lockForUpdate(input.tripId, todoId);
+    if (todo === null) {
+      return;
+    }
+    const done = Todo.complete(todo, input.userId, this.clock.now(), planId);
+    if (done !== todo) {
+      await ctx.todos.update(done);
+    }
+  }
+
   private async run(input: CreatePlanInput): Promise<PlanWriteOutcome> {
     const name = parsePlanName(input.name);
     const kind = parsePlanKind(input.kind);
@@ -100,6 +122,9 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
           time,
           memo,
         });
+        if (input.fromTodoId !== null) {
+          await this.completeSourceTodo(ctx, input, input.fromTodoId, plan.id);
+        }
         const body = toPlanDto(plan, {
           achievement: null,
           booking: null,

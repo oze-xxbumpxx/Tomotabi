@@ -16,6 +16,8 @@ export type CreatePlanInput = Readonly<{
   /** `HH:mm`またはnull。 */
   time: string | null;
   memo: string | null;
+  /** 「予定にする」で元にしたToDo。無ければnull。 */
+  fromTodoId: string | null;
 }>;
 
 export interface CreatePlanInputPort {

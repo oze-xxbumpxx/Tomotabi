@@ -32,6 +32,12 @@ const FINANCE_RECORD_TABLES = ["record.payments", "record.payment_cancellations"
 
 const ALL_TABLES = [...M2_TABLES, ...FINANCE_RECORD_TABLES] as const;
 
+// Added by drizzle/0011_planning_todos.sql. Kept out of ALL_TABLES because app_runtime may
+// DELETE todos (0012), so the D-08 / D-09 grant loops do not fit it as they are.
+const TODO_TABLES = ["planning.todos"] as const;
+
+const SCHEMA_TABLES = [...ALL_TABLES, ...TODO_TABLES] as const;
+
 const M2_INDEXES = [
   "plans_day_idx",
   "trip_participants_user_idx",
@@ -134,7 +140,7 @@ describe("planning / record / infra schema migrations and runtime privileges", (
         WHERE table_schema IN ('planning', 'record', 'infra') AND table_type = 'BASE TABLE'
         ORDER BY name`,
     );
-    expect(tables.rows.map((row) => row.name)).toEqual([...ALL_TABLES].sort());
+    expect(tables.rows.map((row) => row.name)).toEqual([...SCHEMA_TABLES].sort());
 
     const indexes = await db.admin.query<{ indexname: string }>(
       `SELECT indexname FROM pg_indexes WHERE schemaname IN ('planning', 'record', 'infra')`,
@@ -191,7 +197,7 @@ describe("planning / record / infra schema migrations and runtime privileges", (
         `SELECT count(*) AS count FROM information_schema.tables
           WHERE table_schema IN ('planning', 'record', 'infra')`,
       );
-      expect(tables.rows[0]!.count).toBe(String(ALL_TABLES.length));
+      expect(tables.rows[0]!.count).toBe(String(SCHEMA_TABLES.length));
     } finally {
       await secondAdmin.end();
     }

@@ -109,7 +109,7 @@ type Handler = (init?: RequestInit) => Response | Promise<Response>;
 
 /** /api/me・旅行・残額・ToDo・予定の追加をURLとメソッドで振り分けるfake。 */
 function stubApi(handlers: {
-  todos?: () => Todo[];
+  todos?: () => Todo[] | Response;
   create?: Handler;
   complete?: Handler;
   update?: Handler;
@@ -130,7 +130,10 @@ function stubApi(handlers: {
       return Promise.resolve(json(balanceBody()));
     }
     if (url === `${base}/todos` && method === "GET") {
-      return Promise.resolve(json({ items: handlers.todos?.() ?? [] }));
+      const result = handlers.todos?.() ?? [];
+      return Promise.resolve(
+        result instanceof Response ? result : json({ items: result }),
+      );
     }
     if (url === `${base}/todos` && method === "POST") {
       return Promise.resolve(handlers.create?.(init) ?? json(todo(), 201));
@@ -189,6 +192,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
@@ -342,6 +346,43 @@ describe("ToDoのリスト", () => {
     ).toBe(false);
   });
 
+  it("相手が消したToDoに印を押すと、リストに留まって読み直す（E-04）", async () => {
+    let items = [todo()];
+    const fetchMock = stubApi({
+      todos: () => items,
+      complete: () => {
+        items = [];
+        return json({ code: "TODO_NOT_FOUND", message: "x" }, 404);
+      },
+    });
+    renderScreen(<TodosScreen tripId={tripId} />);
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "「湯豆腐を食べる」を完了にする",
+      }),
+    );
+    expect(
+      await screen.findByText(/このToDoは相手が削除しました/),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("ToDoはまだありません")).toBeInTheDocument();
+    expect(screen.queryByText("旅行を開けません")).toBeNull();
+    expect(
+      callsTo(fetchMock, `/api/trips/${tripId}/todos`, "GET").length,
+    ).toBeGreaterThan(1);
+  });
+
+  it("オフラインなら追加する・完了の印を押せない（E-09）", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    stubApi({ todos: () => [todo()] });
+    renderScreen(<TodosScreen tripId={tripId} />);
+    expect(
+      await screen.findByRole("button", {
+        name: "「湯豆腐を食べる」を完了にする",
+      }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "追加する" })).toBeDisabled();
+  });
+
   it("下のタブは5つで、ToDoが今のタブ。主ボタンは「支払いを記録」（F-13）", async () => {
     stubApi({ todos: () => [] });
     renderScreen(<TodosScreen tripId={tripId} />);
@@ -466,6 +507,43 @@ describe("ToDoの詳細", () => {
 });
 
 describe("予定の追加をToDoから開いたとき（F-09・F-10）", () => {
+  it("ToDoの一覧が読めなくても、送る本文にfromTodoIdが付く", async () => {
+    const fetchMock = stubApi({
+      todos: () => json({ code: "TEMPORARILY_UNAVAILABLE", message: "x" }, 503),
+    });
+    renderScreen(
+      <PlanFormScreen
+        mode="new"
+        tripId={tripId}
+        date={null}
+        fromTodoId={todoId}
+      />,
+    );
+    const nameBox = await screen.findByRole("textbox", { name: /名前/ });
+    const dialog = screen.getByRole("dialog", { name: "予定を追加" });
+    await waitFor(() => expect(nameBox).not.toHaveAttribute("readonly"));
+    await userEvent.type(nameBox, "湯豆腐");
+    await userEvent.click(
+      within(dialog).getByRole("radio", { name: /食べ処/ }),
+    );
+    const save = within(dialog).getByRole("button", { name: "保存" });
+    await waitFor(() => expect(save).toBeEnabled());
+    await userEvent.click(save);
+    await waitFor(() =>
+      expect(
+        callsTo(fetchMock, `/api/trips/${tripId}/plans`, "POST"),
+      ).toHaveLength(1),
+    );
+    const [, init] = callsTo(
+      fetchMock,
+      `/api/trips/${tripId}/plans`,
+      "POST",
+    )[0]!;
+    expect(JSON.parse((init as RequestInit).body as string)).toMatchObject({
+      fromTodoId: todoId,
+    });
+  });
+
   it("名前とメモが入り、説明が出て、送る本文にfromTodoIdが付く", async () => {
     const fetchMock = stubApi({
       todos: () => [todo({ memo: "南禅寺のそば" })],

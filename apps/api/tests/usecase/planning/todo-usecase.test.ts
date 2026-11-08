@@ -348,3 +348,101 @@ describe("予定にする（予定の追加のfromTodoId）", () => {
     expect(ctx.calls.some((call) => call.startsWith("todos."))).toBe(false);
   });
 });
+
+describe("ToDoの決まりの残り", () => {
+  it("削除済みのToDoは、編集・完了・戻すのどれも404 TODO_NOT_FOUND（E-04）", async () => {
+    const { uow, writeLog } = setup();
+    const clock = fixedClock();
+    const results = await Promise.all([
+      rejection(
+        new UpdateTodoUseCase(uow, clock, writeLog).execute({
+          ...command(),
+          ifMatch: "1",
+          name: "x",
+          memo: undefined,
+        }),
+      ),
+      rejection(
+        new CompleteTodoUseCase(uow, clock, writeLog).execute(command()),
+      ),
+      rejection(new ReopenTodoUseCase(uow, clock, writeLog).execute(command())),
+    ]);
+    expect(results.map((error) => error.code)).toEqual([
+      "TODO_NOT_FOUND",
+      "TODO_NOT_FOUND",
+      "TODO_NOT_FOUND",
+    ]);
+  });
+
+  it("同じキーで違う内容を送ると409 IDEMPOTENCY_KEY_REUSED", async () => {
+    const { uow, writeLog } = setup();
+    const usecase = new CreateTodoUseCase(uow, writeLog);
+    await usecase.execute({
+      userId: ACTOR,
+      tripId: TRIP_ID,
+      key: KEY,
+      requestHash: "hash-1",
+      name: "清水寺",
+    });
+    const error = await rejection(
+      usecase.execute({
+        userId: ACTOR,
+        tripId: TRIP_ID,
+        key: KEY,
+        requestHash: "hash-2",
+        name: "金閣寺",
+      }),
+    );
+    expect(error.code).toBe("IDEMPOTENCY_KEY_REUSED");
+  });
+
+  it("旅行が終わったあとも追加・完了・削除できる（B-06）", async () => {
+    const ctx = new InMemoryPlanningContext();
+    const uow = inMemoryUnitOfWork(ctx);
+    const writeLog = new RecordingWriteLog();
+    ctx.seedTrip(
+      testTrip({ status: "finished", finishedAt: NOW, finishedBy: ACTOR }),
+      [ACTOR, PARTNER],
+    );
+    const created = await new CreateTodoUseCase(uow, writeLog).execute({
+      userId: ACTOR,
+      tripId: TRIP_ID,
+      key: KEY,
+      requestHash: "hash-c",
+      name: "次は嵐山",
+    });
+    const todoId = created.body.id;
+    const done = await new CompleteTodoUseCase(
+      uow,
+      fixedClock(),
+      writeLog,
+    ).execute(command({ todoId, key: "22222222-2222-4222-8222-222222222222" }));
+    expect(done.body.doneBy).toBe(ACTOR);
+    const removed = await new DeleteTodoUseCase(uow, writeLog).execute(
+      command({ todoId, key: "33333333-3333-4333-8333-333333333333" }),
+    );
+    expect(removed.body).toEqual({ id: todoId });
+  });
+
+  it("予定を取りやめても、ToDoは完了のままで予定の取りやめが分かる（F-12・F-16）", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedPlan(testPlan({ cancelledAt: NOW, cancelledBy: ACTOR }));
+    ctx.seedTodo(
+      testTodo({
+        doneAt: NOW,
+        doneBy: ACTOR,
+        planId: testPlan().id,
+        version: 2,
+      }),
+    );
+    const result = await new CompleteTodoUseCase(
+      uow,
+      fixedClock(),
+      writeLog,
+    ).execute(command());
+    expect(result.body).toMatchObject({
+      doneBy: ACTOR,
+      plan: { id: testPlan().id, cancelled: true },
+    });
+  });
+});

@@ -176,8 +176,8 @@ type TodoList = { items: Todo[] }; // 未完了 → 完了、それぞれ追加�
 
 planningモジュールの中に置く（論点の記録「ToDoの表をどのモジュールに置くか」）。
 
-- Domain: `domain/todo.ts`。`Todo.create`・`rename`・`changeMemo`・`complete(by, at, planId)`・`reopen()`。名前・メモの決まりは予定の`parsePlanName`・`parsePlanMemo`と同じ値型を使う。
-- Repository: `adapter/outbound/todo.repository.ts`と`infrastructure/drizzle-todo.repository.ts`。`listByTrip`・`countByTrip`・`insert`・`lockForUpdate(tripId, todoId)`（FOR NO KEY UPDATE）・`update`・`delete`。`PlanningWorkContext`に`todos`を足す。
+- Domain: `domain/todo.ts`。`Todo.update(todo, patch, at)`（名前・メモ）・`complete(todo, by, at, planId)`・`reopen(todo, at)`。作るのはRepositoryの`insert`。名前・メモの決まりは予定の`parsePlanName`・`parsePlanMemo`と同じ値型を使う。
+- Repository: `adapter/outbound/todo.repository.ts`と`infrastructure/drizzle-todo.repository.ts`。`countByTrip`・`insert`・`lockForUpdate(tripId, todoId)`（FOR NO KEY UPDATE）・`update`・`delete`。`PlanningWorkContext`に`todos`を足す。一覧の読み取りは予定と同じく`PlanningReadPort.listTodos`で、プールから直接読む。
 - UseCase: `list-todos`・`create-todo`・`update-todo`・`complete-todo`・`reopen-todo`・`delete-todo`。書き込みの流れは`plan-write-flow.ts`と同じ（旅行行FOR SHARE → 受領 → ToDoの行のロック → 版の確認（編集だけ） → Domain → 更新と受領を同じトランザクションで保存）。
 - 予定の追加: `CreatePlanUseCase`の入力に`fromTodoId: string | null`を足す。予定をINSERTしたあと、同じトランザクションでToDoをロックし、未完了なら`complete(userId, now, plan.id)`。無い・完了済みなら何もしない。ロックの順は旅行 → 予定 → ToDoで、ほかの書き込みと逆にならない。受領の要求の要約（`computeRequestHash`）は入力全体から作るので、`fromTodoId`の違う再送は別の要求として断られる。
 - 旅行の状態は見ない。旅行が終わったあとも予定と同じく書ける（B-06）。

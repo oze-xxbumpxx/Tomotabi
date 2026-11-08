@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import type { Todo, TodoPatch } from "@tomotabi/contracts";
 import { useMe } from "@/features/auth";
@@ -18,6 +19,7 @@ import {
   DELETE_TODO_OPERATION,
   deleteTodoDraft,
   reopenTodoDraft,
+  replaceTodoInList,
   sendCompleteTodo,
   sendDeleteTodo,
   sendReopenTodo,
@@ -86,19 +88,34 @@ export function TodoDetailScreen({
     tripId,
     operation: DELETE_TODO_OPERATION,
   });
+  const queryClient = useQueryClient();
+  // 保存できた値で一覧の項目を先に置き換える（取り直しまで古い値が出ないように）。
+  const applySaved = (result: { data: Todo }) =>
+    replaceTodoInList(queryClient, tripId, result.data);
   const update = useTodoSave({
     tripId,
     userId,
     send: sendUpdateTodo,
     check: updateCheck.check,
-    onSucceeded: () => {
+    onSucceeded: (result) => {
+      applySaved(result);
       setName(null);
       setMemo(null);
       setToast("変更しました");
     },
   });
-  const complete = useTodoSave({ tripId, userId, send: sendCompleteTodo });
-  const reopen = useTodoSave({ tripId, userId, send: sendReopenTodo });
+  const complete = useTodoSave({
+    tripId,
+    userId,
+    send: sendCompleteTodo,
+    onSucceeded: applySaved,
+  });
+  const reopen = useTodoSave({
+    tripId,
+    userId,
+    send: sendReopenTodo,
+    onSucceeded: applySaved,
+  });
   const remove = useTodoSave({
     tripId,
     userId,

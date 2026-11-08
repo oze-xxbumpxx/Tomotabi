@@ -3,6 +3,7 @@
 import { CaretRight, Check } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import type { Todo } from "@tomotabi/contracts";
 import { useMe } from "@/features/auth";
@@ -11,7 +12,9 @@ import {
   CREATE_TODO_OPERATION,
   completeTodoDraft,
   createTodoDraft,
+  invalidateTodos,
   reopenTodoDraft,
+  replaceTodoInList,
   sendCompleteTodo,
   sendCreateTodo,
   sendReopenTodo,
@@ -74,8 +77,25 @@ export function TodosScreen({ tripId }: { tripId: string }) {
     check: createCheck.check,
     onSucceeded: () => setName(""),
   });
-  const complete = useTodoSave({ tripId, userId, send: sendCompleteTodo });
-  const reopen = useTodoSave({ tripId, userId, send: sendReopenTodo });
+  const queryClient = useQueryClient();
+  // 保存できた値で一覧の項目を先に置き換えてから、押した直後の見た目を消す
+  // （取り直しを待つあいだに「まだ」へ一度戻らないようにする）。
+  const onToggled = (result: { data: Todo }) => {
+    replaceTodoInList(queryClient, tripId, result.data);
+    setToggling(null);
+  };
+  const complete = useTodoSave({
+    tripId,
+    userId,
+    send: sendCompleteTodo,
+    onSucceeded: onToggled,
+  });
+  const reopen = useTodoSave({
+    tripId,
+    userId,
+    send: sendReopenTodo,
+    onSucceeded: onToggled,
+  });
 
   useEffect(() => {
     const pending = takePendingToast();
@@ -103,13 +123,15 @@ export function TodosScreen({ tripId }: { tripId: string }) {
       setToggling(null);
     }
   }, [toggling, toggleStatus]);
-  // 取り直した一覧が届いたら、先に変えた見た目は要らない。
-  const dataUpdatedAt = todos.dataUpdatedAt;
+  // 相手が先に消したToDoだった（404）ときは、一覧を読み直す（E-04）。
+  const toggleRemoved =
+    toggleSave.state.status === "rejected" &&
+    toggleSave.state.httpStatus === 404;
   useEffect(() => {
-    if (toggleStatus === "succeeded") {
-      setToggling(null);
+    if (toggleRemoved) {
+      invalidateTodos(queryClient, tripId);
     }
-  }, [dataUpdatedAt, toggleStatus]);
+  }, [toggleRemoved, queryClient, tripId]);
 
   const failure =
     todos.error instanceof ApiRequestError ? todos.error.failure : null;
@@ -125,10 +147,10 @@ export function TodosScreen({ tripId }: { tripId: string }) {
       </main>
     );
   }
+  // 旅行を開けない（403）ときだけ全面を差し替える。ToDoが無い（404）は
+  // 相手が消した項目なので、リストに留まって読み直す（E-04）。
   const writeNotAvailable = saves.some(
-    (state) =>
-      state.status === "rejected" &&
-      (state.httpStatus === 403 || state.httpStatus === 404),
+    (state) => state.status === "rejected" && state.httpStatus === 403,
   );
   if (
     writeNotAvailable ||
@@ -236,10 +258,12 @@ export function TodosScreen({ tripId }: { tripId: string }) {
       )}
       {rejected !== undefined && (
         <StatusText tone="error">
-          {rejected.status === "rejected" &&
-          rejected.code === "TODO_LIMIT_REACHED"
-            ? "ToDoは1つの旅行に200件までです。済んだものを削除してから追加してください"
-            : "保存できませんでした。もう一度お試しください。"}
+          {rejected.status === "rejected" && rejected.httpStatus === 404
+            ? "このToDoは相手が削除しました。リストを読み直しました"
+            : rejected.status === "rejected" &&
+                rejected.code === "TODO_LIMIT_REACHED"
+              ? "ToDoは1つの旅行に200件までです。済んだものを削除してから追加してください"
+              : "保存できませんでした。もう一度お試しください。"}
         </StatusText>
       )}
 

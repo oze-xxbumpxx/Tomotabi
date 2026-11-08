@@ -26,7 +26,6 @@
 | `apps/web/src/shared/browser/pending-requests.ts`                                                                     | 許可リストにToDoの5つの経路                                                                         |
 | `apps/web/src/app/trips/[tripId]/route-query.ts`                                                                      | `?fromTodo=`の読み解き                                                                              |
 | `apps/web/src/app/trips/[tripId]/plans/new/plan-new-route.tsx`・`apps/web/src/screens/plan-form/plan-form-screen.tsx` | ToDoから開いたときの初期値と説明、`fromTodoId`を送る                                                |
-| `apps/web/src/features/plans/model/plan-save.ts`                                                                      | 予定の追加の要求に`fromTodoId`を入れる。保存のあとToDoの一覧を古いものにする                        |
 
 ## 新規作成ファイル
 
@@ -44,7 +43,7 @@
 | `apps/api/src/modules/planning/controller/todos.controller.ts`                                                                                       | `/api/trips/:tripId/todos`の6つの口                                                       |
 | `apps/web/src/features/todos/api/todos-api.ts`・`model/todo-queries.ts`・`model/todo-save.ts`・`index.ts`                                            | 取得と5つの書き込み                                                                       |
 | `apps/web/src/screens/todos/todos-screen.tsx`                                                                                                        | ToDoのリスト                                                                              |
-| `apps/web/src/screens/todo-detail/todo-detail-screen.tsx`・`delete-todo-dialog.tsx`                                                                  | 詳細と削除の確認                                                                          |
+| `apps/web/src/screens/todo-detail/todo-detail-screen.tsx`（削除の確認も同じファイル）                                                                | 詳細と削除の確認                                                                          |
 | `apps/web/src/app/trips/[tripId]/todos/page.tsx`・`todos-route.tsx`                                                                                  | ルート                                                                                    |
 | `apps/web/src/app/trips/[tripId]/todos/[todoId]/page.tsx`・`todo-detail-route.tsx`                                                                   | ルート                                                                                    |
 
@@ -57,7 +56,7 @@
 5. ToDoのUseCase … `todo-write-flow.ts`と6つのUseCase / 上限200・版の確認（編集だけ）・削除は`{ id }`を受領に残す / `tests/usecase/planning/todo-usecase.test.ts`が通る
 6. 予定の追加を広げる … `create-plan.input-port.ts`・`create-plan.usecase.ts` / 予定のINSERTのあとToDoをロックして未完了なら完了。無い・完了済みは何もしない / 今の`plan-usecase.test.ts`と`write-usecase.test.ts`が落ちず、足した試験が通る
 7. Controllerと登録 … `todos.controller.ts`・`plans.controller.ts`・`planning.module.ts` / `tests/db/todos-http.db.test.ts`が通る（403・404・409・再送・`fromTodoId`）
-8. webの取得と保存 … `features/todos`・`pending-requests.ts`・`plan-save.ts` / `tests/pending-requests.test.tsx`にToDoの経路、`tests/todos-api.test.ts`が通る
+8. webの取得と保存 … `features/todos`・`pending-requests.ts` / `tests/pending-requests.test.tsx`にToDoの経路、`tests/todos-screens.test.tsx`が通る
 9. 下のタブ … `trip-tab-bar.tsx`・`globals.css` / `tests/trip-tab-bar.test.tsx`が5つのタブで通る
 10. ToDoの画面 … `screens/todos`・`screens/todo-detail`・ルート2つ / Claude Designの見本どおり。`tests/todos-screens.test.tsx`が通る
 11. 予定の追加の画面 … `route-query.ts`・`plan-new-route.tsx`・`plan-form-screen.tsx` / 名前とメモが入り、説明が出て、`fromTodoId`を送る / `tests/route-query.test.ts`・`tests/plans-screens.test.tsx`が通る

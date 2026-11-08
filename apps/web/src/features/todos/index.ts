@@ -15,7 +15,12 @@ export {
   UPDATE_TODO_OPERATION,
   updateTodoDraft,
 } from "./api/todos-api";
-export { invalidateTodos, todosQueryKey, useTodos } from "./model/todo-queries";
+export {
+  invalidateTodos,
+  replaceTodoInList,
+  todosQueryKey,
+  useTodos,
+} from "./model/todo-queries";
 export {
   useTodoSave,
   type TodoSave,

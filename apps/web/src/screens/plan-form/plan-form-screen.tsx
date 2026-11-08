@@ -335,9 +335,8 @@ export function PlanFormScreen({
       void create.submit(
         createPlanDraft(tripId, {
           ...planCreateOf({ ...values, kind: values.kind }),
-          ...(sourceTodo !== null && sourceTodo.doneAt === null
-            ? { fromTodoId: sourceTodo.id }
-            : {}),
+          // 一覧が読めていなくても送る。無い・済んでいるToDoはサーバーが何もしない（F-10）。
+          ...(fromTodo && fromTodoId !== null ? { fromTodoId } : {}),
         }),
       );
       return;

@@ -469,6 +469,72 @@ describe("ToDoの詳細", () => {
     ).toBeInTheDocument();
   });
 
+  it("打っている間に相手が名前を直していたら、送らずに「相手が先に変更しました」を出す", async () => {
+    let current = todo();
+    const fetchMock = stubApi({ todos: () => [current] });
+    const client = createQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <TodoDetailScreen tripId={tripId} todoId={todoId} />
+      </QueryClientProvider>,
+    );
+    const memo = await screen.findByLabelText(/メモ/);
+    await waitFor(() => expect(memo).not.toHaveAttribute("readonly"));
+    await userEvent.type(memo, "昼は混む");
+    // 画面に戻ったときの取り直しで、相手の変更が届く。
+    current = todo({ name: "湯豆腐と抹茶", version: "2" });
+    await client.invalidateQueries();
+    const save = screen.getByRole("button", { name: "変更を保存" });
+    await waitFor(() => expect(save).toBeEnabled());
+    await userEvent.click(save);
+    expect(
+      await screen.findByText("相手が先に変更しました"),
+    ).toBeInTheDocument();
+    expect(
+      callsTo(fetchMock, `/api/trips/${tripId}/todos/${todoId}`, "PATCH"),
+    ).toHaveLength(0);
+  });
+
+  it("打っている間に相手が完了の印を押しただけなら、新しい版で送る", async () => {
+    let current = todo();
+    const fetchMock = stubApi({ todos: () => [current] });
+    const client = createQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <TodoDetailScreen tripId={tripId} todoId={todoId} />
+      </QueryClientProvider>,
+    );
+    const memo = await screen.findByLabelText(/メモ/);
+    await waitFor(() => expect(memo).not.toHaveAttribute("readonly"));
+    await userEvent.type(memo, "昼は混む");
+    current = todo({
+      doneAt: "2026-11-08T05:00:00.000Z",
+      doneBy: otherUserId,
+      version: "2",
+    });
+    await client.invalidateQueries();
+    await screen.findByRole("button", { name: "未完了に戻す" });
+    const save = screen.getByRole("button", { name: "変更を保存" });
+    await waitFor(() => expect(save).toBeEnabled());
+    await userEvent.click(save);
+    await waitFor(() =>
+      expect(
+        callsTo(fetchMock, `/api/trips/${tripId}/todos/${todoId}`, "PATCH"),
+      ).toHaveLength(1),
+    );
+    const [, init] = callsTo(
+      fetchMock,
+      `/api/trips/${tripId}/todos/${todoId}`,
+      "PATCH",
+    )[0]!;
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      memo: "昼は混む",
+    });
+    expect(
+      new Headers((init as RequestInit).headers).get("X-Expected-Version"),
+    ).toBe("2");
+  });
+
   it("削除は確認で「削除する」を押したときだけ送り、「やめる」なら送らない（F-08）", async () => {
     const fetchMock = stubApi({ todos: () => [todo()] });
     renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
@@ -520,7 +586,7 @@ describe("予定の追加をToDoから開いたとき（F-09・F-10）", () => {
       />,
     );
     const nameBox = await screen.findByRole("textbox", { name: /名前/ });
-    const dialog = screen.getByRole("dialog", { name: "予定を追加" });
+    const dialog = await screen.findByRole("dialog", { name: "予定を追加" });
     await waitFor(() => expect(nameBox).not.toHaveAttribute("readonly"));
     await userEvent.type(nameBox, "湯豆腐");
     await userEvent.click(
@@ -581,7 +647,8 @@ describe("予定の追加をToDoから開いたとき（F-09・F-10）", () => {
         "ToDoの「湯豆腐を食べる」から作ります。保存すると、ToDoは完了になります。",
       ),
     ).toBeInTheDocument();
-    const dialog = screen.getByRole("dialog", { name: "予定を追加" });
+    // シートはeffectでshowModalしてから読み上げの木に入るので、開くまで待つ。
+    const dialog = await screen.findByRole("dialog", { name: "予定を追加" });
     await waitFor(() =>
       expect(within(dialog).getByRole("textbox", { name: /名前/ })).toHaveValue(
         "湯豆腐を食べる",

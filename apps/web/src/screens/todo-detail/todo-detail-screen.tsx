@@ -74,6 +74,11 @@ export function TodoDetailScreen({
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // 打ち始めたときの名前・メモ。保存の前に今の値と比べ、相手が先に直していたら
+  // 送らずに知らせる。版で比べないのは、完了の付け外しでも版が上がり、
+  // 相手が印を押しただけで止まってしまうため。
+  const [base, setBase] = useState<TodoContent | null>(null);
+  const [staleBase, setStaleBase] = useState(false);
 
   const userId = meState.status === "ready" ? meState.me.user.id : null;
   const listHref = `/trips/${tripId}/todos`;
@@ -101,6 +106,7 @@ export function TodoDetailScreen({
       applySaved(result);
       setName(null);
       setMemo(null);
+      setBase(null);
       setToast("変更しました");
     },
   });
@@ -206,6 +212,11 @@ export function TodoDetailScreen({
     );
   }
 
+  const startEditing = () => {
+    if (base === null) {
+      setBase({ name: todo.name, memo: todo.memo });
+    }
+  };
   const shownName = name ?? todo.name;
   const shownMemo = memo ?? todo.memo ?? "";
   const dirty = shownName !== todo.name || shownMemo !== (todo.memo ?? "");
@@ -231,6 +242,10 @@ export function TodoDetailScreen({
       return;
     }
     setError(null);
+    if (base !== null && (base.name !== todo.name || base.memo !== todo.memo)) {
+      setStaleBase(true);
+      return;
+    }
     const patch = patchOf(todo, trimmed, shownMemo);
     if (Object.keys(patch).length === 0) {
       return;
@@ -251,7 +266,7 @@ export function TodoDetailScreen({
         describedBy: noteId,
       };
 
-  const conflict = update.state.status === "conflict";
+  const conflict = update.state.status === "conflict" || staleBase;
   const rejected = saves.find(
     (state) => state.status === "rejected" && state.httpStatus !== 404,
   );
@@ -313,6 +328,8 @@ export function TodoDetailScreen({
               update.backToEditing();
               setName(null);
               setMemo(null);
+              setBase(null);
+              setStaleBase(false);
               void todos.refetch();
             }}
           >
@@ -375,6 +392,7 @@ export function TodoDetailScreen({
             readOnly={updateLocked}
             data-locked={updateLocked ? "true" : undefined}
             onChange={(event) => {
+              startEditing();
               setName(event.target.value);
               setError(null);
             }}
@@ -392,6 +410,7 @@ export function TodoDetailScreen({
             readOnly={updateLocked}
             data-locked={updateLocked ? "true" : undefined}
             onChange={(event) => {
+              startEditing();
               setMemo(event.target.value);
               setError(null);
             }}
@@ -491,6 +510,8 @@ export function TodoDetailScreen({
     </main>
   );
 }
+
+type TodoContent = Pick<Todo, "name" | "memo">;
 
 /** 変えた項目だけを入れる。メモを空にしたらnull（消す）。 */
 function patchOf(todo: Todo, name: string, memo: string): TodoPatch {

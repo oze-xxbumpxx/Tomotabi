@@ -43,10 +43,10 @@ flowchart LR
 
 ## 対象範囲
 
-- DB: `planning.todos`の表と、実行用のロールへの権限。
+- DB: `planning.todos`の表と、実行用のロールへの権限。受領の表（`infra.command_receipts`）が記録できる種類に、ToDoの2つを足す。
 - 契約: `packages/contracts/openapi/planning.json`にToDoの操作を足し、予定の追加の入力に`fromTodoId`を足す。`packages/contracts/src/`に型を足す。生成物（orval）を作り直す。
 - api: planningモジュールにToDoのDomain・UseCase・Repository・Controllerを足す。予定の追加のUseCaseを広げる。
-- web: `features/todos`、`screens/todos`・`screens/todo-detail`、ルート`/trips/[tripId]/todos`と`/trips/[tripId]/todos/[todoId]`、下のタブ、予定の追加の画面。
+- web: `features/todos`、`screens/todos`・`screens/todo-detail`、ルート`/trips/[tripId]/todos`と`/trips/[tripId]/todos/[todoId]`、下のタブ、予定の追加の画面、端末に残す仕組みの許可リスト（`pending-requests.ts`）。
 - 試験: Domain・UseCase（DBつき）・Controller・画面の単体試験、E2Eに1本。
 
 ## 対象外
@@ -70,7 +70,7 @@ flowchart LR
   tdetail -->|"/plans/new?fromTodo=ID"| form[予定の追加]
   form -->|"POST /plans + fromTodoId"| plans[(planning.plans)]
   form -.->|同じトランザクション| todos[(planning.todos)]
-  todo -->|"GET/POST/PATCH/DELETE /todos"| todos
+  todo -->|"GET/POST/PATCH /todos"| todos
   todos -->|"plan_id（trip_id, plan_id）"| plans
 ```
 
@@ -103,17 +103,17 @@ sequenceDiagram
 
 ## API 設計
 
-すべて`/api/trips/{tripId}`の下。書き込みは`Idempotency-Key`が必須（今ある書き込みと同じ）。参加していない旅行は、今の`tripNotAccessible`と同じ404で断る（E-08）。
+すべて`/api/trips/{tripId}`の下。書き込みは`Idempotency-Key`が必須（今ある書き込みと同じ）。参加していない旅行は、今の`tripNotAccessible`と同じ403 `TRIP_NOT_ACCESSIBLE`で断る（E-08。旅行が無いときも同じ403で、旅行があるかは分からない）。書き込みはどれもPOST・PATCHで本文つきの200か201を返し、今の受領と端末に残す仕組みにそのまま載せる（DELETEと204は使わない）。
 
-| 操作                 | メソッドとパス                      | 入力                                     | 成功                                                 | 主な失敗                                                     |
-| -------------------- | ----------------------------------- | ---------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
-| 一覧                 | `GET /todos`                        | なし                                     | 200 `TodoList`（`Cache-Control: private, no-store`） | 404 旅行なし                                                 |
-| 追加                 | `POST /todos`                       | `{ name }`                               | 201 `Todo`                                           | 422 `TODO_LIMIT_REACHED`（E-02）、400/422 名前（E-01）       |
-| 編集                 | `PATCH /todos/{todoId}`             | `{ name?, memo? }`、`X-Expected-Version` | 200 `Todo`                                           | 409 `VERSION_CONFLICT`（E-03）、404 `TODO_NOT_FOUND`（E-04） |
-| 完了にする           | `PUT /todos/{todoId}/completion`    | なし                                     | 200 `Todo`                                           | 404 `TODO_NOT_FOUND`                                         |
-| 未完了に戻す         | `DELETE /todos/{todoId}/completion` | なし                                     | 200 `Todo`                                           | 404 `TODO_NOT_FOUND`                                         |
-| 削除                 | `DELETE /todos/{todoId}`            | なし                                     | 204                                                  | 404 `TODO_NOT_FOUND`（E-04）                                 |
-| 予定の追加（広げる） | `POST /plans`                       | 今の入力 + `fromTodoId?`                 | 201 `Plan`（形は今のまま）                           | 今のまま。`fromTodoId`が見つからなくても予定は作る           |
+| 操作                 | メソッドとパス                  | 入力                                     | 成功                                                 | 主な失敗                                                     |
+| -------------------- | ------------------------------- | ---------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| 一覧                 | `GET /todos`                    | なし                                     | 200 `TodoList`（`Cache-Control: private, no-store`） | 403 `TRIP_NOT_ACCESSIBLE`                                    |
+| 追加                 | `POST /todos`                   | `{ name }`                               | 201 `Todo`                                           | 422 `TODO_LIMIT_REACHED`（E-02）、400/422 名前（E-01）       |
+| 編集                 | `PATCH /todos/{todoId}`         | `{ name?, memo? }`、`X-Expected-Version` | 200 `Todo`                                           | 409 `VERSION_CONFLICT`（E-03）、404 `TODO_NOT_FOUND`（E-04） |
+| 完了にする           | `POST /todos/{todoId}/complete` | なし                                     | 200 `Todo`                                           | 404 `TODO_NOT_FOUND`                                         |
+| 未完了に戻す         | `POST /todos/{todoId}/reopen`   | なし                                     | 200 `Todo`                                           | 404 `TODO_NOT_FOUND`                                         |
+| 削除                 | `POST /todos/{todoId}/delete`   | なし                                     | 200 `{ id }`（消したToDoのID）                       | 404 `TODO_NOT_FOUND`（E-04）                                 |
+| 予定の追加（広げる） | `POST /plans`                   | 今の入力 + `fromTodoId?`                 | 201 `Plan`（形は今のまま）                           | 今のまま。`fromTodoId`が見つからなくても予定は作る           |
 
 ```ts
 type Todo = {
@@ -138,12 +138,12 @@ type TodoList = { items: Todo[] }; // 未完了 → 完了、それぞれ追加�
 決めたこと:
 
 - 完了の付け外しは、名前・メモの編集と分けて版を要らない操作にする。二人が同時に別の項目を触る使い方で、相手が名前を直しただけで完了の印が競合にならないようにする。「完了にする」は何度送っても完了のまま（完了にした人と時刻は最初のまま）、「未完了に戻す」も何度送っても未完了のまま。
-- 削除も版を要らない。消す前の確かめは画面で行い、相手が先に消していたら404（E-04）。
+- 削除も版を要らない。消す前の確かめは画面で行い、相手が先に消していたら404（E-04）。削除は受領に`{ id }`を残すので、電波が切れて同じキーで送り直したときは、行がもう無くても同じ200が返り、消せたと確かめられる。
 - 予定の応答（`Plan`）は変えない。予定の詳細から元のToDoへのリンクは作らないため（論点の記録「予定にしたToDoと、その予定をどうつなぐか」）。
 
 ## DB 設計
 
-`planning.todos`（migration `0011_planning_todos.sql`と`0012_planning_todos_grants.sql`）。
+`planning.todos`（migration `0011_planning_todos.sql`と`0012_planning_todos_grants.sql`）。あわせて`infra.command_receipts`の`resource_type`のcheckを置き換え、`todo`と`todo_deletion`を足す（今は`plan`や`payment`などしか記録できない）。`CommandReceipt`の`resourceType`の型にも同じ2つを足す。
 
 | 列                                      | 型                 | 決まり                                                                                                                                                       |
 | --------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -169,7 +169,7 @@ type TodoList = { items: Todo[] }; // 未完了 → 完了、それぞれ追加�
 - ToDoのリスト（`/trips/[tripId]/todos`、`screens/todos`）: 上に旅行名・見出し「ToDo」・一行の説明、その下に一行の入力欄と「追加する」。「まだ · N件」「済んだ · N件」の2つの欄。行は丸い完了の印・名前・誰が追加したか（完了の行は誰が完了にしたか）。予定につないだ行は「10/13 の予定 ›」のリンクで予定の詳細を開き、取りやめた予定なら「取りやめた予定 ›」。0件・全件完了の表示は要件B-01・B-05。主ボタンは「支払いを記録」のまま（論点の記録「ToDoの画面の主ボタンを何にするか」）。
 - ToDoの詳細（`/trips/[tripId]/todos/[todoId]`、`screens/todo-detail`）: 名前とメモの入力欄、「変更を保存」（論点の記録「ToDoの詳細で、名前とメモをどう保存するか」）、「完了にする / 未完了に戻す」、「削除する」（確認のシートを挟む）。未完了なら主ボタンを「予定にする」に差し替える（予定の詳細の「達成を記録」と同じしくみ）。完了なら主ボタンは「支払いを記録」に戻す。
 - 予定の追加（今の`screens/plan-form`）: `?fromTodo=<id>`を`route-query.ts`で読み、ToDoの名前とメモを入れて開く（論点の記録「「予定にする」でメモも予定に写すか」）。画面の上に「ToDoの「…」から作ります。保存すると、ToDoは完了になります。」を出し、保存の要求に`fromTodoId`を足す。保存のあとはしおりへ進み、ToDoの一覧の取得を古いものとして扱う。
-- 取得と保存: `features/todos`に一覧の取得と5つの書き込みを置く。書き込みは今の`mutation-request`（端末に残す仕組み）に載せる。完了の付け外しはすぐ画面に反映し、失敗したら戻す。相手の変更は、画面を開いたとき・戻ったときの取り直しで見える（今のほかの画面と同じ）。
+- 取得と保存: `features/todos`に一覧の取得と5つの書き込みを置く。書き込みは今の`mutation-request`（端末に残す仕組み）に載せる。`pending-requests.ts`の送り直せる経路の許可リストに、`/todos`・`/todos/{UUID}`・`/todos/{UUID}/complete`・`/reopen`・`/delete`の5つを足す（足さないと、画面を開き直したときに残した要求が消され、結果を確かめられない）。メソッドはPOST・PATCHだけなので、許可するメソッドは変えない。完了の付け外しはすぐ画面に反映し、失敗したら戻す。相手の変更は、画面を開いたとき・戻ったときの取り直しで見える（今のほかの画面と同じ）。
 - オフライン: 今の画面と同じく、追加する・完了・保存・削除・予定にするを押せない見た目にする（E-09）。
 
 ## バックエンド設計
@@ -197,7 +197,7 @@ planningモジュールの中に置く（論点の記録「ToDoの表をどの�
 
 ## セキュリティ
 
-- 旅行の参加者かを、すべての操作で旅行行のロックと一緒に確かめる（今の`lockForShare(tripId, userId)`）。参加していなければ旅行の有無が分からない404。
+- 旅行の参加者かを、すべての操作で旅行行のロックと一緒に確かめる（今の`lockForShare(tripId, userId)`）。参加していなければ、旅行が無いときと同じ403 `TRIP_NOT_ACCESSIBLE`（今の旅行・予定のAPIと同じ）。
 - ToDoのIDが別の旅行のものなら`TODO_NOT_FOUND`（`(trip_id, id)`で探す）。
 - `fromTodoId`も同じ旅行の中だけで探す。別の旅行のIDを渡しても、何もしない（予定は作る）。
 - 名前・メモはReactの通常の表示で出し、HTMLとして解釈しない。
@@ -210,15 +210,15 @@ planningモジュールの中に置く（論点の記録「ToDoの表をどの�
 ## テスト方針
 
 - Domain: 名前・メモの境界（B-02・B-03）、完了・戻すの冪等性、`plan_id`は完了のときだけ。
-- UseCase（DBつき、`vitest.db.config.ts`）: 追加の上限（E-02）、編集の競合（E-03）、削除済み（E-04）、予定の追加と完了が一つのトランザクションになること（F-10）、削除済み・完了済みのToDoからの予定の追加（E-05・E-06）、同じキーの再送（E-07）、ほかの旅行の参加者（E-08）、ほかの旅行の`fromTodoId`。
+- UseCase（DBつき、`vitest.db.config.ts`）: 追加の上限（E-02）、編集の競合（E-03）、削除済み（E-04）、予定の追加と完了が一つのトランザクションになること（F-10）、削除済み・完了済みのToDoからの予定の追加（E-05・E-06）、同じキーの再送（E-07）、ほかの旅行の参加者（E-08、403）、ほかの旅行の`fromTodoId`、削除の同じキーでの送り直し（行が無くても200）、受領に`todo`・`todo_deletion`を記録できること。
 - Controller: 入力の形と応答の形、`X-Expected-Version`の有無。
-- web: 下のタブが5つ、リストの並びと0件・全件完了、予定へのリンクと取りやめた予定、予定の追加の画面に名前とメモが入ること。
+- web: 下のタブが5つ、リストの並びと0件・全件完了、予定へのリンクと取りやめた予定、予定の追加の画面に名前とメモが入ること、残した要求の許可リストがToDoの5つの経路を受け付け、ほかの経路は今までどおり消すこと。
 - E2E: 追加する → 予定にする → しおりに予定ができる → ToDoで完了になり「の予定」から予定の詳細が開く。
 - 試験の観点の詳細は`docs/tests/trip-todo.md`（設計の承認のあとに書く）。
 
 ## 移行とリリース
 
-- migrationは表と権限を足すだけで、今の表は変えない。結合検証環境に先に当て、`npm run db:check`で生成物とmigrationが合っていることを確かめる。
+- migrationは表と権限を足し、受領の表のcheckを、今の種類に`todo`と`todo_deletion`を足したものに置き換える。今ある行はどれも新しいcheckを満たすので、データは移さない。結合検証環境に先に当て、`npm run db:check`で生成物とmigrationが合っていることを確かめる。
 - 契約は`fromTodoId`を任意で足すだけなので、古い画面からの予定の追加はそのまま通る。apiを先に、webをあとに出しても壊れない。
 
 ## リスク

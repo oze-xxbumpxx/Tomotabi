@@ -315,6 +315,38 @@ describe("ToDoのAPI（trip-todo）", () => {
     expect(created.body.code).toBe("TRIP_NOT_ACCESSIBLE");
   });
 
+  it("参加していない人は、ToDoの編集・完了・戻す・削除も403で、行は変わらない", async () => {
+    const tripId = await seedForeignTrip();
+    const owner = await db.admin.query<{ user_id: string }>(
+      "SELECT user_id FROM planning.trip_participants WHERE trip_id = $1 AND slot = 0",
+      [tripId],
+    );
+    const inserted = await db.admin.query<{ id: string }>(
+      "INSERT INTO planning.todos (trip_id, name, created_by) VALUES ($1, '清水寺', $2) RETURNING id",
+      [tripId, owner.rows[0]!.user_id],
+    );
+    const todoId = inserted.rows[0]!.id;
+    const patched = await authed(
+      http().patch(`/api/trips/${tripId}/todos/${todoId}`),
+      hinataCookie,
+    )
+      .set("Idempotency-Key", newKey())
+      .set("X-Expected-Version", "1")
+      .send({ name: "書き換え" });
+    expect(patched.status).toBe(403);
+    expect(patched.body.code).toBe("TRIP_NOT_ACCESSIBLE");
+    for (const action of ["complete", "reopen", "delete"] as const) {
+      const response = await todoAction(hinataCookie, tripId, todoId, action);
+      expect(response.status).toBe(403);
+      expect(response.body.code).toBe("TRIP_NOT_ACCESSIBLE");
+    }
+    const row = await db.admin.query(
+      "SELECT name, done_at, version FROM planning.todos WHERE id = $1",
+      [todoId],
+    );
+    expect(row.rows[0]).toMatchObject({ name: "清水寺", done_at: null });
+  });
+
   it("予定にすると、予定と完了が一度に決まり、一覧に予定の日付が出る", async () => {
     const tripId = await createTrip(hinataCookie);
     const todo = await postTodo(hinataCookie, tripId, "湯豆腐");

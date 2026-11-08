@@ -20,7 +20,7 @@ import type { Todo as TodoContract } from "@tomotabi/contracts";
 
 /**
  * ToDoの追加。旅行行はFOR SHAREにして件数を数える。二人が同時に追加すると
- * 上限を1件超えることがあるが、上限はリストの長さを抑えるためなので許す
+ * 同時に送った本数だけ上限を超えることがあるが、上限はリストの長さを抑えるためなので許す
  * （設計書「DB 設計」）。
  */
 export class CreateTodoUseCase implements CreateTodoInputPort {

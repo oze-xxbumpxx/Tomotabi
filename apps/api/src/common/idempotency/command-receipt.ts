@@ -26,7 +26,9 @@ export type CommandReceipt = Readonly<{
     | "settlement"
     | "settlement_cancellation"
     | "plan_event"
-    | "plan_event_cancellation";
+    | "plan_event_cancellation"
+    | "todo"
+    | "todo_deletion";
   resourceId: string;
   httpStatus: 200 | 201;
   responseBody: unknown;

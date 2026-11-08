@@ -126,14 +126,23 @@ async function createPlan(
 ): Promise<{ id: string; version: string }> {
   const response = await postPlan(cookie, tripId, body, key);
   expect(response.status).toBe(201);
-  return { id: response.body.id as string, version: `${response.body.version as string}` };
+  return {
+    id: response.body.id as string,
+    version: `${response.body.version as string}`,
+  };
 }
 
 /** ひなたが参加しない旅行を別利用者2人で直接作る。 */
 async function seedForeignTrip(): Promise<string> {
   const suffix = crypto.randomUUID().slice(0, 8);
-  const u0 = await insertUser(`foreign-${suffix}-0`, `foreign-${suffix}-0@example.test`);
-  const u1 = await insertUser(`foreign-${suffix}-1`, `foreign-${suffix}-1@example.test`);
+  const u0 = await insertUser(
+    `foreign-${suffix}-0`,
+    `foreign-${suffix}-0@example.test`,
+  );
+  const u1 = await insertUser(
+    `foreign-${suffix}-1`,
+    `foreign-${suffix}-1@example.test`,
+  );
   const result = await db.admin.query<{ id: string }>(
     "INSERT INTO planning.trips (name, starts_on, ends_on, created_by) VALUES ('関係ない旅行', '2026-10-01', '2026-10-02', $1) RETURNING id",
     [u0],
@@ -263,12 +272,16 @@ describe("ToDoのAPI（trip-todo）", () => {
         http().patch(`/api/trips/${tripId}/todos/${todoId}`),
         hinataCookie,
       ).set("Idempotency-Key", newKey());
-      return (version === null ? req : req.set("X-Expected-Version", version)).send(body);
+      return (
+        version === null ? req : req.set("X-Expected-Version", version)
+      ).send(body);
     };
     const ok = await patch("1", { memo: "夜間拝観" });
     expect(ok.status).toBe(200);
     expect(ok.body).toMatchObject({ memo: "夜間拝観", version: "2" });
-    expect((await patch("1", { name: "清水寺の夜" })).body.code).toBe("VERSION_CONFLICT");
+    expect((await patch("1", { name: "清水寺の夜" })).body.code).toBe(
+      "VERSION_CONFLICT",
+    );
     expect((await patch(null, { name: "清水寺の夜" })).status).toBe(428);
   });
 
@@ -280,7 +293,13 @@ describe("ToDoのAPI（trip-todo）", () => {
     const first = await todoAction(hinataCookie, tripId, todoId, "delete", key);
     expect(first.status).toBe(200);
     expect(first.body).toEqual({ id: todoId });
-    const replay = await todoAction(hinataCookie, tripId, todoId, "delete", key);
+    const replay = await todoAction(
+      hinataCookie,
+      tripId,
+      todoId,
+      "delete",
+      key,
+    );
     expect(replay.status).toBe(200);
     expect(replay.body).toEqual({ id: todoId });
     const other = await todoAction(aoiCookie, tripId, todoId, "delete");

@@ -2,7 +2,10 @@ import { and, asc, count, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { BoundedText } from "../../../common/domain/bounded-text.js";
 import { UserId } from "../../../common/domain/user-id.js";
-import { plans, todos } from "../../../infrastructure/database/schema/planning.js";
+import {
+  plans,
+  todos,
+} from "../../../infrastructure/database/schema/planning.js";
 import type { Todo } from "../domain/todo.js";
 import type {
   NewTodo,

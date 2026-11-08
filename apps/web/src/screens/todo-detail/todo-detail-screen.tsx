@@ -129,7 +129,10 @@ export function TodoDetailScreen({
       </main>
     );
   }
-  const backToList = { label: "ToDoに戻る", onClick: () => router.push(listHref) };
+  const backToList = {
+    label: "ToDoに戻る",
+    onClick: () => router.push(listHref),
+  };
   const tripRejected =
     saves.some(
       (state) => state.status === "rejected" && state.httpStatus === 403,
@@ -165,7 +168,10 @@ export function TodoDetailScreen({
     (state) => state.status === "rejected" && state.httpStatus === 404,
   );
   if (todo === undefined || removedByOther) {
-    if (remove.state.status === "succeeded" || remove.state.status === "saving") {
+    if (
+      remove.state.status === "succeeded" ||
+      remove.state.status === "saving"
+    ) {
       return (
         <main>
           <Loading />
@@ -238,7 +244,10 @@ export function TodoDetailScreen({
       {!online && <OfflineBanner at={new Date(todos.dataUpdatedAt)} />}
       {[update, complete, reopen, remove].map((s, index) =>
         s.state.status === "unknown" ? (
-          <SaveUnknown key={index} onConfirm={() => void s.confirmWithSameRequest()} />
+          <SaveUnknown
+            key={index}
+            onConfirm={() => void s.confirmWithSameRequest()}
+          />
         ) : null,
       )}
       {updateCheck.check.status === "found" && (
@@ -295,7 +304,9 @@ export function TodoDetailScreen({
         </div>
       )}
       {rejected !== undefined && !conflict && (
-        <StatusText tone="error">保存できませんでした。もう一度お試しください。</StatusText>
+        <StatusText tone="error">
+          保存できませんでした。もう一度お試しください。
+        </StatusText>
       )}
 
       <header className="plan-detail-header">
@@ -307,7 +318,9 @@ export function TodoDetailScreen({
 
       <div className="todo-detail">
         <p className="todo-detail-status">
-          <span className={isDone ? "todo-badge todo-badge-done" : "todo-badge"}>
+          <span
+            className={isDone ? "todo-badge todo-badge-done" : "todo-badge"}
+          >
             {isDone ? "済んだ" : "まだ"}
           </span>
           <span className="todo-meta">
@@ -380,7 +393,8 @@ export function TodoDetailScreen({
         <div className="plan-detail-actions">
           {!isDone && (
             <p id={noteId} className="record-note">
-              予定にする: 日付と種類を選んで予定を作ります。保存すると、このToDoは完了になります。相手に通知は届きません。
+              予定にする:
+              日付と種類を選んで予定を作ります。保存すると、このToDoは完了になります。相手に通知は届きません。
             </p>
           )}
           <button
@@ -444,7 +458,9 @@ export function TodoDetailScreen({
                 remove.state.status === "saving" ||
                 deleteCheck.check.status !== "none"
               }
-              onClick={() => void remove.submit(deleteTodoDraft(tripId, todoId))}
+              onClick={() =>
+                void remove.submit(deleteTodoDraft(tripId, todoId))
+              }
             >
               削除する
             </button>

@@ -28,10 +28,7 @@ import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
 import { NotAvailable } from "@/shared/ui/state/not-available";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
-import {
-  RefetchFailed,
-  Refetching,
-} from "@/shared/ui/state/refetch-failed";
+import { RefetchFailed, Refetching } from "@/shared/ui/state/refetch-failed";
 import { SaveUnknown } from "@/shared/ui/state/save-unknown";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
 import { StorageUnavailable } from "@/shared/ui/state/storage-unavailable";
@@ -59,9 +56,10 @@ export function TodosScreen({ tripId }: { tripId: string }) {
   const [nameError, setNameError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   // 完了の印を押した項目（保存中・保存できたあと一覧が取り直されるまで、見た目を先に変える）。
-  const [toggling, setToggling] = useState<{ id: string; done: boolean } | null>(
-    null,
-  );
+  const [toggling, setToggling] = useState<{
+    id: string;
+    done: boolean;
+  } | null>(null);
 
   const userId = meState.status === "ready" ? meState.me.user.id : null;
   const createCheck = usePendingRequestCheck({
@@ -238,7 +236,8 @@ export function TodosScreen({ tripId }: { tripId: string }) {
       )}
       {rejected !== undefined && (
         <StatusText tone="error">
-          {rejected.status === "rejected" && rejected.code === "TODO_LIMIT_REACHED"
+          {rejected.status === "rejected" &&
+          rejected.code === "TODO_LIMIT_REACHED"
             ? "ToDoは1つの旅行に200件までです。済んだものを削除してから追加してください"
             : "保存できませんでした。もう一度お試しください。"}
         </StatusText>
@@ -251,10 +250,17 @@ export function TodosScreen({ tripId }: { tripId: string }) {
           </p>
         )}
         <h1 className="page-title todo-title">ToDo</h1>
-        <p className="todo-lead">行きたい所も、出発前の用事も、ここに書きます。</p>
+        <p className="todo-lead">
+          行きたい所も、出発前の用事も、ここに書きます。
+        </p>
       </header>
 
-      <form className="todo-add" aria-label="ToDoを追加する" onSubmit={submit} noValidate>
+      <form
+        className="todo-add"
+        aria-label="ToDoを追加する"
+        onSubmit={submit}
+        noValidate
+      >
         <label className="sr-only" htmlFor="todo-new">
           ToDoの内容
         </label>
@@ -325,7 +331,11 @@ export function TodosScreen({ tripId }: { tripId: string }) {
                           : actorLine(todo)}
                       </span>
                     </Link>
-                    <CaretRight size={16} aria-hidden="true" className="todo-caret" />
+                    <CaretRight
+                      size={16}
+                      aria-hidden="true"
+                      className="todo-caret"
+                    />
                   </li>
                 ))}
               </ul>
@@ -392,7 +402,12 @@ function withDone(todo: Todo, done: boolean, userId: string | null): Todo {
   if (done) {
     return todo.doneAt !== null
       ? todo
-      : { ...todo, doneAt: new Date().toISOString(), doneBy: userId, plan: null };
+      : {
+          ...todo,
+          doneAt: new Date().toISOString(),
+          doneBy: userId,
+          plan: null,
+        };
   }
   return { ...todo, doneAt: null, doneBy: null, plan: null };
 }

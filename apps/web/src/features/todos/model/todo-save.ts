@@ -27,7 +27,11 @@ export function useTodoSave<T>(options: {
     pendingRequest:
       options.userId === null
         ? null
-        : { userId: options.userId, tripId: options.tripId, check: options.check },
+        : {
+            userId: options.userId,
+            tripId: options.tripId,
+            check: options.check,
+          },
     onSucceeded: (result) => {
       invalidateTodos(queryClient, options.tripId);
       options.onSucceeded?.(result);

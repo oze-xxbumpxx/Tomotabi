@@ -74,7 +74,10 @@ export function updateTodoDraft(
 }
 
 /** 完了の付け外しは版を送らない（相手が名前を直しても競合にしない）。 */
-export function completeTodoDraft(tripId: string, todoId: string): MutationDraft {
+export function completeTodoDraft(
+  tripId: string,
+  todoId: string,
+): MutationDraft {
   return {
     operation: COMPLETE_TODO_OPERATION,
     url: getCompleteTodoUrl(tripId, todoId),

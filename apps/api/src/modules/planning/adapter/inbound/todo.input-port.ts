@@ -1,8 +1,4 @@
-import type {
-  Todo,
-  TodoDeletion,
-  TodoList,
-} from "@tomotabi/contracts";
+import type { Todo, TodoDeletion, TodoList } from "@tomotabi/contracts";
 import type { UserId } from "../../../../common/domain/user-id.js";
 import type { IdempotencyKey } from "../../../../common/http/idempotency-key.js";
 

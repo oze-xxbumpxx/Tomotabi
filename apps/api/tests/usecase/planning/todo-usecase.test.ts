@@ -158,7 +158,11 @@ describe("ToDoの編集", () => {
   it("版が合えば名前とメモを変える", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedTodo(testTodo());
-    const result = await new UpdateTodoUseCase(uow, fixedClock(), writeLog).execute({
+    const result = await new UpdateTodoUseCase(
+      uow,
+      fixedClock(),
+      writeLog,
+    ).execute({
       ...command(),
       ifMatch: "1",
       name: "南禅寺の湯豆腐",
@@ -190,9 +194,11 @@ describe("完了の付け外し", () => {
   it("完了は版を見ない。相手が名前を直したあとでも完了にできる", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedTodo(testTodo({ version: 5 }));
-    const result = await new CompleteTodoUseCase(uow, fixedClock(), writeLog).execute(
-      command(),
-    );
+    const result = await new CompleteTodoUseCase(
+      uow,
+      fixedClock(),
+      writeLog,
+    ).execute(command());
     expect(result.body).toMatchObject({
       doneBy: ACTOR,
       doneAt: NOW.toISOString(),
@@ -203,9 +209,11 @@ describe("完了の付け外し", () => {
   it("完了済みを相手が完了にしても、最初に完了した人のまま", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedTodo(testTodo({ doneAt: NOW, doneBy: ACTOR, version: 2 }));
-    const result = await new CompleteTodoUseCase(uow, fixedClock(), writeLog).execute(
-      command({ userId: PARTNER }),
-    );
+    const result = await new CompleteTodoUseCase(
+      uow,
+      fixedClock(),
+      writeLog,
+    ).execute(command({ userId: PARTNER }));
     expect(result.body.doneBy).toBe(ACTOR);
     expect(result.body.version).toBe("2");
   });
@@ -214,12 +222,23 @@ describe("完了の付け外し", () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedPlan(testPlan());
     ctx.seedTodo(
-      testTodo({ doneAt: NOW, doneBy: ACTOR, planId: testPlan().id, version: 2 }),
+      testTodo({
+        doneAt: NOW,
+        doneBy: ACTOR,
+        planId: testPlan().id,
+        version: 2,
+      }),
     );
-    const result = await new ReopenTodoUseCase(uow, fixedClock(), writeLog).execute(
-      command(),
-    );
-    expect(result.body).toMatchObject({ doneAt: null, doneBy: null, plan: null });
+    const result = await new ReopenTodoUseCase(
+      uow,
+      fixedClock(),
+      writeLog,
+    ).execute(command());
+    expect(result.body).toMatchObject({
+      doneAt: null,
+      doneBy: null,
+      plan: null,
+    });
     expect(ctx.planRows.has(testPlan().id)).toBe(true);
   });
 
@@ -238,10 +257,14 @@ describe("ToDoの削除", () => {
   it("消して`{ id }`を返し、受領を`todo_deletion`で残す", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedTodo(testTodo());
-    const result = await new DeleteTodoUseCase(uow, writeLog).execute(command());
+    const result = await new DeleteTodoUseCase(uow, writeLog).execute(
+      command(),
+    );
     expect(result).toEqual({ httpStatus: 200, body: { id: TODO_ID } });
     expect(ctx.todoRows.has(TODO_ID)).toBe(false);
-    expect([...ctx.receiptRows.values()][0]?.resourceType).toBe("todo_deletion");
+    expect([...ctx.receiptRows.values()][0]?.resourceType).toBe(
+      "todo_deletion",
+    );
   });
 
   it("同じキーで送り直すと、行が無くても同じ200が返る", async () => {

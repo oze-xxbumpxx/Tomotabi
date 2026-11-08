@@ -21,6 +21,9 @@ export function useTodos(tripId: string, options?: { enabled?: boolean }) {
 }
 
 /** ToDoの書き込みや「予定にする」のあとに、一覧を古いものとして取り直させる。 */
-export function invalidateTodos(queryClient: QueryClient, tripId: string): void {
+export function invalidateTodos(
+  queryClient: QueryClient,
+  tripId: string,
+): void {
   void queryClient.invalidateQueries({ queryKey: todosQueryKey(tripId) });
 }

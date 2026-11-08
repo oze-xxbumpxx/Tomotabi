@@ -167,7 +167,9 @@ function callsTo(
 
 function renderScreen(ui: React.ReactElement) {
   return render(
-    <QueryClientProvider client={createQueryClient()}>{ui}</QueryClientProvider>,
+    <QueryClientProvider client={createQueryClient()}>
+      {ui}
+    </QueryClientProvider>,
   );
 }
 
@@ -201,8 +203,16 @@ describe("ToDoのリスト", () => {
   it("まだ・済んだに分け、誰が追加・完了したかと予定へのリンクを出す（F-03・F-04・F-16）", async () => {
     stubApi({
       todos: () => [
-        todo({ id: "a1111111-1111-4111-8111-111111111111", name: "清水寺", createdBy: userId }),
-        todo({ id: "a2222222-2222-4222-8222-222222222222", name: "両替する", memo: "空港で" }),
+        todo({
+          id: "a1111111-1111-4111-8111-111111111111",
+          name: "清水寺",
+          createdBy: userId,
+        }),
+        todo({
+          id: "a2222222-2222-4222-8222-222222222222",
+          name: "両替する",
+          memo: "空港で",
+        }),
         todo({
           id: "a3333333-3333-4333-8333-333333333333",
           name: "錦市場",
@@ -223,7 +233,9 @@ describe("ToDoのリスト", () => {
     const open = await screen.findByRole("region", { name: "まだのもの" });
     expect(within(open).getByText("まだ · 2件")).toBeInTheDocument();
     expect(within(open).getByText("あなたが追加した")).toBeInTheDocument();
-    expect(within(open).getByText("みおが追加した · メモあり")).toBeInTheDocument();
+    expect(
+      within(open).getByText("みおが追加した · メモあり"),
+    ).toBeInTheDocument();
     const done = screen.getByRole("region", { name: "済んだもの" });
     expect(within(done).getByText("済んだ · 2件")).toBeInTheDocument();
     expect(
@@ -237,7 +249,9 @@ describe("ToDoのリスト", () => {
 
   it("全部済んだら、まだの欄に「すべて済みました」（B-05）", async () => {
     stubApi({
-      todos: () => [todo({ doneAt: "2026-11-08T05:00:00.000Z", doneBy: userId })],
+      todos: () => [
+        todo({ doneAt: "2026-11-08T05:00:00.000Z", doneBy: userId }),
+      ],
     });
     renderScreen(<TodosScreen tripId={tripId} />);
     expect(await screen.findByText("すべて済みました")).toBeInTheDocument();
@@ -252,10 +266,18 @@ describe("ToDoのリスト", () => {
     await userEvent.type(input, "  清水寺  ");
     await userEvent.click(button);
     await waitFor(() =>
-      expect(callsTo(fetchMock, `/api/trips/${tripId}/todos`, "POST")).toHaveLength(1),
+      expect(
+        callsTo(fetchMock, `/api/trips/${tripId}/todos`, "POST"),
+      ).toHaveLength(1),
     );
-    const [, init] = callsTo(fetchMock, `/api/trips/${tripId}/todos`, "POST")[0]!;
-    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ name: "清水寺" });
+    const [, init] = callsTo(
+      fetchMock,
+      `/api/trips/${tripId}/todos`,
+      "POST",
+    )[0]!;
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      name: "清水寺",
+    });
     await waitFor(() => expect(input).toHaveValue(""));
   });
 
@@ -266,7 +288,9 @@ describe("ToDoのリスト", () => {
     await waitFor(() => expect(button).toBeEnabled());
     await userEvent.click(button);
     expect(screen.getByText("ToDoの内容を書いてください")).toBeInTheDocument();
-    expect(callsTo(fetchMock, `/api/trips/${tripId}/todos`, "POST")).toHaveLength(0);
+    expect(
+      callsTo(fetchMock, `/api/trips/${tripId}/todos`, "POST"),
+    ).toHaveLength(0);
   });
 
   it("200件あると上限の理由を出す（E-02）", async () => {
@@ -287,29 +311,47 @@ describe("ToDoのリスト", () => {
     const fetchMock = stubApi({
       todos: () => items,
       complete: () => {
-        items = [todo({ doneAt: "2026-11-08T05:00:00.000Z", doneBy: userId, version: "2" })];
+        items = [
+          todo({
+            doneAt: "2026-11-08T05:00:00.000Z",
+            doneBy: userId,
+            version: "2",
+          }),
+        ];
         return json(items[0]);
       },
     });
     renderScreen(<TodosScreen tripId={tripId} />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "「湯豆腐を食べる」を完了にする" }),
+      await screen.findByRole("button", {
+        name: "「湯豆腐を食べる」を完了にする",
+      }),
     );
     expect(
-      await screen.findByRole("button", { name: "「湯豆腐を食べる」を未完了に戻す" }),
+      await screen.findByRole("button", {
+        name: "「湯豆腐を食べる」を未完了に戻す",
+      }),
     ).toBeInTheDocument();
     const completePath = `/api/trips/${tripId}/todos/${todoId}/complete`;
-    await waitFor(() => expect(callsTo(fetchMock, completePath, "POST")).toHaveLength(1));
+    await waitFor(() =>
+      expect(callsTo(fetchMock, completePath, "POST")).toHaveLength(1),
+    );
     const [, init] = callsTo(fetchMock, completePath, "POST")[0]!;
-    expect(new Headers((init as RequestInit).headers).has("X-Expected-Version")).toBe(false);
+    expect(
+      new Headers((init as RequestInit).headers).has("X-Expected-Version"),
+    ).toBe(false);
   });
 
   it("下のタブは5つで、ToDoが今のタブ。主ボタンは「支払いを記録」（F-13）", async () => {
     stubApi({ todos: () => [] });
     renderScreen(<TodosScreen tripId={tripId} />);
     const nav = await screen.findByRole("navigation", { name: "タブ" });
-    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent("ToDo");
-    expect(screen.getByRole("link", { name: "支払いを記録" })).toBeInTheDocument();
+    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent(
+      "ToDo",
+    );
+    expect(
+      screen.getByRole("link", { name: "支払いを記録" }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -327,12 +369,18 @@ describe("ToDoの詳細", () => {
 
   it("完了なら主ボタンは「支払いを記録」に戻る", async () => {
     stubApi({
-      todos: () => [todo({ doneAt: "2026-11-08T05:00:00.000Z", doneBy: userId })],
+      todos: () => [
+        todo({ doneAt: "2026-11-08T05:00:00.000Z", doneBy: userId }),
+      ],
     });
     renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
-    expect(await screen.findByRole("button", { name: "未完了に戻す" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "未完了に戻す" }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "予定にする" })).toBeNull();
-    expect(screen.getByRole("link", { name: "支払いを記録" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "支払いを記録" }),
+    ).toBeInTheDocument();
   });
 
   it("「変更を保存」は変えた項目だけを版つきで送る（F-06）", async () => {
@@ -355,8 +403,12 @@ describe("ToDoの詳細", () => {
       `/api/trips/${tripId}/todos/${todoId}`,
       "PATCH",
     )[0]!;
-    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ memo: "昼は混む" });
-    expect(new Headers((init as RequestInit).headers).get("X-Expected-Version")).toBe("1");
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      memo: "昼は混む",
+    });
+    expect(
+      new Headers((init as RequestInit).headers).get("X-Expected-Version"),
+    ).toBe("1");
   });
 
   it("相手が先に変えていたら「相手が先に変更しました」を出す（E-03）", async () => {
@@ -371,16 +423,24 @@ describe("ToDoの詳細", () => {
     const save = screen.getByRole("button", { name: "変更を保存" });
     await waitFor(() => expect(save).toBeEnabled());
     await userEvent.click(save);
-    expect(await screen.findByText("相手が先に変更しました")).toBeInTheDocument();
+    expect(
+      await screen.findByText("相手が先に変更しました"),
+    ).toBeInTheDocument();
   });
 
   it("削除は確認で「削除する」を押したときだけ送り、「やめる」なら送らない（F-08）", async () => {
     const fetchMock = stubApi({ todos: () => [todo()] });
     renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
     const deletePath = `/api/trips/${tripId}/todos/${todoId}/delete`;
-    await userEvent.click(await screen.findByRole("button", { name: "削除する" }));
-    let dialog = await screen.findByRole("dialog", { name: /を削除しますか？$/ });
-    await userEvent.click(within(dialog).getByRole("button", { name: "やめる" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "削除する" }),
+    );
+    let dialog = await screen.findByRole("dialog", {
+      name: /を削除しますか？$/,
+    });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "やめる" }),
+    );
     expect(callsTo(fetchMock, deletePath, "POST")).toHaveLength(0);
 
     await userEvent.click(screen.getByRole("button", { name: "削除する" }));
@@ -388,7 +448,9 @@ describe("ToDoの詳細", () => {
     const confirm = within(dialog).getByRole("button", { name: "削除する" });
     await waitFor(() => expect(confirm).toBeEnabled());
     await userEvent.click(confirm);
-    await waitFor(() => expect(callsTo(fetchMock, deletePath, "POST")).toHaveLength(1));
+    await waitFor(() =>
+      expect(callsTo(fetchMock, deletePath, "POST")).toHaveLength(1),
+    );
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(`/trips/${tripId}/todos`),
     );
@@ -429,7 +491,12 @@ describe("予定の追加をToDoから開いたとき（F-09・F-10）", () => {
         ),
     });
     renderScreen(
-      <PlanFormScreen mode="new" tripId={tripId} date={null} fromTodoId={todoId} />,
+      <PlanFormScreen
+        mode="new"
+        tripId={tripId}
+        date={null}
+        fromTodoId={todoId}
+      />,
     );
     expect(
       await screen.findByText(
@@ -442,15 +509,25 @@ describe("予定の追加をToDoから開いたとき（F-09・F-10）", () => {
         "湯豆腐を食べる",
       ),
     );
-    expect(within(dialog).getByRole("textbox", { name: /メモ/ })).toHaveValue("南禅寺のそば");
-    await userEvent.click(within(dialog).getByRole("radio", { name: /食べ処/ }));
+    expect(within(dialog).getByRole("textbox", { name: /メモ/ })).toHaveValue(
+      "南禅寺のそば",
+    );
+    await userEvent.click(
+      within(dialog).getByRole("radio", { name: /食べ処/ }),
+    );
     const save = within(dialog).getByRole("button", { name: "保存" });
     await waitFor(() => expect(save).toBeEnabled());
     await userEvent.click(save);
     await waitFor(() =>
-      expect(callsTo(fetchMock, `/api/trips/${tripId}/plans`, "POST")).toHaveLength(1),
+      expect(
+        callsTo(fetchMock, `/api/trips/${tripId}/plans`, "POST"),
+      ).toHaveLength(1),
     );
-    const [, init] = callsTo(fetchMock, `/api/trips/${tripId}/plans`, "POST")[0]!;
+    const [, init] = callsTo(
+      fetchMock,
+      `/api/trips/${tripId}/plans`,
+      "POST",
+    )[0]!;
     expect(JSON.parse((init as RequestInit).body as string)).toMatchObject({
       name: "湯豆腐を食べる",
       memo: "南禅寺のそば",

@@ -32,8 +32,12 @@ export class UpdateTodoUseCase implements UpdateTodoInputPort {
       input.todoId,
       async () => {
         const patch = {
-          ...(input.name === undefined ? {} : { name: parsePlanName(input.name) }),
-          ...(input.memo === undefined ? {} : { memo: parsePlanMemo(input.memo) }),
+          ...(input.name === undefined
+            ? {}
+            : { name: parsePlanName(input.name) }),
+          ...(input.memo === undefined
+            ? {}
+            : { memo: parsePlanMemo(input.memo) }),
         };
         return runTodoTransaction(
           this.unitOfWork,

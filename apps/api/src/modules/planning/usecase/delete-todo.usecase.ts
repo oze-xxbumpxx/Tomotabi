@@ -33,40 +33,50 @@ export class DeleteTodoUseCase implements DeleteTodoInputPort {
       input.tripId,
       input.todoId,
       () =>
-        runTodoTransaction<TodoDeletion>(this.unitOfWork, command, async (ctx) => {
-          const trip = await ctx.trips.lockForShare(input.tripId, input.userId);
-          if (trip === null) {
-            throw tripNotAccessible();
-          }
-          const stored = await storedReceipt<TodoDeletion>(
-            ctx,
-            input.userId,
-            DELETE_TODO_OPERATION,
-            input.key,
-            input.requestHash,
-          );
-          if (stored !== null) {
-            return stored;
-          }
-          const todo = await ctx.todos.lockForUpdate(input.tripId, input.todoId);
-          if (todo === null) {
-            throw todoNotFound();
-          }
-          await ctx.todos.delete(input.tripId, todo.id);
-          const body: TodoDeletion = { id: todo.id };
-          await ctx.receipts.insert({
-            actorId: input.userId,
-            operation: DELETE_TODO_OPERATION,
-            idempotencyKey: input.key,
-            tripId: trip.id,
-            requestHash: input.requestHash,
-            resourceType: "todo_deletion",
-            resourceId: todo.id,
-            httpStatus: 200,
-            responseBody: body,
-          });
-          return { httpStatus: 200, body, replayed: false };
-        }),
+        runTodoTransaction<TodoDeletion>(
+          this.unitOfWork,
+          command,
+          async (ctx) => {
+            const trip = await ctx.trips.lockForShare(
+              input.tripId,
+              input.userId,
+            );
+            if (trip === null) {
+              throw tripNotAccessible();
+            }
+            const stored = await storedReceipt<TodoDeletion>(
+              ctx,
+              input.userId,
+              DELETE_TODO_OPERATION,
+              input.key,
+              input.requestHash,
+            );
+            if (stored !== null) {
+              return stored;
+            }
+            const todo = await ctx.todos.lockForUpdate(
+              input.tripId,
+              input.todoId,
+            );
+            if (todo === null) {
+              throw todoNotFound();
+            }
+            await ctx.todos.delete(input.tripId, todo.id);
+            const body: TodoDeletion = { id: todo.id };
+            await ctx.receipts.insert({
+              actorId: input.userId,
+              operation: DELETE_TODO_OPERATION,
+              idempotencyKey: input.key,
+              tripId: trip.id,
+              requestHash: input.requestHash,
+              resourceType: "todo_deletion",
+              resourceId: todo.id,
+              httpStatus: 200,
+              responseBody: body,
+            });
+            return { httpStatus: 200, body, replayed: false };
+          },
+        ),
     );
   }
 }

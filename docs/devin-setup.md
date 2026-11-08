@@ -17,11 +17,11 @@
 
 DevinのKnowledgeはSkillsに移行し、画面からKnowledgeを登録する入口は無くなった（2026-09時点）。Tomotabiでは画面に登録せず、リポジトリのファイルで届ける。レビューでき、`AGENTS.md`と食い違えば差分で気づけるため。
 
-| Devinが自動で読むもの                    | 内容                                                                    |
-| ---------------------------------------- | ----------------------------------------------------------------------- |
-| `AGENTS.md` / `CLAUDE.md`                | 全ツール共通のルール                                                    |
+| Devinが自動で読むもの                    | 内容                                                                         |
+| ---------------------------------------- | ---------------------------------------------------------------------------- |
+| `AGENTS.md` / `CLAUDE.md`                | 全ツール共通のルール                                                         |
 | `.agents/skills/*/SKILL.md`              | Claude Codeと共有する日常のスキル（`.claude/skills/`へのシンボリックリンク） |
-| `.agents/skills/devin-workflow/SKILL.md` | Devinだけの手順（ブランチ名、品質確認、やってはいけないこと、作業ログ） |
+| `.agents/skills/devin-workflow/SKILL.md` | Devinだけの手順（ブランチ名、品質確認、やってはいけないこと、作業ログ）      |
 
 `devin-workflow`はDevin専用のため`.claude/skills/`には置かず、`.agents/skills/`に実体を置く。説明に「Devinのセッションでだけ使う」と書いて区別する。
 
@@ -50,9 +50,9 @@ Devinは、**既定でローカル**（手元のMacのDevin CLI）で動かす�
 
 |                | ローカル（既定）                                                                                                                                                                                                                                                                               | クラウド（指示時のみ）                                                     |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 起動           | `delegation.mjs open-task`でIssueを作り、`delegation-launch.mjs <Issue番号>`へ`--runner local --model swe-2-<effort> --prompt-file <非公開ファイル> --clone <専用クローン>`を渡す                                                                                                            | 起動の確かめが済むまで使わない（`cloud_launch_verified:false`）            |
-| モデル         | `--model`で依頼ごとにSWE-2のeffortを選べる                                                                                                                                                                                                                                                     | requested_modelとobserved_modelを分ける。実値が確認できない場合は`unknown` |
-| PRの監視       | する。プロンプトで`devin-workflow` §4.5を指示すると、PRを出したあともコメントとCIを5分ごとに見て直す。反応が無ければ既存セッションを確かめ、復旧の判断はユーザーへ渡す                                                                                                               | PRのコメントとCIの失敗に自動で対応する                                     |
+| 起動           | `delegation.mjs open-task`でIssueを作り、`delegation-launch.mjs <Issue番号>`へ`--runner local --model swe-2-flash-<effort> --prompt-file <非公開ファイル> --clone <専用クローン>`を渡す                                                                                                        | 起動の確かめが済むまで使わない（`cloud_launch_verified:false`）            |
+| モデル         | `--model`で依頼ごとにSWE-2 Flashのeffortを選べる                                                                                                                                                                                                                                               | requested_modelとobserved_modelを分ける。実値が確認できない場合は`unknown` |
+| PRの監視       | する。プロンプトで`devin-workflow` §4.5を指示すると、PRを出したあともコメントとCIを5分ごとに見て直す。反応が無ければ既存セッションを確かめ、復旧の判断はユーザーへ渡す                                                                                                                         | PRのコメントとCIの失敗に自動で対応する                                     |
 | 進み具合の見方 | ラッパーが生ログを状態ディレクトリの`devin-logs/issue-<n>.log`へ0600で保存し、見張り画面（`.claude/scripts/devin-watch.mjs`。`--install`で`~/.local/state/tomotabi-harness/bin/devin-watch`にリンク）をターミナルで開く。実行中のコマンド・変更中のファイル・PRとCI・最近の発言を5秒ごとに出す | Devin Webのセッション画面                                                  |
 | 注意           | 同じクローンで2つ同時に動かさない。`--sandbox`を付けると途中で止まる。書き込みは強制ではなくプロンプトでクローン内に限る                                                                                                                                                                       | Macを閉じても進む                                                          |
 

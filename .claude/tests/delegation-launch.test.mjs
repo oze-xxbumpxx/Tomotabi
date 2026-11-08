@@ -39,7 +39,7 @@ async function fixture(fn, overrides = {}) {
       },
       ...overrides,
     };
-    const options = { issue: 81, runner: 'local', model: 'swe-2-high', promptFile: prompt, clone };
+    const options = { issue: 81, runner: 'local', model: 'swe-2-flash-high', promptFile: prompt, clone };
     await fn({ dir, prompt, clone, dependencies, options, count: () => spawnCount, setSessions: (value) => { sessions = value; } });
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -47,21 +47,21 @@ async function fixture(fn, overrides = {}) {
 }
 
 test('Issue番号・runner・model・prompt fileを明示し、それ以外の引数を拒む', () => {
-  const options = parseLaunchArgs(['81', '--runner', 'local', '--model', 'swe-2-high', '--prompt-file', '/private/prompt']);
-  assert.deepEqual([options.issue, options.runner, options.model], [81, 'local', 'swe-2-high']);
-  assert.throws(() => parseLaunchArgs(['81', '--model', 'swe-2-high', '--prompt-file', '/p']));
-  assert.throws(() => parseLaunchArgs(['feature:task', '--runner', 'local', '--model', 'swe-2-high', '--prompt-file', '/p']));
+  const options = parseLaunchArgs(['81', '--runner', 'local', '--model', 'swe-2-flash-high', '--prompt-file', '/private/prompt']);
+  assert.deepEqual([options.issue, options.runner, options.model], [81, 'local', 'swe-2-flash-high']);
+  assert.throws(() => parseLaunchArgs(['81', '--model', 'swe-2-flash-high', '--prompt-file', '/p']));
+  assert.throws(() => parseLaunchArgs(['feature:task', '--runner', 'local', '--model', 'swe-2-flash-high', '--prompt-file', '/p']));
   assert.throws(() => parseLaunchArgs(['81', '--runner', 'local', '--model', 'unknown', '--prompt-file', '/p']));
-  assert.throws(() => parseLaunchArgs(['81', '--runner', 'local', '--model', 'swe-2-high', '--prompt-file', '/p', '--activation-id', id(1)]));
-  assert.deepEqual(buildDevinArgs({ runner: 'cloud', model: 'swe-2-high', promptFile: '/p' }), ['--cloud', '--model', 'swe-2-high', '--permission-mode', 'dangerous', '-p', '--prompt-file', '/p']);
-  assert.deepEqual(buildDevinArgs({ runner: 'local', model: 'swe-2-high', promptFile: '/p', exportFile: '/e' }), ['--model', 'swe-2-high', '--permission-mode', 'dangerous', '--export', '/e', '-p', '--prompt-file', '/p']);
+  assert.throws(() => parseLaunchArgs(['81', '--runner', 'local', '--model', 'swe-2-flash-high', '--prompt-file', '/p', '--activation-id', id(1)]));
+  assert.deepEqual(buildDevinArgs({ runner: 'cloud', model: 'swe-2-flash-high', promptFile: '/p' }), ['--cloud', '--model', 'swe-2-flash-high', '--permission-mode', 'dangerous', '-p', '--prompt-file', '/p']);
+  assert.deepEqual(buildDevinArgs({ runner: 'local', model: 'swe-2-flash-high', promptFile: '/p', exportFile: '/e' }), ['--model', 'swe-2-flash-high', '--permission-mode', 'dangerous', '--export', '/e', '-p', '--prompt-file', '/p']);
   assert.throws(() => buildDevinArgs({ runner: 'local', model: 'unknown', promptFile: '/p' }));
 });
 
 test('手元のDevinを1回だけ起動し、セッションのIDを確定して返す。秘密を出さない', async () => {
   await fixture(async ({ dir, dependencies, options, count }) => {
     const result = await launchDelegation(options, dependencies);
-    assert.deepEqual(result, { exitCode: 0, state: 'running', issue: 81, runner: 'local', requested_model: 'swe-2-high', session_id: 'session-1', pid: null });
+    assert.deepEqual(result, { exitCode: 0, state: 'running', issue: 81, runner: 'local', requested_model: 'swe-2-flash-high', session_id: 'session-1', pid: null });
     assert.equal(count(), 1);
     assert.doesNotMatch(JSON.stringify(result), /PRIVATE/);
     assert.equal(statSync(join(dir, 'devin-logs', 'issue-81.log')).mode & 0o777, 0o600);

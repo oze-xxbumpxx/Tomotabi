@@ -29,7 +29,7 @@ const HEAD = 'aaaaaaa' + '1'.repeat(33);
 const NEW_HEAD = 'bbbbbbb' + '2'.repeat(33);
 
 const issueRec = (issue, extra = {}) => ({
-  ...newRecord({ issue, title: `Issue ${issue}`, model: 'swe-2-medium', delegatedAt: '2026-09-27T09:00:00Z' }),
+  ...newRecord({ issue, title: `Issue ${issue}`, model: 'swe-2-flash-medium', delegatedAt: '2026-09-27T09:00:00Z' }),
   ...extra,
 });
 const reviewed = (rec, verdict, extra = {}) =>

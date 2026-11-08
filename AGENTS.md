@@ -38,12 +38,12 @@ Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは
 
 人が止まって判断するゲートは次のとおり。AIはゲートの手前まで進めてよい。ゲートを越える判断はユーザーが行う。
 
-| ゲート | いつ | 誰が決めるか |
-| --- | --- | --- |
-| L2 / L3の設計承認 | 実装開始前 | ユーザー |
-| ADR級の決定（スタック・アーキテクチャ・後方互換） | 採用前 | ユーザー（AIは比較まで） |
-| PRのマージ | 品質確認後 | ユーザー |
-| 破壊的操作 | 実行前 | ユーザー |
+| ゲート                                            | いつ       | 誰が決めるか             |
+| ------------------------------------------------- | ---------- | ------------------------ |
+| L2 / L3の設計承認                                 | 実装開始前 | ユーザー                 |
+| ADR級の決定（スタック・アーキテクチャ・後方互換） | 採用前     | ユーザー（AIは比較まで） |
+| PRのマージ                                        | 品質確認後 | ユーザー                 |
+| 破壊的操作                                        | 実行前     | ユーザー                 |
 
 ## 作業の進め方
 
@@ -68,7 +68,7 @@ Tomotabiは **AI駆動開発を主とする**。AIが実装し、ユーザーは
 - ハーネスの状態を扱うコマンドをClaude Codeの外で実行するときは`HARNESS_NAMESPACE=tomotabi-harness`を付け、リポジトリルートで実行する。Claude Codeには同じ値をsettingsのenvで設定している。
 - スキルから参照されるCookpit専用文書・専用スキルが無い場合は、本ファイルと実際の構成を使う。未採用の技術や架空の成果物を補わない。
 - Devin: 本ファイルと`.agents/skills/devin-workflow/SKILL.md`（背景は`docs/devin-setup.md`）を使う。担当はIssue起点のL0 / L1とPRレビュー。L2 / L3は設計承認後だけ。ブランチは`devin/<内容>`を使い、他ツールのブランチにpushしない。Claude Codeのフック（危険操作の遮断・成果物チェック）は動かないため、本ファイルの作業分担・ブランチ運用・破壊的操作の事前確認を守る。履歴改変・データ削除・本番操作は、ユーザー確認なしに実行しない。
-- Devinへの委譲は、承認済み計画のタスクから`delegation.mjs open-task`でIssueと記録を作り、`delegation-launch.mjs`で手元のDevinを起動する。管理Issueの共通受付は使わない（2026-10-25 ユーザーの判断。ADR-0010）。既定の選択はローカルのSWE-2（effortは難易度で選ぶ）とし、runner/modelを明示する（2026-10-12 クラウドの無料期間が終わったため。ユーザーの指示）。クラウドはユーザーが指示したときだけ使い、起動の確かめが済むまでは止める。起動結果不明・期限超過・stallで自動再起動しない。手順は`.claude/skills/review-devin-pr/SKILL.md`。
+- Devinへの委譲は、承認済み計画のタスクから`delegation.mjs open-task`でIssueと記録を作り、`delegation-launch.mjs`で手元のDevinを起動する。管理Issueの共通受付は使わない（2026-10-25 ユーザーの判断。ADR-0010）。既定の選択はローカルのSWE-2 Flash（`swe-2-flash-<effort>`。effortは難易度で選ぶ）とし、runner/modelを明示する（ローカルは2026-10-12 クラウドの無料期間が終わったため、SWE-2 Flashは2026-11-08。どちらもユーザーの指示）。クラウドはユーザーが指示したときだけ使い、起動の確かめが済むまでは止める。起動結果不明・期限超過・stallで自動再起動しない。手順は`.claude/skills/review-devin-pr/SKILL.md`。
 - DevinのPRはClaude Codeがレビューし、`must`の指摘（と同じ回の`nit`）をPRに自動で投稿して、Devinの修正を再レビューする（自動の投稿は2回まで。超えたらユーザーに渡す）。セキュリティ指摘と設計判断が要る指摘は投稿せず、ユーザーに渡す。委譲ごとの記録は`docs/claude-code/improvements/delegations/`。手順は`.claude/skills/review-devin-pr/SKILL.md`。
 - マージ判断をユーザーへ渡す前に、現在headの完全SHAに対するClaudeの完了のコメントを確かめる。短いSHAは完了の印にしない。修正push後は、新しいheadへのClaudeの完了が要る。PRのレビューはClaude CodeとDevinで足り、ChatGPT（Codex）には頼まない（2026-11-02 ユーザーの判断）。マージはユーザーが行う。
 - Issueに紐づかないDevinのPR（知見・スキル・blueprintを自分から出したもの）も、Claude Codeが見つけて同じ手順でレビューする（`review-devin-pr`の「IssueなしPR」）。

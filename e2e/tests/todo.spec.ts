@@ -39,7 +39,10 @@ test("ToDo: 追加したものを相手が見て、予定にすると完了に�
   await expect(sheet.getByRole("textbox", { name: /名前/ })).toHaveValue(
     "湯豆腐を食べる",
   );
-  await sheet.getByRole("radio", { name: /食べ処/ }).check();
+  // 種類のradioはsr-only（見た目のspanがポインタを受ける）ためforceで選ぶ。
+  await sheet
+    .getByRole("radio", { name: "食べ処", exact: true })
+    .check({ force: true });
   await sheet.getByRole("button", { name: "保存" }).click();
   await expect(aoiPage).toHaveURL(new RegExp(`/trips/${tripId}/itinerary`));
   await expect(aoiPage.getByText("湯豆腐を食べる")).toBeVisible();

@@ -36,6 +36,12 @@ export type {
   PlanEvent,
   PlanKind,
   PlanPatch,
+  Todo,
+  TodoCreate,
+  TodoDeletion,
+  TodoList,
+  TodoPatch,
+  TodoPlan,
 } from "./plan";
 export type { ProbeView } from "./probe";
 export {

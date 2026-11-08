@@ -6,7 +6,10 @@
   "round": 1,
   "stages": {
     "requirements": {
-      "state": "waiting"
+      "state": "approval",
+      "docs": [
+        "docs/requirements/trip-todo.md"
+      ]
     },
     "design": {
       "state": "pending"
@@ -27,5 +30,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-08T06:49:42.504Z"
+  "updated_at": "2026-11-08T06:52:29.996Z"
 }

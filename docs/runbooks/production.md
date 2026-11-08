@@ -59,6 +59,11 @@ Git連携は切る（mainへのpushで本番が変わらないようにするた
 
 PRのプレビューに使っている`tomotabi`のプロジェクトとは別にする。二人に渡すのは`tomotabi-web`のURLだけ。
 
+2026-11-07に作った本番の固定のURLは次のとおり。
+
+- web（二人に渡すURL）: `https://tomotabi-web.vercel.app`
+- api: `https://tomotabi-dhj4.vercel.app`（`tomotabi-api`の名前の後ろに`-dhj4`が付いた）
+
 ## 4. GoogleのOAuthのクライアントを2つ作る
 
 検証用とは別に、本番用のGoogle Cloudのプロジェクト（または同じプロジェクトの本番用のクライアント）で作る。同意の画面は「テスト」のままにし、テストユーザーには二人だけを足す。

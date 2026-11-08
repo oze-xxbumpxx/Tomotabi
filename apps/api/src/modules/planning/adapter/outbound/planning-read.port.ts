@@ -3,6 +3,7 @@ import type { LocalDate } from "../../../../common/domain/local-date.js";
 import type { Plan } from "../../domain/plan.js";
 import type { Trip, TripStatus } from "../../domain/trip.js";
 import type { ActivePlanEvent } from "./record-history.port.js";
+import type { TodoView } from "./todo.repository.js";
 
 export const PLANNING_READ_PORT = Symbol("PLANNING_READ_PORT");
 
@@ -87,4 +88,10 @@ export interface PlanningReadPort {
    * 並びは時刻の早い順・時刻未定は末尾・登録日時・id（詳細設計04 §4）。
    */
   listPlansForDay(tripId: string, date: LocalDate): Promise<PlanView[]>;
+
+  /**
+   * 旅行のToDoを、未完了 → 完了、それぞれ追加した順で返す。
+   * 参加確認は呼び出し側がfindTripForParticipantで済ませている前提。
+   */
+  listTodos(tripId: string): Promise<TodoView[]>;
 }

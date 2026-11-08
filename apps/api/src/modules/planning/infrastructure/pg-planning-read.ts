@@ -24,6 +24,8 @@ import type {
 } from "../adapter/outbound/planning-read.port.js";
 import type { ActivePlanEvent } from "../adapter/outbound/record-history.port.js";
 import { toPlanDomain } from "./drizzle-plan.repository.js";
+import { listTodoViews } from "./drizzle-todo.repository.js";
+import type { TodoView } from "../adapter/outbound/todo.repository.js";
 import { toTripDomain } from "./drizzle-trip.repository.js";
 
 type PlanEventRow = typeof planEvents.$inferSelect;
@@ -217,5 +219,9 @@ export class PgPlanningRead implements PlanningReadPort {
           ),
         ),
     );
+  }
+
+  listTodos(tripId: string): Promise<TodoView[]> {
+    return listTodoViews(this.db, tripId);
   }
 }

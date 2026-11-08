@@ -19,6 +19,8 @@ import type {
 } from "../../src/modules/planning/adapter/outbound/planning-work-context";
 import type { WriteLog, WriteLogEntry } from "../../src/modules/planning/adapter/outbound/write-log.port";
 import type { Plan } from "../../src/modules/planning/domain/plan";
+import type { Todo } from "../../src/modules/planning/domain/todo";
+import type { NewTodo, TodoRepository } from "../../src/modules/planning/adapter/outbound/todo.repository";
 import type { Trip } from "../../src/modules/planning/domain/trip";
 import { TripPeriod } from "../../src/modules/planning/domain/trip-period";
 
@@ -92,6 +94,8 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
   outsideDates: LocalDate[] = [];
   private nextId = 0;
   private nextPlanId = 0;
+  readonly todoRows = new Map<string, Todo>();
+  private nextTodoId = 0;
 
   readonly trips: TripRepository = {
     lockForUpdate: (tripId, actorId) => {
@@ -176,6 +180,63 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
     },
   };
 
+  readonly todos: TodoRepository = {
+    countByTrip: (tripId) => {
+      this.calls.push("todos.countByTrip");
+      return Promise.resolve(
+        [...this.todoRows.values()].filter((todo) => todo.tripId === tripId)
+          .length,
+      );
+    },
+    insert: (todo: NewTodo) => {
+      this.calls.push("todos.insert");
+      const stored: Todo = {
+        id: `66666666-6666-4666-8666-${String(++this.nextTodoId).padStart(12, "0")}`,
+        tripId: todo.tripId,
+        name: todo.name,
+        memo: null,
+        createdBy: todo.createdBy,
+        createdAt: BASE_TIME,
+        doneAt: null,
+        doneBy: null,
+        planId: null,
+        version: 1,
+        updatedAt: BASE_TIME,
+      };
+      this.todoRows.set(stored.id, stored);
+      return Promise.resolve(stored);
+    },
+    lockForUpdate: (tripId, todoId) => {
+      this.calls.push("todos.lockForUpdate");
+      const todo = this.todoRows.get(todoId);
+      return Promise.resolve(
+        todo === undefined || todo.tripId !== tripId ? null : todo,
+      );
+    },
+    update: (todo) => {
+      this.calls.push("todos.update");
+      this.todoRows.set(todo.id, todo);
+      return Promise.resolve();
+    },
+    delete: (tripId, todoId) => {
+      this.calls.push("todos.delete");
+      const todo = this.todoRows.get(todoId);
+      if (todo !== undefined && todo.tripId === tripId) {
+        this.todoRows.delete(todoId);
+      }
+      return Promise.resolve();
+    },
+    planLink: (tripId, planId) => {
+      this.calls.push("todos.planLink");
+      const plan = this.planRows.get(planId);
+      return Promise.resolve(
+        plan === undefined || plan.tripId !== tripId
+          ? null
+          : { id: plan.id, date: plan.date, cancelled: plan.cancelledAt !== null },
+      );
+    },
+  };
+
   readonly recordHistory: RecordHistoryPort = {
     hasHistory: (planId) => {
       this.calls.push("recordHistory.hasHistory");
@@ -252,6 +313,10 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
     this.planRows.set(plan.id, plan);
   }
 
+  seedTodo(todo: Todo): void {
+    this.todoRows.set(todo.id, todo);
+  }
+
   seedHistory(planId: string): void {
     this.historyPlanIds.add(planId);
   }
@@ -284,4 +349,23 @@ export class RecordingWriteLog implements WriteLog {
   info(entry: WriteLogEntry): void {
     this.entries.push(entry);
   }
+}
+
+export const TODO_ID = "55555555-5555-4555-8555-555555555555";
+
+export function testTodo(overrides: Partial<Todo> = {}): Todo {
+  return {
+    id: TODO_ID,
+    tripId: "99999999-9999-4999-8999-999999999999",
+    name: BoundedText.parse("湯豆腐を食べる", 100),
+    memo: null,
+    createdBy: ACTOR,
+    createdAt: BASE_TIME,
+    doneAt: null,
+    doneBy: null,
+    planId: null,
+    version: 1,
+    updatedAt: BASE_TIME,
+    ...overrides,
+  };
 }

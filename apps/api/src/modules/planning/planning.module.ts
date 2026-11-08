@@ -82,6 +82,21 @@ import {
 import { HomeController } from "./controller/home.controller.js";
 import { PlansController } from "./controller/plans.controller.js";
 import { TripsController } from "./controller/trips.controller.js";
+import { TodosController } from "./controller/todos.controller.js";
+import {
+  COMPLETE_TODO_INPUT_PORT,
+  CREATE_TODO_INPUT_PORT,
+  DELETE_TODO_INPUT_PORT,
+  LIST_TODOS_INPUT_PORT,
+  REOPEN_TODO_INPUT_PORT,
+  UPDATE_TODO_INPUT_PORT,
+} from "./adapter/inbound/todo.input-port.js";
+import { CompleteTodoUseCase } from "./usecase/complete-todo.usecase.js";
+import { CreateTodoUseCase } from "./usecase/create-todo.usecase.js";
+import { DeleteTodoUseCase } from "./usecase/delete-todo.usecase.js";
+import { ListTodosUseCase } from "./usecase/list-todos.usecase.js";
+import { ReopenTodoUseCase } from "./usecase/reopen-todo.usecase.js";
+import { UpdateTodoUseCase } from "./usecase/update-todo.usecase.js";
 import { CancelPlanUseCase } from "./usecase/cancel-plan.usecase.js";
 import { CreatePlanUseCase } from "./usecase/create-plan.usecase.js";
 import { CreateTripUseCase } from "./usecase/create-trip.usecase.js";
@@ -116,7 +131,7 @@ const PLAN_WRITE_INJECT = [
 
 @Module({
   imports: [PlanningCompositionModule],
-  controllers: [TripsController, PlansController, HomeController],
+  controllers: [TripsController, PlansController, HomeController, TodosController],
   providers: [
     {
       provide: CREATE_TRIP_INPUT_PORT,
@@ -207,6 +222,38 @@ const PLAN_WRITE_INJECT = [
       useFactory: (...deps: PlanWriteDeps): CancelPlanInputPort =>
         new CancelPlanUseCase(...deps),
       inject: PLAN_WRITE_INJECT,
+    },
+    {
+      provide: LIST_TODOS_INPUT_PORT,
+      useFactory: (read: PlanningReadPort) => new ListTodosUseCase(read),
+      inject: [PLANNING_READ_PORT],
+    },
+    {
+      provide: CREATE_TODO_INPUT_PORT,
+      useFactory: (uow: UnitOfWork<PlanningWorkContext>, writeLog: WriteLog) =>
+        new CreateTodoUseCase(uow, writeLog),
+      inject: [PLANNING_UNIT_OF_WORK, WRITE_LOG],
+    },
+    {
+      provide: UPDATE_TODO_INPUT_PORT,
+      useFactory: (...deps: WriteDeps) => new UpdateTodoUseCase(...deps),
+      inject: WRITE_INJECT,
+    },
+    {
+      provide: COMPLETE_TODO_INPUT_PORT,
+      useFactory: (...deps: WriteDeps) => new CompleteTodoUseCase(...deps),
+      inject: WRITE_INJECT,
+    },
+    {
+      provide: REOPEN_TODO_INPUT_PORT,
+      useFactory: (...deps: WriteDeps) => new ReopenTodoUseCase(...deps),
+      inject: WRITE_INJECT,
+    },
+    {
+      provide: DELETE_TODO_INPUT_PORT,
+      useFactory: (uow: UnitOfWork<PlanningWorkContext>, writeLog: WriteLog) =>
+        new DeleteTodoUseCase(uow, writeLog),
+      inject: [PLANNING_UNIT_OF_WORK, WRITE_LOG],
     },
   ],
 })

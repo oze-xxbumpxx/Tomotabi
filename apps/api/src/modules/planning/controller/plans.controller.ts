@@ -130,6 +130,7 @@ export class PlansController {
       date: body.date,
       time: body.time ?? null,
       memo: body.memo ?? null,
+      fromTodoId: body.fromTodoId ?? null,
     });
     return this.writeResult(response, result);
   }

@@ -155,6 +155,7 @@ describe("通知のイベントを渡す判定（PU-10）", () => {
         date: "2026-09-12",
         time: null,
         memo: null,
+        fromTodoId: null,
       };
       const created = await usecase.execute(input);
       expect(created.httpStatus).toBe(201);

@@ -60,6 +60,7 @@ function intersectLast(): void {
   });
 }
 
+import { setPendingToast, takePendingToast } from "@/shared/lib/pending-toast";
 import { RecordsScreen } from "@/screens/records/records-screen";
 import { PaymentDetailScreen } from "@/screens/payment-detail/payment-detail-screen";
 import { PaymentFormScreen } from "@/screens/payment-form/payment-form-screen";
@@ -461,6 +462,24 @@ beforeEach(async () => {
 });
 
 describe("記録の一覧（RW-05〜RW-08）", () => {
+  it("履歴から開いた支払いを保存して戻ると、知らせを1回だけ出す", async () => {
+    stubApi({ records: () => json({ items: [], nextCursor: null }) });
+    setPendingToast("支払いを記録しました");
+    renderScreen(
+      <RecordsScreen
+        tripId={tripId}
+        type={null}
+        planId={null}
+        recordId={null}
+        recordType={null}
+      />,
+    );
+    expect(
+      await screen.findByText("支払いを記録しました"),
+    ).toBeInTheDocument();
+    expect(takePendingToast()).toBeNull();
+  });
+
   it("取り消しの行が取り消した時刻の位置に、元の行は「取り消し済み」（RW-05）", async () => {
     const voided = event({
       cancellation: {

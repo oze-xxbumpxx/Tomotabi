@@ -404,7 +404,7 @@ describe("HomeScreen (/trips/{id}/home)", () => {
     );
     expect(
       screen.getByRole("link", { name: "支払いを記録" }),
-    ).toHaveAttribute("href", `/trips/${tripId}/payments/new`);
+    ).toHaveAttribute("href", `/trips/${tripId}/payments/new?back=home`);
 
     await waitFor(() =>
       expect(window.localStorage.getItem(selectedKey)).toBe(tripId),

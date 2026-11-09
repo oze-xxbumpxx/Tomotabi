@@ -96,10 +96,19 @@ describe("parsePaymentNewQuery", () => {
     expect(parsePaymentNewQuery(q(`planId=${ID}&from=${ID2}`))).toEqual({
       planId: ID,
       fromPaymentId: ID2,
+      back: null,
     });
     expect(parsePaymentNewQuery(q("planId=x&from="))).toEqual({
       planId: null,
       fromPaymentId: null,
+      back: null,
     });
+  });
+
+  it("backはhomeかrecordsのときだけ渡す", () => {
+    expect(parsePaymentNewQuery(q("back=home")).back).toBe("home");
+    expect(parsePaymentNewQuery(q("back=records")).back).toBe("records");
+    expect(parsePaymentNewQuery(q("back=settlement")).back).toBeNull();
+    expect(parsePaymentNewQuery(q("back=//example.com")).back).toBeNull();
   });
 });

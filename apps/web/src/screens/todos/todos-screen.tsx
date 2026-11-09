@@ -222,7 +222,7 @@ export function TodosScreen({ tripId }: { tripId: string }) {
   const rejected = saves.find((state) => state.status === "rejected");
 
   return (
-    <main className="todo-page">
+    <main className="todo-page todo-page-list">
       {!online && <OfflineBanner at={new Date(todos.dataUpdatedAt)} />}
       {todos.isRefetchError && (
         <RefetchFailed

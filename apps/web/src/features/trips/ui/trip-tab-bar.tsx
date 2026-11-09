@@ -20,7 +20,7 @@ import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
  * ホームと履歴（支払いの詳細を含む）だけで、しおり・ToDo・精算は`action={null}`で
  * 出さない（2026-11-09 ユーザーの判断。どの画面にも出ているのは違和感がある）。
  * 「支払いを記録」は関連する予定を選ばずに開く
- * （F-49。`/payments/new`には`planId`を付けない）。
+ * （F-49。`/payments/new`には`planId`を付けず、開いた画面を`back`で渡す）。
  * オフラインのあいだは主ボタンを押せない見た目にする（C-3）。
  */
 export type TripTab = "home" | "itinerary" | "todos" | "records" | "settlement";
@@ -94,6 +94,9 @@ export function TripTabBar({
   action?: TripMainAction | null;
 }) {
   const online = useOnlineStatus();
+  // 保存したあとと閉じたときに、開いた画面（ホームか履歴）へ戻すための印。
+  const backQuery =
+    current === "home" || current === "records" ? `?back=${current}` : "";
 
   return (
     <>
@@ -110,7 +113,10 @@ export function TripTabBar({
             {action.label}
           </button>
         ) : (
-          <Link className="main-action" href={`/trips/${tripId}/payments/new`}>
+          <Link
+            className="main-action"
+            href={`/trips/${tripId}/payments/new${backQuery}`}
+          >
             <Plus size={20} weight="bold" aria-hidden="true" />
             支払いを記録
           </Link>

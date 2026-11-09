@@ -19,7 +19,7 @@ type PaymentInput = {
 
 /**
  * ホームから「支払いを記録」を開き、入力して保存し、
- * しおりへ戻るところまで進める。
+ * ホームへ戻るところまで進める。
  *
  * 「払った人」の選択肢は残額の取得を待ってから出るため、
  * 金額欄だけでなく本人の選択肢が決まるのを待ってから入力する
@@ -47,7 +47,7 @@ async function recordPayment(page: Page, input: PaymentInput): Promise<void> {
     await sheet.getByLabel("用途").fill(input.label);
   }
   await sheet.getByRole("button", { name: "保存" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/itinerary$/);
+  await page.waitForURL(/\/trips\/[^/]+\/home$/);
   await expect(
     page.getByRole("status").filter({ hasText: "支払いを記録しました" }),
   ).toBeVisible();

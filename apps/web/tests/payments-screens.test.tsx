@@ -252,10 +252,11 @@ function writeCalls(fetchMock: ReturnType<typeof vi.fn>) {
 function renderForm(
   planId: string | null = null,
   client = createQueryClient(),
+  back: "home" | "records" | null = null,
 ) {
   render(
     <QueryClientProvider client={client}>
-      <PaymentFormScreen tripId={tripId} planId={planId} />
+      <PaymentFormScreen tripId={tripId} planId={planId} back={back} />
     </QueryClientProvider>,
   );
   return client;
@@ -762,6 +763,34 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
       expect(pushMock).toHaveBeenCalledWith(
         `/trips/${tripId}/plans/${planId}`,
       ),
+    );
+  });
+
+  it.each(["home", "records"] as const)(
+    "%s から開いたときは、保存したあとその画面へ戻る",
+    async (back) => {
+      stubApi({ createPayment: () => json(paymentResponse(), 201) });
+      renderForm(null, createQueryClient(), back);
+      const amountInput = await waitForForm();
+      const user = userEvent.setup();
+
+      await user.type(amountInput, "7001");
+      await user.click(screen.getByRole("button", { name: "保存" }));
+
+      await waitFor(() =>
+        expect(replaceMock).toHaveBeenCalledWith(`/trips/${tripId}/${back}`),
+      );
+    },
+  );
+
+  it("履歴から開いたときは、閉じると履歴へ戻る", async () => {
+    stubApi({});
+    renderForm(null, createQueryClient(), "records");
+    await waitForForm();
+
+    await userEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/trips/${tripId}/records`),
     );
   });
 

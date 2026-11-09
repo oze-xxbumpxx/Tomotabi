@@ -923,7 +923,7 @@ describe("取り消しの確認と支払いの詳細（RW-09・RW-10）", () => 
     });
     expect(recode).toHaveAttribute(
       "href",
-      `/trips/${tripId}/payments/new?from=${paymentId}`,
+      `/trips/${tripId}/payments/new?from=${paymentId}&back=records`,
     );
     // 取り消し済みでは、下の主ボタン「支払いを記録」は出さない
     // （「正しい内容で支払いを記録」と意味が重なり、並べると中身に重なるため）

@@ -1277,8 +1277,8 @@ dialog.dialog[open] {
 
 /* しおり・予定の画面（08・09・追加/編集）。M2-d */
 .itinerary-page {
-  /* タブとその上の主ボタン「支払いを記録」のぶん。 */
-  padding-bottom: calc(var(--space-8) + 168px);
+  /* タブのぶん。この画面には、タブの上の主ボタンを出さない。 */
+  padding-bottom: calc(var(--space-8) + 96px);
 }
 
 /* 日付バー（08）。期間の日を並べ、長い旅行は横スクロール */
@@ -3699,8 +3699,13 @@ a.plan-record-row-link {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  /* しおり・ホームと同じ。タブとその上の主ボタンのぶん */
+  /* ToDoの詳細の「予定にする」があるときの、タブとその上の主ボタンのぶん */
   padding-bottom: calc(var(--space-8) + 168px);
+}
+
+/* ToDoのリストには主ボタンを出さないので、タブのぶんだけ空ける */
+.todo-page-list {
+  padding-bottom: calc(var(--space-8) + 96px);
 }
 
 .todo-head {

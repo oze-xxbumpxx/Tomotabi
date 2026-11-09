@@ -85,6 +85,15 @@ describe("TripTabBar（RW-01: 共通の下のタブ）", () => {
   });
 });
 
+describe("「支払いを記録」は、開いた画面を back で渡す", () => {
+  it.each(["home", "records"] as const)("%s から開くと ?back=%s が付く", (current) => {
+    render(<TripTabBar tripId={tripId} current={current} />);
+    expect(
+      screen.getByRole("link", { name: "支払いを記録" }),
+    ).toHaveAttribute("href", `/trips/${tripId}/payments/new?back=${current}`);
+  });
+});
+
 describe("action={null}（しおり・ToDo・精算は主ボタンを出さない）", () => {
   it("主ボタンを出さず、タブは5つのまま", () => {
     render(<TripTabBar tripId={tripId} current="settlement" action={null} />);

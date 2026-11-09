@@ -35,7 +35,9 @@ import { useTrip } from "@/features/trips";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { setPendingToast } from "@/shared/lib/pending-toast";
+import { HomeScreen } from "@/screens/home/home-screen";
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
+import { RecordsScreen } from "@/screens/records/records-screen";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
 import { NotAvailable } from "@/shared/ui/state/not-available";
@@ -78,9 +80,12 @@ function rejectedMessage(
   }
 }
 
+/** 「支払いを記録」を開いた画面。保存したあとと閉じたときに、ここへ戻す。 */
+export type PaymentFormBack = "home" | "records";
+
 /**
- * 支払いを記録（v3 11・11b）。`/trips/{tripId}/payments/new?planId=`。
- * しおりの上に重ねるシート。保存は保留中の要求（IndexedDB）を通し、
+ * 支払いを記録（v3 11・11b）。`/trips/{tripId}/payments/new?planId=&back=`。
+ * 開いた画面（ホーム・履歴。分からなければしおり）の上に重ねるシート。保存は保留中の要求（IndexedDB）を通し、
  * 同じ利用者・旅行・操作の保留があれば入力を固定して「保存されたか
  * 確認できません」と「同じ内容で確認する」を出す（ADR-0006・F-50〜F-53）。
  * URLのplanIdはgetPlanで同じ旅行の予定か確かめてから選んだ状態に
@@ -90,12 +95,19 @@ export function PaymentFormScreen({
   tripId,
   planId,
   fromPaymentId,
+  back,
 }: {
   tripId: string;
   /** URLの`planId`（予定の詳細から開いた入口。無ければnull）。 */
   planId: string | null;
   /** URLの`from`（支払いの詳細の「正しい内容で支払いを記録」。写す支払いのID。無ければnull）。 */
   fromPaymentId?: string | null;
+  /**
+   * URLの`back`（開いた画面）。保存したあとと閉じたときに戻る先と、シートの
+   * 後ろに出す画面を決める。無ければしおり。確かめられた`planId`があれば、
+   * そちら（予定の詳細）を優先する。
+   */
+  back?: PaymentFormBack | null;
 }) {
   const router = useRouter();
   const { state: meState, reload: reloadMe } = useMe();
@@ -116,7 +128,7 @@ export function PaymentFormScreen({
   >(planId !== null ? "pending" : "none");
   // URLの`planId`をgetPlanで確かめられたあとだけ真。保存したあとと
   // 戻るリンクは、その予定の詳細へ戻す（確かめられない・無いときは
-  // 今のまましおり）。onSucceededは描画の外で呼ばれるのでrefにも持つ。
+  // 開いた画面。それも分からなければしおり）。onSucceededは描画の外で呼ばれるのでrefにも持つ。
   const [urlPlanVerified, setUrlPlanVerified] = useState(false);
   const urlPlanVerifiedRef = useRef(false);
 
@@ -252,6 +264,7 @@ export function PaymentFormScreen({
     }
   }, [locked, urlPlanCheck, planQuery, planId]);
 
+  const openerHref = `/trips/${tripId}/${back ?? "itinerary"}`;
   const save = useCreatePayment({
     tripId,
     userId: meUserId ?? "",
@@ -261,7 +274,7 @@ export function PaymentFormScreen({
       router.replace(
         urlPlanVerifiedRef.current && planId !== null
           ? `/trips/${tripId}/plans/${planId}`
-          : `/trips/${tripId}/itinerary`,
+          : openerHref,
       );
     },
   });
@@ -322,7 +335,7 @@ export function PaymentFormScreen({
   const backHref =
     urlPlanVerified && planId !== null
       ? `/trips/${tripId}/plans/${planId}`
-      : `/trips/${tripId}/itinerary`;
+      : openerHref;
   const tryClose = () => {
     if (state.status === "saving" || state.status === "unknown") {
       return;
@@ -412,7 +425,20 @@ export function PaymentFormScreen({
     (!locked && !hydrated) ||
     planFetchPending;
 
-  const underlying = <ItineraryScreen tripId={tripId} />;
+  const underlying =
+    back === "home" ? (
+      <HomeScreen tripId={tripId} />
+    ) : back === "records" ? (
+      <RecordsScreen
+        tripId={tripId}
+        type={null}
+        planId={null}
+        recordId={null}
+        recordType={null}
+      />
+    ) : (
+      <ItineraryScreen tripId={tripId} />
+    );
 
   if (loading || meUserId === null) {
     return (

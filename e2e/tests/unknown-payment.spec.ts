@@ -60,9 +60,9 @@ test("FE-04: 応答の届かなかった支払いの記録は同じ内容で確�
   await expect(sheet.getByLabel("金額")).toHaveJSProperty("readOnly", true);
   await expect(sheet.getByLabel("用途")).toHaveValue("夕食代");
 
-  // 「同じ内容で確認する」→ 保存済みの結果が返り、しおりへ戻る。
+  // 「同じ内容で確認する」→ 保存済みの結果が返り、開いた画面（ホーム）へ戻る。
   await sheet.getByRole("button", { name: "同じ内容で確認する" }).click();
-  await page.waitForURL(new RegExp(`/trips/${tripId}/itinerary$`));
+  await page.waitForURL(new RegExp(`/trips/${tripId}/home$`));
   await expect(
     page.getByRole("status").filter({ hasText: "支払いを記録しました" }),
   ).toBeVisible();

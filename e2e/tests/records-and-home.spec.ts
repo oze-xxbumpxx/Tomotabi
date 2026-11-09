@@ -48,7 +48,7 @@ async function addPlan(page: Page, plan: PlanInput): Promise<void> {
 }
 
 /**
- * ホームから「支払いを記録」を開き、入力して保存し、しおりへ戻るところまで進める
+ * ホームから「支払いを記録」を開き、入力して保存し、ホームへ戻るところまで進める
  * （payment-and-settlement.spec.tsのrecordPaymentと同じ作り方）。
  */
 async function recordPayment(page: Page, input: PaymentInput): Promise<void> {
@@ -75,7 +75,7 @@ async function recordPayment(page: Page, input: PaymentInput): Promise<void> {
     await sheet.getByLabel("用途").fill(input.label);
   }
   await sheet.getByRole("button", { name: "保存" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/itinerary$/);
+  await page.waitForURL(/\/trips\/[^/]+\/home$/);
   await expect(
     page.getByRole("status").filter({ hasText: "支払いを記録しました" }),
   ).toBeVisible();
@@ -227,6 +227,8 @@ test("RE-02: 終了すると予定の欄が消えて精算が上に出る。終�
     label: "ランチ",
     payerName: "あおい",
   });
+  // 支払いを保存するとホームへ戻るので、予定はしおりへ移ってから足す。
+  await openTab(page, "しおり");
   await addPlan(page, {
     name: "千光寺",
     kindLabel: "場所",

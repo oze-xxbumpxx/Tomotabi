@@ -472,7 +472,9 @@ describe("精算の画面（14・14f・14g・14i）", () => {
       await screen.findByText("現在、精算する対象はありません"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("支払いを記録すると、ここに受け渡しの額が出ます。"),
+      screen.getByText(
+        "ホームか履歴で支払いを記録すると、ここに受け渡しの額が出ます。",
+      ),
     ).toBeInTheDocument();
     // 対象0件では確認の作成を出さない。
     expect(

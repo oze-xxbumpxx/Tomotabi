@@ -63,7 +63,7 @@ async function recordPayment(page: Page, label: string): Promise<void> {
   await sheet.getByLabel("金額").fill("3000");
   await sheet.getByLabel("用途").fill(label);
   await sheet.getByRole("button", { name: "保存" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/itinerary$/);
+  await page.waitForURL(/\/trips\/[^/]+\/home$/);
   await expect(
     page.getByRole("status").filter({ hasText: "支払いを記録しました" }),
   ).toBeVisible();

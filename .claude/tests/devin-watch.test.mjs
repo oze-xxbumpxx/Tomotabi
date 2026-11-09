@@ -20,8 +20,8 @@ import {
 const CLONE = '/Users/siro/個人開発/devin-work/tomotabi';
 const PS = [
   '17048 12509 1-00:00:00 devin',
-  '98097 1 34:41 /bin/zsh -c cd /x && devin --model swe-2-max -p GitHub Issue #73 | tee -a log',
-  '98100 98097 34:41 devin --model swe-2-max --permission-mode dangerous -p GitHub Issue #73',
+  '98097 1 34:41 /bin/zsh -c cd /x && devin --model swe-2-flash-max -p GitHub Issue #73 | tee -a log',
+  '98100 98097 34:41 devin --model swe-2-flash-max --permission-mode dangerous -p GitHub Issue #73',
   '98101 98097 34:41 tee -a /Users/siro/.local/state/tomotabi-harness/devin-logs/issue-73.log',
   '98102 98100 34:41 /opt/homebrew/bin/devin acp',
   '99001 98102 00:05 bash -c cd /Users/siro/M-eM-^@/devin-work/tomotabi && npm test 2>&1',
@@ -63,7 +63,7 @@ test('文の分割: 空白の無い連結でも文ごとに分ける', () => {
 });
 
 test('プロセス: 作業用コピーで -p 付きの devin を本体にし、対話の devin と別の場所の devin は見ない', () => {
-  const rows = parsePs(`55000 1 10:00 devin --model swe-2-high -p other project\n${PS}`);
+  const rows = parsePs(`55000 1 10:00 devin --model swe-2-flash-high -p other project\n${PS}`);
   const cwdOf = (pid) => (pid === 98100 ? CLONE : '/Users/siro/other');
   const found = findDevin(rows, { clone: CLONE, cwdOf });
   assert.equal(found.root.pid, 98100);

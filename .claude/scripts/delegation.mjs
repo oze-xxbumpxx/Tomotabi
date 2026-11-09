@@ -3,7 +3,7 @@
 // 設計: docs/designs/devin-delegation-loop.md / 形式: docs/claude-code/improvements/delegations/README.md
 //
 // 使い方:
-//   node .claude/scripts/delegation.mjs init <issue> --model <swe-2-medium|swe-2-high|swe-2-max|unknown>
+//   node .claude/scripts/delegation.mjs init <issue> --model <swe-2-flash-medium|swe-2-flash-high|swe-2-flash-max|unknown>
 //     [--runner <local|cloud>] [--level 0-3] [--title <題>] [--delegated-at <ISO 8601>] [--follow-up-of <issue|pr-n>]
 //       --runnerはDevinを動かした場所。既定はlocal（2026-09-26ユーザー指示: 既定はローカル、出先の指示時だけクラウド）。
 //       記録を作る。--titleと --delegated-atを省くとghからIssueの題と作成日時を取る。
@@ -54,7 +54,7 @@ import { findLinkedPr, listPrs } from './wait-for-pr.mjs';
 export const DEFAULT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../docs/claude-code/improvements/delegations');
 const GH_TIMEOUT_MS = 30_000;
 
-export const MODELS = ['swe-2-medium', 'swe-2-high', 'swe-2-max', 'unknown'];
+export const MODELS = ['swe-2-flash-medium', 'swe-2-flash-high', 'swe-2-flash-max', 'unknown'];
 // 新しい記録で指定できる実行場所。runnerの無い古い記録は、集計のときだけunknownとして扱う。
 export const RUNNERS = ['local', 'cloud'];
 export const SEVERITIES = ['must', 'nit', 'security', 'decision'];

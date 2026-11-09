@@ -39,7 +39,7 @@ import {
 
 const scriptPath = join(dirname(fileURLToPath(import.meta.url)), '../scripts/delegation.mjs');
 
-const base = (issue, model = 'swe-2-medium') =>
+const base = (issue, model = 'swe-2-flash-medium') =>
   newRecord({ issue, title: `Issue ${issue}`, model, level: 1, delegatedAt: '2026-09-26T00:00:00Z' });
 
 function withTmp(fn) {
@@ -123,10 +123,10 @@ test('D-03: init の model の値の制限と重複作成', () => {
   assert.throws(() => base(1, 'swe-1.5'), /--model/);
   assert.throws(() => newRecord({ issue: 1, title: 't', model: 'unknown', level: 5, delegatedAt: '2026-09-26T00:00:00Z' }), /--level/);
   withTmp((dir) => {
-    const args = ['init', '44', '--model', 'swe-2-max', '--level', '3', '--title', 'M1-c', '--delegated-at', '2026-09-26T05:30:00Z', '--dir', dir];
+    const args = ['init', '44', '--model', 'swe-2-flash-max', '--level', '3', '--title', 'M1-c', '--delegated-at', '2026-09-26T05:30:00Z', '--dir', dir];
     assert.equal(cli(args).status, 0);
     const rec = parseYaml(readFileSync(join(dir, '44.yml'), 'utf8'));
-    assert.equal(rec.model, 'swe-2-max');
+    assert.equal(rec.model, 'swe-2-flash-max');
     assert.equal(rec.change_level, 3);
     assert.deepEqual(rec.reviews, []);
     const again = cli(args);
@@ -151,7 +151,7 @@ test('D-04: review の追記と、同じ round の重複・security の自動投
   assert.equal(escalated.escalations, 1);
 
   withTmp((dir) => {
-    cli(['init', '7', '--model', 'swe-2-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir]);
+    cli(['init', '7', '--model', 'swe-2-flash-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir]);
     const ok = cli(['review', '7', '--round', '0', '--sha', 'abc1234', '--verdict', 'fix', '--posted', '--finding', 'must:missing-test:A-01 が無い', '--finding', 'nit:coding-standard:any', '--dir', dir]);
     assert.equal(ok.status, 0, ok.stderr);
     const rec7 = parseYaml(readFileSync(join(dir, '7.yml'), 'utf8'));
@@ -247,14 +247,14 @@ function merged(issue, model, { rounds = 0, ci = true, prAfterMin = 60, mergeAft
 
 test('D-08: モデル別の件数・一発合格・平均 round・CI 初回成功・所要時間の中央値', () => {
   const s = summarize([
-    merged(1, 'swe-2-medium', { rounds: 0, prAfterMin: 30, mergeAfterMin: 60 }),
-    merged(2, 'swe-2-medium', { rounds: 2, ci: false, prAfterMin: 50, mergeAfterMin: 300 }),
-    merged(3, 'swe-2-max', { rounds: 1 }),
-    base(4, 'swe-2-max'),
+    merged(1, 'swe-2-flash-medium', { rounds: 0, prAfterMin: 30, mergeAfterMin: 60 }),
+    merged(2, 'swe-2-flash-medium', { rounds: 2, ci: false, prAfterMin: 50, mergeAfterMin: 300 }),
+    merged(3, 'swe-2-flash-max', { rounds: 1 }),
+    base(4, 'swe-2-flash-max'),
   ]);
   assert.equal(s.total, 4);
   assert.deepEqual(s.outcomes, { merged: 3, closed: 0, open: 1 });
-  const med = s.models['swe-2-medium'];
+  const med = s.models['swe-2-flash-medium'];
   assert.equal(med.count, 2);
   assert.equal(med.merged, 2);
   assert.equal(med.firstPass, 1);
@@ -264,7 +264,7 @@ test('D-08: モデル別の件数・一発合格・平均 round・CI 初回成�
   assert.equal(med.ciKnown, 2);
   assert.equal(med.medianIssueToPrMin, 40);
   assert.equal(med.medianPrToMergeMin, 180);
-  const max = s.models['swe-2-max'];
+  const max = s.models['swe-2-flash-max'];
   assert.equal(max.count, 2);
   assert.equal(max.reviewed, 1);
   assert.equal(max.firstPass, 0);
@@ -272,7 +272,7 @@ test('D-08: モデル別の件数・一発合格・平均 round・CI 初回成�
   const text = formatSummary(s);
   assert.match(text, /委譲 4 件（merged 3 \/ closed 0 \/ open 1）/);
   // 件数 / マージ / 一発合格 / 後続なしの一発合格 / 後続を生んだ / 平均round / CI初回成功 / 引き渡し / Issue→PR / PR→マージ
-  assert.match(text, /swe-2-medium: 2 \/ 2\/2 \/ 1\/2 \/ 1\/2 \/ 0 \/ 1\.0 \/ 1\/2 \/ 0 \/ 40m \/ 3\.0h/);
+  assert.match(text, /swe-2-flash-medium: 2 \/ 2\/2 \/ 1\/2 \/ 1\/2 \/ 0 \/ 1\.0 \/ 1\/2 \/ 0 \/ 40m \/ 3\.0h/);
 });
 
 test('D-09: 分類は Issue 単位で数える（同じ Issue で何度出ても 1 件）', () => {
@@ -323,15 +323,15 @@ test('不明なサブコマンドは exit 2', () => {
 test('D-12: runner（実行場所）は既定 local、cloud を選べ、それ以外はエラー。古い記録は unknown として集計する', () => {
   assert.equal(base(60).runner, 'local');
   assert.equal(
-    newRecord({ issue: 61, title: 't', model: 'swe-2-high', runner: 'cloud', delegatedAt: '2026-09-26T00:00:00Z' }).runner,
+    newRecord({ issue: 61, title: 't', model: 'swe-2-flash-high', runner: 'cloud', delegatedAt: '2026-09-26T00:00:00Z' }).runner,
     'cloud',
   );
   assert.throws(
-    () => newRecord({ issue: 62, title: 't', model: 'swe-2-high', runner: 'remote', delegatedAt: '2026-09-26T00:00:00Z' }),
+    () => newRecord({ issue: 62, title: 't', model: 'swe-2-flash-high', runner: 'remote', delegatedAt: '2026-09-26T00:00:00Z' }),
     /--runner/,
   );
   withTmp((dir) => {
-    const common = ['--model', 'swe-2-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir];
+    const common = ['--model', 'swe-2-flash-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir];
     assert.equal(cli(['init', '63', ...common]).status, 0);
     assert.equal(parseYaml(readFileSync(join(dir, '63.yml'), 'utf8')).runner, 'local');
     assert.equal(cli(['init', '64', '--runner', 'cloud', ...common]).status, 0);
@@ -438,7 +438,7 @@ test('S-01: follow_up_of は任意。Issue 番号と pr-<n> を受け付け、�
   assert.throws(() => newRecord({ issue: 60, title: 't', model: 'unknown', delegatedAt: '2026-09-26T00:00:00Z', followUpOf: 'x' }), UsageError);
   assert.throws(() => newRecord({ issue: 60, title: 't', model: 'unknown', delegatedAt: '2026-09-26T00:00:00Z', followUpOf: 60 }), /自分自身/);
   withTmp((dir) => {
-    const common = ['--model', 'swe-2-medium', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir];
+    const common = ['--model', 'swe-2-flash-medium', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir];
     assert.equal(cli(['init', '59', '--follow-up-of', '51', ...common]).status, 0);
     assert.equal(parseYaml(readFileSync(join(dir, '59.yml'), 'utf8')).follow_up_of, 51);
     assert.equal(cli(['init', '61', '--follow-up-of', 'bogus', ...common]).status, 2);
@@ -452,7 +452,7 @@ test('S-02: reviewed_at は任意。指定したときだけ round の次に入�
   assert.deepEqual(Object.keys(timed.reviews[0]).slice(0, 3), ['round', 'reviewed_at', 'reviewed_sha']);
   assert.throws(() => addReview(base(1), { round: 0, sha: 'abc1234', verdict: 'fix', at: 'yesterday' }), /--reviewed-at/);
   withTmp((dir) => {
-    cli(['init', '7', '--model', 'swe-2-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir]);
+    cli(['init', '7', '--model', 'swe-2-flash-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z', '--dir', dir]);
     const before = Date.now() - 1000;
     assert.equal(cli(['review', '7', '--round', '0', '--sha', 'abc1234', '--verdict', 'merge', '--dir', dir]).status, 0);
     const at = parseYaml(readFileSync(join(dir, '7.yml'), 'utf8')).reviews[0].reviewed_at;
@@ -473,7 +473,7 @@ test('S-03: 写し。writeRecord は写しにも書き、写しの失敗は警�
     writeFileSync(join(dir, 'blocked'), 'x');
     const path = writeRecord(primary, base(71), { mirrorDir: join(dir, 'blocked') });
     assert.equal(path, join(primary, '71.yml'));
-    const common = ['--model', 'swe-2-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z'];
+    const common = ['--model', 'swe-2-flash-high', '--title', 't', '--delegated-at', '2026-09-26T00:00:00Z'];
     assert.equal(cli(['init', '72', ...common, '--dir', primary]).status, 0);
     assert.equal(existsSync(join(mirror, '72.yml')), false);
     assert.equal(cli(['init', '73', ...common, '--dir', primary, '--mirror-dir', mirror]).status, 0);
@@ -569,11 +569,11 @@ test('open-task: 承認済みの計画から区間を取り出し、印つきの
       return 'https://github.com/o/r/issues/123\n';
     };
     const git = (args) => (args[0] === 'show' ? (assert.equal(args[1], 'origin/main:docs/implementation-plans/polish.md'), plan) : '');
-    const issue = openTask({ planPath: 'docs/implementation-plans/polish.md', taskKey: 'polish:fix-date', title: 'fix(web): 日付', model: 'swe-2-medium' }, { dir, run, git, now: () => '2026-10-25T00:00:00Z' });
+    const issue = openTask({ planPath: 'docs/implementation-plans/polish.md', taskKey: 'polish:fix-date', title: 'fix(web): 日付', model: 'swe-2-flash-medium' }, { dir, run, git, now: () => '2026-10-25T00:00:00Z' });
     assert.equal(issue, 123);
     const record = readRecord(dir, 123);
     assert.equal(record.task_key, 'polish:fix-date');
-    assert.equal(record.model, 'swe-2-medium');
+    assert.equal(record.model, 'swe-2-flash-medium');
     assert.equal(calls.filter((args) => args[1] === 'create').length, 1);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -586,5 +586,5 @@ test('open-task: 同じ印の開いたIssueがあれば作らず、本文が違�
   assert.throws(() => findTaskIssue([{ number: 7, body }], 'polish:fix-date', 'b'.repeat(64)), /本文が計画と違う/);
   assert.throws(() => findTaskIssue([{ number: 7, body }, { number: 9, body }], 'polish:fix-date', digest), /2件/);
   assert.throws(() => extractPlanTask('<!-- delegation-task:x -->\nA\n<!-- /delegation-task -->\n<!-- delegation-task:x -->\nB\n<!-- /delegation-task -->', 'f:x'), /ちょうど1つ/);
-  assert.throws(() => openTask({ planPath: '/etc/passwd', taskKey: 'f:x', title: 't', model: 'swe-2-high' }, { run: () => assert.fail(), git: () => assert.fail() }), UsageError);
+  assert.throws(() => openTask({ planPath: '/etc/passwd', taskKey: 'f:x', title: 't', model: 'swe-2-flash-high' }, { run: () => assert.fail(), git: () => assert.fail() }), UsageError);
 });

@@ -7,11 +7,11 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_CLONE } from './devin-watch.mjs';
 import { resolveStateDir } from '../lib/harness-paths.mjs';
 
-const MODELS = ['swe-2-medium', 'swe-2-high', 'swe-2-max'];
+const MODELS = ['swe-2-flash-medium', 'swe-2-flash-high', 'swe-2-flash-max'];
 const CONFIG = join(dirname(fileURLToPath(import.meta.url)), '../config/delegation-review.json');
 
 /**
- * 使い方: delegation-launch.mjs <Issue番号> --runner local --model <swe-2-medium|swe-2-high|swe-2-max>
+ * 使い方: delegation-launch.mjs <Issue番号> --runner local --model <swe-2-flash-medium|swe-2-flash-high|swe-2-flash-max>
  *   --prompt-file <本人だけが読めるファイル> [--clone <専用クローン>]
  * Issueは`delegation.mjs open-task`で作ったもの。起動の結果は1行のJSONで出し、自動で起動し直さない。
  */

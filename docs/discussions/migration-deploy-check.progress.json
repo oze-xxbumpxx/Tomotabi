@@ -3,13 +3,19 @@
   "title": "migrationの流し忘れをデプロイの前に止める",
   "level": "L3",
   "page": "https://claude.ai/artifact/S9mTnGRS7fvYNYD4Dk2SWt",
-  "round": 1,
+  "round": 2,
   "stages": {
     "requirements": {
-      "state": "waiting"
+      "state": "approval",
+      "docs": [
+        "docs/requirements/migration-deploy-check.md"
+      ]
     },
     "design": {
-      "state": "pending"
+      "state": "approval",
+      "docs": [
+        "docs/designs/migration-deploy-check.md"
+      ]
     },
     "plan": {
       "state": "pending"
@@ -27,5 +33,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-09T05:03:35.359Z"
+  "updated_at": "2026-11-09T07:05:10.302Z"
 }

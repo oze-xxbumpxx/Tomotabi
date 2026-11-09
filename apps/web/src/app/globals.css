@@ -2362,24 +2362,6 @@ dialog.dialog[open] {
   box-shadow: none;
 }
 
-/* 脇の操作のときの主ボタン（精算の「支払いを記録」）。枠だけの小さな
-   ボタンにして、画面の主な操作と見分けられるようにする */
-.main-action-quiet {
-  width: auto;
-  height: 40px;
-  padding: 0 var(--space-5);
-  border: 1.5px solid var(--color-text);
-  background: var(--color-bg);
-  color: var(--color-text);
-  box-shadow: none;
-}
-
-.main-action-quiet.main-action-offline {
-  border-color: var(--color-text-muted);
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-}
-
 /* 支払いを記録のシート（v3 11・11b） */
 .pay-amount {
   display: flex;

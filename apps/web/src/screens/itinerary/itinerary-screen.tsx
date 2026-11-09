@@ -497,7 +497,7 @@ export function ItineraryScreen({
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
       {/* 下部の主ボタン「支払いを記録」と4つのタブ（共通の部品）。 */}
-      <TripTabBar tripId={tripId} current="itinerary" />
+      <TripTabBar tripId={tripId} current="itinerary" action={null} />
     </main>
   );
 }

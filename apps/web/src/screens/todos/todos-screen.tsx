@@ -416,7 +416,7 @@ export function TodosScreen({ tripId }: { tripId: string }) {
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
-      <TripTabBar tripId={tripId} current="todos" />
+      <TripTabBar tripId={tripId} current="todos" action={null} />
     </main>
   );
 }

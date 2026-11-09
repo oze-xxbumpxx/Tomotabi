@@ -28,7 +28,11 @@ test("FE-04: 応答の届かなかった支払いの記録は同じ内容で確�
     await route.abort("failed");
   });
 
-  // 支払いを記録 → 入力して保存（応答は捨てられる）。
+  // ホームから支払いを記録 → 入力して保存（応答は捨てられる）。
+  await page
+    .getByRole("navigation", { name: "タブ" })
+    .getByRole("link", { name: "ホーム" })
+    .click();
   await page.getByRole("link", { name: "支払いを記録" }).click();
   const sheet = page.getByRole("dialog", { name: "支払いを記録" });
   await expect(sheet.getByLabel("金額")).toBeVisible();

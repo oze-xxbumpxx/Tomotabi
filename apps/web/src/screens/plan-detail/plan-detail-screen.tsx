@@ -442,7 +442,7 @@ export function PlanDetailScreen({
           disabled: bookBlocked || !online,
           describedBy: bookNoteId,
         }
-      : undefined;
+      : null;
 
   const openLayer = (next: Layer) => {
     // 前回の拒否・競合は開き直したときに持ち越さない（結果不明は残す）。

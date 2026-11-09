@@ -48,10 +48,18 @@ async function addPlan(page: Page, plan: PlanInput): Promise<void> {
 }
 
 /**
- * 「支払いを記録」を開き、入力して保存し、しおりへ戻るところまで進める
+ * ホームから「支払いを記録」を開き、入力して保存し、しおりへ戻るところまで進める
  * （payment-and-settlement.spec.tsのrecordPaymentと同じ作り方）。
  */
 async function recordPayment(page: Page, input: PaymentInput): Promise<void> {
+  // 主ボタン「支払いを記録」はホームと履歴にだけ出るので、ホームから開く。
+  // いまホームにいるときはタブがリンクでないため、押さずに進む。
+  const homeTab = page
+    .getByRole("navigation", { name: "タブ" })
+    .getByRole("link", { name: "ホーム" });
+  if ((await homeTab.count()) > 0) {
+    await homeTab.click();
+  }
   await page.getByRole("link", { name: "支払いを記録" }).click();
   const sheet = page.getByRole("dialog", { name: "支払いを記録" });
   await expect(sheet.getByLabel("金額")).toBeVisible();
@@ -141,8 +149,8 @@ test("RE-01: ホームから達成を付け、記録で取り消して付け直�
   await expect(
     page.getByRole("status").filter({ hasText: "達成を記録しました" }),
   ).toBeVisible();
-  // 達成が付くと主ボタンは「支払いを記録」に戻る（もう付けられない）。
-  await expect(page.locator(".main-action")).toContainText("支払いを記録");
+  // 達成が付くと主ボタンは消える（もう付けられない）。
+  await expect(page.locator(".main-action")).toHaveCount(0);
 
   // 記録の一覧 → 達成の行を押す → 小さな詳細 → 取り消す → 確認。
   await openTab(page, "履歴");
@@ -191,7 +199,7 @@ test("RE-01: ホームから達成を付け、記録で取り消して付け直�
   await expect(
     page.getByRole("status").filter({ hasText: "達成を記録しました" }),
   ).toBeVisible();
-  await expect(page.locator(".main-action")).toContainText("支払いを記録");
+  await expect(page.locator(".main-action")).toHaveCount(0);
   await expect(
     page.locator(".plan-record-label").filter({ hasText: "達成" }),
   ).toBeVisible();

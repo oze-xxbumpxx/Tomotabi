@@ -256,7 +256,7 @@ export function TodoDetailScreen({
   const participants = balance.data?.participants;
   const isDone = todo.doneAt !== null;
   const mainAction = isDone
-    ? undefined
+    ? null
     : {
         label: "予定にする",
         icon: <CalendarPlus size={20} weight="fill" aria-hidden="true" />,

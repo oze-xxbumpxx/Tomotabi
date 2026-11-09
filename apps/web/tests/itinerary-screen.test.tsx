@@ -210,7 +210,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("10/12(月) – 10/14(水)")).toBeInTheDocument();
     expect(screen.getByText("出発前")).toBeInTheDocument();
-    // 下部タブは4つと「支払いを記録」。「しおり」にだけ aria-current。
+    // 下部タブの「しおり」にだけ aria-current。主ボタン「支払いを記録」は出さない。
     const nav = screen.getByRole("navigation", { name: "タブ" });
     for (const [label, href] of [
       ["ホーム", `/trips/${tripId}/home`],
@@ -226,9 +226,7 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent(
       "しおり",
     );
-    expect(
-      screen.getByRole("link", { name: "支払いを記録" }),
-    ).toHaveAttribute("href", `/trips/${tripId}/payments/new`);
+    expect(screen.queryByRole("link", { name: "支払いを記録" })).toBeNull();
     await waitFor(() =>
       expect(window.localStorage.getItem(selectedKey)).toBe(tripId),
     );

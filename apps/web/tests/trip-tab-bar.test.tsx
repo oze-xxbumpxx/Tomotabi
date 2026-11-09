@@ -99,16 +99,17 @@ describe("action={null}（しおり・ToDo・精算は主ボタンを出さな�
     expect(screen.queryByText("支払いを記録")).toBeNull();
   });
 
-  it("画面が指定した主ボタンには quiet を付けても形を変えない", () => {
+  it("画面が指定した主ボタンだけを出し、「支払いを記録」は並べない", () => {
     render(
       <TripTabBar
         tripId={tripId}
         current="itinerary"
-        quiet
         action={{ label: "達成を記録", icon: null, onPress: () => {} }}
       />,
     );
-    const action = screen.getByRole("button", { name: "達成を記録" });
-    expect(action).not.toHaveClass("main-action-quiet");
+    expect(
+      screen.getByRole("button", { name: "達成を記録" }),
+    ).toHaveClass("main-action");
+    expect(screen.queryByText("支払いを記録")).toBeNull();
   });
 });

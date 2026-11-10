@@ -36,6 +36,7 @@ export function CancelPlanDialog({
   version,
   cancel,
   cancelPending,
+  onReload,
   onClose,
   onSessionExpired,
   onNotAvailable,
@@ -45,6 +46,11 @@ export function CancelPlanDialog({
   cancel: PlanSave;
   /** 「予定の取りやめ」の保留の照合結果（再読み込みつき）。 */
   cancelPending: { check: PendingRequestCheck; reload: () => void };
+  /**
+   * 取りやめが版の古さ（428）で拒否されたときの「もう一度読み込む」。
+   * 画面のデータを読み直す（TanStack Queryのrefetch）。
+   */
+  onReload: () => Promise<void>;
   onClose: () => void;
   onSessionExpired: (unconfirmed: boolean) => void;
   /** 書き込みが403 / 404で拒否（C-2）。呼び出し側が全面を差し替える。 */
@@ -148,11 +154,22 @@ export function CancelPlanDialog({
           {state.status === "rejected" && (
             <StatusText tone="error">
               {state.httpStatus === 428
-                ? "画面を更新してからやり直してください"
+                ? "最新の内容を読み込めませんでした。"
                 : state.code === "PLAN_CANCELLED"
                   ? "予定の状態が変わっています。閉じて開き直してください。"
                   : "取りやめにできませんでした。もう一度お試しください。"}
             </StatusText>
+          )}
+          {state.status === "rejected" && state.httpStatus === 428 && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                void onReload().then(() => cancel.backToEditing());
+              }}
+            >
+              もう一度読み込む
+            </button>
           )}
           <div className="dialog-actions">
             <button

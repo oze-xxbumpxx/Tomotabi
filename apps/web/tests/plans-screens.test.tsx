@@ -1803,7 +1803,7 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     await clickWhenEnabled("保存");
 
     expect(
-      await screen.findByText("画面を更新してからやり直してください"),
+      await screen.findByText("最新の内容を読み込めませんでした。"),
     ).toBeInTheDocument();
     // 欄を変えても送り直せない（版が古い）。
     fireEvent.change(nameInput, { target: { value: "もう一度直す" } });
@@ -1811,11 +1811,19 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
       screen.getByRole("button", { name: "保存" }),
     ).toBeDisabled();
 
-    // 最新を取り直すと予定を再取得し、新しい版で送れる。
+    // 「もう一度読み込む」と予定を再取得し、欄は読み直した内容に戻る。
     await userEvent.click(
-      screen.getByRole("button", { name: "最新を取り直す" }),
+      screen.getByRole("button", { name: "もう一度読み込む" }),
     );
     await waitFor(() => expect(planCalls).toBeGreaterThanOrEqual(2));
+    await waitFor(() =>
+      expect(screen.getByLabelText("名前")).toHaveValue("錦市場で昼食"),
+    );
+
+    // もう一度直して保存すると、新しい版で送れる。
+    fireEvent.change(screen.getByLabelText("名前"), {
+      target: { value: "直した名前" },
+    });
     const submit = await screen.findByRole("button", { name: "保存" });
     await waitFor(() => expect(submit).toBeEnabled());
     await userEvent.click(submit);
@@ -2027,6 +2035,21 @@ describe("「今 · 次まで」の線と次の予定・「あと N」（08・09
     { label: "別の日", overrides: { date: "2026-10-14" } },
     { label: "今日の過ぎた時刻", overrides: { time: "09:00" } },
     { label: "時刻未定", overrides: { time: null } },
+    {
+      label: "達成の記録がある",
+      overrides: {
+        time: "12:00",
+        achievement: {
+          id: eventId2,
+          tripId,
+          planId,
+          kind: "achievement",
+          createdBy: userId,
+          createdAt: "2026-10-13T11:00:00.000Z",
+          cancellation: null,
+        },
+      },
+    },
   ])(
     "詳細（09）: $label なら「あと N」を出さない",
     async ({ overrides }) => {

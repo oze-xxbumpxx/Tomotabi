@@ -59,20 +59,35 @@ function MenuItem({ icon, label, note, disabled, onClick }: MenuItemProps) {
   );
 }
 
-function StartStateBlock({ start }: { start: TripSave }) {
+function StartStateBlock({
+  start,
+  onReload,
+}: {
+  start: TripSave;
+  onReload: () => Promise<void>;
+}) {
   const state = start.state;
   switch (state.status) {
     case "saving":
       return <StatusText>開始しています</StatusText>;
     case "rejected":
-      // 拒否のあとは同じ版で再送しない。閉じると最新を取り直す。
+      // 拒否のあとは同じ版で再送しない。読み直した最新の版で送り直す。
       return (
         <div className="menu-status">
           <StatusText tone="error">
             {state.httpStatus === 428
-              ? "画面を更新してからやり直してください"
-              : "開始できませんでした。画面を更新してやり直してください。"}
+              ? "最新の内容を読み込めませんでした。"
+              : "開始できませんでした。"}
           </StatusText>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              void onReload().then(() => start.backToEditing());
+            }}
+          >
+            もう一度読み込む
+          </button>
         </div>
       );
     case "unknown":
@@ -140,9 +155,11 @@ function StartConflict({ start }: { start: TripSave }) {
 export function TripMenu({
   trip,
   version,
+  today,
   displayName,
   start,
   startPending,
+  onReload,
   onEdit,
   onRequestFinish,
   onSwitch,
@@ -153,10 +170,17 @@ export function TripMenu({
 }: {
   trip: Trip;
   version: string;
+  /** 日本時間の今日（`YYYY-MM-DD`）。状態の印の「開始待ち」の判定に使う。 */
+  today: string | null;
   displayName: string | null;
   start: TripSave;
   /** 「旅行を開始する」の保留の照合結果（再読み込みつき）。 */
   startPending: { check: PendingRequestCheck; reload: () => void };
+  /**
+   * 開始が拒否されたときの「もう一度読み込む」。画面のデータを
+   * 読み直す（TanStack Queryのrefetch）。終わると版が新しくなる。
+   */
+  onReload: () => Promise<void>;
   onEdit: () => void;
   onRequestFinish: () => void;
   onSwitch: () => void;
@@ -178,7 +202,11 @@ export function TripMenu({
         <span className="trip-header-period tabular-nums">
           {formatTripPeriod(trip.startsOn, trip.endsOn)}
         </span>
-        <TripStatusBadge status={trip.status} />
+        <TripStatusBadge
+          status={trip.status}
+          startsOn={trip.startsOn}
+          today={today}
+        />
       </div>
       {/* 書き込み中・結果不明は StartStateBlock が確認を出すので、
           保留の確認は編集待ち（editing / succeeded）のあいだだけ出す。 */}
@@ -198,7 +226,7 @@ export function TripMenu({
         <StorageUnavailable />
       )}
       {startInFlight ? (
-        <StartStateBlock start={start} />
+        <StartStateBlock start={start} onReload={onReload} />
       ) : (
         <div className="menu-card">
           <MenuItem

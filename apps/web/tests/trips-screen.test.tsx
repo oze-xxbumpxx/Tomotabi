@@ -5,19 +5,25 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Trip, TripPage } from "@tomotabi/contracts";
 import { createQueryClient } from "@/shared/api/query-client";
 
-const { replaceMock, pushMock } = vi.hoisted(() => ({
+const { replaceMock, pushMock, nowRef } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   pushMock: vi.fn(),
+  nowRef: { value: null as Date | null },
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, push: pushMock }),
+}));
+
+vi.mock("@/shared/lib/use-now", () => ({
+  useNow: () => nowRef.value,
 }));
 
 import { TripsScreen } from "@/screens/trips/trips-screen";
@@ -100,6 +106,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   window.localStorage.clear();
+  nowRef.value = null;
 });
 
 describe("TripsScreen (/trips)", () => {
@@ -251,6 +258,21 @@ describe("TripsScreen (/trips)", () => {
     expect(screen.getByText("旅行はまだありません")).toBeInTheDocument();
   });
 
+  it("見出しは「旅行」。入口の「旅行を切り替え」の名前は変えない", async () => {
+    stubApi({ status: 200, body: meBody }, () =>
+      new Response(JSON.stringify(page([trip()])), { status: 200 }),
+    );
+
+    renderScreen();
+
+    expect(
+      await screen.findByRole("heading", { name: "旅行" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "旅行を切り替え" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("見出しの右に「通知の設定」のリンクがあり /settings/notifications へ行く", async () => {
     stubApi({ status: 200, body: meBody }, () =>
       new Response(JSON.stringify(page([trip()])), { status: 200 }),
@@ -304,5 +326,57 @@ describe("TripsScreen (/trips)", () => {
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith("/sign-in"),
     );
+  });
+});
+
+describe("状態の印（開始していない旅行は今日と開始日で分ける）", () => {
+  // 日本時間のその日の昼を「今日」として渡す。
+  const tokyoNoon = (ymd: string) => new Date(`${ymd}T12:00:00+09:00`);
+
+  function renderPlanning() {
+    stubApi({ status: 200, body: meBody }, () =>
+      new Response(JSON.stringify(page([trip()])), { status: 200 }),
+    );
+    renderScreen();
+    return screen.findByRole("link", { name: /沖縄/ });
+  }
+
+  it("今日が開始日より前なら「出発前」", async () => {
+    nowRef.value = tokyoNoon("2026-10-11");
+    const row = await renderPlanning();
+    expect(await within(row).findByText("出発前")).toBeInTheDocument();
+  });
+
+  it("今日が開始日なら「開始待ち」", async () => {
+    nowRef.value = tokyoNoon("2026-10-12");
+    const row = await renderPlanning();
+    expect(await within(row).findByText("開始待ち")).toBeInTheDocument();
+  });
+
+  it("今日が期間のあとでも、開始していなければ「開始待ち」", async () => {
+    nowRef.value = tokyoNoon("2026-10-15");
+    const row = await renderPlanning();
+    expect(await within(row).findByText("開始待ち")).toBeInTheDocument();
+  });
+
+  it("開始した旅行は「旅行中」のまま", async () => {
+    nowRef.value = tokyoNoon("2026-10-13");
+    stubApi({ status: 200, body: meBody }, () =>
+      new Response(
+        JSON.stringify(
+          page([
+            trip({
+              status: "traveling",
+              startedAt: "2026-10-12T01:00:00.000Z",
+              startedBy: userId,
+            }),
+          ]),
+        ),
+        { status: 200 },
+      ),
+    );
+    renderScreen();
+    const row = await screen.findByRole("link", { name: /沖縄/ });
+    expect(await within(row).findByText("旅行中")).toBeInTheDocument();
   });
 });

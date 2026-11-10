@@ -43,7 +43,7 @@ test("M-03: ログアウトのあと、前回開いた旅行に戻る", async ({
   await page.goto("/");
   await page.waitForURL(/\/trips$/);
   await expect(
-    page.getByRole("heading", { name: "旅行を切り替え" }),
+    page.getByRole("heading", { name: "旅行", exact: true }),
   ).toBeVisible();
 
   // 一覧で1つ目を選ぶ → 1つ目のホーム（旅行一覧からはホームを開く）。

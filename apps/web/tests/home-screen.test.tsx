@@ -454,9 +454,14 @@ describe("HomeScreen (/trips/{id}/home)", () => {
       screen.getByText("3日のうち 過ぎた日 1日 · 今日 · これから 1日", { selector: ".home-bars-caption" }),
     ).toBeInTheDocument();
 
-    // まだ開始していない日は「旅行を開始」への案内（メニューを開く）。
+    // 期間に入って開始していない日は「旅行を開始」への案内（メニューを開く）。
     expect(
-      screen.getByText("この旅行はまだ開始していません"),
+      screen.getByText("旅行の日になりました"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "「旅行を開始する」を押すと、印が「旅行中」に変わります。",
+      ),
     ).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", { name: "旅行を開始する" }),

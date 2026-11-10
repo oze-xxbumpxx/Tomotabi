@@ -345,6 +345,7 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
       <TripMenu
         trip={trip as never}
         version="1"
+        today={null}
         displayName="ひなた"
         start={
           {
@@ -355,6 +356,7 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
           } as never
         }
         startPending={{ check: { status: "none" }, reload: vi.fn() } as never}
+        onReload={async () => {}}
         onEdit={vi.fn()}
         onRequestFinish={vi.fn()}
         onSwitch={vi.fn()}
@@ -417,6 +419,7 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
       <TripMenu
         trip={trip as never}
         version="1"
+        today={null}
         displayName="ひなた"
         start={
           {
@@ -427,6 +430,7 @@ describe("PW-01 旅行のメニューとfromの検証", () => {
           } as never
         }
         startPending={{ check: { status: "none" }, reload: vi.fn() } as never}
+        onReload={async () => {}}
         onEdit={vi.fn()}
         onRequestFinish={vi.fn()}
         onSwitch={vi.fn()}

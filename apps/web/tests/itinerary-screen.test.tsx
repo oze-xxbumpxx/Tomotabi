@@ -23,16 +23,21 @@ import {
   toPendingRequestRecord,
 } from "@/shared/browser/pending-requests";
 
-const { replaceMock, pushMock, signOutMock } = vi.hoisted(() => ({
+const { replaceMock, pushMock, signOutMock, nowRef } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   pushMock: vi.fn(),
   signOutMock: vi.fn(),
+  nowRef: { value: null as Date | null },
 }));
 
 let searchParamsValue = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, push: pushMock }),
   useSearchParams: () => searchParamsValue,
+}));
+
+vi.mock("@/shared/lib/use-now", () => ({
+  useNow: () => nowRef.value,
 }));
 
 vi.mock("@/shared/auth/auth-client", () => ({
@@ -197,11 +202,14 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   window.localStorage.clear();
+  nowRef.value = null;
   await resetDb();
 });
 
 describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
   it("ヘッダーに旅行名・期間・状態を出し、開いた旅行を「前回の旅行」に保存する", async () => {
+    // 旅行の開始日（10/12）より前の「今日」→ 印は「出発前」。
+    nowRef.value = new Date("2026-10-01T00:00:00+09:00");
     stubApi({});
     renderScreen();
 
@@ -620,14 +628,20 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     },
   );
 
-  it("開始が 428 なら古い版で再送せず、閉じると最新を取り直す", async () => {
+  it("開始が 428 なら「もう一度読み込む」で最新を取り直し、新しい版で送れる", async () => {
     let itineraryCalls = 0;
+    let startCalls = 0;
     const fetchMock = stubApi({
       itinerary: () => {
         itineraryCalls += 1;
         return json(itineraryBody(trip({ version: String(itineraryCalls) })));
       },
-      start: () => json({ code: "IF_MATCH_REQUIRED" }, 428),
+      start: () => {
+        startCalls += 1;
+        return startCalls === 1
+          ? json({ code: "IF_MATCH_REQUIRED" }, 428)
+          : json(trip({ status: "traveling", version: "3" }));
+      },
     });
     renderScreen();
 
@@ -638,20 +652,27 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     await clickWhenEnabled("旅行を開始する");
 
     expect(
-      await screen.findByText("画面を更新してからやり直してください"),
+      await screen.findByText("最新の内容を読み込めませんでした。"),
     ).toBeInTheDocument();
     // 古い版のままの再送ボタンは出さない。
     expect(
       screen.queryByRole("button", { name: "やり直す" }),
     ).not.toBeInTheDocument();
 
+    // 「もう一度読み込む」でしおりを取り直すと編集に戻り、
+    // 新しい版で開始を送り直せる。
     await userEvent.click(
-      screen.getByRole("button", { name: "閉じる" }),
+      screen.getByRole("button", { name: "もう一度読み込む" }),
     );
-
     await waitFor(() => expect(itineraryCalls).toBe(2));
+
+    await clickWhenEnabled("旅行を開始する");
+    await waitFor(() => expect(startCalls).toBe(2));
     const writes = writeCalls(fetchMock);
-    expect(writes).toHaveLength(1);
+    expect(writes).toHaveLength(2);
+    expect(
+      new Headers(writes[1][1]?.headers).get("x-expected-version"),
+    ).toBe("2");
   });
 
   it("W-23: 期間が 422 のあと期間だけ直して再保存すると直近の応答の版で送る", async () => {

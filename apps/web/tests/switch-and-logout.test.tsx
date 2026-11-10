@@ -74,6 +74,7 @@ function renderMenu() {
     <TripMenu
       trip={home.trip}
       version="1"
+      today={null}
       displayName="ひなた"
       start={
         {
@@ -84,6 +85,7 @@ function renderMenu() {
         } as never
       }
       startPending={{ check: { status: "none" }, reload: vi.fn() } as never}
+      onReload={async () => {}}
       onEdit={vi.fn()}
       onRequestFinish={vi.fn()}
       onSwitch={vi.fn()}

@@ -64,7 +64,7 @@ function rejectedMessage(
   state: Extract<PaymentSaveState, { status: "rejected" }>,
 ): string | null {
   if (state.httpStatus === 428) {
-    return "画面を更新してからやり直してください";
+    return "最新の内容を読み込めませんでした。";
   }
   switch (state.code) {
     case "VALIDATION_FAILED":
@@ -594,12 +594,19 @@ export function PaymentFormScreen({
             type="button"
             className="btn-secondary"
             onClick={() => {
-              void tripQuery.refetch();
-              void balanceQuery.refetch();
-              save.backToEditing();
+              // 画面が使っている読み込みをやり直してから編集に戻す
+              // （版は取り直したデータのものになる）。
+              const queries: Promise<unknown>[] = [
+                tripQuery.refetch(),
+                balanceQuery.refetch(),
+              ];
+              if (displayPlanId !== null) {
+                queries.push(planQuery.refetch());
+              }
+              void Promise.all(queries).then(() => save.backToEditing());
             }}
           >
-            最新を取り直す
+            もう一度読み込む
           </button>
         )}
         {state.status === "conflict" && (

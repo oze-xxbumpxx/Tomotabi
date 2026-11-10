@@ -8,9 +8,12 @@ import { TripStatusBadge } from "./trip-status-badge";
 /** 旅行ヘッダー（16）：旅行名・期間・状態バッジ、「…」でメニューを開く。 */
 export function TripHeader({
   trip,
+  today,
   onOpenMenu,
 }: {
   trip: Trip;
+  /** 日本時間の今日（`YYYY-MM-DD`）。状態の印の「開始待ち」の判定に使う。 */
+  today: string | null;
   onOpenMenu: () => void;
 }) {
   return (
@@ -23,7 +26,11 @@ export function TripHeader({
         </span>
         <h1 className="trip-header-name">{trip.name}</h1>
       </div>
-      <TripStatusBadge status={trip.status} />
+      <TripStatusBadge
+        status={trip.status}
+        startsOn={trip.startsOn}
+        today={today}
+      />
       <button
         type="button"
         className="icon-button"

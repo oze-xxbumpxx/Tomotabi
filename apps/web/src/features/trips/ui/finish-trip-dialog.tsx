@@ -24,6 +24,7 @@ export function FinishTripDialog({
   version,
   finish,
   finishPending,
+  onReload,
   onClose,
 }: {
   trip: Trip;
@@ -31,6 +32,11 @@ export function FinishTripDialog({
   finish: TripSave;
   /** 「旅行を終了する」の保留の照合結果（再読み込みつき）。 */
   finishPending: { check: PendingRequestCheck; reload: () => void };
+  /**
+   * 終了が版の古さ（428）で拒否されたときの「もう一度読み込む」。
+   * 画面のデータを読み直す（TanStack Queryのrefetch）。
+   */
+  onReload: () => Promise<void>;
   onClose: () => void;
 }) {
   const online = useOnlineStatus();
@@ -113,11 +119,22 @@ export function FinishTripDialog({
             {state.status === "rejected" && (
               <StatusText tone="error">
                 {state.httpStatus === 428
-                  ? "画面を更新してからやり直してください"
+                  ? "最新の内容を読み込めませんでした。"
                   : state.code === "INVALID_TRIP_TRANSITION"
                     ? "旅行の状態が変わっています。閉じて開き直してください。"
                     : "終了できませんでした。もう一度お試しください。"}
               </StatusText>
+            )}
+            {state.status === "rejected" && state.httpStatus === 428 && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  void onReload().then(() => finish.backToEditing());
+                }}
+              >
+                もう一度読み込む
+              </button>
             )}
             <div className="dialog-actions">
               <button
@@ -135,7 +152,9 @@ export function FinishTripDialog({
                 disabled={
                   state.status === "saving" ||
                   !online ||
-                  finishPending.check.status !== "none"
+                  finishPending.check.status !== "none" ||
+                  // 428（版が古い）のときは読み直すまで送らせない。
+                  (state.status === "rejected" && state.httpStatus === 428)
                 }
               >
                 <FlagCheckered size={16} weight="bold" aria-hidden="true" />

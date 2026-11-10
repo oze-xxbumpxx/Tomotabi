@@ -32,7 +32,10 @@ import {
   clearSelectedTripId,
   saveSelectedTripId,
 } from "@/shared/browser/selected-trip-store";
-import { formatLocalDate, tokyoDateOf } from "@/shared/lib/local-date";
+import {
+  formatLocalDate,
+  tokyoDateOf,
+} from "@/shared/lib/local-date";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 import { useNow } from "@/shared/lib/use-now";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
@@ -68,6 +71,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
   const home = useHome(tripId);
   const online = useOnlineStatus();
   const now = useNow();
+  const today = now === null ? null : tokyoDateOf(now);
   const [layer, setLayer] = useState<Layer | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [sheetExpired, setSheetExpired] = useState<boolean | null>(null);
@@ -330,6 +334,14 @@ export function HomeScreen({ tripId }: { tripId: string }) {
   const showSchedule = mode === "before" || mode === "during";
   const showOrder = mode === "completed" || mode === "after_dates";
 
+  // 「もう一度読み込む」: 画面のデータを読み直す。
+  const reloadTrip = async (): Promise<Trip | null> => {
+    return (await home.refetch()).data?.trip ?? null;
+  };
+  const reloadData = async (): Promise<void> => {
+    await home.refetch();
+  };
+
   const openMenu = () => {
     // 前回の拒否・競合は開き直したときに持ち越さない（結果不明は残す）。
     start.backToEditing();
@@ -400,9 +412,9 @@ export function HomeScreen({ tripId }: { tripId: string }) {
       {mode === "during" && data.context.suggestedAction === "start" && (
         <div className="banner banner-info home-banner">
           <span className="banner-text">
-            <span className="banner-title">この旅行はまだ開始していません</span>
+            <span className="banner-title">旅行の日になりました</span>
             <span className="banner-body">
-              旅行を開始すると、記録や精算ができます。
+              「旅行を開始する」を押すと、印が「旅行中」に変わります。
             </span>
             <button
               type="button"
@@ -453,9 +465,11 @@ export function HomeScreen({ tripId }: { tripId: string }) {
         <TripMenu
           trip={trip}
           version={version}
+          today={today}
           displayName={displayName}
           start={start}
           startPending={startCheck}
+          onReload={reloadData}
           onEdit={() => setLayer("edit")}
           onRequestFinish={() => {
             finish.backToEditing();
@@ -479,6 +493,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
           trip={trip}
           version={version}
           userId={userId}
+          onReload={reloadTrip}
           onClose={() => setLayer(null)}
           onSaved={() => {
             setLayer(null);
@@ -500,6 +515,7 @@ export function HomeScreen({ tripId }: { tripId: string }) {
           version={version}
           finish={finish}
           finishPending={finishCheck}
+          onReload={reloadData}
           onClose={() => {
             if (finish.state.status === "rejected") {
               void home.refetch();

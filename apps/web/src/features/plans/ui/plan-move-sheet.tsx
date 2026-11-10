@@ -26,7 +26,7 @@ function isNotAvailableState(state: PlanSaveState): state is RejectedState {
 
 function rejectedMessage(state: RejectedState): string {
   if (state.httpStatus === 428) {
-    return "画面を更新してからやり直してください";
+    return "最新の内容を読み込めませんでした。";
   }
   switch (state.code) {
     case "PLAN_OUTSIDE_TRIP_PERIOD":
@@ -51,6 +51,7 @@ export function PlanMoveSheet({
   version,
   move,
   movePending,
+  onReload,
   onClose,
   onSessionExpired,
   onNotAvailable,
@@ -61,6 +62,11 @@ export function PlanMoveSheet({
   move: PlanSave;
   /** 「日の移動」の保留の照合結果（再読み込みつき）。 */
   movePending: { check: PendingRequestCheck; reload: () => void };
+  /**
+   * 移動が版の古さ（428）で拒否されたときの「もう一度読み込む」。
+   * 予定を読み直し、新しい予定を返す（TanStack Queryのrefetch）。
+   */
+  onReload: () => Promise<Plan | null>;
   onClose: () => void;
   onSessionExpired: (unconfirmed: boolean) => void;
   /** 書き込みが403 / 404で拒否（C-2）。呼び出し側が全面を差し替える。 */
@@ -205,9 +211,17 @@ export function PlanMoveSheet({
             <button
               type="button"
               className="btn-secondary"
-              onClick={onClose}
+              onClick={() => {
+                // 読み直した予定の日付に選択を戻し、版も新しくする。
+                void onReload().then((fresh) => {
+                  if (fresh !== null) {
+                    setSelected(fresh.date);
+                  }
+                  move.backToEditing();
+                });
+              }}
             >
-              閉じて最新を取り直す
+              もう一度読み込む
             </button>
           )}
           <DatePickerGrid

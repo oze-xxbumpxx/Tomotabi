@@ -8,6 +8,8 @@ import { useMe } from "@/features/auth";
 import { TripRow, useTripList } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { loadSelectedTripId } from "@/shared/browser/selected-trip-store";
+import { tokyoDateOf } from "@/shared/lib/local-date";
+import { useNow } from "@/shared/lib/use-now";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
 import { OfflineBanner } from "@/shared/ui/state/offline-banner";
@@ -26,6 +28,8 @@ export function TripsScreen() {
   const { state: meState } = useMe();
   const trips = useTripList();
   const online = useOnlineStatus();
+  const now = useNow();
+  const today = now === null ? null : tokyoDateOf(now);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,7 +65,7 @@ export function TripsScreen() {
   return (
     <main className="trips-page">
       <div className="trips-head">
-        <h1 className="page-title">旅行を切り替え</h1>
+        <h1 className="page-title">旅行</h1>
         <Link href="/settings/notifications" className="trips-notify-link">
           <Bell size={16} weight="bold" aria-hidden="true" />
           通知の設定
@@ -112,6 +116,7 @@ export function TripsScreen() {
                 key={trip.id}
                 trip={trip}
                 selected={trip.id === selectedId}
+                today={today}
               />
             ))}
           </div>

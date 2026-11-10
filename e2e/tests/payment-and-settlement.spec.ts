@@ -183,3 +183,38 @@ test("FE-03: 確認を作ったあとの支払いは確認の金額を変えな�
   await expect(page.locator(".settle-amount")).toHaveText("1,500 円");
   await expect(page.getByText("カフェ")).toBeVisible();
 });
+
+// #336: 旅行を手で開始しなくても、期間に入れば支払いを記録できる。
+// 開始日が今日の計画中の旅行で、ホームの知らせ・印・記録までを確かめる。
+test("開始の前（期間中）でも支払いを記録できる", async ({
+  hinataPage: page,
+}) => {
+  const tripId = await createTrip(page, {
+    name: "屋久島 2 泊",
+    startsOn: daysFromToday(0),
+    endsOn: daysFromToday(2),
+  });
+
+  // しおりの印は「開始待ち」（開始日が来たが、まだ開始していない）。
+  await expect(
+    page.getByText("開始待ち", { exact: true }),
+  ).toBeVisible();
+
+  // ホームには「旅行を開始する」への案内が出る。
+  await page
+    .getByRole("navigation", { name: "タブ" })
+    .getByRole("link", { name: "ホーム" })
+    .click();
+  await page.waitForURL(new RegExp(`/trips/${tripId}/home$`));
+  await expect(page.getByText("旅行の日になりました")).toBeVisible();
+
+  // 開始の前でも支払いを記録して保存できる。
+  await recordPayment(page, { amount: "1200", label: "バス代" });
+
+  // 履歴に出る。
+  await page
+    .getByRole("navigation", { name: "タブ" })
+    .getByRole("link", { name: "履歴" })
+    .click();
+  await expect(page.getByText("バス代")).toBeVisible();
+});

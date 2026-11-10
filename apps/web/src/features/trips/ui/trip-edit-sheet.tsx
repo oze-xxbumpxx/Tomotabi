@@ -40,7 +40,7 @@ function isNotAvailableState(state: TripSaveState): state is RejectedState {
 
 function nameError(state: RejectedState): string {
   if (state.httpStatus === 428) {
-    return "画面を更新してからやり直してください";
+    return "最新の内容を読み込めませんでした。";
   }
   return state.code === "VALIDATION_FAILED"
     ? "旅行名を確認してください"
@@ -49,7 +49,7 @@ function nameError(state: RejectedState): string {
 
 function periodError(state: RejectedState): string {
   if (state.httpStatus === 428) {
-    return "画面を更新してからやり直してください";
+    return "最新の内容を読み込めませんでした。";
   }
   switch (state.code) {
     case "PLAN_OUTSIDE_TRIP_PERIOD":
@@ -85,6 +85,7 @@ export function TripEditSheet({
   trip,
   version,
   userId,
+  onReload,
   onClose,
   onSaved,
   onSessionExpired,
@@ -94,6 +95,11 @@ export function TripEditSheet({
   version: string;
   /** 保留の照合に使う利用者のID（呼び出し側の`useMe`）。 */
   userId: string | null;
+  /**
+   * 版の古さ（428）で拒否されたときの「もう一度読み込む」。
+   * 画面のデータを読み直し、新しい旅行を返す（TanStack Queryのrefetch）。
+   */
+  onReload: () => Promise<Trip | null>;
   onClose: () => void;
   /** 必要な送信がすべて成功したとき。呼び出し側はシートを閉じてトーストを出す。 */
   onSaved: () => void;
@@ -190,18 +196,50 @@ export function TripEditSheet({
     }
   }, [rename.state, period.state, onSessionExpired, onNotAvailable]);
 
+  // 428（版が古い）の拒否は、最新を読み直すまで編集に戻さない
+  // （読み直す前の版で送り直させない。予定のフォームと同じ考え方）。
+  const staleVersion = (state: TripSaveState) =>
+    state.status === "rejected" && state.httpStatus === 428;
+
   const onChange = (field: TripFormField, value: string) => {
     if (field === "name") {
       setName(value);
-      rename.backToEditing();
+      if (!staleVersion(rename.state)) {
+        rename.backToEditing();
+      }
     } else if (field === "startsOn") {
       setStartsOn(value);
-      period.backToEditing();
+      if (!staleVersion(period.state)) {
+        period.backToEditing();
+      }
     } else {
       setEndsOn(value);
-      period.backToEditing();
+      if (!staleVersion(period.state)) {
+        period.backToEditing();
+      }
     }
     setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  // 「もう一度読み込む」: 旅行を読み直し、欄・保存済みの基準・版を
+  // 新しい内容に置き換えてから編集に戻す。
+  const reload = () => {
+    void onReload().then((fresh) => {
+      if (fresh !== null) {
+        setName(fresh.name);
+        setStartsOn(fresh.startsOn);
+        setEndsOn(fresh.endsOn);
+        savedRef.current = {
+          name: fresh.name,
+          startsOn: fresh.startsOn,
+          endsOn: fresh.endsOn,
+        };
+        versionRef.current = fresh.version;
+        setErrors({});
+      }
+      rename.backToEditing();
+      period.backToEditing();
+    });
   };
 
   const save = () => {
@@ -249,6 +287,8 @@ export function TripEditSheet({
     periodCheck.check.status === "unavailable";
   const saving =
     rename.state.status === "saving" || period.state.status === "saving";
+  const staleRejected =
+    staleVersion(rename.state) || staleVersion(period.state);
 
   const displayErrors: TripFormErrors = {
     name:
@@ -311,7 +351,9 @@ export function TripEditSheet({
                 saving ||
                 !online ||
                 renameCheck.check.status !== "none" ||
-                periodCheck.check.status !== "none"
+                periodCheck.check.status !== "none" ||
+                // 428（版が古い）のときは読み直すまで送らせない。
+                staleRejected
               }
             >
               {saving ? (
@@ -394,6 +436,15 @@ export function TripEditSheet({
           )))}
       {conflictSave === undefined && (
         <>
+          {staleRejected && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={reload}
+            >
+              もう一度読み込む
+            </button>
+          )}
           <TripFormFields
             values={{ name, startsOn, endsOn }}
             errors={displayErrors}

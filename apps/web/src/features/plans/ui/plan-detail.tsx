@@ -46,8 +46,12 @@ export function PlanDetailBody({
     cancelled ||
     plan.memo !== null;
   // 今日の今以降の予定なら、時刻の横に「あとN」（v3 09）。
+  // 達成を記録した予定・取りやめた予定には出さない（#336）。
   const now = useNow();
-  const remaining = now !== null ? minutesUntilPlan(plan, now) : null;
+  const remaining =
+    now !== null && plan.achievement === null
+      ? minutesUntilPlan(plan, now)
+      : null;
   return (
     <>
       <div className="plan-detail-head">

@@ -1,0 +1,32 @@
+{
+  "feature": "natural-wording",
+  "title": "画面の言葉と表示を、使う人の言い方に直す",
+  "level": "L2",
+  "page": "https://claude.ai/artifact/LHveSuV4u91pZUKjUqhf3z",
+  "round": 1,
+  "stages": {
+    "requirements": {
+      "state": "skipped",
+      "reason": "L2なので要件定義書は作らない"
+    },
+    "design": {
+      "state": "waiting"
+    },
+    "plan": {
+      "state": "pending"
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-11-10T03:45:23.243Z"
+}

@@ -675,6 +675,146 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     ).toBe("2");
   });
 
+  it("終了が 428 なら「もう一度読み込む」で最新を取り直し、新しい版で送れる", async () => {
+    let itineraryCalls = 0;
+    let finishCalls = 0;
+    const fetchMock = stubApi({
+      itinerary: () => {
+        itineraryCalls += 1;
+        return json(
+          itineraryBody(
+            trip({
+              status: "traveling",
+              startedAt: "2026-10-12T01:00:00.000Z",
+              version: String(itineraryCalls),
+            }),
+          ),
+        );
+      },
+      finish: () => {
+        finishCalls += 1;
+        return finishCalls === 1
+          ? json({ code: "IF_MATCH_REQUIRED" }, 428)
+          : json(
+              trip({
+                status: "finished",
+                version: "3",
+                startedAt: "2026-10-12T01:00:00.000Z",
+                finishedAt: "2026-10-14T09:00:00.000Z",
+                startedBy: userId,
+                finishedBy: userId,
+              }),
+            );
+      },
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /旅行を終了する/ }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "旅行を終了しますか？" }),
+    ).toBeInTheDocument();
+    await clickWhenEnabled("終了する");
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    // 428のあとは読み直すまで送れない。
+    expect(screen.getByRole("button", { name: "終了する" })).toBeDisabled();
+
+    // 「もう一度読み込む」でしおりを取り直すと編集に戻り、
+    // 新しい版で終了を送り直せる。
+    await userEvent.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(itineraryCalls).toBe(2));
+
+    await clickWhenEnabled("終了する");
+    await waitFor(() => expect(finishCalls).toBe(2));
+    const finishes = writeCalls(fetchMock).filter(
+      ([url]) => url === `/api/trips/${tripId}/finish`,
+    );
+    expect(finishes).toHaveLength(2);
+    expect(
+      new Headers(finishes[1][1]?.headers).get("x-expected-version"),
+    ).toBe("2");
+  });
+
+  it("旅行名と期間の変更が 428 なら「もう一度読み込む」で欄を読み直し、新しい版で送れる", async () => {
+    let itineraryCalls = 0;
+    let renameCalls = 0;
+    const fetchMock = stubApi({
+      itinerary: () => {
+        itineraryCalls += 1;
+        return json(
+          itineraryBody(
+            itineraryCalls === 1
+              ? trip()
+              : trip({ name: "石垣島", version: String(itineraryCalls) }),
+          ),
+        );
+      },
+      rename: () => {
+        renameCalls += 1;
+        return renameCalls === 1
+          ? json({ code: "IF_MATCH_REQUIRED" }, 428)
+          : json(trip({ name: "宮古島", version: "3" }));
+      },
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行名と期間を変更" }),
+    );
+
+    fireEvent.change(screen.getByLabelText("旅行名"), {
+      target: { value: "宮古島" },
+    });
+    await clickWhenEnabled("保存");
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    // 428のあとは読み直すまで送れない。
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+
+    // 「もう一度読み込む」でしおりを取り直し、欄は読み直した内容に替わる。
+    await userEvent.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(itineraryCalls).toBe(2));
+    await waitFor(() =>
+      expect(screen.getByLabelText("旅行名")).toHaveValue("石垣島"),
+    );
+
+    // もう一度名前を変えて保存すると、新しい版で送れる。
+    fireEvent.change(screen.getByLabelText("旅行名"), {
+      target: { value: "宮古島" },
+    });
+    const submit = screen.getByRole("button", { name: "保存" });
+    await waitFor(() => expect(submit).toBeEnabled());
+    await userEvent.click(submit);
+
+    await waitFor(() => expect(renameCalls).toBe(2));
+    const patches = writeCalls(fetchMock).filter(
+      ([url, init]) =>
+        url === `/api/trips/${tripId}` && init?.method === "PATCH",
+    );
+    expect(patches).toHaveLength(2);
+    expect(
+      new Headers(patches[1][1]?.headers).get("x-expected-version"),
+    ).toBe("2");
+  });
+
   it("W-23: 期間が 422 のあと期間だけ直して再保存すると直近の応答の版で送る", async () => {
     let periodCalls = 0;
     const fetchMock = stubApi({

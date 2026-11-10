@@ -830,6 +830,141 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
       date: "2026-10-14",
     });
   });
+
+  it("移動が 428 のあとは取り直すまで送れず、取り直すと新しい版で送れる", async () => {
+    let planCalls = 0;
+    let moveCalls = 0;
+    const fetchMock = stubApi({
+      plan: () => {
+        planCalls += 1;
+        return json(
+          planCalls === 1
+            ? plan({ date: "2026-10-13", version: "3" })
+            : plan({ date: "2026-10-13", version: "5" }),
+        );
+      },
+      trip: () => json(trip()),
+      move: () => {
+        moveCalls += 1;
+        return moveCalls === 1
+          ? json({ code: "IF_MATCH_REQUIRED" }, 428)
+          : json(plan({ date: "2026-10-14", version: "6" }));
+      },
+    });
+    renderDetail();
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    await userEvent.click(
+      screen.getByRole("button", { name: /別の日に移す/ }),
+    );
+    await screen.findByRole("heading", { name: "別の日に移す" });
+    await userEvent.click(
+      screen.getByRole("radio", { name: "10/14(水)" }),
+    );
+    await clickWhenEnabled("この日に移動する");
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    // 428のあとは読み直すまで送れない。
+    expect(
+      screen.getByRole("button", { name: "この日に移動する" }),
+    ).toBeDisabled();
+
+    // 「もう一度読み込む」で予定を取り直すと編集に戻る。
+    await userEvent.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(planCalls).toBeGreaterThanOrEqual(2));
+
+    // 選択は読み直した予定の日付に戻るので、別の日を選び直して送れる。
+    await userEvent.click(
+      screen.getByRole("radio", { name: "10/14(水)" }),
+    );
+    const submit = screen.getByRole("button", {
+      name: "この日に移動する",
+    });
+    await waitFor(() => expect(submit).toBeEnabled());
+    await userEvent.click(submit);
+
+    await waitFor(() => expect(moveCalls).toBe(2));
+    const moves = fetchMock.mock.calls.filter(
+      ([url]) => String(url) === `/api/trips/${tripId}/plans/${planId}/move`,
+    );
+    expect(moves).toHaveLength(2);
+    expect(
+      new Headers(moves[1][1]?.headers).get("x-expected-version"),
+    ).toBe("5");
+  });
+
+  it("取りやめが 428 のあとは取り直すまで送れず、取り直すと新しい版で送れる", async () => {
+    let planCalls = 0;
+    let cancelCalls = 0;
+    const fetchMock = stubApi({
+      plan: () => {
+        planCalls += 1;
+        return json(
+          planCalls === 1
+            ? plan({ version: "3" })
+            : plan({ version: "5" }),
+        );
+      },
+      cancel: () => {
+        cancelCalls += 1;
+        return cancelCalls === 1
+          ? json({ code: "IF_MATCH_REQUIRED" }, 428)
+          : json(
+              plan({
+                cancelledAt: "2026-10-13T18:00:00.000Z",
+                cancelledBy: userId,
+                version: "6",
+              }),
+            );
+      },
+    });
+    renderDetail();
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "取りやめにする" }),
+    );
+    const dialog = document.querySelector("dialog");
+    expect(dialog).not.toBeNull();
+    const dialogEl = within(dialog as HTMLElement);
+    const confirm = dialogEl.getByRole("button", {
+      name: "取りやめにする",
+    });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    await userEvent.click(confirm);
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    // 428のあとは読み直すまで送れない。
+    expect(confirm).toBeDisabled();
+
+    // 「もう一度読み込む」で予定を取り直すと編集に戻る。
+    await userEvent.click(
+      dialogEl.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(planCalls).toBeGreaterThanOrEqual(2));
+
+    const confirmAgain = dialogEl.getByRole("button", {
+      name: "取りやめにする",
+    });
+    await waitFor(() => expect(confirmAgain).toBeEnabled());
+    await userEvent.click(confirmAgain);
+
+    await waitFor(() => expect(cancelCalls).toBe(2));
+    const cancels = fetchMock.mock.calls.filter(
+      ([url]) =>
+        String(url) === `/api/trips/${tripId}/plans/${planId}/cancel`,
+    );
+    expect(cancels).toHaveLength(2);
+    expect(
+      new Headers(cancels[1][1]?.headers).get("x-expected-version"),
+    ).toBe("5");
+  });
 });
 
 describe("PlanFormScreen（追加 /trips/{id}/plans/new）", () => {

@@ -60,7 +60,7 @@ effortは、表示の条件や部品の組み替えがあるタスクをhigh、�
 - [ ] 予定の詳細（`screens/plan-detail/plan-detail-screen.tsx`）で、達成があるときは主ボタンを出さない。予約のボタンは、画面の中の白いボタンとして残す。主ボタンの決め方は設計書の「データフロー」の図のとおりにする。
 - [ ] 予定の詳細の残り時間（`features/plans/ui/plan-detail.tsx`）を、達成があるときと取りやめのときは出さない。
 - [ ] 旅行の一覧（`screens/trips/trips-screen.tsx`）の見出しを「旅行」にする。旅行のメニューの「旅行を切り替え」とホームの「切り替え」は変えない。
-- [ ] 「画面を更新してからやり直してください」を出している所（`plan-move-sheet.tsx`、`cancel-plan-dialog.tsx`、`finish-trip-dialog.tsx`、`trip-menu.tsx`、`trip-edit-sheet.tsx`、`payment-form-screen.tsx`、`plan-form-screen.tsx`）を、「最新の内容を読み込めませんでした。」と「もう一度読み込む」のボタンにする。ボタンは、その画面が使っている読み込み（TanStack Queryの`refetch`）を呼ぶ。
+- [ ] 「画面を更新してからやり直してください」を出している所（`plan-move-sheet.tsx`、`cancel-plan-dialog.tsx`、`finish-trip-dialog.tsx`、`trip-menu.tsx`、`trip-edit-sheet.tsx`、`payment-form-screen.tsx`、`plan-form-screen.tsx`）を、「最新の内容を読み込めませんでした。」と「もう一度読み込む」のボタンにする。ボタンは、その画面が使っている読み込み（TanStack Queryの`refetch`）を呼んだうえで、書き込みの拒否の状態（`rejected`）を解き、送るときに使う版（`trip-edit-sheet.tsx`の`versionRef`など）と入力の初期値を、読み直した内容に替える。`refetch`だけでは、拒否の状態と古い版が残って保存のボタンが押せないままになる（`plan-move-sheet.tsx`と`cancel-plan-dialog.tsx`は`rejected`のあいだボタンを無効にしている）。
 - [ ] 開始の前でも支払いを記録できることを、ブラウザの試験で1本確かめる。もし断られたら、知らせの本文を「「旅行を開始する」を押すと、支払いを記録できます。」にして、PRの説明に書く。
 - [ ] 変えた画面（ホームの知らせ、印、予定の詳細、旅行の一覧、読み直しのボタン）をスマートフォンの幅で撮り、PRの説明に載せる。
 
@@ -197,7 +197,9 @@ effortは、表示の条件や部品の組み替えがあるタスクをhigh、�
 
 - [ ] `apps/web/src/features/records/model/achievement-word.ts`を作り、予定の種類から言葉を返す関数を置く。場所は「行った」、食べ処は「食べた」、買い物は「買った」、種類がわからないときは「済んだ」。
 - [ ] 達成のボタン、印（しおり・ホーム・予定の詳細）、確かめ、履歴の行を、その関数の言葉にする。人の名前つきの印は「行った・ひなた」の形にする。
-- [ ] 履歴の行とホームの最近の履歴は、すでに読んでいる予定（`records-screen.tsx`の`usePlan`）から種類を取る。予定が読めないあいだは「済んだ」と出す。新しい読み込みは足さない。
+- [ ] 履歴の行は、すでに読んでいる予定（`records-screen.tsx`の`usePlan`）から種類を取る。
+- [ ] ホームの最近の履歴は、日程欄のデータと、日程欄に無い予定を補う`usePlanNames`（`features/plans/model/plan-queries.ts`）から種類を取る。`usePlanNames`は今は名前だけを返すので、同じ読み込みの結果から名前と種類を返すように変える（呼び出し側も直す）。
+- [ ] どちらも、予定が読めないあいだは「済んだ」と出す。新しい読み込みは足さない。
 - [ ] 履歴の絞り込みの「達成」を「済んだ予定」にする（`record-filters.tsx`）。
 - [ ] 達成のあとの知らせを「記録しました」にする。
 - [ ] 予約のボタンを「予約済みにする」、印を「予約済み」、確かめを設計書の表のとおりにする。

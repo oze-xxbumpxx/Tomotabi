@@ -85,45 +85,40 @@ describe("TripTabBar（RW-01: 共通の下のタブ）", () => {
   });
 });
 
-describe("quiet（精算の「支払いを記録」を脇の操作の見た目にする）", () => {
-  it("quiet なら主ボタンに main-action-quiet が付き、行き先は変わらない", () => {
-    render(<TripTabBar tripId={tripId} current="settlement" quiet />);
-    const action = screen.getByRole("link", { name: "支払いを記録" });
-    expect(action).toHaveClass("main-action-quiet");
-    expect(action).toHaveAttribute(
-      "href",
-      `/trips/${tripId}/payments/new`,
-    );
+describe("「支払いを記録」は、開いた画面を back で渡す", () => {
+  it.each(["home", "records"] as const)("%s から開くと ?back=%s が付く", (current) => {
+    render(<TripTabBar tripId={tripId} current={current} />);
+    expect(
+      screen.getByRole("link", { name: "支払いを記録" }),
+    ).toHaveAttribute("href", `/trips/${tripId}/payments/new?back=${current}`);
+  });
+});
+
+describe("action={null}（しおり・ToDo・精算は主ボタンを出さない）", () => {
+  it("主ボタンを出さず、タブは5つのまま", () => {
+    render(<TripTabBar tripId={tripId} current="settlement" action={null} />);
+    expect(screen.queryByText("支払いを記録")).toBeNull();
+    const nav = screen.getByRole("navigation", { name: "タブ" });
+    expect(within(nav).getAllByRole("link")).toHaveLength(4);
   });
 
-  it("quiet を渡さない画面（ホーム）の主ボタンは main-action-quiet を持たない", () => {
-    render(<TripTabBar tripId={tripId} current="home" />);
-    const action = screen.getByRole("link", { name: "支払いを記録" });
-    expect(action).toHaveClass("main-action");
-    expect(action).not.toHaveClass("main-action-quiet");
-  });
-
-  it("オフラインでも quiet なら押せない見た目に main-action-quiet が付く", () => {
+  it("オフラインでも主ボタンを出さない", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
-    render(<TripTabBar tripId={tripId} current="settlement" quiet />);
-    const action = screen
-      .getByText("支払いを記録")
-      .closest("[aria-disabled]");
-    expect(action).toHaveAttribute("aria-disabled", "true");
-    expect(action).toHaveClass("main-action-quiet");
-    expect(action).toHaveClass("main-action-offline");
+    render(<TripTabBar tripId={tripId} current="itinerary" action={null} />);
+    expect(screen.queryByText("支払いを記録")).toBeNull();
   });
 
-  it("画面が指定した主ボタンには quiet を付けても形を変えない", () => {
+  it("画面が指定した主ボタンだけを出し、「支払いを記録」は並べない", () => {
     render(
       <TripTabBar
         tripId={tripId}
         current="itinerary"
-        quiet
         action={{ label: "達成を記録", icon: null, onPress: () => {} }}
       />,
     );
-    const action = screen.getByRole("button", { name: "達成を記録" });
-    expect(action).not.toHaveClass("main-action-quiet");
+    expect(
+      screen.getByRole("button", { name: "達成を記録" }),
+    ).toHaveClass("main-action");
+    expect(screen.queryByText("支払いを記録")).toBeNull();
   });
 });

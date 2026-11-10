@@ -36,7 +36,7 @@ export function TransferCard({
       <section className="settle-card">
         <p className="settle-empty-title">現在、精算する対象はありません</p>
         <p className="settle-empty-body">
-          支払いを記録すると、ここに受け渡しの額が出ます。
+          ホームか履歴で支払いを記録すると、ここに受け渡しの額が出ます。
         </p>
       </section>
     );

@@ -383,16 +383,14 @@ describe("ToDoのリスト", () => {
     expect(screen.getByRole("button", { name: "追加する" })).toBeDisabled();
   });
 
-  it("下のタブは5つで、ToDoが今のタブ。主ボタンは「支払いを記録」（F-13）", async () => {
+  it("下のタブは5つで、ToDoが今のタブ。主ボタン「支払いを記録」は出さない", async () => {
     stubApi({ todos: () => [] });
     renderScreen(<TodosScreen tripId={tripId} />);
     const nav = await screen.findByRole("navigation", { name: "タブ" });
     expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent(
       "ToDo",
     );
-    expect(
-      screen.getByRole("link", { name: "支払いを記録" }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "支払いを記録" })).toBeNull();
   });
 });
 
@@ -408,7 +406,7 @@ describe("ToDoの詳細", () => {
     );
   });
 
-  it("完了なら主ボタンは「支払いを記録」に戻る", async () => {
+  it("完了なら主ボタンを出さない", async () => {
     stubApi({
       todos: () => [
         todo({ doneAt: "2026-11-08T05:00:00.000Z", doneBy: userId }),
@@ -419,9 +417,7 @@ describe("ToDoの詳細", () => {
       await screen.findByRole("button", { name: "未完了に戻す" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "予定にする" })).toBeNull();
-    expect(
-      screen.getByRole("link", { name: "支払いを記録" }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "支払いを記録" })).toBeNull();
   });
 
   it("「変更を保存」は変えた項目だけを版つきで送る（F-06）", async () => {

@@ -15,11 +15,13 @@ import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 
 /**
  * 旅行の中の主な画面に出す共通の下のタブ（v3のタブ）。
- * ホーム・しおり・記録・精算の4つのタブと「支払いを記録」を1つにまとめる
- * （F-55・設計書「共通の下のタブ」）。ホームと記録の画面はまだ無いが、
- * リンクだけ置く。ホームから「支払いを記録」を開くときは関連する予定を
- * 選ばない（F-49。`/payments/new`には`planId`を付けない）。
- * オフラインのあいだは「支払いを記録」を押せない見た目にする（C-3）。
+ * ホーム・しおり・ToDo・履歴・精算の5つのタブと、その上の主ボタンを1つにまとめる
+ * （F-55・設計書「共通の下のタブ」）。主ボタン「支払いを記録」を出すのは
+ * ホームと履歴（支払いの詳細を含む）だけで、しおり・ToDo・精算は`action={null}`で
+ * 出さない（2026-11-09 ユーザーの判断。どの画面にも出ているのは違和感がある）。
+ * 「支払いを記録」は関連する予定を選ばずに開く
+ * （F-49。`/payments/new`には`planId`を付けず、開いた画面を`back`で渡す）。
+ * オフラインのあいだは主ボタンを押せない見た目にする（C-3）。
  */
 export type TripTab = "home" | "itinerary" | "todos" | "records" | "settlement";
 
@@ -80,28 +82,21 @@ export function TripTabBar({
   tripId,
   current,
   action,
-  quiet = false,
 }: {
   tripId: string;
   /** 今の画面のタブ。`aria-current="page"`の印を付ける。 */
   current: TripTab;
   /**
    * 画面から差し替える主ボタン。省略時は「支払いを記録」。
-   * `null`なら主ボタンを出さない（支払いの詳細のように、画面の中に
-   * 同じ意味の操作があり、並べると重なるとき）。
+   * `null`なら主ボタンを出さない（しおり・ToDo・精算の画面と、
+   * 画面の中に同じ意味の操作がある取り消し済みの支払いの詳細）。
    */
   action?: TripMainAction | null;
-  /**
-   * `true`なら既定の主ボタン「支払いを記録」を枠だけの小さな見た目
-   * （`.main-action-quiet`）にする。精算の画面のように、主ボタンが
-   * 脇の操作のときに使う。`action`を指定した画面には付かない。
-   * 行き先と押せる条件（オフラインで押せない）は変わらない。
-   */
-  quiet?: boolean;
 }) {
   const online = useOnlineStatus();
-  // quietは既定の「支払いを記録」にだけ付ける。画面が指定した主ボタンは変えない。
-  const quietClass = quiet && action === undefined ? " main-action-quiet" : "";
+  // 保存したあとと閉じたときに、開いた画面（ホームか履歴）へ戻すための印。
+  const backQuery =
+    current === "home" || current === "records" ? `?back=${current}` : "";
 
   return (
     <>
@@ -119,18 +114,15 @@ export function TripTabBar({
           </button>
         ) : (
           <Link
-            className={`main-action${quietClass}`}
-            href={`/trips/${tripId}/payments/new`}
+            className="main-action"
+            href={`/trips/${tripId}/payments/new${backQuery}`}
           >
             <Plus size={20} weight="bold" aria-hidden="true" />
             支払いを記録
           </Link>
         )
       ) : (
-        <span
-          className={`main-action${quietClass} main-action-offline`}
-          aria-disabled="true"
-        >
+        <span className="main-action main-action-offline" aria-disabled="true">
           <WifiSlash size={18} weight="bold" aria-hidden="true" />
           {action?.label ?? "支払いを記録"}
         </span>

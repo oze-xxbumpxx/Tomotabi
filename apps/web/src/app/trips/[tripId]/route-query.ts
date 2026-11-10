@@ -1,4 +1,5 @@
 import type { ListRecordsType } from "@/features/records";
+import type { PaymentFormBack } from "@/screens/payment-form/payment-form-screen";
 import { parseFocusSettlementId } from "@/screens/settlement/focus-settlement-id";
 import { isLocalDateString } from "@/shared/lib/local-date";
 import { isUuidString } from "@/shared/lib/uuid";
@@ -85,13 +86,19 @@ export function parsePlanDetailQuery(query: QueryReader): { from: string | null 
   return { from: first(query, "from") };
 }
 
-/** 支払いを記録（`?planId=&from=`）。どちらもUUIDの形のときだけ渡す。 */
+/**
+ * 支払いを記録（`?planId=&from=&back=`）。`planId`と`from`はUUIDの形のときだけ渡す。
+ * `back`は開いた画面（`home`か`records`）。それ以外の値は無いものとして扱う。
+ */
 export function parsePaymentNewQuery(query: QueryReader): {
   planId: string | null;
   fromPaymentId: string | null;
+  back: PaymentFormBack | null;
 } {
+  const back = query.getAll("back")[0] ?? null;
   return {
     planId: uuidOf(query.getAll("planId")[0] ?? null),
     fromPaymentId: uuidOf(query.getAll("from")[0] ?? null),
+    back: back === "home" || back === "records" ? back : null,
   };
 }

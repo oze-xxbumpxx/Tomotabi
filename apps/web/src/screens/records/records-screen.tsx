@@ -42,6 +42,7 @@ import { SaveUnknown } from "@/shared/ui/state/save-unknown";
 import { SessionExpired } from "@/shared/ui/state/session-expired";
 import { StorageUnavailable } from "@/shared/ui/state/storage-unavailable";
 import { StatusText } from "@/shared/ui/status-text";
+import { takePendingToast } from "@/shared/lib/pending-toast";
 import { Toast } from "@/shared/ui/toast";
 import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 
@@ -127,6 +128,14 @@ export function RecordsScreen({
   const online = useOnlineStatus();
   const now = useNow();
   const [toast, setToast] = useState<string | null>(null);
+
+  // 別画面での保存成功を遷移先で1回だけ知らせる（履歴から開いた支払いの記録）。
+  useEffect(() => {
+    const pending = takePendingToast();
+    if (pending !== null) {
+      setToast(pending);
+    }
+  }, []);
 
   const userId = meState.status === "ready" ? meState.me.user.id : null;
   const meName =

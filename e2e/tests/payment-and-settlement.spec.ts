@@ -18,14 +18,22 @@ type PaymentInput = {
 };
 
 /**
- * しおりの画面から「支払いを記録」を開き、入力して保存し、
- * しおりへ戻るところまで進める。
+ * ホームから「支払いを記録」を開き、入力して保存し、
+ * ホームへ戻るところまで進める。
  *
  * 「払った人」の選択肢は残額の取得を待ってから出るため、
  * 金額欄だけでなく本人の選択肢が決まるのを待ってから入力する
  * （先に入力すると後から来た選択肢の初期化と競合しうる）。
  */
 async function recordPayment(page: Page, input: PaymentInput): Promise<void> {
+  // 主ボタン「支払いを記録」はホームと履歴にだけ出るので、ホームから開く。
+  // いまホームにいるときはタブがリンクでないため、押さずに進む。
+  const homeTab = page
+    .getByRole("navigation", { name: "タブ" })
+    .getByRole("link", { name: "ホーム" });
+  if ((await homeTab.count()) > 0) {
+    await homeTab.click();
+  }
   await page.getByRole("link", { name: "支払いを記録" }).click();
   const sheet = page.getByRole("dialog", { name: "支払いを記録" });
   await expect(sheet.getByLabel("金額")).toBeVisible();
@@ -39,7 +47,7 @@ async function recordPayment(page: Page, input: PaymentInput): Promise<void> {
     await sheet.getByLabel("用途").fill(input.label);
   }
   await sheet.getByRole("button", { name: "保存" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/itinerary$/);
+  await page.waitForURL(/\/trips\/[^/]+\/home$/);
   await expect(
     page.getByRole("status").filter({ hasText: "支払いを記録しました" }),
   ).toBeVisible();

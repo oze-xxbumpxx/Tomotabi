@@ -331,7 +331,7 @@ export function PaymentDetailScreen({
               <div className="payment-detail-actions">
                 <Link
                   className="btn-ink"
-                  href={`/trips/${tripId}/payments/new?from=${paymentId}`}
+                  href={`/trips/${tripId}/payments/new?from=${paymentId}&back=records`}
                 >
                   正しい内容で支払いを記録
                 </Link>

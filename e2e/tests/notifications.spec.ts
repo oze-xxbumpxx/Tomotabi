@@ -44,8 +44,16 @@ async function addPlan(page: Page, name: string): Promise<void> {
   ).toBeVisible();
 }
 
-/** しおりの画面から支払いを1件記録する（ひなたが払った・折半）。 */
+/** ホームから支払いを1件記録する（ひなたが払った・折半）。 */
 async function recordPayment(page: Page, label: string): Promise<void> {
+  // 主ボタン「支払いを記録」はホームと履歴にだけ出るので、ホームから開く。
+  // いまホームにいるときはタブがリンクでないため、押さずに進む。
+  const homeTab = page
+    .getByRole("navigation", { name: "タブ" })
+    .getByRole("link", { name: "ホーム" });
+  if ((await homeTab.count()) > 0) {
+    await homeTab.click();
+  }
   await page.getByRole("link", { name: "支払いを記録" }).click();
   const sheet = page.getByRole("dialog", { name: "支払いを記録" });
   await expect(sheet.getByLabel("金額")).toBeVisible();
@@ -55,7 +63,7 @@ async function recordPayment(page: Page, label: string): Promise<void> {
   await sheet.getByLabel("金額").fill("3000");
   await sheet.getByLabel("用途").fill(label);
   await sheet.getByRole("button", { name: "保存" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/itinerary$/);
+  await page.waitForURL(/\/trips\/[^/]+\/home$/);
   await expect(
     page.getByRole("status").filter({ hasText: "支払いを記録しました" }),
   ).toBeVisible();

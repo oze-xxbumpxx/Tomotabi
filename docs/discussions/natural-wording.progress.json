@@ -10,13 +10,21 @@
       "reason": "L2なので要件定義書は作らない"
     },
     "design": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/designs/natural-wording.md"
-      ]
+      ],
+      "approved": {
+        "pr": 334,
+        "at": "2026-11-10"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "approval",
+      "docs": [
+        "docs/implementation-plans/natural-wording.md",
+        "docs/tests/natural-wording.md"
+      ]
     },
     "implement": {
       "state": "pending"
@@ -31,5 +39,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-10T03:59:48.284Z"
+  "updated_at": "2026-11-10T13:06:30.347Z"
 }

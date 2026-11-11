@@ -49,7 +49,7 @@ flowchart LR
   B["deploy ボタン"] --> V["SHA・API_ORIGIN・main・CIを確かめる"] --> C{"migrationの確かめ<br/>（新しい手順）"}
   C -->|"DBが同じか新しい"| A["apiを出す"] --> W["webを出す"]
   C -->|"DBが古い・つながらない"| S["止める<br/>足りないmigrationの名前を出す"]
-  C -->|"口が無い(404)<br/>最初の1回"| A
+  C -->|"口が無い(404)<br/>最初の1回、またはこの機能より前へ戻したあとの1回"| A
   C -. "GET /api/health/migrations" .-> OLD["今動いているapi"] --> DB[("Neon<br/>drizzle.__drizzle_migrations")]
 ```
 
@@ -58,7 +58,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant GH as ワークフロー
-  participant CLI as check-deployed-migrations.mjs（ワークフロー側の版）
+  participant CLI as 確かめるスクリプト（ワークフロー側の版）
   participant API as 今のapi（API_ORIGIN）
   participant DB as Neon
   GH->>CLI: ワークフロー側の版を実行。出すcommitの _journal.json のパスを渡す
@@ -128,7 +128,9 @@ DBの接続は既存の`getPool()`を使う。トランザクションは要ら�
 
 `node .github/scripts/check-deployed-migrations.mjs <API_ORIGIN> <_journal.jsonのパス>`。Node 24の`fetch`だけを使い、`npm ci`も`nest build`も要らない。判定は同じファイルの純粋関数（`compareMigrations`）に分けて試験する。
 
-置き場所を`apps/api`のCLIにしないのは、出すcommitの作業ツリーに置くと、この機能より前のcommitへ戻して出すときにスクリプトが無く、確かめの手順で止まるため。ワークフローは、出すcommitとは別に、ワークフローを動かした版（`github.sha`）を取り出して使う。出すcommitから読むのは`_journal.json`だけで、これはどの版にもある。
+置き場所を`apps/api`のCLIにしないのは、出すcommitの作業ツリーに置くと、この機能より前のcommitへ戻して出すときにスクリプトが無く、確かめの手順で止まるため。ワークフローは、出すcommitとは別に、ワークフローを動かした版（`github.sha`）を取り出して使う。出すcommitから読むのは`_journal.json`だけで、これはデプロイのワークフローができた版（`befb700`、2026-10-18）以降のどの版にもある。それより前のcommitは、読めないので止まる（出す対象外）。
+
+試験で本体を読み込めるよう、スクリプトは直接実行されたときだけ本体を動かす（`import.meta.main`で判定する）。
 
 | 今のapiの答え                                     | 判定                                                  | 終了コード |
 | ------------------------------------------------- | ----------------------------------------------------- | ---------- |
@@ -144,7 +146,7 @@ DBの接続は既存の`getPool()`を使う。トランザクションは要ら�
 
 ### ワークフロー（`deploy-vercel.yml`）
 
-`setup-node`のあと、`Deploy api to Vercel`の前に手順を2つ足す。出すcommitのcheckoutは今のまま変えない。
+`setup-node`のあと、`npm ci`の前に手順を2つ足す。確かめは依存が要らないので、`npm ci`を待たずに早く止める。出すcommitのcheckoutは今のまま変えない。
 
 ```yaml
 - name: Checkout deploy tooling from the workflow ref
@@ -153,6 +155,7 @@ DBの接続は既存の`getPool()`を使う。トランザクションは要ら�
     ref: ${{ github.sha }}
     path: .workflow
     sparse-checkout: .github/scripts
+    sparse-checkout-cone-mode: false
     persist-credentials: false
 - name: Verify database migrations are applied
   env:
@@ -160,7 +163,7 @@ DBの接続は既存の`getPool()`を使う。トランザクションは要ら�
   run: node .workflow/.github/scripts/check-deployed-migrations.mjs "$API_ORIGIN" apps/api/drizzle/meta/_journal.json
 ```
 
-`github.sha`は、ボタンを押したブランチ（main）の先頭で、出すcommit（`inputs.sha`）とは別。前のcommitを指定しても、確かめるスクリプトは今のmainの版で動く。
+`github.sha`は、ボタンを押したブランチの先頭で、出すcommit（`inputs.sha`）とは別。検証用・本番のEnvironmentはどちらも`main`だけに限っている（`docs/runbooks/production.md`・`docs/runbooks/integration-env.md`）ので、mainの先頭になる。前のcommitを指定しても、確かめるスクリプトは今のmainの版で動く。
 
 検証用と本番は同じファイルを呼ぶので、両方に効く。
 
@@ -200,19 +203,20 @@ DBの接続は既存の`getPool()`を使う。トランザクションは要ら�
 1. 検証用のDBに、管理者の端末から`0011`〜`0013`を流す（ToDoの分と、この機能の権限）。
 2. `deploy-integration`で出す。今のapiに口がまだ無いので、警告が出て進む（F-06）。
 3. もう一度`deploy-integration`を押し、今度は確かめが通ることを見る。
-4. 結合検証環境で、この機能より前のcommitのSHAを指定して出し、確かめが通ること（戻せること）を見る。
-5. 本番は、バックアップを取って照合してから`0011`〜`0013`を流し、`deploy-production`で出す。
+4. 結合検証環境で、この機能より前のcommitのSHAを指定して出し、確かめの手順で止まらないことを見る。
+5. 4で戻したので、動くapiに口が無い。検証用を最新へ出し直し、404の警告で進むことを見る（F-06）。
+6. 本番は、バックアップを取って照合してから`0011`〜`0013`を流し、`deploy-production`で出す。
 
 `0013`を流さずに出すと、新しいapiの口が500を返し、次のデプロイから止まる。流し忘れは次の回で必ず見つかる。
 
 ## リスク
 
-| リスク                                                     | 起きたとき                   | 手当て                                                                                                                                           |
-| ---------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `_journal.json`の`when`が前のものより小さいmigrationが入る | 足りないのに通る             | Drizzleは`when`の順に流す。`npm run db:check`が通るcommitだけを出す。ここでは足さない                                                            |
-| 今のapiが落ちていて、直す版を出したいのに止まる            | 障害のときに出せない         | 落ちている原因がDBでないなら、管理者がワークフローの手順を一時的に外す。手順書の障害の章に書く                                                   |
-| この機能より前のcommitへ戻して出す                         | 確かめが止まり、戻せない     | 確かめるスクリプトはワークフロー側の版を使い、出すcommitからは`_journal.json`だけを読む。この機能より前のcommitにも`_journal.json`はあるので動く |
-| 404で通す道が、最初の1回のあとも残る                       | 口が消える壊れ方をしても通る | 次のデプロイで同じ警告が出るので気づける。最初の1回が済んだら、404を止める側に変えるかを振り返りで決める                                         |
+| リスク                                                     | 起きたとき                   | 手当て                                                                                                                                                                        |
+| ---------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_journal.json`の`when`が前のものより小さいmigrationが入る | 足りないのに通る             | Drizzleは`when`の順に流す。`npm run db:check`が通るcommitだけを出す。ここでは足さない                                                                                         |
+| 今のapiが落ちていて、直す版を出したいのに止まる            | 障害のときに出せない         | 落ちている原因がDBでないなら、管理者がワークフローの手順を一時的に外す。手順書の障害の章に書く                                                                                |
+| この機能より前のcommitへ戻して出す                         | 確かめが止まり、戻せない     | 確かめるスクリプトはワークフロー側の版を使い、出すcommitからは`_journal.json`だけを読む。この機能より前のcommitにも`_journal.json`はあるので動く                              |
+| 404で通す道が、最初の1回のあとも残る                       | 口が消える壊れ方をしても通る | 次のデプロイで同じ警告が出るので気づける。この機能より前のcommitを戻し先にしなくなってから、404を止める側に変えるかを振り返りで決める。それまでは、戻したあとの1回も404で通る |
 
 ## 決めたこと（問いと答え）（docs/discussions/migration-deploy-check.md へのリンクだけ）
 
@@ -220,4 +224,4 @@ DBの接続は既存の`getPool()`を使う。トランザクションは要ら�
 
 ## 未決事項（論点の記録の「回答待ち」「仮決定」へのリンクと、件数）
 
-- 仮決定3件（最初に出す1回、DBの方が新しいとき、マージのあとの作業の書き場所）。設計のPRのマージまでに異議がなければ決定にする。
+- 仮決定4件（口が無いときの扱い、DBの方が新しいとき、マージのあとの作業の書き場所、確かめるスクリプトの置き場所）。設計のPRのマージまでに異議がなければ決定にする。

@@ -10,9 +10,12 @@ import { TripStatusBadge } from "./trip-status-badge";
 export function TripRow({
   trip,
   selected,
+  today,
 }: {
   trip: Trip;
   selected: boolean;
+  /** 日本時間の今日（`YYYY-MM-DD`）。状態の印の「開始待ち」の判定に使う。 */
+  today: string | null;
 }) {
   return (
     <Link
@@ -25,7 +28,11 @@ export function TripRow({
           {formatTripPeriod(trip.startsOn, trip.endsOn)}
         </span>
       </span>
-      <TripStatusBadge status={trip.status} />
+      <TripStatusBadge
+        status={trip.status}
+        startsOn={trip.startsOn}
+        today={today}
+      />
       <span className="trip-row-check">
         {selected && (
           <>

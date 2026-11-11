@@ -898,6 +898,65 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
       putSpy.mockRestore();
     }
   });
+
+  it("保存が 428 のあとは「もう一度読み込む」で取り直してから送り直せる", async () => {
+    let tripCalls = 0;
+    let balanceCalls = 0;
+    let createCalls = 0;
+    const fetchMock = stubApi({
+      trip: () => {
+        tripCalls += 1;
+        return json(trip({ version: String(tripCalls) }));
+      },
+      balance: () => {
+        balanceCalls += 1;
+        return json(balanceBody());
+      },
+      createPayment: () => {
+        createCalls += 1;
+        return createCalls === 1
+          ? json({ code: "EXPECTED_VERSION_REQUIRED" }, 428)
+          : json(paymentResponse(), 201);
+      },
+    });
+    renderForm();
+    const amountInput = await waitForForm();
+    const user = userEvent.setup();
+
+    await user.type(amountInput, "7001");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    // 428のあとは読み直すまで送れない。
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+
+    // 「もう一度読み込む」で旅行と残額を取り直すと編集に戻る。
+    const tripBefore = tripCalls;
+    const balanceBefore = balanceCalls;
+    await user.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(tripCalls).toBeGreaterThan(tripBefore));
+    await waitFor(() =>
+      expect(balanceCalls).toBeGreaterThan(balanceBefore),
+    );
+
+    const submit = screen.getByRole("button", { name: "保存" });
+    await waitFor(() => expect(submit).toBeEnabled());
+    await user.click(submit);
+
+    await waitFor(() => expect(createCalls).toBe(2));
+    const posts = writeCalls(fetchMock).filter(
+      ([url]) => url === `/api/trips/${tripId}/payments`,
+    );
+    expect(posts).toHaveLength(2);
+    // 送り直しは新しい要求（新しい冪等キー）。
+    expect(
+      new Headers(posts[1][1]?.headers).get("idempotency-key"),
+    ).not.toBe(new Headers(posts[0][1]?.headers).get("idempotency-key"));
+  });
 });
 
 describe("支払いの詳細の相手の印（#300）", () => {

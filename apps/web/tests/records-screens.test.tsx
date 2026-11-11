@@ -1030,6 +1030,27 @@ describe("予定の詳細の達成・予約のボタンと関連する支払い�
     ).toBeInTheDocument();
   });
 
+  it("達成のある予定には主ボタンを出さず、予約は画面の中の白いボタンに残す（#336）", async () => {
+    stubApi({
+      plan: () => json(plan({ achievement: event() })),
+    });
+    const { container } = renderScreen(
+      <PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />,
+    );
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    // 下のタブの上の主ボタンは出ない。達成を記録のボタンも無い。
+    await waitFor(() =>
+      expect(container.querySelector(".main-action")).toBeNull(),
+    );
+    expect(
+      screen.queryByRole("button", { name: "達成を記録" }),
+    ).not.toBeInTheDocument();
+    // 予約は本文の白いボタンとして残る。
+    const book = screen.getByRole("button", { name: "予約を記録" });
+    expect(book).toHaveClass("btn-outline");
+    expect(book).not.toHaveClass("main-action");
+  });
+
   it("有効な記録の行は記録の絞り込みへのリンクになる（RW-11）", async () => {
     stubApi({
       plan: () => json(plan({ achievement: event() })),

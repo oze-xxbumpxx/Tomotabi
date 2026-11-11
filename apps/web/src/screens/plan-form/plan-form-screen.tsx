@@ -57,7 +57,7 @@ function fieldMessage(
   state: Extract<PlanSaveState, { status: "rejected" }>,
 ): string | null {
   if (state.httpStatus === 428) {
-    return "画面を更新してからやり直してください";
+    return "最新の内容を読み込めませんでした。";
   }
   switch (state.code) {
     case "PLAN_OUTSIDE_TRIP_PERIOD":
@@ -181,12 +181,16 @@ export function PlanFormScreen({
   }, [mode, plan]);
 
   // 428（版の確認が必須）で拒否されたら版が古いので、最新を取り直す
-  // までは送り直せない。取り直しで版を差し替えて編集に戻す。
+  // までは送り直せない。取り直しで版・欄の基準・入力を新しい内容に
+  // 置き換えて編集に戻す。
   const reloadLatest = async () => {
     if (mode === "edit") {
       const result = await planQuery.refetch();
       if (result.data !== undefined) {
         versionRef.current = result.data.version;
+        savedRef.current = valuesOfPlan(result.data);
+        setValues(valuesOfPlan(result.data));
+        setErrors({});
       }
     } else {
       await tripQuery.refetch();
@@ -682,7 +686,7 @@ export function PlanFormScreen({
               className="btn-secondary"
               onClick={() => void reloadLatest()}
             >
-              最新を取り直す
+              もう一度読み込む
             </button>
           )}
           {!hideFields && (

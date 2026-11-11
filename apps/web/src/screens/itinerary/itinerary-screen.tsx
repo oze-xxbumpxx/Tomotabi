@@ -2,6 +2,7 @@
 
 import { Plus } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
+import type { Trip } from "@tomotabi/contracts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
@@ -38,6 +39,7 @@ import {
   formatLocalDate,
   formatRemaining,
   isLocalDateString,
+  tokyoDateOf,
   tokyoTimeOf,
 } from "@/shared/lib/local-date";
 import { useNow } from "@/shared/lib/use-now";
@@ -79,6 +81,7 @@ export function ItineraryScreen({
   const itinerary = useTripItinerary(tripId, date);
   const online = useOnlineStatus();
   const now = useNow();
+  const today = now === null ? null : tokyoDateOf(now);
   const [layer, setLayer] = useState<Layer | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [sheetExpired, setSheetExpired] = useState<boolean | null>(null);
@@ -336,6 +339,18 @@ export function ItineraryScreen({
   const version = trip.version;
   const plans = data !== undefined ? data.plans : null;
 
+  // 「もう一度読み込む」: この画面が使っている読み込みをやり直す。
+  // 期間外の表示では旅行の問い合わせ、通常はしおりの問い合わせを使う。
+  const reloadTrip = async (): Promise<Trip | null> => {
+    if (itinerary.data !== undefined) {
+      return (await itinerary.refetch()).data?.trip ?? null;
+    }
+    return (await tripQuery.refetch()).data ?? null;
+  };
+  const reloadData = async (): Promise<void> => {
+    await reloadTrip();
+  };
+
   // 「今 · 次まで」の線と次の予定の強調。表示中の日が日本時間の
   // 今日で、次の予定がある日だけ。線の位置は今の時刻の位置
   // （時刻が今以降のいちばん早い行の直前）。
@@ -364,7 +379,7 @@ export function ItineraryScreen({
         />
       )}
       {itinerary.isRefetching && <Refetching />}
-      <TripHeader trip={trip} onOpenMenu={openMenu} />
+      <TripHeader trip={trip} today={today} onOpenMenu={openMenu} />
       <DateBar
         tripId={tripId}
         startsOn={trip.startsOn}
@@ -438,9 +453,11 @@ export function ItineraryScreen({
         <TripMenu
           trip={trip}
           version={version}
+          today={today}
           displayName={displayName}
           start={start}
           startPending={startCheck}
+          onReload={reloadData}
           onEdit={() => setLayer("edit")}
           onRequestFinish={() => {
             finish.backToEditing();
@@ -464,6 +481,7 @@ export function ItineraryScreen({
           trip={trip}
           version={version}
           userId={userId}
+          onReload={reloadTrip}
           onClose={() => setLayer(null)}
           onSaved={() => {
             setLayer(null);
@@ -485,6 +503,7 @@ export function ItineraryScreen({
           version={version}
           finish={finish}
           finishPending={finishCheck}
+          onReload={reloadData}
           onClose={() => {
             if (finish.state.status === "rejected") {
               void itinerary.refetch();

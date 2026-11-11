@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { Plan } from "@tomotabi/contracts";
 import { useEffect, useId, useState } from "react";
 import { useMe } from "@/features/auth";
 import {
@@ -422,6 +423,12 @@ export function PlanDetailScreen({
       s.httpStatus !== 404,
   );
 
+  // 主ボタンは下のタブの上に1つだけ出す。達成を記録できる予定は
+  // 「達成を記録」、記録済みでなければ予約できる予定は「予約を記録」。
+  // 達成を記録済みの予定には主ボタンを出さない（予約は本文の
+  // 副ボタンから付けられる。#336）。
+  const hasAchievement = plan.achievement !== null;
+  const bookingIsPrimary = !canAchieve && !hasAchievement && canBook;
   const mainAction = canAchieve
     ? {
         label: "達成を記録",
@@ -432,7 +439,7 @@ export function PlanDetailScreen({
         disabled: achieveBlocked || !online,
         describedBy: achieveNoteId,
       }
-    : canBook
+    : bookingIsPrimary
       ? {
           label: "予約を記録",
           icon: (
@@ -457,6 +464,16 @@ export function PlanDetailScreen({
       void planQuery.refetch();
     }
     setLayer(null);
+  };
+
+  // 「もう一度読み込む」: 予定を読み直し、新しい予定を返す
+  // （版と表示中の日付が新しくなる）。
+  const reloadPlan = async (): Promise<Plan | null> => {
+    const result = await planQuery.refetch();
+    return result.data ?? null;
+  };
+  const reloadPlanData = async (): Promise<void> => {
+    await planQuery.refetch();
   };
 
   return (
@@ -567,9 +584,9 @@ export function PlanDetailScreen({
           <Wallet size={18} aria-hidden="true" />
           支払いを記録
         </Link>
-        {/* 達成と予約の両方を付けられる予定では、予約は副ボタンにする
-            （主ボタンは下のタブの上に達成を記録として出る）。 */}
-        {canAchieve && canBook && (
+        {/* 達成を記録する予定、または達成を記録済みの予定では、
+            予約は副ボタンにする（主ボタンは下のタブの上に出る）。 */}
+        {canBook && !bookingIsPrimary && (
           <button
             type="button"
             className="btn-outline"
@@ -661,6 +678,7 @@ export function PlanDetailScreen({
             version={version}
             move={move}
             movePending={moveCheck}
+            onReload={reloadPlan}
             onClose={() => onWriteClose(move)}
             onSessionExpired={(unconfirmed) => {
               setLayer(null);
@@ -693,6 +711,7 @@ export function PlanDetailScreen({
           version={version}
           cancel={cancel}
           cancelPending={cancelCheck}
+          onReload={reloadPlanData}
           onClose={() => onWriteClose(cancel)}
           onSessionExpired={(unconfirmed) => {
             setLayer(null);

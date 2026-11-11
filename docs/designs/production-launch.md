@@ -178,7 +178,7 @@ flowchart TB
 ### バックアップと復元
 
 - 取る: 管理者の端末で、`migrator`の直接の接続（pooledでないもの）から、PostgreSQL 16の`pg_dump`でcustom形式のdumpを取る。端末の`pg_dump`は18なので、`postgres:16-alpine`のコンテナの中の`pg_dump`を使う（版を合わせると、復元の先が16でも余計な設定の行が入らない）。出力はそのまま`age -p`に渡し、暗号化したファイルだけをディスクに書く。
-- 置く: 手元のPCの決めたフォルダと、普段使っているクラウドのストレージのフォルダの2か所。ファイル名は`tomotabi-production-<日時>-<きっかけ>.dump.age`（きっかけは`weekly`・`before-trip`・`after-trip`・`before-change`）。直近4回と、最後の`before-change`の1回を残し、それより古いものは手で消す。パスフレーズはパスワード管理ソフトに置く。
+- 置く: 手元のPCの決めたフォルダと、普段使っているクラウドのストレージのフォルダの2か所。ファイル名は`tomotabi-production-<日時>-<きっかけ>.dump.age`（きっかけは`weekly`・`before-trip`・`after-trip`・`before-change`・`before-launch`・`incident`）。直近4回と、最後の`before-change`の1回を残し、それより古いものは手で消す。パスフレーズはパスワード管理ソフトに置く。
 - 戻して照合する: 名前つきの使い捨てのコンテナ（`postgres:16-alpine`、`127.0.0.1`の空いたポート、volumeなし）を立て、`create-roles.sql`と`grant-database.sql`でロールを作り直してから、`age -d`の出力を`pg_restore`に渡す。続けて`neutralize-restored.sql`、`verify-restore.sql`の順に流し、本番で取った数字と比べる。終わったらコンテナを消す（実データを手元のDBに残さない）。
 - 時期: 利用中は週1回、旅行の前、旅行の終わったあと、DBを変える前。DBを変える前は、戻して照合が合ってからmigrationを流す（要件P-11）。
 - 本当の障害で本番に戻す手順（Neonの新しいブランチかプロジェクトへ戻し、照合してから接続先を替える）は、手順書の「障害のとき」に書く。初回の公開の前には試さない。

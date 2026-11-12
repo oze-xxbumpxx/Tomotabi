@@ -29,6 +29,7 @@ import {
   type TripSaveState,
 } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import { refetchSucceeded } from "@/shared/api/refetch";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import {
   clearSelectedTripId,
@@ -341,14 +342,21 @@ export function ItineraryScreen({
 
   // 「もう一度読み込む」: この画面が使っている読み込みをやり直す。
   // 期間外の表示では旅行の問い合わせ、通常はしおりの問い合わせを使う。
+  // 再取得に失敗したら null / falseを返し、呼び出し側は入力・版・
+  // 拒否の状態を残す。
   const reloadTrip = async (): Promise<Trip | null> => {
     if (itinerary.data !== undefined) {
-      return (await itinerary.refetch()).data?.trip ?? null;
+      const result = await itinerary.refetch();
+      return refetchSucceeded(result) ? result.data.trip : null;
     }
-    return (await tripQuery.refetch()).data ?? null;
+    const result = await tripQuery.refetch();
+    return refetchSucceeded(result) ? result.data : null;
   };
-  const reloadData = async (): Promise<void> => {
-    await reloadTrip();
+  const reloadData = async (): Promise<boolean> => {
+    if (itinerary.data !== undefined) {
+      return refetchSucceeded(await itinerary.refetch());
+    }
+    return refetchSucceeded(await tripQuery.refetch());
   };
 
   // 「今 · 次まで」の線と次の予定の強調。表示中の日が日本時間の

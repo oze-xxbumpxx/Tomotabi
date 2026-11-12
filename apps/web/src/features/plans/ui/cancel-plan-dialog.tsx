@@ -48,9 +48,10 @@ export function CancelPlanDialog({
   cancelPending: { check: PendingRequestCheck; reload: () => void };
   /**
    * 取りやめが版の古さ（428）で拒否されたときの「もう一度読み込む」。
-   * 画面のデータを読み直す（TanStack Queryのrefetch）。
+   * 画面のデータを読み直す（TanStack Queryのrefetch）。読み直せたら
+   * trueを返し、版が新しくなる。失敗したらfalseで、拒否の状態を残す。
    */
-  onReload: () => Promise<void>;
+  onReload: () => Promise<boolean>;
   onClose: () => void;
   onSessionExpired: (unconfirmed: boolean) => void;
   /** 書き込みが403 / 404で拒否（C-2）。呼び出し側が全面を差し替える。 */
@@ -165,7 +166,12 @@ export function CancelPlanDialog({
               type="button"
               className="btn-secondary"
               onClick={() => {
-                void onReload().then(() => cancel.backToEditing());
+                // 再取得に失敗したら拒否の状態とボタンを残す。
+                void onReload().then((reloaded) => {
+                  if (reloaded) {
+                    cancel.backToEditing();
+                  }
+                });
               }}
             >
               もう一度読み込む

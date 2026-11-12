@@ -38,6 +38,7 @@ import { useTrip } from "@/features/trips";
 import { ItineraryScreen } from "@/screens/itinerary/itinerary-screen";
 import { PlanDetailScreen } from "@/screens/plan-detail/plan-detail-screen";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import { refetchSucceeded } from "@/shared/api/refetch";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { setPendingToast } from "@/shared/lib/pending-toast";
 import { isLocalDateString } from "@/shared/lib/local-date";
@@ -182,18 +183,22 @@ export function PlanFormScreen({
 
   // 428（版の確認が必須）で拒否されたら版が古いので、最新を取り直す
   // までは送り直せない。取り直しで版・欄の基準・入力を新しい内容に
-  // 置き換えて編集に戻す。
+  // 置き換えて編集に戻す。再取得に失敗したら入力と拒否の状態を残す。
   const reloadLatest = async () => {
     if (mode === "edit") {
       const result = await planQuery.refetch();
-      if (result.data !== undefined) {
-        versionRef.current = result.data.version;
-        savedRef.current = valuesOfPlan(result.data);
-        setValues(valuesOfPlan(result.data));
-        setErrors({});
+      if (!refetchSucceeded(result)) {
+        return;
       }
+      versionRef.current = result.data.version;
+      savedRef.current = valuesOfPlan(result.data);
+      setValues(valuesOfPlan(result.data));
+      setErrors({});
     } else {
-      await tripQuery.refetch();
+      const result = await tripQuery.refetch();
+      if (!refetchSucceeded(result)) {
+        return;
+      }
     }
     save.backToEditing();
   };

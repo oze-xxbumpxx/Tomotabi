@@ -10,7 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Todo, Trip } from "@tomotabi/contracts";
-import { deleteTodoDraft } from "@/features/todos";
+import { deleteTodoDraft, updateTodoDraft } from "@/features/todos";
 import { createMutationRequest } from "@/shared/api/mutation-request";
 import { createQueryClient } from "@/shared/api/query-client";
 import {
@@ -194,6 +194,15 @@ async function resetDb(): Promise<void> {
 async function saveDeletePending(targetTodoId: string): Promise<void> {
   const request = createMutationRequest(
     deleteTodoDraft(tripId, targetTodoId),
+  );
+  await savePendingRequest(
+    toPendingRequestRecord({ userId, tripId, request }),
+  );
+}
+
+async function saveUpdatePending(targetTodoId: string): Promise<void> {
+  const request = createMutationRequest(
+    updateTodoDraft(tripId, targetTodoId, { name: "残るToDo" }, "1"),
   );
   await savePendingRequest(
     toPendingRequestRecord({ userId, tripId, request }),
@@ -605,6 +614,50 @@ describe("ToDoの詳細", () => {
     expect(
       screen.getByRole("button", { name: "同じ内容で確認する" }),
     ).toBeInTheDocument();
+  });
+
+  it("別のToDoの変更の結果不明は、この詳細に出さず変更も止めない", async () => {
+    const otherTodoId = "7b7b7b7b-7b7b-4b7b-8b7b-7b7b7b7b7b7b";
+    const fetchMock = stubApi({
+      todos: () => [todo({ id: otherTodoId, name: "残るToDo" })],
+    });
+    await saveUpdatePending(todoId);
+
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={otherTodoId} />);
+    const memo = await screen.findByLabelText(/メモ/);
+    await waitFor(() => expect(memo).not.toHaveAttribute("readonly"));
+    await userEvent.type(memo, "昼は混む");
+    const save = screen.getByRole("button", { name: "変更を保存" });
+    await waitFor(() => expect(save).toBeEnabled());
+    expect(screen.queryByText("保存されたか確認できません")).toBeNull();
+    await userEvent.click(save);
+    await waitFor(() =>
+      expect(
+        callsTo(fetchMock, `/api/trips/${tripId}/todos/${otherTodoId}`, "PATCH"),
+      ).toHaveLength(1),
+    );
+  });
+
+  it("このToDoの変更の結果不明は、詳細に「保存されたか確認できません」を出し、欄を固定する", async () => {
+    stubApi({ todos: () => [todo()] });
+    await saveUpdatePending(todoId);
+
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
+
+    expect(
+      (await screen.findAllByText("保存されたか確認できません")).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("button", { name: "同じ内容で確認する" }).length,
+    ).toBeGreaterThan(0);
+    expect(await screen.findByLabelText(/内容/)).toHaveAttribute(
+      "data-locked",
+      "true",
+    );
+    expect(screen.getByLabelText(/メモ/)).toHaveAttribute(
+      "data-locked",
+      "true",
+    );
   });
 
   it("相手が先に消していたら、開けない表示にする（E-04）", async () => {

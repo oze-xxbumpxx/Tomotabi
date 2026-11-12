@@ -26,7 +26,11 @@
       }
     },
     "plan": {
-      "state": "pending"
+      "state": "done",
+      "docs": [
+        "docs/implementation-plans/migration-deploy-check.md",
+        "docs/tests/migration-deploy-check.md"
+      ]
     },
     "implement": {
       "state": "pending"
@@ -41,5 +45,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-12T13:23:53.335Z"
+  "updated_at": "2026-11-12T13:31:45.834Z"
 }

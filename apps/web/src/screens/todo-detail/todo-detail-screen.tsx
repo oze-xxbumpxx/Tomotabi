@@ -82,6 +82,7 @@ export function TodoDetailScreen({
 
   const userId = meState.status === "ready" ? meState.me.user.id : null;
   const listHref = `/trips/${tripId}/todos`;
+  const deleteUrl = deleteTodoDraft(tripId, todoId).url;
 
   const updateCheck = usePendingRequestCheck({
     userId,
@@ -92,6 +93,7 @@ export function TodoDetailScreen({
     userId,
     tripId,
     operation: DELETE_TODO_OPERATION,
+    url: deleteUrl,
   });
   const queryClient = useQueryClient();
   // 保存できた値で一覧の項目を先に置き換える（取り直しまで古い値が出ないように）。

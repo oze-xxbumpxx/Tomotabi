@@ -10,7 +10,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Todo, Trip } from "@tomotabi/contracts";
+import { deleteTodoDraft } from "@/features/todos";
+import { createMutationRequest } from "@/shared/api/mutation-request";
 import { createQueryClient } from "@/shared/api/query-client";
+import {
+  savePendingRequest,
+  toPendingRequestRecord,
+} from "@/shared/browser/pending-requests";
 
 const { pushMock, replaceMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
@@ -183,6 +189,15 @@ async function resetDb(): Promise<void> {
     request.onerror = () => resolve();
     request.onblocked = () => resolve();
   });
+}
+
+async function saveDeletePending(targetTodoId: string): Promise<void> {
+  const request = createMutationRequest(
+    deleteTodoDraft(tripId, targetTodoId),
+  );
+  await savePendingRequest(
+    toPendingRequestRecord({ userId, tripId, request }),
+  );
 }
 
 beforeEach(async () => {
@@ -557,6 +572,39 @@ describe("ToDoの詳細", () => {
     await waitFor(() =>
       expect(replaceMock).toHaveBeenCalledWith(`/trips/${tripId}/todos`),
     );
+  });
+
+  it("別のToDoの削除の結果不明は、この詳細に出さず削除も止めない", async () => {
+    const otherTodoId = "7b7b7b7b-7b7b-4b7b-8b7b-7b7b7b7b7b7b";
+    stubApi({
+      todos: () => [todo({ id: otherTodoId, name: "残るToDo" })],
+    });
+    await saveDeletePending(todoId);
+
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={otherTodoId} />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "削除する" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: /を削除しますか？$/,
+    });
+    const confirm = within(dialog).getByRole("button", { name: "削除する" });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    expect(screen.queryByText("保存されたか確認できません")).toBeNull();
+  });
+
+  it("このToDoの削除の結果不明は、詳細に「保存されたか確認できません」を出す", async () => {
+    stubApi({ todos: () => [todo()] });
+    await saveDeletePending(todoId);
+
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
+
+    expect(
+      await screen.findByText("保存されたか確認できません"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "同じ内容で確認する" }),
+    ).toBeInTheDocument();
   });
 
   it("相手が先に消していたら、開けない表示にする（E-04）", async () => {

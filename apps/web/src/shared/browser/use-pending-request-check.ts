@@ -20,6 +20,7 @@ export type PendingRequestCheck =
 
 /**
  * 画面を開いたときに、同じ利用者・旅行・操作の保留をIndexedDBで探す。
+ * `url`を渡すと、その経路の保留だけを対象にする。
  * `userId`がnullのあいだ（利用者がまだ分からない）は`checking`のままにし、
  * 別の利用者の保留を見せない。利用者が分かったら、先に他の利用者の保留を消す。
  */
@@ -27,12 +28,13 @@ export function usePendingRequestCheck(input: {
   userId: string | null;
   tripId: string;
   operation: string;
+  url?: string;
 }): { check: PendingRequestCheck; reload: () => void } {
   const [check, setCheck] = useState<PendingRequestCheck>({
     status: "checking",
   });
   const [attempt, setAttempt] = useState(0);
-  const { userId, tripId, operation } = input;
+  const { userId, tripId, operation, url } = input;
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
 
@@ -50,6 +52,7 @@ export function usePendingRequestCheck(input: {
         userId: signedInUserId,
         tripId,
         operation,
+        url,
       });
     })().then(
       (lookup) => {
@@ -77,7 +80,7 @@ export function usePendingRequestCheck(input: {
     return () => {
       cancelled = true;
     };
-  }, [userId, tripId, operation, attempt]);
+  }, [userId, tripId, operation, url, attempt]);
 
   return { check, reload };
 }

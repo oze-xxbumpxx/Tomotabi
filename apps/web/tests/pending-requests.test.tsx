@@ -868,6 +868,33 @@ describe("保持期間と他の利用者の掃除", () => {
     }
   });
 
+  it("urlを渡すと、その経路の保留だけを返す", async () => {
+    const operation = "delete-todo";
+    const target = makeRecord({
+      operation,
+      url: `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/delete`,
+      createdAt: new Date(Date.now() - DAY_MS).toISOString(),
+    });
+    const other = makeRecord({
+      operation,
+      url: `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/delete`,
+      createdAt: new Date().toISOString(),
+    });
+    await savePendingRequest(target);
+    await savePendingRequest(other);
+
+    const lookup = await findPendingRequest({
+      userId: USER_ID,
+      tripId: TRIP_ID,
+      operation,
+      url: target.url,
+    });
+    expect(lookup.status).toBe("found");
+    if (lookup.status === "found") {
+      expect(lookup.record.id).toBe(target.id);
+    }
+  });
+
   it("サインインした利用者以外の保留は、利用者が分かったときに消す", async () => {
     await savePendingRequest(makeRecord());
     await savePendingRequest(makeRecord({ userId: OTHER_USER_ID }));

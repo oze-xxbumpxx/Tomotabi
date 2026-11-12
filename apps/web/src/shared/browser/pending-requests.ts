@@ -289,8 +289,9 @@ export async function savePendingRequest(
 }
 
 /**
- * 同じ利用者・旅行・操作の保留を探す。複数残っていたら
- * 新しいもの（createdAtの大きいもの）を返す。
+ * 同じ利用者・旅行・操作の保留を探す。`url`を渡すと、その経路の
+ * 保留だけを対象にする。複数残っていたら新しいもの
+ * （createdAtの大きいもの）を返す。
  * 形・経路が確かめられないものと、保持期間（7日）を超えたものは消す。
  * 確かめられないものだけがあったときは`invalid`を返す。
  */
@@ -298,6 +299,7 @@ export async function findPendingRequest(input: {
   userId: string;
   tripId: string;
   operation: string;
+  url?: string;
 }): Promise<PendingRequestLookup> {
   return withDb(async (db) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -320,12 +322,16 @@ export async function findPendingRequest(input: {
       cursor = await cursor.continue();
     }
     await tx.done;
-    if (valid.length === 0) {
+    const matched =
+      input.url === undefined
+        ? valid
+        : valid.filter((record) => record.url === input.url);
+    if (matched.length === 0) {
       return sawInvalid ? { status: "invalid" } : { status: "none" };
     }
     return {
       status: "found",
-      record: valid.reduce((a, b) => (a.createdAt >= b.createdAt ? a : b)),
+      record: matched.reduce((a, b) => (a.createdAt >= b.createdAt ? a : b)),
     };
   });
 }

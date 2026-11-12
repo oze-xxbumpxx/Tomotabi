@@ -176,30 +176,46 @@ test('MD-26: 記録に2つの時刻と足りない名前を書き、止めるは
 });
 
 test('MD-27: 出すcommitの作業ツリーに依らず、_journal.jsonのパスだけで動く', async () => {
+  // 本体が動かない（import.meta.mainが偽になる）と、何もせず0で終わり、確かめずに通ってしまう。
+  // 通す場合の出力と、止める場合の終了コードの両方を見て、本体が動いたことを確かめる。
   const dir = await mkdtemp(join(tmpdir(), 'md27-'));
+  let lastAppliedAt = W12;
   const server = createServer((req, res) => {
     if (req.url === '/api/health/migrations') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ lastAppliedAt: W12 }));
+      res.end(JSON.stringify({ lastAppliedAt }));
       return;
     }
     res.writeHead(404).end();
   });
+  const run = (origin, journalPath) =>
+    new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, [SCRIPT, origin, journalPath], {
+        cwd: dir,
+        env: { ...process.env, GITHUB_STEP_SUMMARY: '' },
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      let stdout = '';
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk;
+      });
+      child.on('error', reject);
+      child.on('exit', (code) => resolve({ code, stdout }));
+    });
   try {
     const journalPath = join(dir, '_journal.json');
     await writeFile(journalPath, JSON.stringify(journal()));
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-    const { port } = server.address();
-    const code = await new Promise((resolve, reject) => {
-      const child = spawn(process.execPath, [SCRIPT, `http://127.0.0.1:${port}`, journalPath], {
-        cwd: dir,
-        env: { ...process.env, GITHUB_STEP_SUMMARY: '' },
-        stdio: 'ignore',
-      });
-      child.on('error', reject);
-      child.on('exit', resolve);
-    });
-    assert.equal(code, 0);
+    const origin = `http://127.0.0.1:${server.address().port}`;
+
+    const passed = await run(origin, journalPath);
+    assert.equal(passed.code, 0);
+    assert.match(passed.stdout, /^::notice::/m);
+
+    lastAppliedAt = W11;
+    const stopped = await run(origin, journalPath);
+    assert.equal(stopped.code, 1);
+    assert.match(stopped.stdout, /^::error::DBに流していないmigrationがあります: 0012_planning_todos_grants/m);
   } finally {
     server.close();
     await rm(dir, { recursive: true, force: true });

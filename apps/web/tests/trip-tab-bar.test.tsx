@@ -8,6 +8,7 @@ afterEach(() => {
 });
 
 const tripId = "8a6e0804-2bd0-4672-b79d-d97027f9071a";
+const planId = "6d6a86a1-6d0b-4c0f-9bb9-9a1d3a9e9c01";
 
 const TABS: { current: TripTab; name: string; href: string }[] = [
   { current: "home", name: "ホーム", href: `/trips/${tripId}/home` },
@@ -91,6 +92,23 @@ describe("「支払いを記録」は、開いた画面を back で渡す", () =
     expect(
       screen.getByRole("link", { name: "支払いを記録" }),
     ).toHaveAttribute("href", `/trips/${tripId}/payments/new?back=${current}`);
+  });
+
+  it("履歴の絞り込みは records に入れて支払いを記録へ渡す", () => {
+    const recordsQuery = `type=payment&planId=${planId}`;
+    render(
+      <TripTabBar
+        tripId={tripId}
+        current="records"
+        recordsQuery={recordsQuery}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "支払いを記録" }),
+    ).toHaveAttribute(
+      "href",
+      `/trips/${tripId}/payments/new?back=records&records=${encodeURIComponent(recordsQuery)}`,
+    );
   });
 });
 

@@ -52,6 +52,7 @@ import {
   type Participant,
   type PaymentFormValues,
 } from "@/features/payments";
+import type { RecordsFilterQuery } from "@/features/records";
 
 const userId = "550e8400-e29b-41d4-a716-446655440000";
 const otherUserId = "3f7c1f68-9c05-4f2e-9b4c-2d5b1a90f811";
@@ -253,10 +254,16 @@ function renderForm(
   planId: string | null = null,
   client = createQueryClient(),
   back: "home" | "records" | null = null,
+  recordsFilter: RecordsFilterQuery | null = null,
 ) {
   render(
     <QueryClientProvider client={client}>
-      <PaymentFormScreen tripId={tripId} planId={planId} back={back} />
+      <PaymentFormScreen
+        tripId={tripId}
+        planId={planId}
+        back={back}
+        recordsFilter={recordsFilter}
+      />
     </QueryClientProvider>,
   );
   return client;
@@ -791,6 +798,45 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
     await userEvent.click(screen.getByRole("button", { name: "閉じる" }));
     await waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith(`/trips/${tripId}/records`),
+    );
+  });
+
+  it("履歴の絞り込みから開いたときは、閉じると絞り込みつきの履歴へ戻る", async () => {
+    stubApi({});
+    renderForm(null, createQueryClient(), "records", {
+      type: "payment",
+      planId,
+      recordId: null,
+      recordType: null,
+    });
+    await waitForForm();
+
+    await userEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/records?type=payment&planId=${planId}`,
+      ),
+    );
+  });
+
+  it("履歴の絞り込みから開いて保存したときは、絞り込みつきの履歴へ戻る", async () => {
+    stubApi({ createPayment: () => json(paymentResponse(), 201) });
+    renderForm(null, createQueryClient(), "records", {
+      type: "payment",
+      planId,
+      recordId: null,
+      recordType: null,
+    });
+    const amountInput = await waitForForm();
+    const user = userEvent.setup();
+
+    await user.type(amountInput, "7001");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() =>
+      expect(replaceMock).toHaveBeenCalledWith(
+        `/trips/${tripId}/records?type=payment&planId=${planId}`,
+      ),
     );
   });
 

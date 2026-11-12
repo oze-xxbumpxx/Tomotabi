@@ -97,11 +97,13 @@ describe("parsePaymentNewQuery", () => {
       planId: ID,
       fromPaymentId: ID2,
       back: null,
+      recordsFilter: null,
     });
     expect(parsePaymentNewQuery(q("planId=x&from="))).toEqual({
       planId: null,
       fromPaymentId: null,
       back: null,
+      recordsFilter: null,
     });
   });
 
@@ -110,5 +112,27 @@ describe("parsePaymentNewQuery", () => {
     expect(parsePaymentNewQuery(q("back=records")).back).toBe("records");
     expect(parsePaymentNewQuery(q("back=settlement")).back).toBeNull();
     expect(parsePaymentNewQuery(q("back=//example.com")).back).toBeNull();
+  });
+
+  it("back=recordsならrecordsの絞り込みを履歴の条件として渡す", () => {
+    const records = `type=payment&planId=${ID}&recordId=${ID2}&recordType=payment`;
+    expect(
+      parsePaymentNewQuery(
+        q(`back=records&records=${encodeURIComponent(records)}`),
+      ).recordsFilter,
+    ).toEqual({
+      type: "payment",
+      planId: ID,
+      recordId: ID2,
+      recordType: "payment",
+    });
+  });
+
+  it("back=recordsでなければrecordsを無視する", () => {
+    const records = encodeURIComponent(`type=payment&planId=${ID}`);
+    expect(
+      parsePaymentNewQuery(q(`back=home&records=${records}`)).recordsFilter,
+    ).toBeNull();
+    expect(parsePaymentNewQuery(q(`records=${records}`)).recordsFilter).toBeNull();
   });
 });

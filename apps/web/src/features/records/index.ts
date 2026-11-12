@@ -23,6 +23,10 @@ export {
   type TimelineItemKind,
 } from "./api/records-api";
 export {
+  recordsFilterQueryString,
+  type RecordsFilterQuery,
+} from "./model/records-filter-query";
+export {
   recordsQueryKey,
   usePlanPayments,
   useRecordItems,

@@ -114,7 +114,7 @@ rm -f /tmp/tomotabi-restored.txt
 
 ## 5. 古いバックアップを消す
 
-手元とクラウドの両方で、直近4回と、最後の`before-change`の1回を残し、それより古い`.dump.age`・`.before.txt`・`.after.txt`を消す。
+手元とクラウドの両方で、直近4回と、最後の`before-change`の1回を残し、それより古い`.dump.age`・`.before.txt`を消す。手元の`.after.txt`も消す。
 
 ## 6. 本当の障害で本番に戻す
 

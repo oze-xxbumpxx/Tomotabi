@@ -12,6 +12,14 @@ export const GetHealthResponse = zod.object({
 })
 
 
+/**
+ * Last applied migration time for the deploy workflow. Public, returns one timestamp only.
+ */
+export const GetMigrationStatusResponse = zod.object({
+  "lastAppliedAt": zod.int().nullable().describe('Milliseconds, same value as "when" in apps/api/drizzle/meta/_journal.json. null when no migration is applied.')
+})
+
+
 export const getProbeResponseCountMin = 0;
 
 

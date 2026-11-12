@@ -43,6 +43,7 @@ import {
 import { useBalance } from "@/features/payments";
 import { TripTabBar, useTrip } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import { refetchSucceeded } from "@/shared/api/refetch";
 import type { SaveState } from "@/shared/api/save-state";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import { Sheet } from "@/shared/ui/sheet";
@@ -467,13 +468,15 @@ export function PlanDetailScreen({
   };
 
   // 「もう一度読み込む」: 予定を読み直し、新しい予定を返す
-  // （版と表示中の日付が新しくなる）。
+  // （版と表示中の日付が新しくなる）。再取得に失敗したら null / falseを
+  // 返し、呼び出し側は入力・版・拒否の状態を残す。
   const reloadPlan = async (): Promise<Plan | null> => {
     const result = await planQuery.refetch();
-    return result.data ?? null;
+    return refetchSucceeded(result) ? result.data : null;
   };
-  const reloadPlanData = async (): Promise<void> => {
-    await planQuery.refetch();
+  const reloadPlanData = async (): Promise<boolean> => {
+    const result = await planQuery.refetch();
+    return refetchSucceeded(result);
   };
 
   return (

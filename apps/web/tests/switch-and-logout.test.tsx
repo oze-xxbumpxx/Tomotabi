@@ -85,7 +85,7 @@ function renderMenu() {
         } as never
       }
       startPending={{ check: { status: "none" }, reload: vi.fn() } as never}
-      onReload={async () => {}}
+      onReload={async () => true}
       onEdit={vi.fn()}
       onRequestFinish={vi.fn()}
       onSwitch={vi.fn()}

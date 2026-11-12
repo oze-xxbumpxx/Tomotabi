@@ -27,6 +27,7 @@ import {
   type TripSaveState,
 } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
+import { refetchSucceeded } from "@/shared/api/refetch";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
 import {
   clearSelectedTripId,
@@ -334,12 +335,15 @@ export function HomeScreen({ tripId }: { tripId: string }) {
   const showSchedule = mode === "before" || mode === "during";
   const showOrder = mode === "completed" || mode === "after_dates";
 
-  // 「もう一度読み込む」: 画面のデータを読み直す。
+  // 「もう一度読み込む」: 画面のデータを読み直す。再取得に失敗したら
+  // null / falseを返し、呼び出し側は入力・版・拒否の状態を残す。
   const reloadTrip = async (): Promise<Trip | null> => {
-    return (await home.refetch()).data?.trip ?? null;
+    const result = await home.refetch();
+    return refetchSucceeded(result) ? result.data.trip : null;
   };
-  const reloadData = async (): Promise<void> => {
-    await home.refetch();
+  const reloadData = async (): Promise<boolean> => {
+    const result = await home.refetch();
+    return refetchSucceeded(result);
   };
 
   const openMenu = () => {

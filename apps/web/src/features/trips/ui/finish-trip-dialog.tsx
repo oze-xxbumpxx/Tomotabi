@@ -34,9 +34,10 @@ export function FinishTripDialog({
   finishPending: { check: PendingRequestCheck; reload: () => void };
   /**
    * 終了が版の古さ（428）で拒否されたときの「もう一度読み込む」。
-   * 画面のデータを読み直す（TanStack Queryのrefetch）。
+   * 画面のデータを読み直す（TanStack Queryのrefetch）。読み直せたら
+   * trueを返し、版が新しくなる。失敗したらfalseで、拒否の状態を残す。
    */
-  onReload: () => Promise<void>;
+  onReload: () => Promise<boolean>;
   onClose: () => void;
 }) {
   const online = useOnlineStatus();
@@ -130,7 +131,12 @@ export function FinishTripDialog({
                 type="button"
                 className="btn-secondary"
                 onClick={() => {
-                  void onReload().then(() => finish.backToEditing());
+                  // 再取得に失敗したら拒否の状態とボタンを残す。
+                  void onReload().then((reloaded) => {
+                    if (reloaded) {
+                      finish.backToEditing();
+                    }
+                  });
                 }}
               >
                 もう一度読み込む

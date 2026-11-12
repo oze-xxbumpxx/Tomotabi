@@ -675,6 +675,47 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     ).toBe("2");
   });
 
+  it("開始の 428 のあとの再取得に失敗しても、拒否の状態と「もう一度読み込む」が残る", async () => {
+    let itineraryCalls = 0;
+    stubApi({
+      itinerary: () => {
+        itineraryCalls += 1;
+        // 2回目（「もう一度読み込む」の再取得）は失敗させる。
+        return itineraryCalls === 2
+          ? json({ code: "INTERNAL" }, 500)
+          : json(itineraryBody(trip({ version: String(itineraryCalls) })));
+      },
+      start: () => json({ code: "IF_MATCH_REQUIRED" }, 428),
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    await clickWhenEnabled("旅行を開始する");
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(itineraryCalls).toBe(2));
+
+    // 再取得に失敗しても、拒否の状態とボタンは残り、送り直せない。
+    expect(
+      screen.getByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "旅行を開始する" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("終了が 428 なら「もう一度読み込む」で最新を取り直し、新しい版で送れる", async () => {
     let itineraryCalls = 0;
     let finishCalls = 0;
@@ -813,6 +854,69 @@ describe("ItineraryScreen (/trips/{id}/itinerary)", () => {
     expect(
       new Headers(patches[1][1]?.headers).get("x-expected-version"),
     ).toBe("2");
+  });
+
+  it("428のあとの「もう一度読み込む」で再取得に失敗しても、入力・版・拒否の状態が残る", async () => {
+    let itineraryCalls = 0;
+    let renameCalls = 0;
+    stubApi({
+      itinerary: () => {
+        itineraryCalls += 1;
+        // 2回目（「もう一度読み込む」の再取得）は失敗させる。
+        return itineraryCalls === 2
+          ? json({ code: "INTERNAL" }, 500)
+          : json(itineraryBody(trip({ version: String(itineraryCalls) })));
+      },
+      rename: () => {
+        renameCalls += 1;
+        return renameCalls === 1
+          ? json({ code: "IF_MATCH_REQUIRED" }, 428)
+          : json(trip({ name: "宮古島", version: "3" }));
+      },
+    });
+    renderScreen();
+
+    await screen.findByRole("heading", { name: "沖縄" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行のメニュー" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "旅行名と期間を変更" }),
+    );
+
+    fireEvent.change(screen.getByLabelText("旅行名"), {
+      target: { value: "宮古島" },
+    });
+    await clickWhenEnabled("保存");
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+
+    // 再取得が失敗しても、入力・拒否の状態・「もう一度読み込む」は残る。
+    await userEvent.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(itineraryCalls).toBe(2));
+
+    expect(screen.getByLabelText("旅行名")).toHaveValue("宮古島");
+    expect(
+      screen.getByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+
+    // もう一度押すと今度は取り直せて、新しい内容に置き換わる。
+    await userEvent.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(itineraryCalls).toBe(3));
+    await waitFor(() =>
+      expect(screen.getByLabelText("旅行名")).toHaveValue("沖縄"),
+    );
+    expect(screen.queryByText("最新の内容を読み込めませんでした。")).toBeNull();
   });
 
   it("W-23: 期間が 422 のあと期間だけ直して再保存すると直近の応答の版で送る", async () => {

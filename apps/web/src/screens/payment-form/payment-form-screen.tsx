@@ -611,15 +611,18 @@ export function PaymentFormScreen({
             className="btn-secondary"
             onClick={() => {
               // 画面が使っている読み込みをやり直してから編集に戻す
-              // （版は取り直したデータのものになる）。
-              const queries: Promise<unknown>[] = [
+              // （版は取り直したデータのものになる）。再取得に失敗したら
+              // 入力と拒否の状態を残し、もう一度押せるようにする。
+              const queries = [
                 tripQuery.refetch(),
                 balanceQuery.refetch(),
+                ...(displayPlanId !== null ? [planQuery.refetch()] : []),
               ];
-              if (displayPlanId !== null) {
-                queries.push(planQuery.refetch());
-              }
-              void Promise.all(queries).then(() => save.backToEditing());
+              void Promise.all(queries).then((results) => {
+                if (results.every((result) => result.isSuccess)) {
+                  save.backToEditing();
+                }
+              });
             }}
           >
             もう一度読み込む

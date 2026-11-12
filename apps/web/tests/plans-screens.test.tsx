@@ -897,6 +897,100 @@ describe("PlanDetailScreen (/trips/{id}/plans/{planId}）", () => {
     ).toBe("5");
   });
 
+  it("移動の 428 のあとの再取得に失敗しても、選択・拒否の状態・「もう一度読み込む」が残る", async () => {
+    let planCalls = 0;
+    stubApi({
+      plan: () => {
+        planCalls += 1;
+        // 2回目（「もう一度読み込む」の再取得）は失敗させる。
+        return planCalls === 2
+          ? json({ code: "INTERNAL" }, 500)
+          : json(plan({ date: "2026-10-13", version: "3" }));
+      },
+      trip: () => json(trip()),
+      move: () => json({ code: "IF_MATCH_REQUIRED" }, 428),
+    });
+    renderDetail();
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    await userEvent.click(
+      screen.getByRole("button", { name: /別の日に移す/ }),
+    );
+    await screen.findByRole("heading", { name: "別の日に移す" });
+    await userEvent.click(
+      screen.getByRole("radio", { name: "10/14(水)" }),
+    );
+    await clickWhenEnabled("この日に移動する");
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(planCalls).toBe(2));
+
+    // 再取得に失敗しても、選んだ日・拒否の状態・ボタンは残る。
+    expect(screen.getByRole("radio", { name: "10/14(水)" })).toBeChecked();
+    expect(
+      screen.getByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "この日に移動する" }),
+    ).toBeDisabled();
+  });
+
+  it("取りやめの 428 のあとの再取得に失敗しても、拒否の状態と「もう一度読み込む」が残る", async () => {
+    let planCalls = 0;
+    stubApi({
+      plan: () => {
+        planCalls += 1;
+        // 2回目（「もう一度読み込む」の再取得）は失敗させる。
+        return planCalls === 2
+          ? json({ code: "INTERNAL" }, 500)
+          : json(plan({ version: "3" }));
+      },
+      cancel: () => json({ code: "IF_MATCH_REQUIRED" }, 428),
+    });
+    renderDetail();
+
+    await screen.findByRole("heading", { name: "錦市場で昼食" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "取りやめにする" }),
+    );
+    const dialog = document.querySelector("dialog");
+    expect(dialog).not.toBeNull();
+    const dialogEl = within(dialog as HTMLElement);
+    const confirm = dialogEl.getByRole("button", {
+      name: "取りやめにする",
+    });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    await userEvent.click(confirm);
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      dialogEl.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(planCalls).toBe(2));
+
+    expect(
+      screen.getByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    expect(
+      dialogEl.getByRole("button", { name: "もう一度読み込む" }),
+    ).toBeInTheDocument();
+    expect(
+      dialogEl.getByRole("button", { name: "取りやめにする" }),
+    ).toBeDisabled();
+  });
+
   it("取りやめが 428 のあとは取り直すまで送れず、取り直すと新しい版で送れる", async () => {
     let planCalls = 0;
     let cancelCalls = 0;
@@ -1971,6 +2065,49 @@ describe("読み込み失敗と拒否の出し分け（C-1 / C-2 / C-4）", () =
     const writes = writeCalls(fetchMock);
     expect(writes).toHaveLength(2);
     expect(new Headers(writes[1][1]?.headers).get("x-expected-version")).toBe("5");
+  });
+
+  it("編集の 428 のあとの再取得に失敗しても、入力・拒否の状態・「もう一度読み込む」が残る", async () => {
+    let planCalls = 0;
+    stubApi({
+      plan: () => {
+        planCalls += 1;
+        // 2回目（「もう一度読み込む」の再取得）は失敗させる。
+        return planCalls === 2
+          ? json({ code: "INTERNAL" }, 500)
+          : json(plan({ version: "3" }));
+      },
+      patch: () => json({ code: "IF_MATCH_REQUIRED" }, 428),
+    });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanFormScreen mode="edit" tripId={tripId} planId={planId} />
+      </QueryClientProvider>,
+    );
+
+    const nameInput = await screen.findByLabelText("名前");
+    await waitFor(() => expect(nameInput).toHaveValue("錦市場で昼食"));
+    fireEvent.change(nameInput, { target: { value: "直した名前" } });
+    await clickWhenEnabled("保存");
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(planCalls).toBe(2));
+
+    // 再取得に失敗しても、入力・拒否の状態・ボタンは残り、送り直せない。
+    expect(screen.getByLabelText("名前")).toHaveValue("直した名前");
+    expect(
+      screen.getByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   });
 
   it("移動で期間外に拒否されたあと別の日を選ぶと送り直せる", async () => {

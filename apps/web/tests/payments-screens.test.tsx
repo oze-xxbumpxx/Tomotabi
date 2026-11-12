@@ -1003,6 +1003,46 @@ describe("PaymentFormScreen（v3 11・11b）", () => {
       new Headers(posts[1][1]?.headers).get("idempotency-key"),
     ).not.toBe(new Headers(posts[0][1]?.headers).get("idempotency-key"));
   });
+
+  it("428のあとの再取得に失敗しても、入力・拒否の状態・「もう一度読み込む」が残る", async () => {
+    let tripCalls = 0;
+    stubApi({
+      trip: () => {
+        tripCalls += 1;
+        // 「もう一度読み込む」の再取得（2回目以降）は失敗させる。
+        return tripCalls === 2
+          ? json({ code: "INTERNAL" }, 500)
+          : json(trip({ version: String(tripCalls) }));
+      },
+      balance: () => json(balanceBody()),
+      createPayment: () => json({ code: "EXPECTED_VERSION_REQUIRED" }, 428),
+    });
+    renderForm();
+    const amountInput = await waitForForm();
+    const user = userEvent.setup();
+
+    await user.type(amountInput, "7001");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(
+      await screen.findByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    );
+    await waitFor(() => expect(tripCalls).toBe(2));
+
+    // 再取得に失敗しても、入力・拒否の状態・ボタンは残り、送り直せない。
+    expect(amountInput).toHaveValue("7,001");
+    expect(
+      screen.getByText("最新の内容を読み込めませんでした。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "もう一度読み込む" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+  });
 });
 
 describe("支払いの詳細の相手の印（#300）", () => {

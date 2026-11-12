@@ -64,7 +64,8 @@ function StartStateBlock({
   onReload,
 }: {
   start: TripSave;
-  onReload: () => Promise<void>;
+  /** 読み直せたらtrue。失敗したらfalseで、拒否の状態を残す。 */
+  onReload: () => Promise<boolean>;
 }) {
   const state = start.state;
   switch (state.status) {
@@ -83,7 +84,12 @@ function StartStateBlock({
             type="button"
             className="btn-secondary"
             onClick={() => {
-              void onReload().then(() => start.backToEditing());
+              // 再取得に失敗したら拒否の状態とボタンを残す。
+              void onReload().then((reloaded) => {
+                if (reloaded) {
+                  start.backToEditing();
+                }
+              });
             }}
           >
             もう一度読み込む
@@ -178,9 +184,10 @@ export function TripMenu({
   startPending: { check: PendingRequestCheck; reload: () => void };
   /**
    * 開始が拒否されたときの「もう一度読み込む」。画面のデータを
-   * 読み直す（TanStack Queryのrefetch）。終わると版が新しくなる。
+   * 読み直す（TanStack Queryのrefetch）。読み直せたらtrueを返し、
+   * 版が新しくなる。失敗したらfalseで、拒否の状態を残す。
    */
-  onReload: () => Promise<void>;
+  onReload: () => Promise<boolean>;
   onEdit: () => void;
   onRequestFinish: () => void;
   onSwitch: () => void;

@@ -222,7 +222,8 @@ export function TripEditSheet({
   };
 
   // 「もう一度読み込む」: 旅行を読み直し、欄・保存済みの基準・版を
-  // 新しい内容に置き換えてから編集に戻す。
+  // 新しい内容に置き換えてから編集に戻す。再取得に失敗したら（null）
+  // 入力と拒否の状態を残し、もう一度押せるようにする。
   const reload = () => {
     void onReload().then((fresh) => {
       if (fresh !== null) {
@@ -236,9 +237,9 @@ export function TripEditSheet({
         };
         versionRef.current = fresh.version;
         setErrors({});
+        rename.backToEditing();
+        period.backToEditing();
       }
-      rename.backToEditing();
-      period.backToEditing();
     });
   };
 

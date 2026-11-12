@@ -213,11 +213,12 @@ export function PlanMoveSheet({
               className="btn-secondary"
               onClick={() => {
                 // 読み直した予定の日付に選択を戻し、版も新しくする。
+                // 再取得に失敗したら選択と拒否の状態を残す。
                 void onReload().then((fresh) => {
                   if (fresh !== null) {
                     setSelected(fresh.date);
+                    move.backToEditing();
                   }
-                  move.backToEditing();
                 });
               }}
             >

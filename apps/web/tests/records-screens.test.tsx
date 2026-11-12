@@ -580,6 +580,27 @@ describe("記録の一覧（RW-05〜RW-08）", () => {
     );
   });
 
+  it("絞り込み中の「支払いを記録」は、履歴の絞り込みを支払いの記録へ渡す", async () => {
+    stubApi({});
+    renderScreen(
+      <RecordsScreen
+        tripId={tripId}
+        type="payment"
+        planId={planId}
+        recordId={paymentId}
+        recordType="payment"
+      />,
+    );
+    expect(
+      await screen.findByRole("link", { name: "支払いを記録" }),
+    ).toHaveAttribute(
+      "href",
+      `/trips/${tripId}/payments/new?back=records&records=${encodeURIComponent(
+        `type=payment&planId=${planId}&recordId=${paymentId}&recordType=payment`,
+      )}`,
+    );
+  });
+
   it("読み足しに失敗しても出ている行を残し、末尾で再試行できる（RW-07）", async () => {
     let pageCalls = 0;
     stubApi({
@@ -964,6 +985,35 @@ describe("取り消しの確認と支払いの詳細（RW-09・RW-10）", () => 
     const amount = await screen.findByDisplayValue("2,400");
     expect(amount).toBeInTheDocument();
     expect(screen.getByDisplayValue("参道で朝ごはん")).toBeInTheDocument();
+  });
+
+  it("支払いを記録の後ろの履歴にも同じ絞り込みを渡す", async () => {
+    const recordUrls: string[] = [];
+    stubApi({
+      records: (url) => {
+        recordUrls.push(url);
+        return json({ items: [], nextCursor: null });
+      },
+    });
+    renderScreen(
+      <PaymentFormScreen
+        tripId={tripId}
+        planId={null}
+        back="records"
+        recordsFilter={{
+          type: "payment",
+          planId,
+          recordId: null,
+          recordType: null,
+        }}
+      />,
+    );
+    await screen.findByLabelText("金額");
+    await waitFor(() =>
+      expect(recordUrls).toContain(
+        `/api/trips/${tripId}/records?type=payment&planId=${planId}&limit=20`,
+      ),
+    );
   });
 });
 

@@ -1,4 +1,4 @@
-import type { ListRecordsType } from "@/features/records";
+import type { ListRecordsType, RecordsFilterQuery } from "@/features/records";
 import type { PaymentFormBack } from "@/screens/payment-form/payment-form-screen";
 import { parseFocusSettlementId } from "@/screens/settlement/focus-settlement-id";
 import { isLocalDateString } from "@/shared/lib/local-date";
@@ -87,18 +87,26 @@ export function parsePlanDetailQuery(query: QueryReader): { from: string | null 
 }
 
 /**
- * 支払いを記録（`?planId=&from=&back=`）。`planId`と`from`はUUIDの形のときだけ渡す。
- * `back`は開いた画面（`home`か`records`）。それ以外の値は無いものとして扱う。
+ * 支払いを記録（`?planId=&from=&back=&records=`）。`planId`と`from`はUUIDの形のときだけ渡す。
+ * `back`は開いた画面（`home`か`records`）。`records`は履歴の絞り込み。
+ * それ以外の値は無いものとして扱う。
  */
 export function parsePaymentNewQuery(query: QueryReader): {
   planId: string | null;
   fromPaymentId: string | null;
   back: PaymentFormBack | null;
+  recordsFilter: RecordsFilterQuery | null;
 } {
-  const back = query.getAll("back")[0] ?? null;
+  const backValue = query.getAll("back")[0] ?? null;
+  const back = backValue === "home" || backValue === "records" ? backValue : null;
+  const records = first(query, "records");
   return {
     planId: uuidOf(query.getAll("planId")[0] ?? null),
     fromPaymentId: uuidOf(query.getAll("from")[0] ?? null),
-    back: back === "home" || back === "records" ? back : null,
+    back,
+    recordsFilter:
+      back === "records" && records !== null
+        ? parseRecordsQuery(new URLSearchParams(records))
+        : null,
   };
 }

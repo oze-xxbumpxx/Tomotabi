@@ -82,6 +82,7 @@ export function TripTabBar({
   tripId,
   current,
   action,
+  recordsQuery,
 }: {
   tripId: string;
   /** 今の画面のタブ。`aria-current="page"`の印を付ける。 */
@@ -92,11 +93,19 @@ export function TripTabBar({
    * 画面の中に同じ意味の操作がある取り消し済みの支払いの詳細）。
    */
   action?: TripMainAction | null;
+  /** 履歴の絞り込み（`/records`の問い合わせ）。履歴から開くときだけ`records`に入れる。 */
+  recordsQuery?: string | null;
 }) {
   const online = useOnlineStatus();
   // 保存したあとと閉じたときに、開いた画面（ホームか履歴）へ戻すための印。
+  const recordsQueryParam =
+    current === "records" && recordsQuery
+      ? `&records=${encodeURIComponent(recordsQuery)}`
+      : "";
   const backQuery =
-    current === "home" || current === "records" ? `?back=${current}` : "";
+    current === "home" || current === "records"
+      ? `?back=${current}${recordsQueryParam}`
+      : "";
 
   return (
     <>

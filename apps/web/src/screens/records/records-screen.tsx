@@ -12,6 +12,7 @@ import {
   cancelBookingDraft,
   eventOf,
   isOriginalOf,
+  recordsFilterQueryString,
   PlanEventSheet,
   RecordFilters,
   RecordList,
@@ -349,6 +350,12 @@ export function RecordsScreen({
   const emptyMessage = filtering
     ? "この条件の記録はありません"
     : "記録はまだありません";
+  const recordsQuery = recordsFilterQueryString({
+    type,
+    planId,
+    recordId,
+    recordType,
+  });
 
   return (
     <main className="records-page">
@@ -518,7 +525,11 @@ export function RecordsScreen({
       {toast !== null && (
         <Toast message={toast} onDismiss={() => setToast(null)} />
       )}
-      <TripTabBar tripId={tripId} current="records" />
+      <TripTabBar
+        tripId={tripId}
+        current="records"
+        recordsQuery={recordsQuery}
+      />
     </main>
   );
 }

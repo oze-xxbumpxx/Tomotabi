@@ -30,6 +30,10 @@ import {
   type PlanRowState,
   type SelectedPlan,
 } from "@/features/payments";
+import {
+  recordsFilterQueryString,
+  type RecordsFilterQuery,
+} from "@/features/records";
 import { usePlan } from "@/features/plans";
 import { useTrip } from "@/features/trips";
 import { usePendingRequestCheck } from "@/shared/browser/use-pending-request-check";
@@ -84,7 +88,7 @@ function rejectedMessage(
 export type PaymentFormBack = "home" | "records";
 
 /**
- * 支払いを記録（v3 11・11b）。`/trips/{tripId}/payments/new?planId=&back=`。
+ * 支払いを記録（v3 11・11b）。`/trips/{tripId}/payments/new?planId=&back=&records=`。
  * 開いた画面（ホーム・履歴。分からなければしおり）の上に重ねるシート。保存は保留中の要求（IndexedDB）を通し、
  * 同じ利用者・旅行・操作の保留があれば入力を固定して「保存されたか
  * 確認できません」と「同じ内容で確認する」を出す（ADR-0006・F-50〜F-53）。
@@ -96,6 +100,7 @@ export function PaymentFormScreen({
   planId,
   fromPaymentId,
   back,
+  recordsFilter = null,
 }: {
   tripId: string;
   /** URLの`planId`（予定の詳細から開いた入口。無ければnull）。 */
@@ -108,6 +113,8 @@ export function PaymentFormScreen({
    * そちら（予定の詳細）を優先する。
    */
   back?: PaymentFormBack | null;
+  /** URLの`records`（履歴の絞り込み。`back`が`records`のとき、戻る先と後ろの一覧に使う）。 */
+  recordsFilter?: RecordsFilterQuery | null;
 }) {
   const router = useRouter();
   const { state: meState, reload: reloadMe } = useMe();
@@ -264,7 +271,16 @@ export function PaymentFormScreen({
     }
   }, [locked, urlPlanCheck, planQuery, planId]);
 
-  const openerHref = `/trips/${tripId}/${back ?? "itinerary"}`;
+  const recordsQuery =
+    back === "records" && recordsFilter !== null
+      ? recordsFilterQueryString(recordsFilter)
+      : "";
+  const openerHref =
+    back === "records"
+      ? `/trips/${tripId}/records${
+          recordsQuery === "" ? "" : `?${recordsQuery}`
+        }`
+      : `/trips/${tripId}/${back ?? "itinerary"}`;
   const save = useCreatePayment({
     tripId,
     userId: meUserId ?? "",
@@ -431,10 +447,10 @@ export function PaymentFormScreen({
     ) : back === "records" ? (
       <RecordsScreen
         tripId={tripId}
-        type={null}
-        planId={null}
-        recordId={null}
-        recordType={null}
+        type={recordsFilter?.type ?? null}
+        planId={recordsFilter?.planId ?? null}
+        recordId={recordsFilter?.recordId ?? null}
+        recordType={recordsFilter?.recordType ?? null}
       />
     ) : (
       <ItineraryScreen tripId={tripId} />

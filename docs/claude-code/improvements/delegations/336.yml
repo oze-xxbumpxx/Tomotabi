@@ -13,7 +13,7 @@ reviews:
     posted: true
     findings:
       - severity: 'must'
-        category: 'test-coverage'
+        category: 'missing-test'
         summary: '428のあとの「もう一度読み込む」で保存を再開する試験が、日の移動・取りやめ・旅行の編集・終了・支払いに無い'
       - severity: 'nit'
         category: 'scope-creep'

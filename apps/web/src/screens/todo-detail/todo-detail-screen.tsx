@@ -83,11 +83,15 @@ export function TodoDetailScreen({
   const userId = meState.status === "ready" ? meState.me.user.id : null;
   const listHref = `/trips/${tripId}/todos`;
   const deleteUrl = deleteTodoDraft(tripId, todoId).url;
+  // 変更の保留はこのToDoの経路だけを対象にする（同じ旅行の別のToDoの
+  // 変更の保留を、この詳細の「保存されたか確認できません」に出さない）。
+  const updateUrl = updateTodoDraft(tripId, todoId, {}, "1").url;
 
   const updateCheck = usePendingRequestCheck({
     userId,
     tripId,
     operation: UPDATE_TODO_OPERATION,
+    url: updateUrl,
   });
   const deleteCheck = usePendingRequestCheck({
     userId,

@@ -6,16 +6,24 @@
   "round": 2,
   "stages": {
     "requirements": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/requirements/migration-deploy-check.md"
-      ]
+      ],
+      "approved": {
+        "pr": 331,
+        "at": "2026-11-12"
+      }
     },
     "design": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/designs/migration-deploy-check.md"
-      ]
+      ],
+      "approved": {
+        "pr": 331,
+        "at": "2026-11-12"
+      }
     },
     "plan": {
       "state": "pending"
@@ -33,5 +41,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-11T22:11:30.686Z"
+  "updated_at": "2026-11-12T13:23:53.335Z"
 }

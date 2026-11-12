@@ -1,0 +1,37 @@
+issue: 336
+title: 'fix(web): 状況と食い違う表示を直す（開始待ちの印・達成のあとの主ボタン・読み直しのボタン）'
+agent: 'devin'
+model: 'swe-2-flash-high'
+runner: 'local'
+change_level: null
+delegated_at: '2026-11-10T13:17:00Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-10T14:32:38Z'
+    reviewed_sha: '7ffb3850853848682832b32c0eefe3cc7c6caa9b'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-coverage'
+        summary: '428のあとの「もう一度読み込む」で保存を再開する試験が、日の移動・取りやめ・旅行の編集・終了・支払いに無い'
+      - severity: 'nit'
+        category: 'scope-creep'
+        summary: '画面写真をコミットに入れて消しており、マージで履歴に残る'
+  - round: 1
+    reviewed_at: '2026-11-10T14:49:17Z'
+    reviewed_sha: '6f2671d338385886f2263b8608451b4556e034a9'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 337
+  pr_created_at: '2026-11-10T14:30:25Z'
+  merged_at: '2026-11-11T22:11:27Z'
+  closed_at: '2026-11-11T22:11:27Z'
+  commits: 4
+  ci_first_pass: true
+  closes_linked: true
+task_key: 'natural-wording:misleading-display'

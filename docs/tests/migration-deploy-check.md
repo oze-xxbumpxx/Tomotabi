@@ -16,6 +16,7 @@ DBに流していないmigrationがあるcommitを出そうとすると、ワー
 | 種別                     | 置き場所                                                                   | 動かすコマンド                                     |
 | ------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------- |
 | apiの単体（DBなし）      | `apps/api/tests/http/health-migrations.http.test.ts`                       | `npm test -w @tomotabi/api`                        |
+| DBを読む回数（DBなし）   | `apps/api/tests/usecase/get-migration-status.usecase.test.ts`              | `npm test -w @tomotabi/api`                        |
 | apiの結合（DBつき）      | `apps/api/tests/db/migration-status.db.test.ts`                            | `npm run test:db -w @tomotabi/api`（CIの`api-db`） |
 | 確かめるスクリプトの単体 | `.claude/tests/check-deployed-migrations.test.mjs`                         | `npm run test:harness`（CIの`harness`）            |
 | ワークフローの形         | `.claude/tests/deploy-integration-workflow.test.mjs`（今のファイルに足す） | `npm run test:harness`                             |
@@ -32,6 +33,16 @@ DBに流していないmigrationがあるcommitを出そうとすると、ワー
 | MD-01 | ログインなしで読める（B-04）   | セッションの検証が「未ログイン」   | `GET /api/health/migrations` | 200、本文が`{ lastAppliedAt: null }`と`toEqual`で一致 | 正常 |
 | MD-02 | ログインしていても同じ（B-04） | セッションの検証が「ログイン済み」 | 同じ                         | 200、本文が同じ                                       | 正常 |
 | MD-03 | `/api/health`は変わらない      | 同じ                               | `GET /api/health`            | 200、`{ status: "ok" }`（既存のA-15がそのまま通る）   | 回帰 |
+
+### DBを読む回数（`get-migration-status.usecase.test.ts`）
+
+口はログインなしで読めるので、連続して呼ばれてもDBの接続をふさがないようにする（PRのレビューでDevinが指摘）。時計と読み手を偽物にして、`GetMigrationStatusUseCase`だけを試す。
+
+| #     | 観点                                   | 前提                                | 操作                                | 期待結果                                       | 分類 |
+| ----- | -------------------------------------- | ----------------------------------- | ----------------------------------- | ---------------------------------------------- | ---- |
+| MD-45 | 覚えている間は読まず、過ぎたら読み直す | 1回目は`1`、2回目は`2`を返す読み手  | 0ms・9,999ms・10,000msに1回ずつ呼ぶ | `1`・`1`・`2`。読み手を呼んだのは2回           | 境界 |
+| MD-46 | 同時に来た要求はDBを1回だけ読む        | 読み手が答えを止めている            | 20回呼んでから答えを返させる        | 20回とも同じ答え。読み手を呼んだのは1回        | 正常 |
+| MD-47 | 読めなかったときは覚えない             | 1回目は失敗、2回目は`3`を返す読み手 | 2回呼ぶ                             | 1回目は失敗、2回目は`3`。読み手を呼んだのは2回 | 異常 |
 
 ### DBつき（`migration-status.db.test.ts`）
 
@@ -118,6 +129,7 @@ MD-05は、`drizzle-kit`の`migrate`を通さずに空の表を作る。作る�
 - 権限: 口はログインなしで読める（MD-01・02・07）。実行用のロールは履歴の表を読むだけで、書けない（MD-06）。
 - データ整合性: 返す時刻は`_journal.json`の`when`と同じ数（MD-04）。bigintの文字列から数へ直すとき、安全な整数でなければ500にする（実装計画）。
 - 冪等性: 対象外。口は読むだけで、スクリプトも何も書き換えない。
+- 負荷: 口のDBを読む回数は、同じプロセスで10秒に1回まで。同時の要求は1回の読み取りを待つ（MD-45〜47）。
 - 障害系: つながらない・打ち切り・404以外のエラーは止める（MD-17〜19）。再試行はしない（MD-25）。
 - フロントエンド: 対象外（webは変えない）。
 - 防御性: 返す形の違い（MD-20）、`entries`の並び（MD-23）、importしただけで動かない（MD-29）。EntityとValue Objectは足さないので、防御的コピー・`updatedAt`は対象外。
@@ -128,7 +140,7 @@ MD-05は、`drizzle-kit`の`migrate`を通さずに空の表を作る。作る�
 | ------------------------------- | -------------------- | ----------------- |
 | `PgMigrationStatus`             | `lastAppliedAt`      | MD-04・05・06     |
 | `InMemoryMigrationStatus`       | `lastAppliedAt`      | MD-01             |
-| `GetMigrationStatusUseCase`     | `execute`            | MD-01・07         |
+| `GetMigrationStatusUseCase`     | `execute`            | MD-01・07・45〜47 |
 | `HealthController`              | `get`（既存）        | MD-03             |
 | `HealthController`              | `migrations`（新規） | MD-01・02・07・08 |
 | `check-deployed-migrations.mjs` | `lastJournalEntry`   | MD-21・22・23     |

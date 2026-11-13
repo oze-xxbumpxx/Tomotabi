@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { getPool } from "../../infrastructure/database/pool.js";
+import { SystemClock } from "../../infrastructure/clock/system-clock.js";
 import type { UnitOfWork } from "../../adapter/transaction/unit-of-work.js";
 import {
   GET_PROBE_INPUT_PORT,
@@ -108,7 +109,7 @@ function useDatabase(): boolean {
       useFactory: (
         migrations: MigrationStatusReader,
       ): GetMigrationStatusInputPort =>
-        new GetMigrationStatusUseCase(migrations),
+        new GetMigrationStatusUseCase(migrations, new SystemClock()),
       inject: [MIGRATION_STATUS_READER],
     },
   ],

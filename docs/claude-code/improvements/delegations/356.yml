@@ -1,0 +1,29 @@
+issue: 356
+title: 'feat(web): ToDoのリストをカテゴリごとの欄にし、担当・期限・絞り込みを足す'
+agent: 'devin'
+model: 'swe-2-flash-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-11-14T09:09:09Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-14T10:06:40Z'
+    reviewed_sha: '76133cb7f0b2fc29cdd39ca0b6a032a0513c45ac'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'concurrency'
+        summary: '内容の保存とカテゴリ・担当・期限の保存が同時に送れ、自分の保存と競合する（Codexの指摘）'
+      - severity: 'must'
+        category: 'offline'
+        summary: 'カテゴリ・担当・期限のシートの中でオフラインでも保存できる（Codexの指摘）'
+  - round: 1
+    reviewed_at: '2026-11-14T10:15:43Z'
+    reviewed_sha: 'c1736d6bae0ab13dfb7f0379b976e1d6e5c6009e'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: null
+gh: null

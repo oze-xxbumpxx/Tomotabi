@@ -1,0 +1,26 @@
+issue: 353
+title: 'feat(planning): ToDoのカテゴリ・担当・期限のDB・契約・API'
+agent: 'devin'
+model: 'swe-2-flash-max'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-11-14T07:27:35Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-14T08:47:10Z'
+    reviewed_sha: 'a53c68827db3e4f49806dd6fd7e3c22d197cfe7d'
+    verdict: 'merge'
+    posted: true
+    findings:
+      - severity: 'nit'
+        category: 'error-handling'
+        summary: '件数・順が変わった409にretryableが付いている（#355）'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: '一覧が同じ時点かの試験が読み取りのあいだにToDoを動かしていない（#355）'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: '権限をapp_runtimeの接続で確かめる試験が無い（#355）'
+escalations: 0
+outcome: null
+gh: null

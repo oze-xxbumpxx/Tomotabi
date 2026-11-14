@@ -18,6 +18,12 @@ reviews:
       - severity: 'must'
         category: 'offline'
         summary: 'カテゴリ・担当・期限のシートの中でオフラインでも保存できる（Codexの指摘）'
+  - round: 1
+    reviewed_at: '2026-11-14T10:15:43Z'
+    reviewed_sha: 'c1736d6bae0ab13dfb7f0379b976e1d6e5c6009e'
+    verdict: 'merge'
+    posted: false
+    findings: []
 escalations: 0
 outcome: null
 gh: null

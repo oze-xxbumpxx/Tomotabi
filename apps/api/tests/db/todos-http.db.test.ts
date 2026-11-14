@@ -222,6 +222,23 @@ async function postTodo(
     .send({ name });
 }
 
+async function patchTodo(
+  cookie: string,
+  tripId: string,
+  todoId: string,
+  body: Record<string, unknown>,
+  ifMatch = "1",
+  key = newKey(),
+): Promise<request.Response> {
+  return authed(
+    http().patch(`/api/trips/${tripId}/todos/${todoId}`),
+    cookie,
+  )
+    .set("Idempotency-Key", key)
+    .set("X-Expected-Version", ifMatch)
+    .send(body);
+}
+
 async function todoAction(
   cookie: string,
   tripId: string,
@@ -348,7 +365,7 @@ describe("ToDoのAPI（trip-todo）", () => {
     expect(row.rows[0]).toMatchObject({ name: "清水寺", done_at: null });
   });
 
-  it("予定にすると、予定と完了が一度に決まり、一覧に予定の日付が出る", async () => {
+  it("予定をToDoから作ると、ToDoは完了にならず予定とつながる（F-19）", async () => {
     const tripId = await createTrip(hinataCookie);
     const todo = await postTodo(hinataCookie, tripId, "湯豆腐");
     const todoId = todo.body.id as string;
@@ -367,7 +384,8 @@ describe("ToDoのAPI（trip-todo）", () => {
     const list = await listTodos(hinataCookie, tripId);
     expect(list.body.items[0]).toMatchObject({
       id: todoId,
-      doneBy: aoi.userId,
+      doneAt: null,
+      doneBy: null,
       plan: { id: plan.body.id, date: "2026-09-11", cancelled: false },
     });
     const plans = await db.admin.query(
@@ -448,5 +466,73 @@ describe("ToDoのAPI（trip-todo）", () => {
     await expect(
       insert(", done_at, done_by, plan_id", ", now(), $2, $3", [otherPlan.id]),
     ).rejects.toThrow();
+  });
+
+  it("planIdで予定と結び、nullで外せる。別の旅行・取りやめの予定は422 TODO_PLAN_NOT_AVAILABLE", async () => {
+    const tripId = await createTrip(hinataCookie);
+    const plan = await createPlan(hinataCookie, tripId, {
+      name: "清水寺",
+      kind: "place",
+      date: "2026-09-11",
+    });
+    const otherTrip = await createTrip(hinataCookie);
+    const otherPlan = await createPlan(hinataCookie, otherTrip, {
+      name: "金閣寺",
+      kind: "place",
+      date: "2026-09-11",
+    });
+
+    // 追加でplanIdを付ける。
+    const created = await authed(
+      http().post(`/api/trips/${tripId}/todos`),
+      hinataCookie,
+    )
+      .set("Idempotency-Key", newKey())
+      .send({ name: "湯豆腐", planId: plan.id });
+    expect(created.status).toBe(201);
+    expect(created.body.plan).toMatchObject({ id: plan.id, cancelled: false });
+    const todoId = created.body.id as string;
+
+    // 別の旅行の予定・無い予定は422。
+    for (const badPlanId of [otherPlan.id, hinata.userId]) {
+      const error = await patchTodo(
+        hinataCookie,
+        tripId,
+        todoId,
+        { planId: badPlanId },
+        "1",
+      );
+      expect(error.status).toBe(422);
+      expect(error.body.code).toBe("TODO_PLAN_NOT_AVAILABLE");
+    }
+
+    // nullで外す。
+    const unlinked = await patchTodo(
+      hinataCookie,
+      tripId,
+      todoId,
+      { planId: null },
+      "1",
+    );
+    expect(unlinked.status).toBe(200);
+    expect(unlinked.body.plan).toBeNull();
+
+    // 取りやめた予定は結べない。
+    const cancel = await authed(
+      http().post(`/api/trips/${tripId}/plans/${plan.id}/cancel`),
+      hinataCookie,
+    )
+      .set("Idempotency-Key", newKey())
+      .send({});
+    expect(cancel.status).toBe(200);
+    const cancelled = await patchTodo(
+      hinataCookie,
+      tripId,
+      todoId,
+      { planId: plan.id },
+      "2",
+    );
+    expect(cancelled.status).toBe(422);
+    expect(cancelled.body.code).toBe("TODO_PLAN_NOT_AVAILABLE");
   });
 });

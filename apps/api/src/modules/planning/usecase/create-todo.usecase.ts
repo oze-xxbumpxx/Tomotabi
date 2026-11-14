@@ -58,6 +58,20 @@ export class CreateTodoUseCase implements CreateTodoInputPort {
             if (stored !== null) {
               return stored;
             }
+            // planIdは同じ旅行の、取りやめていない予定を同じトランザクションで
+            // 確かめる（FOR SHARE。ロックの順は旅行 → 予定 → カテゴリ → ToDo。
+            // 設計書 todo-organize「UseCase 設計」）。
+            const planId = input.planId ?? null;
+            if (planId !== null) {
+              const plan = await ctx.plans.lockForShare(trip.id, planId);
+              if (plan === null || plan.cancelledAt !== null) {
+                throw new ApiError({
+                  code: "TODO_PLAN_NOT_AVAILABLE",
+                  status: 422,
+                  message: "Plan is not available to link in the trip",
+                });
+              }
+            }
             // categoryIdは同じ旅行のカテゴリを同じトランザクションで確かめる
             // （FOR SHARE。設計書 todo-organize「UseCase 設計」）。
             const categoryId = input.categoryId ?? null;
@@ -86,8 +100,12 @@ export class CreateTodoUseCase implements CreateTodoInputPort {
               name,
               createdBy: input.userId,
               categoryId,
+              planId,
             });
-            const body = toTodoDto(todo, null);
+            const body = toTodoDto(
+              todo,
+              planId === null ? null : await ctx.todos.planLink(trip.id, planId),
+            );
             await ctx.receipts.insert({
               actorId: input.userId,
               operation: CREATE_TODO_OPERATION,

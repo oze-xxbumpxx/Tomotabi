@@ -94,6 +94,7 @@ export class DrizzleTodoRepository implements TodoRepository {
         name: todo.name,
         createdBy: todo.createdBy,
         categoryId: todo.categoryId,
+        planId: todo.planId,
       })
       .returning();
     return toTodoDomain(rows[0]!);

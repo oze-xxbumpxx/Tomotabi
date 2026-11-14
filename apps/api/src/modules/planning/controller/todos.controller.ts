@@ -105,6 +105,7 @@ export class TodosController {
       requestHash,
       name: body.name,
       categoryId: body.categoryId ?? null,
+      planId: body.planId ?? null,
     });
     return this.writeResult(response, result);
   }
@@ -140,6 +141,7 @@ export class TodosController {
       categoryId: body.categoryId,
       assigneeId: body.assigneeId,
       dueOn: body.dueOn,
+      planId: body.planId,
     });
     return this.writeResult(response, result);
   }

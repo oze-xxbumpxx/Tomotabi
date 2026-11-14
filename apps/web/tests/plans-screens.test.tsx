@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Itinerary, Plan, Trip } from "@tomotabi/contracts";
+import type { Itinerary, Plan, Todo, Trip } from "@tomotabi/contracts";
 import { createQueryClient } from "@/shared/api/query-client";
 import { takePendingToast } from "@/shared/lib/pending-toast";
 
@@ -112,6 +112,25 @@ function plan(overrides: Partial<Plan> = {}): Plan {
   };
 }
 
+function todoRow(overrides: Partial<Todo> = {}): Todo {
+  return {
+    id: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a51",
+    tripId,
+    name: "湯豆腐を食べる",
+    memo: null,
+    createdBy: userId,
+    createdAt: "2026-11-08T03:00:00.000Z",
+    doneAt: null,
+    doneBy: null,
+    plan: null,
+    categoryId: null,
+    assigneeId: null,
+    dueOn: null,
+    version: "1",
+    ...overrides,
+  };
+}
+
 function itineraryBody(t: Trip, plans: Plan[], date = t.startsOn): Itinerary {
   return {
     trip: t,
@@ -151,6 +170,9 @@ function stubApi(handlers: {
   cancel?: Handler;
   records?: Handler;
   balance?: Handler;
+  todos?: Handler;
+  createTodo?: Handler;
+  todoAction?: Handler;
 }): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = urlOf(input);
@@ -217,6 +239,32 @@ function stubApi(handlers: {
     ) {
       return Promise.resolve(
         handlers.patch !== undefined ? handlers.patch(init) : notFound(),
+      );
+    }
+    if (url === `/api/trips/${tripId}/todos` && method === "GET") {
+      return Promise.resolve(
+        handlers.todos !== undefined
+          ? handlers.todos(init)
+          : json({ categories: [], items: [] }),
+      );
+    }
+    if (url === `/api/trips/${tripId}/todos` && method === "POST") {
+      return Promise.resolve(
+        handlers.createTodo !== undefined
+          ? handlers.createTodo(init)
+          : json(todoRow(), 201),
+      );
+    }
+    if (
+      new RegExp(
+        `^/api/trips/${tripId}/todos/[^/]+/(complete|reopen)$`,
+      ).test(url) &&
+      method === "POST"
+    ) {
+      return Promise.resolve(
+        handlers.todoAction !== undefined
+          ? handlers.todoAction(init)
+          : json(todoRow()),
       );
     }
     if (
@@ -2333,4 +2381,147 @@ describe("「今 · 次まで」の線と次の予定・「あと N」（08・09
       expect(screen.queryByText(/あと /)).toBeNull();
     },
   );
+});
+
+describe("予定の詳細の「関連するToDo」（todo-organize F-21〜F-23）", () => {
+  const planLink = {
+    id: planId,
+    name: "錦市場で昼食",
+    date: "2026-10-13",
+    cancelled: false,
+  };
+
+  function renderLinkedDetail() {
+    return render(
+      <QueryClientProvider client={createQueryClient()}>
+        <PlanDetailScreen tripId={tripId} planId={planId} from="2026-10-13" />
+      </QueryClientProvider>,
+    );
+  }
+
+  it("未完了を上・完了を下に並べ、「1 / 3 件済み」と未完了の件数を出す（L-S04・L-C01）", async () => {
+    stubApi({
+      todos: () =>
+        json({
+          categories: [],
+          // APIは追加した順に返す（完了が間にあっても、そのままの並び）。
+          items: [
+            todoRow({
+              id: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a54",
+              name: "さきの未完了",
+              createdAt: "2026-11-08T12:00:00.000Z",
+              plan: planLink,
+            }),
+            todoRow({
+              id: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a53",
+              name: "完了",
+              createdAt: "2026-11-08T13:00:00.000Z",
+              doneAt: "2026-11-10T00:00:00.000Z",
+              doneBy: userId,
+              plan: planLink,
+            }),
+            todoRow({
+              id: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a52",
+              name: "あとの未完了",
+              createdAt: "2026-11-09T00:00:00.000Z",
+              plan: planLink,
+            }),
+            todoRow({
+              id: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a55",
+              name: "よその予定のToDo",
+              plan: {
+                ...planLink,
+                id: "66666666-7777-4888-8999-000000000001",
+              },
+            }),
+          ],
+        }),
+    });
+    renderLinkedDetail();
+    const region = await screen.findByRole("region", {
+      name: "関連するToDo",
+    });
+    const links = within(region).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual([
+      "さきの未完了",
+      "あとの未完了",
+      "完了",
+    ]);
+    expect(region).toHaveTextContent("1 / 3 件済み");
+    expect(region).toHaveTextContent("未完了のToDoが2件あります");
+  });
+
+  it("完了の印を押すと完了の要求を送る（L-S05）", async () => {
+    const fetchMock = stubApi({
+      todos: () =>
+        json({ categories: [], items: [todoRow({ plan: planLink })] }),
+    });
+    renderLinkedDetail();
+    const region = await screen.findByRole("region", {
+      name: "関連するToDo",
+    });
+    await userEvent.click(
+      within(region).getByRole("button", {
+        name: "「湯豆腐を食べる」を完了にする",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) =>
+            String(url).endsWith(
+              "/todos/5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a51/complete",
+            ) &&
+            (init?.method ?? "GET") === "POST",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("一行入れて「追加する」でplanIdつきの追加を送る（L-S06）", async () => {
+    const fetchMock = stubApi({});
+    renderLinkedDetail();
+    const region = await screen.findByRole("region", {
+      name: "関連するToDo",
+    });
+    await userEvent.type(
+      within(region).getByLabelText("ToDoの内容"),
+      "両替する",
+    );
+    await userEvent.click(
+      within(region).getByRole("button", { name: "追加する" }),
+    );
+    await waitFor(() => {
+      const post = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          String(url) === `/api/trips/${tripId}/todos` &&
+          (init?.method ?? "GET") === "POST",
+      );
+      expect(post).toBeDefined();
+      expect(
+        JSON.parse((post?.[1] as RequestInit).body as string),
+      ).toMatchObject({ name: "両替する", planId });
+    });
+  });
+
+  it("取りやめた予定では追加の欄を出さない（L-S07）", async () => {
+    stubApi({
+      plan: () =>
+        json(
+          plan({
+            cancelledAt: "2026-10-10T00:00:00.000Z",
+            cancelledBy: userId,
+          }),
+        ),
+    });
+    renderLinkedDetail();
+    const region = await screen.findByRole("region", {
+      name: "関連するToDo",
+    });
+    expect(
+      within(region).queryByRole("form", {
+        name: "関連するToDoを追加する",
+      }),
+    ).toBeNull();
+  });
 });

@@ -569,11 +569,13 @@ export function PlanFormScreen({
           )
         }
       >
+      {/* 「新しく予定を作る」から開いたときの文（F-19）。関連する予定が
+          すでにあるToDoは、保存しても関連付けを変えない（E-08）。 */}
       {sourceTodo !== null && (
         <p className="todo-source-note">
-          {sourceTodo.doneAt === null
-            ? `ToDoの「${sourceTodo.name}」から作ります。保存すると、ToDoは完了になります。`
-            : `ToDoの「${sourceTodo.name}」はもう済んでいます。予定だけを作ります。`}
+          {sourceTodo.plan === null
+            ? `ToDoの「${sourceTodo.name}」から作ります。保存すると、このToDoと関連付けられます。`
+            : `ToDoの「${sourceTodo.name}」から作ります。`}
         </p>
       )}
       {!online && (

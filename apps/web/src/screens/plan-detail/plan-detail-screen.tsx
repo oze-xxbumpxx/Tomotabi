@@ -4,6 +4,8 @@ import {
   CalendarBlank,
   CalendarCheck,
   CaretLeft,
+  CaretRight,
+  Check,
   CheckCircle,
   PencilSimple,
   Prohibit,
@@ -11,7 +13,8 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Plan } from "@tomotabi/contracts";
+import type { Plan, Todo } from "@tomotabi/contracts";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { useMe } from "@/features/auth";
 import {
@@ -41,6 +44,18 @@ import {
   usePlanPayments,
 } from "@/features/records";
 import { useBalance } from "@/features/payments";
+import {
+  CREATE_TODO_OPERATION,
+  completeTodoDraft,
+  createTodoDraft,
+  reopenTodoDraft,
+  replaceTodoInList,
+  sendCompleteTodo,
+  sendCreateTodo,
+  sendReopenTodo,
+  useTodos,
+  useTodoSave,
+} from "@/features/todos";
 import { TripTabBar, useTrip } from "@/features/trips";
 import { ApiRequestError } from "@/shared/api/api-failure";
 import { refetchSucceeded } from "@/shared/api/refetch";
@@ -188,6 +203,38 @@ export function PlanDetailScreen({
   const balance = useBalance(tripId);
   const planPayments = usePlanPayments(tripId, planId);
 
+  // 関連するToDo（その予定に結びついたもの）。完了の付け外しと一行の追加
+  // （POST /todosにplanId）をこの欄から行う（todo-organize F-21）。
+  const todos = useTodos(tripId);
+  const queryClient = useQueryClient();
+  const [newTodoName, setNewTodoName] = useState("");
+  const createTodoCheck = usePendingRequestCheck({
+    userId,
+    tripId,
+    operation: CREATE_TODO_OPERATION,
+  });
+  const onTodoSaved = (result: { data: Todo }) =>
+    replaceTodoInList(queryClient, tripId, result.data);
+  const createTodo = useTodoSave({
+    tripId,
+    userId,
+    send: sendCreateTodo,
+    check: createTodoCheck.check,
+    onSucceeded: () => setNewTodoName(""),
+  });
+  const completeTodo = useTodoSave({
+    tripId,
+    userId,
+    send: sendCompleteTodo,
+    onSucceeded: onTodoSaved,
+  });
+  const reopenTodo = useTodoSave({
+    tripId,
+    userId,
+    send: sendReopenTodo,
+    onSucceeded: onTodoSaved,
+  });
+
   // 別画面での保存成功（編集）を遷移先で1回だけ知らせる。
   useEffect(() => {
     const pending = takePendingToast();
@@ -264,6 +311,9 @@ export function PlanDetailScreen({
     cancel.state,
     createAchievement.state,
     createBooking.state,
+    createTodo.state,
+    completeTodo.state,
+    reopenTodo.state,
   ];
   const expired = saves.find(
     (
@@ -423,6 +473,45 @@ export function PlanDetailScreen({
       s.httpStatus !== 403 &&
       s.httpStatus !== 404,
   );
+  const todoRejected = [
+    createTodo.state,
+    completeTodo.state,
+    reopenTodo.state,
+  ].find(
+    (s): s is Extract<typeof s, { status: "rejected" }> =>
+      s.status === "rejected" &&
+      s.httpStatus !== 403 &&
+      s.httpStatus !== 404,
+  );
+
+  // その予定に結びついたToDo。未完了を上・完了を下、それぞれ追加した順。
+  const linkedTodos = (todos.data?.items ?? []).filter(
+    (item) => item.plan?.id === planId,
+  );
+  const openTodos = linkedTodos.filter((item) => item.doneAt === null);
+  const doneTodos = linkedTodos.filter((item) => item.doneAt !== null);
+  const todoToggleSaving =
+    completeTodo.state.status === "saving" ||
+    reopenTodo.state.status === "saving";
+  const todoBlocked =
+    createTodo.state.status === "saving" ||
+    createTodoCheck.check.status !== "none";
+
+  const toggleTodo = (todo: Todo) => {
+    void (todo.doneAt === null
+      ? completeTodo.submit(completeTodoDraft(tripId, todo.id))
+      : reopenTodo.submit(reopenTodoDraft(tripId, todo.id)));
+  };
+  const submitTodo = (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmed = newTodoName.trim();
+    if (trimmed === "") {
+      return;
+    }
+    void createTodo.submit(
+      createTodoDraft(tripId, trimmed, null, planId),
+    );
+  };
 
   // 主ボタンは下のタブの上に1つだけ出す。達成を記録できる予定は
   // 「達成を記録」、記録済みでなければ予約できる予定は「予約を記録」。
@@ -531,10 +620,31 @@ export function PlanDetailScreen({
           confirming={false}
         />
       )}
+      {createTodoCheck.check.status === "found" && (
+        <SaveUnknown
+          onConfirm={() => {
+            if (createTodoCheck.check.status !== "found") {
+              return;
+            }
+            void createTodo
+              .confirmRequest(createTodoCheck.check.record)
+              .then(createTodoCheck.reload);
+          }}
+          confirming={createTodo.state.status === "saving"}
+        />
+      )}
+      {createTodo.state.status === "unknown" && (
+        <SaveUnknown
+          onConfirm={() => void createTodo.confirmWithSameRequest()}
+          confirming={false}
+        />
+      )}
       {(achieveCheck.check.status === "unavailable" ||
         bookCheck.check.status === "unavailable" ||
+        createTodoCheck.check.status === "unavailable" ||
         createAchievement.state.status === "storage-unavailable" ||
-        createBooking.state.status === "storage-unavailable") && (
+        createBooking.state.status === "storage-unavailable" ||
+        createTodo.state.status === "storage-unavailable") && (
         <StorageUnavailable />
       )}
       {createRejected !== undefined && (
@@ -544,6 +654,11 @@ export function PlanDetailScreen({
             : createRejected.code === "PLAN_KIND_NOT_SUPPORTED"
               ? "この種類の予定には記録できません"
               : "記録できませんでした"}
+        </StatusText>
+      )}
+      {todoRejected !== undefined && (
+        <StatusText tone="error">
+          保存できませんでした。もう一度お試しください。
         </StatusText>
       )}
 
@@ -566,6 +681,109 @@ export function PlanDetailScreen({
         meId={userId}
         meName={displayName}
       />
+      {/* その予定に結びついたToDo（todo-organize F-21）。 */}
+      <section className="plan-todos" aria-label="関連するToDo">
+        <h2 className="plan-payments-title">関連するToDo</h2>
+        {todos.isPending ? (
+          <Loading />
+        ) : todos.data === undefined ? (
+          <FetchFailed
+            message="ToDoを取得できませんでした"
+            onRetry={() => void todos.refetch()}
+          />
+        ) : (
+          <>
+            {linkedTodos.length > 0 && (
+              <p className="todo-meta">
+                {`${doneTodos.length} / ${linkedTodos.length} 件済み`}
+              </p>
+            )}
+            {openTodos.length > 0 && (
+              <p className="record-note">
+                {`未完了のToDoが${openTodos.length}件あります`}
+              </p>
+            )}
+            {linkedTodos.length === 0 ? (
+              <p className="record-empty-text">まだありません</p>
+            ) : (
+              <ul className="todo-list">
+                {[...openTodos, ...doneTodos].map((todo) => {
+                  const done = todo.doneAt !== null;
+                  return (
+                    <li
+                      key={todo.id}
+                      className={done ? "todo-row todo-row-done" : "todo-row"}
+                    >
+                      <button
+                        type="button"
+                        className={
+                          done ? "todo-check todo-check-done" : "todo-check"
+                        }
+                        aria-label={
+                          done
+                            ? `「${todo.name}」を未完了に戻す`
+                            : `「${todo.name}」を完了にする`
+                        }
+                        disabled={!online || todoToggleSaving}
+                        onClick={() => toggleTodo(todo)}
+                      >
+                        {done && (
+                          <Check size={14} weight="bold" aria-hidden="true" />
+                        )}
+                      </button>
+                      <div className="todo-row-main">
+                        <Link
+                          className={
+                            done ? "todo-name todo-name-done" : "todo-name"
+                          }
+                          href={`/trips/${tripId}/todos/${todo.id}`}
+                        >
+                          {todo.name}
+                        </Link>
+                      </div>
+                      <CaretRight
+                        size={16}
+                        aria-hidden="true"
+                        className="todo-caret"
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {/* 取りやめた予定では追加の欄を出さない（E-06）。 */}
+            {plan.cancelledAt === null && (
+              <form
+                className="todo-add"
+                aria-label="関連するToDoを追加する"
+                onSubmit={submitTodo}
+                noValidate
+              >
+                <label className="sr-only" htmlFor="plan-todo-new">
+                  ToDoの内容
+                </label>
+                <input
+                  id="plan-todo-new"
+                  className="field-input todo-add-input"
+                  type="text"
+                  value={newTodoName}
+                  onChange={(event) => setNewTodoName(event.target.value)}
+                  placeholder="ToDoを追加する"
+                />
+                <button
+                  type="submit"
+                  className="btn-ink todo-add-button"
+                  disabled={
+                    !online || todoBlocked || newTodoName.trim() === ""
+                  }
+                >
+                  追加する
+                </button>
+              </form>
+            )}
+          </>
+        )}
+      </section>
       <div className="plan-detail-actions">
         {/* 出ているボタンの分だけ、何を記録して誰に知らせるかを先に書く。
             主ボタンは下のタブの上にあるので、説明の先頭にボタンの名前を置く（#252）。 */}

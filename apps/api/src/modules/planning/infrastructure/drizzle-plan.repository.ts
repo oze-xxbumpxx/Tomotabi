@@ -71,6 +71,16 @@ export class DrizzlePlanRepository implements PlanRepository {
     return rows[0] === undefined ? null : toPlanDomain(rows[0]);
   }
 
+  /** ToDoとの関連付けの確かめ用。旅行行のロック中に呼ぶ。 */
+  async lockForShare(tripId: string, planId: string): Promise<Plan | null> {
+    const rows = await this.db
+      .select()
+      .from(plans)
+      .where(and(eq(plans.tripId, tripId), eq(plans.id, planId)))
+      .for("share");
+    return rows[0] === undefined ? null : toPlanDomain(rows[0]);
+  }
+
   async insert(plan: NewPlan): Promise<Plan> {
     const rows = await this.db
       .insert(plans)

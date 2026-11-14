@@ -53,17 +53,19 @@ import { useOnlineStatus } from "@/shared/ui/state/use-online-status";
 import { StatusText } from "@/shared/ui/status-text";
 import { Toast } from "@/shared/ui/toast";
 import { todoActorLine } from "../todos/todo-actor";
+import { TodoPlanPickSheet } from "./todo-plan-pick-sheet";
 
 const NAME_MAX = 100;
 const MEMO_MAX = 2000;
 
-/** 「カテゴリ・担当・期限」のどの欄を編集するシートを出しているか。 */
-type FieldSheet = "category" | "assignee" | "due";
+/** 「カテゴリ・担当・期限・関連する予定」のどの欄を編集するシートを出しているか。 */
+type FieldSheet = "category" | "assignee" | "due" | "plan";
 
 /**
  * `/trips/{tripId}/todos/{todoId}`のToDoの詳細（Claude Designの見本「ToDoの詳細」）。
  * 名前とメモは「変更を保存」で版つきで送る。完了の付け外しと削除は版を送らない。
- * 未完了なら主ボタンを「予定にする」に差し替え、名前とメモを入れた予定の追加を開く。
+ * 未完了で関連する予定が無いときだけ、主ボタンを「新しく予定を作る」に差し替え、
+ * 名前とメモを入れた予定の追加を開く（F-19）。
  */
 export function TodoDetailScreen({
   tripId,
@@ -173,11 +175,12 @@ export function TodoDetailScreen({
     }
   }, [fieldsSucceeded, updateFields]);
 
-  // カテゴリ・担当が参照先ごと無くなっていた（422）は一覧を読み直す（E-04）。
+  // カテゴリ・担当・予定が参照先ごと無くなっていた（422）は一覧を読み直す（E-04）。
   const fieldsRejectedGone =
     updateFields.state.status === "rejected" &&
     (updateFields.state.code === "TODO_CATEGORY_NOT_FOUND" ||
-      updateFields.state.code === "TODO_ASSIGNEE_NOT_PARTICIPANT");
+      updateFields.state.code === "TODO_ASSIGNEE_NOT_PARTICIPANT" ||
+      updateFields.state.code === "TODO_PLAN_NOT_AVAILABLE");
   useEffect(() => {
     if (fieldsRejectedGone) {
       invalidateTodos(queryClient, tripId);
@@ -343,16 +346,18 @@ export function TodoDetailScreen({
       updateTodoDraft(tripId, todoId, patch, todo.version),
     );
   };
-  const mainAction = isDone
-    ? null
-    : {
-        label: "予定にする",
-        icon: <CalendarPlus size={20} weight="fill" aria-hidden="true" />,
-        onPress: () =>
-          router.push(`/trips/${tripId}/plans/new?fromTodo=${todoId}`),
-        disabled: !online || dirty,
-        describedBy: noteId,
-      };
+  // 「新しく予定を作る」は未完了で関連する予定が無いときだけ出す（F-19）。
+  const mainAction =
+    isDone || todo.plan !== null
+      ? null
+      : {
+          label: "新しく予定を作る",
+          icon: <CalendarPlus size={20} weight="fill" aria-hidden="true" />,
+          onPress: () =>
+            router.push(`/trips/${tripId}/plans/new?fromTodo=${todoId}`),
+          disabled: !online || dirty,
+          describedBy: noteId,
+        };
 
   const conflict =
     update.state.status === "conflict" ||
@@ -365,7 +370,10 @@ export function TodoDetailScreen({
       : updateFields.state.status === "rejected" &&
           updateFields.state.code === "TODO_ASSIGNEE_NOT_PARTICIPANT"
         ? "担当に選んだ人はもう旅行にいません。リストを読み直しました"
-        : null;
+        : updateFields.state.status === "rejected" &&
+            updateFields.state.code === "TODO_PLAN_NOT_AVAILABLE"
+          ? "その予定は関連付けられません。リストを読み直しました"
+          : null;
   const rejected = saves.find(
     (state) =>
       state.status === "rejected" &&
@@ -562,6 +570,22 @@ export function TodoDetailScreen({
             type="button"
             className="todo-field-row"
             disabled={!online || fieldsLocked}
+            onClick={() => setFieldSheet("plan")}
+          >
+            <span className="todo-field-label">関連する予定</span>
+            <span className="todo-field-value">
+              {todo.plan === null
+                ? "なし"
+                : todo.plan.cancelled
+                  ? "取りやめた予定"
+                  : `${formatLocalDate(todo.plan.date)} ${todo.plan.name}`}
+              <CaretRight size={14} weight="bold" aria-hidden="true" />
+            </span>
+          </button>
+          <button
+            type="button"
+            className="todo-field-row"
+            disabled={!online || fieldsLocked}
             onClick={() => setFieldSheet("due")}
           >
             <span className="todo-field-label">期限</span>
@@ -584,10 +608,10 @@ export function TodoDetailScreen({
         </div>
 
         <div className="plan-detail-actions">
-          {!isDone && (
+          {mainAction !== null && (
             <p id={noteId} className="record-note">
-              予定にする:
-              日付と種類を選んで予定を作ります。保存すると、このToDoは完了になります。相手に通知は届きません。
+              新しく予定を作る:
+              日付と種類を選んで予定を作ります。保存すると、このToDoと関連付けられます。相手に通知は届きません。
             </p>
           )}
           <button
@@ -683,6 +707,16 @@ export function TodoDetailScreen({
             />
           </div>
         </Sheet>
+      )}
+      {fieldSheet === "plan" && (
+        <TodoPlanPickSheet
+          tripId={tripId}
+          currentPlanId={todo.plan?.id ?? null}
+          saving={updateFields.state.status === "saving"}
+          closable={updateFields.state.status !== "saving"}
+          onPick={(planId) => patchFields({ planId })}
+          onClose={() => setFieldSheet(null)}
+        />
       )}
       {fieldSheet === "due" && (
         <DueSheet

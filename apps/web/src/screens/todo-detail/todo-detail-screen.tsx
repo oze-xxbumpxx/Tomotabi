@@ -3,6 +3,8 @@
 import {
   CalendarPlus,
   CaretLeft,
+  CaretRight,
+  Check,
   CheckCircle,
   ArrowCounterClockwise,
   Trash,
@@ -18,6 +20,9 @@ import {
   completeTodoDraft,
   DELETE_TODO_OPERATION,
   deleteTodoDraft,
+  dueBadge,
+  formatDueOn,
+  invalidateTodos,
   reopenTodoDraft,
   replaceTodoInList,
   sendCompleteTodo,
@@ -36,6 +41,7 @@ import { formatLocalDate, tokyoDateOf } from "@/shared/lib/local-date";
 import { setPendingToast } from "@/shared/lib/pending-toast";
 import { boundedTextLength } from "@/shared/lib/text-length";
 import { Dialog } from "@/shared/ui/dialog";
+import { Sheet } from "@/shared/ui/sheet";
 import { FetchFailed } from "@/shared/ui/state/fetch-failed";
 import { Loading } from "@/shared/ui/state/loading";
 import { NotAvailable } from "@/shared/ui/state/not-available";
@@ -50,6 +56,9 @@ import { todoActorLine } from "../todos/todo-actor";
 
 const NAME_MAX = 100;
 const MEMO_MAX = 2000;
+
+/** 「カテゴリ・担当・期限」のどの欄を編集するシートを出しているか。 */
+type FieldSheet = "category" | "assignee" | "due";
 
 /**
  * `/trips/{tripId}/todos/{todoId}`のToDoの詳細（Claude Designの見本「ToDoの詳細」）。
@@ -73,6 +82,7 @@ export function TodoDetailScreen({
   const [memo, setMemo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [fieldSheet, setFieldSheet] = useState<FieldSheet | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   // 打ち始めたときの名前・メモ。保存の前に今の値と比べ、相手が先に直していたら
   // 送らずに知らせる。版で比べないのは、完了の付け外しでも版が上がり、
@@ -116,6 +126,15 @@ export function TodoDetailScreen({
       setToast("変更しました");
     },
   });
+  // カテゴリ・担当・期限は、行で選んだらすぐ保存する。名前・メモの
+  // 「変更を保存」の編集中の入力を消さないよう、別の保存状態にする。
+  const updateFields = useTodoSave({
+    tripId,
+    userId,
+    send: sendUpdateTodo,
+    check: updateCheck.check,
+    onSucceeded: applySaved,
+  });
   const complete = useTodoSave({
     tripId,
     userId,
@@ -145,9 +164,35 @@ export function TodoDetailScreen({
     }
   }, [meState.status, router]);
 
+  // 行からすぐ保存したものが保存できたら、選ぶシートを閉じて次を選べるようにする。
+  const fieldsSucceeded = updateFields.state.status === "succeeded";
+  useEffect(() => {
+    if (fieldsSucceeded) {
+      setFieldSheet(null);
+      updateFields.backToEditing();
+    }
+  }, [fieldsSucceeded, updateFields]);
+
+  // カテゴリ・担当が参照先ごと無くなっていた（422）は一覧を読み直す（E-04）。
+  const fieldsRejectedGone =
+    updateFields.state.status === "rejected" &&
+    (updateFields.state.code === "TODO_CATEGORY_NOT_FOUND" ||
+      updateFields.state.code === "TODO_ASSIGNEE_NOT_PARTICIPANT");
+  useEffect(() => {
+    if (fieldsRejectedGone) {
+      invalidateTodos(queryClient, tripId);
+    }
+  }, [fieldsRejectedGone, queryClient, tripId]);
+
   const failure =
     todos.error instanceof ApiRequestError ? todos.error.failure : null;
-  const saves = [update.state, complete.state, reopen.state, remove.state];
+  const saves = [
+    update.state,
+    updateFields.state,
+    complete.state,
+    reopen.state,
+    remove.state,
+  ];
   if (
     saves.some((state) => state.status === "session-expired") ||
     (failure !== null && failure.kind === "http" && failure.status === 401)
@@ -229,6 +274,17 @@ export function TodoDetailScreen({
   const updateLocked =
     update.state.status === "saving" ||
     update.state.status === "unknown" ||
+    updateFields.state.status === "saving" ||
+    updateFields.state.status === "unknown" ||
+    updateCheck.check.status !== "none";
+  // 行からすぐ保存する操作も、保留の照合中・保存中は押せない（E-11）。
+  // 内容の保存と同じversionで同時に送ると自分の保存と競合するため、
+  // 両方を互いに押せなくする。
+  const fieldsLocked =
+    updateFields.state.status === "saving" ||
+    updateFields.state.status === "unknown" ||
+    update.state.status === "saving" ||
+    update.state.status === "unknown" ||
     updateCheck.check.status !== "none";
   const toggleSaving =
     complete.state.status === "saving" || reopen.state.status === "saving";
@@ -261,6 +317,32 @@ export function TodoDetailScreen({
 
   const participants = balance.data?.participants;
   const isDone = todo.doneAt !== null;
+  const today = tokyoDateOf(new Date());
+  const badge = dueBadge(todo.dueOn, today);
+  const categoryLabel =
+    todos.data.categories.find((entry) => entry.id === todo.categoryId)
+      ?.name ?? "未分類";
+  const assigneeLabel =
+    todo.assigneeId === null
+      ? "未定"
+      : todo.assigneeId === userId
+        ? "あなた"
+        : (participants?.find((p) => p.userId === todo.assigneeId)
+            ?.displayName ?? "相手");
+  const fieldsBusy =
+    !online ||
+    update.state.status === "saving" ||
+    update.state.status === "unknown" ||
+    updateFields.state.status === "saving" ||
+    updateFields.state.status === "unknown";
+  const patchFields = (patch: TodoPatch) => {
+    if (!online) {
+      return;
+    }
+    void updateFields.submit(
+      updateTodoDraft(tripId, todoId, patch, todo.version),
+    );
+  };
   const mainAction = isDone
     ? null
     : {
@@ -272,15 +354,29 @@ export function TodoDetailScreen({
         describedBy: noteId,
       };
 
-  const conflict = update.state.status === "conflict" || staleBase;
+  const conflict =
+    update.state.status === "conflict" ||
+    updateFields.state.status === "conflict" ||
+    staleBase;
+  const goneNotice =
+    updateFields.state.status === "rejected" &&
+    updateFields.state.code === "TODO_CATEGORY_NOT_FOUND"
+      ? "このカテゴリは相手が削除しました。リストを読み直しました"
+      : updateFields.state.status === "rejected" &&
+          updateFields.state.code === "TODO_ASSIGNEE_NOT_PARTICIPANT"
+        ? "担当に選んだ人はもう旅行にいません。リストを読み直しました"
+        : null;
   const rejected = saves.find(
-    (state) => state.status === "rejected" && state.httpStatus !== 404,
+    (state) =>
+      state.status === "rejected" &&
+      state.httpStatus !== 404 &&
+      !(state === updateFields.state && fieldsRejectedGone),
   );
 
   return (
     <main className="todo-page">
       {!online && <OfflineBanner at={new Date(todos.dataUpdatedAt)} />}
-      {[update, complete, reopen, remove].map((s, index) =>
+      {[update, updateFields, complete, reopen, remove].map((s, index) =>
         s.state.status === "unknown" ? (
           <SaveUnknown
             key={index}
@@ -332,6 +428,7 @@ export function TodoDetailScreen({
             className="btn-secondary"
             onClick={() => {
               update.backToEditing();
+              updateFields.backToEditing();
               setName(null);
               setMemo(null);
               setBase(null);
@@ -343,10 +440,13 @@ export function TodoDetailScreen({
           </button>
         </div>
       )}
-      {rejected !== undefined && !conflict && (
+      {rejected !== undefined && !conflict && goneNotice === null && (
         <StatusText tone="error">
           保存できませんでした。もう一度お試しください。
         </StatusText>
+      )}
+      {goneNotice !== null && (
+        <StatusText tone="error">{goneNotice}</StatusText>
       )}
 
       <header className="plan-detail-header">
@@ -432,6 +532,57 @@ export function TodoDetailScreen({
           {update.state.status === "saving" ? "保存中" : "変更を保存"}
         </button>
 
+        {/* カテゴリ・担当・期限は行で選ぶとすぐ保存する（F-22〜F-24）。 */}
+        <div className="todo-fields">
+          <button
+            type="button"
+            className="todo-field-row"
+            disabled={!online || fieldsLocked}
+            onClick={() => setFieldSheet("category")}
+          >
+            <span className="todo-field-label">カテゴリ</span>
+            <span className="todo-field-value">
+              {categoryLabel}
+              <CaretRight size={14} weight="bold" aria-hidden="true" />
+            </span>
+          </button>
+          <button
+            type="button"
+            className="todo-field-row"
+            disabled={!online || fieldsLocked}
+            onClick={() => setFieldSheet("assignee")}
+          >
+            <span className="todo-field-label">担当</span>
+            <span className="todo-field-value">
+              {assigneeLabel}
+              <CaretRight size={14} weight="bold" aria-hidden="true" />
+            </span>
+          </button>
+          <button
+            type="button"
+            className="todo-field-row"
+            disabled={!online || fieldsLocked}
+            onClick={() => setFieldSheet("due")}
+          >
+            <span className="todo-field-label">期限</span>
+            <span className="todo-field-value">
+              {todo.dueOn === null ? "なし" : formatDueOn(todo.dueOn)}
+              {badge !== null && (
+                <span
+                  className={
+                    badge === "期限切れ"
+                      ? "todo-field-badge todo-field-badge-over"
+                      : "todo-field-badge"
+                  }
+                >
+                  {badge}
+                </span>
+              )}
+              <CaretRight size={14} weight="bold" aria-hidden="true" />
+            </span>
+          </button>
+        </div>
+
         <div className="plan-detail-actions">
           {!isDone && (
             <p id={noteId} className="record-note">
@@ -471,6 +622,78 @@ export function TodoDetailScreen({
         </div>
       </div>
 
+      {fieldSheet === "category" && (
+        <Sheet
+          title="カテゴリ"
+          onClose={() => setFieldSheet(null)}
+          closable={updateFields.state.status !== "saving"}
+        >
+          <div className="menu-card">
+            <FieldOption
+              label="未分類"
+              current={todo.categoryId === null}
+              disabled={fieldsBusy}
+              onClick={() => patchFields({ categoryId: null })}
+            />
+            {todos.data.categories.map((category) => (
+              <FieldOption
+                key={category.id}
+                label={category.name}
+                current={todo.categoryId === category.id}
+                disabled={fieldsBusy}
+                onClick={() =>
+                  patchFields({ categoryId: category.id })
+                }
+              />
+            ))}
+          </div>
+        </Sheet>
+      )}
+      {fieldSheet === "assignee" && (
+        <Sheet
+          title="担当"
+          onClose={() => setFieldSheet(null)}
+          closable={updateFields.state.status !== "saving"}
+        >
+          <div className="menu-card">
+            {userId !== null && (
+              <FieldOption
+                label="あなた"
+                current={todo.assigneeId === userId}
+                disabled={fieldsBusy}
+                onClick={() => patchFields({ assigneeId: userId })}
+              />
+            )}
+            {(participants ?? [])
+              .filter((p) => p.userId !== userId)
+              .map((p) => (
+                <FieldOption
+                  key={p.userId}
+                  label={p.displayName}
+                  current={todo.assigneeId === p.userId}
+                  disabled={fieldsBusy}
+                  onClick={() => patchFields({ assigneeId: p.userId })}
+                />
+              ))}
+            <FieldOption
+              label="未定"
+              current={todo.assigneeId === null}
+              disabled={fieldsBusy}
+              onClick={() => patchFields({ assigneeId: null })}
+            />
+          </div>
+        </Sheet>
+      )}
+      {fieldSheet === "due" && (
+        <DueSheet
+          todo={todo}
+          today={today}
+          disabled={fieldsBusy}
+          closable={updateFields.state.status !== "saving"}
+          onPick={(dueOn) => patchFields({ dueOn })}
+          onClose={() => setFieldSheet(null)}
+        />
+      )}
       {confirmingDelete && (
         <Dialog
           title={`「${todo.name}」を削除しますか？`}
@@ -514,6 +737,100 @@ export function TodoDetailScreen({
       )}
       <TripTabBar tripId={tripId} current="todos" action={mainAction} />
     </main>
+  );
+}
+
+/** カテゴリ・担当の選び項目（いまの値には印を付ける）。 */
+function FieldOption({
+  label,
+  current,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  current: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="menu-item"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <span className="menu-item-icon" aria-hidden="true">
+        {current ? <Check size={18} weight="bold" /> : null}
+      </span>
+      <span className="menu-item-main">
+        <span className="menu-item-label">{label}</span>
+      </span>
+    </button>
+  );
+}
+
+/** 期限を決めるシート。決めたらすぐ送る。 */
+function DueSheet({
+  todo,
+  today,
+  disabled,
+  closable,
+  onPick,
+  onClose,
+}: {
+  todo: Todo;
+  today: string;
+  disabled: boolean;
+  closable: boolean;
+  onPick: (dueOn: string | null) => void;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState(todo.dueOn ?? "");
+  const preview = dueBadge(draft === "" ? null : draft, today);
+  return (
+    <Sheet
+      title="期限"
+      onClose={onClose}
+      closable={closable}
+      footer={
+        <>
+          {todo.dueOn !== null && (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={disabled}
+              onClick={() => onPick(null)}
+            >
+              期限を消す
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn-ink"
+            disabled={disabled || draft === ""}
+            onClick={() => onPick(draft)}
+          >
+            決定
+          </button>
+        </>
+      }
+    >
+      <div className="field">
+        <label className="field-label" htmlFor="todo-due">
+          期限
+        </label>
+        <input
+          id="todo-due"
+          className="field-input"
+          type="date"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+        />
+        {preview !== null && (
+          <p className="todo-meta">{preview}</p>
+        )}
+      </div>
+    </Sheet>
   );
 }
 

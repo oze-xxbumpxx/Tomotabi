@@ -681,15 +681,22 @@ export const ListRecordsResponse = zod.object({
 
 
 /**
- * 旅行のToDoの一覧。未完了 → 完了の順、それぞれ追加した順。予定にしたToDoは予定の日付と取りやめを含む。
+ * 旅行のToDoの一覧。categoriesは二人の決めた順、itemsは追加した順。予定にしたToDoは予定の名前・日付・取りやめを含む。
  */
 export const ListTodosParams = zod.object({
   "tripId": zod.uuid()
 })
 
+export const listTodosResponseCategoriesItemNameMax = 30;
+
+export const listTodosResponseCategoriesItemVersionRegExp = new RegExp('^[1-9][0-9]*$');
+export const listTodosResponseCategoriesMax = 20;
+
 export const listTodosResponseItemsItemNameMax = 100;
 
 export const listTodosResponseItemsItemMemoMax = 2000;
+
+export const listTodosResponseItemsItemPlanOneNameMax = 100;
 
 export const listTodosResponseItemsItemVersionRegExp = new RegExp('^[1-9][0-9]*$');
 export const listTodosResponseItemsMax = 1000;
@@ -697,6 +704,12 @@ export const listTodosResponseItemsMax = 1000;
 
 
 export const ListTodosResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1).max(listTodosResponseCategoriesItemNameMax),
+  "version": zod.string().regex(listTodosResponseCategoriesItemVersionRegExp)
+})).max(listTodosResponseCategoriesMax).describe('二人の決めた順'),
   "items": zod.array(zod.object({
   "id": zod.uuid(),
   "tripId": zod.uuid(),
@@ -708,11 +721,15 @@ export const ListTodosResponse = zod.object({
   "doneBy": zod.union([zod.uuid(),zod.null()]),
   "plan": zod.union([zod.object({
   "id": zod.uuid(),
+  "name": zod.string().min(1).max(listTodosResponseItemsItemPlanOneNameMax).describe('予定の名前'),
   "date": zod.iso.date(),
   "cancelled": zod.boolean()
-}),zod.null()]),
-  "version": zod.string().regex(listTodosResponseItemsItemVersionRegExp)
-})).max(listTodosResponseItemsMax)
+}),zod.null()]).describe('つないだ予定。関連付けは完了の付け外しとは別で、完了の印を外してもそのまま。'),
+  "version": zod.string().regex(listTodosResponseItemsItemVersionRegExp),
+  "categoryId": zod.union([zod.uuid(),zod.null()]).describe('移す・未分類に戻すときはnull'),
+  "assigneeId": zod.union([zod.uuid(),zod.null()]).describe('担当を変える・未定に戻すときはnull'),
+  "dueOn": zod.union([zod.iso.date(),zod.null()]).describe('期限。YYYY-MM-DD。消すときはnull')
+})).max(listTodosResponseItemsMax).describe('追加した順')
 })
 
 
@@ -732,12 +749,15 @@ export const CreateTodoHeader = zod.object({
 
 
 export const CreateTodoBody = zod.strictObject({
-  "name": zod.string().min(1)
+  "name": zod.string().min(1),
+  "categoryId": zod.union([zod.uuid(),zod.null()]).optional().describe('入れるカテゴリ。未分類はnull・省略')
 })
 
 export const createTodoResponseNameMax = 100;
 
 export const createTodoResponseMemoMax = 2000;
+
+export const createTodoResponsePlanOneNameMax = 100;
 
 export const createTodoResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
@@ -753,10 +773,14 @@ export const CreateTodoResponse = zod.object({
   "doneBy": zod.union([zod.uuid(),zod.null()]),
   "plan": zod.union([zod.object({
   "id": zod.uuid(),
+  "name": zod.string().min(1).max(createTodoResponsePlanOneNameMax).describe('予定の名前'),
   "date": zod.iso.date(),
   "cancelled": zod.boolean()
-}),zod.null()]),
-  "version": zod.string().regex(createTodoResponseVersionRegExp)
+}),zod.null()]).describe('つないだ予定。関連付けは完了の付け外しとは別で、完了の印を外してもそのまま。'),
+  "version": zod.string().regex(createTodoResponseVersionRegExp),
+  "categoryId": zod.union([zod.uuid(),zod.null()]).describe('移す・未分類に戻すときはnull'),
+  "assigneeId": zod.union([zod.uuid(),zod.null()]).describe('担当を変える・未定に戻すときはnull'),
+  "dueOn": zod.union([zod.iso.date(),zod.null()]).describe('期限。YYYY-MM-DD。消すときはnull')
 })
 
 
@@ -778,16 +802,22 @@ export const UpdateTodoHeader = zod.object({
 })
 
 
+export const updateTodoBodyDueOnOneRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 
 export const UpdateTodoBody = zod.strictObject({
   "name": zod.string().min(1).optional(),
-  "memo": zod.string().nullish()
+  "memo": zod.string().nullish(),
+  "categoryId": zod.union([zod.uuid(),zod.null()]).optional().describe('移す・未分類に戻すときはnull'),
+  "assigneeId": zod.union([zod.uuid(),zod.null()]).optional().describe('担当を変える・未定に戻すときはnull'),
+  "dueOn": zod.union([zod.string().regex(updateTodoBodyDueOnOneRegExp),zod.null()]).optional().describe('期限。YYYY-MM-DD。消すときはnull')
 })
 
 export const updateTodoResponseNameMax = 100;
 
 export const updateTodoResponseMemoMax = 2000;
+
+export const updateTodoResponsePlanOneNameMax = 100;
 
 export const updateTodoResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
@@ -803,10 +833,14 @@ export const UpdateTodoResponse = zod.object({
   "doneBy": zod.union([zod.uuid(),zod.null()]),
   "plan": zod.union([zod.object({
   "id": zod.uuid(),
+  "name": zod.string().min(1).max(updateTodoResponsePlanOneNameMax).describe('予定の名前'),
   "date": zod.iso.date(),
   "cancelled": zod.boolean()
-}),zod.null()]),
-  "version": zod.string().regex(updateTodoResponseVersionRegExp)
+}),zod.null()]).describe('つないだ予定。関連付けは完了の付け外しとは別で、完了の印を外してもそのまま。'),
+  "version": zod.string().regex(updateTodoResponseVersionRegExp),
+  "categoryId": zod.union([zod.uuid(),zod.null()]).describe('移す・未分類に戻すときはnull'),
+  "assigneeId": zod.union([zod.uuid(),zod.null()]).describe('担当を変える・未定に戻すときはnull'),
+  "dueOn": zod.union([zod.iso.date(),zod.null()]).describe('期限。YYYY-MM-DD。消すときはnull')
 })
 
 
@@ -827,6 +861,8 @@ export const completeTodoResponseNameMax = 100;
 
 export const completeTodoResponseMemoMax = 2000;
 
+export const completeTodoResponsePlanOneNameMax = 100;
+
 export const completeTodoResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
@@ -841,15 +877,19 @@ export const CompleteTodoResponse = zod.object({
   "doneBy": zod.union([zod.uuid(),zod.null()]),
   "plan": zod.union([zod.object({
   "id": zod.uuid(),
+  "name": zod.string().min(1).max(completeTodoResponsePlanOneNameMax).describe('予定の名前'),
   "date": zod.iso.date(),
   "cancelled": zod.boolean()
-}),zod.null()]),
-  "version": zod.string().regex(completeTodoResponseVersionRegExp)
+}),zod.null()]).describe('つないだ予定。関連付けは完了の付け外しとは別で、完了の印を外してもそのまま。'),
+  "version": zod.string().regex(completeTodoResponseVersionRegExp),
+  "categoryId": zod.union([zod.uuid(),zod.null()]).describe('移す・未分類に戻すときはnull'),
+  "assigneeId": zod.union([zod.uuid(),zod.null()]).describe('担当を変える・未定に戻すときはnull'),
+  "dueOn": zod.union([zod.iso.date(),zod.null()]).describe('期限。YYYY-MM-DD。消すときはnull')
 })
 
 
 /**
- * ToDoを未完了に戻す。予定とのつながりも消す。未完了なら変えずに返す。Idempotency-Key 必須。版は要らない。
+ * ToDoを未完了に戻す。予定とのつながりはそのまま。未完了なら変えずに返す。Idempotency-Key 必須。版は要らない。
  */
 export const ReopenTodoParams = zod.object({
   "tripId": zod.uuid(),
@@ -865,6 +905,8 @@ export const reopenTodoResponseNameMax = 100;
 
 export const reopenTodoResponseMemoMax = 2000;
 
+export const reopenTodoResponsePlanOneNameMax = 100;
+
 export const reopenTodoResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
 
 
@@ -879,10 +921,14 @@ export const ReopenTodoResponse = zod.object({
   "doneBy": zod.union([zod.uuid(),zod.null()]),
   "plan": zod.union([zod.object({
   "id": zod.uuid(),
+  "name": zod.string().min(1).max(reopenTodoResponsePlanOneNameMax).describe('予定の名前'),
   "date": zod.iso.date(),
   "cancelled": zod.boolean()
-}),zod.null()]),
-  "version": zod.string().regex(reopenTodoResponseVersionRegExp)
+}),zod.null()]).describe('つないだ予定。関連付けは完了の付け外しとは別で、完了の印を外してもそのまま。'),
+  "version": zod.string().regex(reopenTodoResponseVersionRegExp),
+  "categoryId": zod.union([zod.uuid(),zod.null()]).describe('移す・未分類に戻すときはnull'),
+  "assigneeId": zod.union([zod.uuid(),zod.null()]).describe('担当を変える・未定に戻すときはnull'),
+  "dueOn": zod.union([zod.iso.date(),zod.null()]).describe('期限。YYYY-MM-DD。消すときはnull')
 })
 
 
@@ -901,4 +947,146 @@ export const DeleteTodoHeader = zod.object({
 
 export const DeleteTodoResponse = zod.object({
   "id": zod.uuid()
+})
+
+
+/**
+ * カテゴリの追加。Idempotency-Key 必須。1つの旅行に20個まで。
+ */
+export const CreateTodoCategoryParams = zod.object({
+  "tripId": zod.uuid()
+})
+
+export const CreateTodoCategoryHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。')
+})
+
+
+
+
+export const CreateTodoCategoryBody = zod.strictObject({
+  "name": zod.string().min(1)
+})
+
+export const createTodoCategoryResponseNameMax = 30;
+
+export const createTodoCategoryResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
+
+
+export const CreateTodoCategoryResponse = zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1).max(createTodoCategoryResponseNameMax),
+  "version": zod.string().regex(createTodoCategoryResponseVersionRegExp)
+})
+
+
+/**
+ * カテゴリの名前の変更。Idempotency-Key・X-Expected-Version 必須。
+ */
+export const UpdateTodoCategoryParams = zod.object({
+  "tripId": zod.uuid(),
+  "categoryId": zod.uuid()
+})
+
+export const updateTodoCategoryHeaderXExpectedVersionRegExp = new RegExp('^[1-9][0-9]*$');
+
+
+export const UpdateTodoCategoryHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。'),
+  "X-Expected-Version": zod.string().regex(updateTodoCategoryHeaderXExpectedVersionRegExp).describe('取得したときの版（本文の version。引用符なしの10進の正整数）。欠落428、不一致409。同一キー成功再送は認可後に元の結果を返す。If-Match は使わない（Vercel の層が成功の応答を412に置き換えるため）。')
+})
+
+
+
+
+export const UpdateTodoCategoryBody = zod.strictObject({
+  "name": zod.string().min(1)
+})
+
+export const updateTodoCategoryResponseNameMax = 30;
+
+export const updateTodoCategoryResponseVersionRegExp = new RegExp('^[1-9][0-9]*$');
+
+
+export const UpdateTodoCategoryResponse = zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1).max(updateTodoCategoryResponseNameMax),
+  "version": zod.string().regex(updateTodoCategoryResponseVersionRegExp)
+})
+
+
+/**
+ * カテゴリの並べ替え。`from`が今の順と同じときだけ保存し、`to`は`from`の並べ替え。Idempotency-Key 必須。
+ */
+export const ReorderTodoCategoriesParams = zod.object({
+  "tripId": zod.uuid()
+})
+
+export const ReorderTodoCategoriesHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。')
+})
+
+export const reorderTodoCategoriesBodyFromMin = 0;
+export const reorderTodoCategoriesBodyFromMax = 20;
+
+export const reorderTodoCategoriesBodyToMin = 0;
+export const reorderTodoCategoriesBodyToMax = 20;
+
+
+
+export const ReorderTodoCategoriesBody = zod.strictObject({
+  "from": zod.array(zod.uuid()).min(reorderTodoCategoriesBodyFromMin).max(reorderTodoCategoriesBodyFromMax).describe('今の並び（変更の起点）'),
+  "to": zod.array(zod.uuid()).min(reorderTodoCategoriesBodyToMin).max(reorderTodoCategoriesBodyToMax).describe('新しい並び。`from`の並べ替え')
+})
+
+export const reorderTodoCategoriesResponseCategoriesItemNameMax = 30;
+
+export const reorderTodoCategoriesResponseCategoriesItemVersionRegExp = new RegExp('^[1-9][0-9]*$');
+export const reorderTodoCategoriesResponseCategoriesMax = 20;
+
+
+
+export const ReorderTodoCategoriesResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "id": zod.uuid(),
+  "tripId": zod.uuid(),
+  "name": zod.string().min(1).max(reorderTodoCategoriesResponseCategoriesItemNameMax),
+  "version": zod.string().regex(reorderTodoCategoriesResponseCategoriesItemVersionRegExp)
+})).max(reorderTodoCategoriesResponseCategoriesMax)
+})
+
+
+/**
+ * カテゴリの削除。中のToDoも消える。`expectedTodoCount`と保存のときの件数が違えば止める。Idempotency-Key 必須。同じキーの再送は、行が無くても同じ本文を返す。
+ */
+export const DeleteTodoCategoryParams = zod.object({
+  "tripId": zod.uuid(),
+  "categoryId": zod.uuid()
+})
+
+export const DeleteTodoCategoryHeader = zod.object({
+  "Origin": zod.url().describe('公開アプリのオリジンと完全一致が必要。欠落・null・別オリジンは403。認証そのものの代替ではない。'),
+  "Idempotency-Key": zod.uuid().describe('利用者・操作単位の再送識別子。同じ論理操作の再送には同じキー。tripId、対象ID、正規化bodyをrequest hashに含める。')
+})
+
+export const deleteTodoCategoryBodyExpectedTodoCountMin = 0;
+
+
+
+export const DeleteTodoCategoryBody = zod.strictObject({
+  "expectedTodoCount": zod.int().min(deleteTodoCategoryBodyExpectedTodoCountMin).describe('画面が数えたカテゴリ内のToDoの件数')
+})
+
+export const deleteTodoCategoryResponseDeletedTodoCountMin = 0;
+
+
+
+export const DeleteTodoCategoryResponse = zod.object({
+  "id": zod.uuid(),
+  "deletedTodoCount": zod.int().min(deleteTodoCategoryResponseDeletedTodoCountMin)
 })

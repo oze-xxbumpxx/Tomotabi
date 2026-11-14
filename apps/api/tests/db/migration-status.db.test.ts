@@ -130,7 +130,7 @@ describe("1本も流していないDB（実DB）", () => {
     );
     await db.admin.query(
       readFileSync(
-        join(MIGRATIONS_FOLDER, "0013_app_runtime_read_migrations.sql"),
+        join(MIGRATIONS_FOLDER, "0015_app_runtime_read_migrations.sql"),
         "utf8",
       ),
     );

@@ -96,8 +96,22 @@
     {
       "idx": 13,
       "version": "7",
-      "when": 1794524043024,
-      "tag": "0013_app_runtime_read_migrations",
+      "when": 1794641749810,
+      "tag": "0013_todo_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794641750000,
+      "tag": "0014_todo_categories_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794647518065,
+      "tag": "0015_app_runtime_read_migrations",
       "breakpoints": true
     }
   ]

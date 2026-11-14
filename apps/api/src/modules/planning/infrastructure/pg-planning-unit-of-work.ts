@@ -10,6 +10,7 @@ import type {
   PlanningWorkContext,
 } from "../adapter/outbound/planning-work-context.js";
 import { DrizzlePlanRepository } from "./drizzle-plan.repository.js";
+import { DrizzleTodoCategoryRepository } from "./drizzle-todo-category.repository.js";
 import { DrizzleTodoRepository } from "./drizzle-todo.repository.js";
 import { DrizzleTripRepository } from "./drizzle-trip.repository.js";
 
@@ -42,6 +43,7 @@ export class PgPlanningUnitOfWork implements UnitOfWork<PlanningWorkContext> {
         trips: new DrizzleTripRepository(db),
         plans: new DrizzlePlanRepository(db),
         todos: new DrizzleTodoRepository(db),
+        todoCategories: new DrizzleTodoCategoryRepository(db),
         participants: this.participantsFactory(db),
         receipts: new PgCommandReceipts(db),
         financeGuards: new PgFinanceGuards(db),

@@ -42,6 +42,7 @@ export function replaceTodoInList(
     list === undefined
       ? list
       : {
+          ...list,
           items: list.items.map((item) => (item.id === todo.id ? todo : item)),
         },
   );

@@ -31,14 +31,23 @@ type Command = Readonly<{
 }>;
 
 export type ListTodosInput = Readonly<{ userId: UserId; tripId: string }>;
-export type CreateTodoInput = Command & Readonly<{ name: string }>;
+export type CreateTodoInput = Command &
+  Readonly<{
+    name: string;
+    /** 入れるカテゴリ。未分類はnull。 */
+    categoryId: string | null;
+  }>;
 export type UpdateTodoInput = Command &
   Readonly<{
     todoId: string;
     ifMatch: string;
-    /** undefinedは「送られていない」、nullは「メモを消す」。 */
+    /** undefinedは「送られていない」、nullは「消す」。 */
     name: string | undefined;
     memo: string | null | undefined;
+    categoryId: string | null | undefined;
+    assigneeId: string | null | undefined;
+    /** `YYYY-MM-DD`。 */
+    dueOn: string | null | undefined;
   }>;
 export type TodoCommandInput = Command & Readonly<{ todoId: string }>;
 

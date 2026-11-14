@@ -1,0 +1,48 @@
+{
+  "feature": "todo-organize",
+  "title": "ToDoのカテゴリ分けと予定との関連付け",
+  "level": "L3",
+  "page": "https://claude.ai/artifact/RkrTGDx64nX4sjzjk8zJAT",
+  "round": 4,
+  "stages": {
+    "requirements": {
+      "state": "done",
+      "docs": [
+        "docs/requirements/todo-organize.md"
+      ],
+      "approved": {
+        "pr": 350,
+        "at": "2026-11-14"
+      }
+    },
+    "design": {
+      "state": "done",
+      "docs": [
+        "docs/designs/todo-organize.md"
+      ],
+      "approved": {
+        "pr": 351,
+        "at": "2026-11-14"
+      }
+    },
+    "plan": {
+      "state": "approval",
+      "docs": [
+        "docs/implementation-plans/todo-organize.md"
+      ]
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-11-14T07:22:19.024Z"
+}

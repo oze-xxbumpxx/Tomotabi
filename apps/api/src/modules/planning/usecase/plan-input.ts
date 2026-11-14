@@ -6,6 +6,7 @@ import { PlanKind } from "../domain/plan-kind.js";
 
 const MAX_NAME_CODE_POINTS = 100;
 const MAX_MEMO_CODE_POINTS = 2000;
+const MAX_CATEGORY_NAME_CODE_POINTS = 30;
 
 /**
  * 名前の値の規則（1〜100コードポイント・前後空白の除去）。
@@ -87,6 +88,21 @@ export function parsePlanTime(value: string | null): LocalTime | null {
       code: "VALIDATION_FAILED",
       status: 422,
       message: "time must be HH:mm",
+    });
+  }
+}
+/**
+ * カテゴリの名前の値の規則（1〜30コードポイント・前後空白の除去）。
+ * @throws空・上限超過は422 VALIDATION_FAILED。
+ */
+export function parseTodoCategoryName(value: string): BoundedText {
+  try {
+    return BoundedText.parse(value, MAX_CATEGORY_NAME_CODE_POINTS);
+  } catch {
+    throw new ApiError({
+      code: "VALIDATION_FAILED",
+      status: 422,
+      message: "name must be 1-30 characters",
     });
   }
 }

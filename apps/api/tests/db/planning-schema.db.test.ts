@@ -32,9 +32,10 @@ const FINANCE_RECORD_TABLES = ["record.payments", "record.payment_cancellations"
 
 const ALL_TABLES = [...M2_TABLES, ...FINANCE_RECORD_TABLES] as const;
 
-// Added by drizzle/0011_planning_todos.sql. Kept out of ALL_TABLES because app_runtime may
-// DELETE todos (0012), so the D-08 / D-09 grant loops do not fit it as they are.
-const TODO_TABLES = ["planning.todos"] as const;
+// Added by drizzle/0011_planning_todos.sql and 0013_todo_categories.sql. Kept out of
+// ALL_TABLES because app_runtime may DELETE todos / todo_categories (0012 / 0014),
+// so the D-08 / D-09 grant loops do not fit them as they are.
+const TODO_TABLES = ["planning.todos", "planning.todo_categories"] as const;
 
 const SCHEMA_TABLES = [...ALL_TABLES, ...TODO_TABLES] as const;
 
@@ -45,6 +46,7 @@ const M2_INDEXES = [
   "plan_events_history_idx",
   "plan_events_timeline_idx",
   "plan_event_cancellations_timeline_idx",
+  "todo_categories_list_idx",
 ] as const;
 
 async function migrateFolder(connectionString: string, migrationsFolder: string): Promise<void> {
@@ -298,6 +300,94 @@ describe("planning / record / infra schema migrations and runtime privileges", (
           [tripId, outsider],
         ),
       ).rejects.toMatchObject({ code: "23503" });
+    });
+  });
+
+  describe("todo_categories and todos organize columns (todo-organize)", () => {
+    it("rejects an empty name, a negative position, and a non-participant creator", async () => {
+      const { tripId, slot0 } = await seedTrip(db.admin);
+      const outsider = await insertUser(db.admin, "outsider-category");
+      await expect(
+        db.admin.query(
+          "INSERT INTO planning.todo_categories (trip_id, name, position, created_by) VALUES ($1, '   ', 0, $2)",
+          [tripId, slot0],
+        ),
+      ).rejects.toMatchObject({ code: "23514" });
+      await expect(
+        db.admin.query(
+          "INSERT INTO planning.todo_categories (trip_id, name, position, created_by) VALUES ($1, 'x', -1, $2)",
+          [tripId, slot0],
+        ),
+      ).rejects.toMatchObject({ code: "23514" });
+      await expect(
+        db.admin.query(
+          "INSERT INTO planning.todo_categories (trip_id, name, position, created_by) VALUES ($1, 'x', 0, $2)",
+          [tripId, outsider],
+        ),
+      ).rejects.toMatchObject({ code: "23503" });
+    });
+
+    it("rejects todos with a category of another trip or a non-participant assignee", async () => {
+      const { tripId, slot0 } = await seedTrip(db.admin);
+      const { tripId: otherTripId, slot0: otherSlot0 } =
+        await seedTrip(db.admin);
+      const outsider = await insertUser(db.admin, "outsider-assignee");
+      const otherCategory = await db.admin.query<{ id: string }>(
+        "INSERT INTO planning.todo_categories (trip_id, name, position, created_by) VALUES ($1, 'x', 0, $2) RETURNING id",
+        [otherTripId, otherSlot0],
+      );
+      await expect(
+        db.admin.query(
+          "INSERT INTO planning.todos (trip_id, name, created_by, category_id) VALUES ($1, 'x', $2, $3)",
+          [tripId, slot0, otherCategory.rows[0]!.id],
+        ),
+      ).rejects.toMatchObject({ code: "23503" });
+      await expect(
+        db.admin.query(
+          "INSERT INTO planning.todos (trip_id, name, created_by, assignee_id) VALUES ($1, 'x', $2, $3)",
+          [tripId, slot0, outsider],
+        ),
+      ).rejects.toMatchObject({ code: "23503" });
+    });
+
+    it("allows todos.plan_id without done_at (todo_plan_requires_done dropped)", async () => {
+      const { tripId, planId, slot0 } = await seedTrip(db.admin);
+      const inserted = await db.admin.query<{ id: string }>(
+        "INSERT INTO planning.todos (trip_id, name, created_by, plan_id) VALUES ($1, 'x', $2, $3) RETURNING id",
+        [tripId, slot0, planId],
+      );
+      expect(inserted.rowCount).toBe(1);
+    });
+
+    it("accepts the todo_category receipt resource types", async () => {
+      const { tripId, slot0 } = await seedTrip(db.admin);
+      for (const resourceType of [
+        "todo_category",
+        "todo_category_order",
+        "todo_category_deletion",
+      ]) {
+        const inserted = await db.admin.query(
+          `INSERT INTO infra.command_receipts
+             (actor_id, operation, idempotency_key, trip_id, request_hash, resource_type, resource_id, http_status, response_body)
+           VALUES ($1, 'x', $2, $3, $4, $5, $3, 200, '{}'::jsonb)`,
+          [
+            slot0,
+            crypto.randomUUID(),
+            tripId,
+            "b".repeat(64),
+            resourceType,
+          ],
+        );
+        expect(inserted.rowCount).toBe(1);
+      }
+      await expect(
+        db.admin.query(
+          `INSERT INTO infra.command_receipts
+             (actor_id, operation, idempotency_key, trip_id, request_hash, resource_type, resource_id, http_status, response_body)
+           VALUES ($1, 'x', $2, $3, $4, 'bogus', $3, 200, '{}'::jsonb)`,
+          [slot0, crypto.randomUUID(), tripId, "b".repeat(64)],
+        ),
+      ).rejects.toMatchObject({ code: "23514" });
     });
   });
 

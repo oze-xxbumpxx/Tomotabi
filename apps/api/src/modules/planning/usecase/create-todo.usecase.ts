@@ -58,6 +58,22 @@ export class CreateTodoUseCase implements CreateTodoInputPort {
             if (stored !== null) {
               return stored;
             }
+            // categoryIdは同じ旅行のカテゴリを同じトランザクションで確かめる
+            // （FOR SHARE。設計書 todo-organize「UseCase 設計」）。
+            const categoryId = input.categoryId ?? null;
+            if (categoryId !== null) {
+              const category = await ctx.todoCategories.lockForShare(
+                trip.id,
+                categoryId,
+              );
+              if (category === null) {
+                throw new ApiError({
+                  code: "TODO_CATEGORY_NOT_FOUND",
+                  status: 422,
+                  message: "Todo category not found in the trip",
+                });
+              }
+            }
             if ((await ctx.todos.countByTrip(trip.id)) >= TODO_LIMIT) {
               throw new ApiError({
                 code: "TODO_LIMIT_REACHED",
@@ -69,6 +85,7 @@ export class CreateTodoUseCase implements CreateTodoInputPort {
               tripId: trip.id,
               name,
               createdBy: input.userId,
+              categoryId,
             });
             const body = toTodoDto(todo, null);
             await ctx.receipts.insert({

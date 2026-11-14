@@ -523,6 +523,7 @@ describe("ToDoのAPI（trip-todo）", () => {
       hinataCookie,
     )
       .set("Idempotency-Key", newKey())
+      .set("X-Expected-Version", "1")
       .send({});
     expect(cancel.status).toBe(200);
     const cancelled = await patchTodo(

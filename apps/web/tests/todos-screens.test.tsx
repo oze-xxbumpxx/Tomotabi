@@ -74,6 +74,9 @@ function todo(overrides: Partial<Todo> = {}): Todo {
     doneAt: null,
     doneBy: null,
     plan: null,
+    categoryId: null,
+    assigneeId: null,
+    dueOn: null,
     version: "1",
     ...overrides,
   };
@@ -138,7 +141,9 @@ function stubApi(handlers: {
     if (url === `${base}/todos` && method === "GET") {
       const result = handlers.todos?.() ?? [];
       return Promise.resolve(
-        result instanceof Response ? result : json({ items: result }),
+        result instanceof Response
+          ? result
+          : json({ categories: [], items: result }),
       );
     }
     if (url === `${base}/todos` && method === "POST") {
@@ -246,14 +251,24 @@ describe("ToDoのリスト", () => {
           name: "錦市場",
           doneAt: "2026-11-08T05:00:00.000Z",
           doneBy: userId,
-          plan: { id: planId, date: "2026-10-13", cancelled: false },
+          plan: {
+            id: planId,
+            name: "錦市場",
+            date: "2026-10-13",
+            cancelled: false,
+          },
         }),
         todo({
           id: "a4444444-4444-4444-8444-444444444444",
           name: "新幹線を予約する",
           doneAt: "2026-11-08T05:00:00.000Z",
           doneBy: otherUserId,
-          plan: { id: planId, date: "2026-10-13", cancelled: true },
+          plan: {
+            id: planId,
+            name: "新幹線を予約する",
+            date: "2026-10-13",
+            cancelled: true,
+          },
         }),
       ],
     });

@@ -9,6 +9,7 @@ import { ReopenTodoUseCase } from "../../../src/modules/planning/usecase/reopen-
 import { UpdateTodoUseCase } from "../../../src/modules/planning/usecase/update-todo.usecase";
 import {
   ACTOR,
+  CATEGORY_ID,
   fixedClock,
   InMemoryPlanningContext,
   inMemoryUnitOfWork,
@@ -16,6 +17,7 @@ import {
   PARTNER,
   RecordingWriteLog,
   TODO_ID,
+  testCategory,
   testPlan,
   testTodo,
   testTrip,
@@ -218,7 +220,7 @@ describe("完了の付け外し", () => {
     expect(result.body.version).toBe("2");
   });
 
-  it("戻すと予定とのつながりも消える", async () => {
+  it("戻すと完了の人・時刻は消えるが、予定とのつながりは残る", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedPlan(testPlan());
     ctx.seedTodo(
@@ -237,7 +239,7 @@ describe("完了の付け外し", () => {
     expect(result.body).toMatchObject({
       doneAt: null,
       doneBy: null,
-      plan: null,
+      plan: { id: testPlan().id, name: "清水寺", cancelled: false },
     });
     expect(ctx.planRows.has(testPlan().id)).toBe(true);
   });
@@ -444,5 +446,95 @@ describe("ToDoの決まりの残り", () => {
       doneBy: ACTOR,
       plan: { id: testPlan().id, cancelled: true },
     });
+  });
+});
+
+describe("ToDoのカテゴリ・担当・期限", () => {
+  it("追加にcategoryIdを付けられる。同じ旅行のカテゴリだけ", async () => {
+    const { ctx, uow, writeLog } = setup();
+    const usecase = new CreateTodoUseCase(uow, writeLog);
+    ctx.seedCategory(testCategory());
+    const ok = await usecase.execute({
+      userId: ACTOR,
+      tripId: TRIP_ID,
+      key: KEY,
+      requestHash: "hash-c1",
+      name: "清水寺",
+      categoryId: CATEGORY_ID,
+    });
+    expect(ok.body.categoryId).toBe(CATEGORY_ID);
+    const ng = await rejection(
+      usecase.execute({
+        userId: ACTOR,
+        tripId: TRIP_ID,
+        key: "22222222-2222-4222-8222-222222222222" as typeof KEY,
+        requestHash: "hash-c2",
+        name: "金閣寺",
+        categoryId: "44444444-4444-4444-8444-444444444999",
+      }),
+    );
+    expect(ng.code).toBe("TODO_CATEGORY_NOT_FOUND");
+    expect(ng.status).toBe(422);
+  });
+
+  it("編集でカテゴリ・担当・期限を入れられる", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedCategory(testCategory());
+    ctx.seedTodo(testTodo());
+    const result = await new UpdateTodoUseCase(
+      uow,
+      fixedClock(),
+      writeLog,
+    ).execute({
+      ...command(),
+      ifMatch: "1",
+      name: undefined,
+      memo: undefined,
+      categoryId: CATEGORY_ID,
+      assigneeId: PARTNER,
+      dueOn: "2026-09-12",
+    });
+    expect(result.body).toMatchObject({
+      categoryId: CATEGORY_ID,
+      assigneeId: PARTNER,
+      dueOn: "2026-09-12",
+      version: "2",
+    });
+  });
+
+  it("担当に旅行の参加者以外を入れると422 TODO_ASSIGNEE_NOT_PARTICIPANT", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedTodo(testTodo());
+    const error = await rejection(
+      new UpdateTodoUseCase(uow, fixedClock(), writeLog).execute({
+        ...command(),
+        ifMatch: "1",
+        name: undefined,
+        memo: undefined,
+        categoryId: undefined,
+        assigneeId: OUTSIDER,
+        dueOn: undefined,
+      }),
+    );
+    expect(error.code).toBe("TODO_ASSIGNEE_NOT_PARTICIPANT");
+    expect(error.status).toBe(422);
+  });
+
+  it("実在しない期限は422 VALIDATION_FAILED", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedTodo(testTodo());
+    const error = await rejection(
+      new UpdateTodoUseCase(uow, fixedClock(), writeLog).execute({
+        ...command(),
+        ifMatch: "1",
+        name: undefined,
+        memo: undefined,
+        categoryId: undefined,
+        assigneeId: undefined,
+        dueOn: "2026-02-30",
+      }),
+    );
+    expect(error.code).toBe("VALIDATION_FAILED");
+    expect(error.status).toBe(422);
   });
 });

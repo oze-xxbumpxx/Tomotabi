@@ -1,4 +1,5 @@
 import type { ResultAsync } from "neverthrow";
+import { z, type ZodType } from "zod";
 import type {
   Todo,
   TodoCreate,
@@ -35,6 +36,35 @@ import type {
  * ToDoのAPIの薄い入口（設計書 trip-todo「API 設計」）。書き込みはどれも
  * POST・PATCHで、端末に残す仕組み（ADR-0006）にそのまま載せる。
  */
+
+/**
+ * deployの前に残した保留要求を再送すると、受領の仕組みが
+ * 新しい欄の入る前の古い応答を返す。無い欄はnull・既定値として読む。
+ */
+function compatTodoBody(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+  const todo = { ...(value as Record<string, unknown>) };
+  for (const key of ["categoryId", "assigneeId", "dueOn"] as const) {
+    if (todo[key] === undefined) {
+      todo[key] = null;
+    }
+  }
+  const plan = todo.plan;
+  if (
+    typeof plan === "object" &&
+    plan !== null &&
+    (plan as Record<string, unknown>).name === undefined
+  ) {
+    todo.plan = { ...(plan as Record<string, unknown>), name: "" };
+  }
+  return todo;
+}
+
+function todoResponse<T>(schema: ZodType<T>): ZodType<T> {
+  return z.preprocess(compatTodoBody, schema);
+}
 
 export function listTodos(tripId: string): ResultAsync<TodoList, ApiFailure> {
   return callApi(listTodosRequest(tripId), ListTodosResponse);
@@ -107,25 +137,25 @@ export function deleteTodoDraft(tripId: string, todoId: string): MutationDraft {
 export function sendCreateTodo(
   request: MutationRequest,
 ): ResultAsync<ApiSuccess<Todo>, ApiFailure> {
-  return sendMutationRequest(request, CreateTodoResponse);
+  return sendMutationRequest(request, todoResponse(CreateTodoResponse));
 }
 
 export function sendUpdateTodo(
   request: MutationRequest,
 ): ResultAsync<ApiSuccess<Todo>, ApiFailure> {
-  return sendMutationRequest(request, UpdateTodoResponse);
+  return sendMutationRequest(request, todoResponse(UpdateTodoResponse));
 }
 
 export function sendCompleteTodo(
   request: MutationRequest,
 ): ResultAsync<ApiSuccess<Todo>, ApiFailure> {
-  return sendMutationRequest(request, CompleteTodoResponse);
+  return sendMutationRequest(request, todoResponse(CompleteTodoResponse));
 }
 
 export function sendReopenTodo(
   request: MutationRequest,
 ): ResultAsync<ApiSuccess<Todo>, ApiFailure> {
-  return sendMutationRequest(request, ReopenTodoResponse);
+  return sendMutationRequest(request, todoResponse(ReopenTodoResponse));
 }
 
 export function sendDeleteTodo(

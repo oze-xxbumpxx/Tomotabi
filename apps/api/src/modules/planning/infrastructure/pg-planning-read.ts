@@ -18,14 +18,15 @@ import type { Trip } from "../domain/trip.js";
 import type {
   PlanningReadPort,
   PlanView,
+  TodoListView,
   TripListAnchor,
   TripListPage,
   TripListQuery,
 } from "../adapter/outbound/planning-read.port.js";
 import type { ActivePlanEvent } from "../adapter/outbound/record-history.port.js";
 import { toPlanDomain } from "./drizzle-plan.repository.js";
+import { listTodoCategories } from "./drizzle-todo-category.repository.js";
 import { listTodoViews } from "./drizzle-todo.repository.js";
-import type { TodoView } from "../adapter/outbound/todo.repository.js";
 import { toTripDomain } from "./drizzle-trip.repository.js";
 
 type PlanEventRow = typeof planEvents.$inferSelect;
@@ -117,7 +118,7 @@ export async function planViews(
 export class PgPlanningRead implements PlanningReadPort {
   private readonly db: NodePgDatabase;
 
-  constructor(pool: Pool) {
+  constructor(private readonly pool: Pool) {
     this.db = drizzle(pool);
   }
 
@@ -221,7 +222,42 @@ export class PgPlanningRead implements PlanningReadPort {
     );
   }
 
-  listTodos(tripId: string): Promise<TodoView[]> {
-    return listTodoViews(this.db, tripId);
+  /**
+   * カテゴリとToDoを1つのREPEATABLE READ・READ ONLYトランザクションで
+   * 続けて読み、同じ時点のものにする（itemsがcategoriesに無いカテゴリを
+   * 指さないため。設計書 todo-organize「バックエンド設計」）。
+   */
+  async listTodos(tripId: string): Promise<TodoListView> {
+    const client = await this.pool.connect();
+    let released = false;
+    try {
+      await client.query(
+        "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
+      );
+      const db = drizzle(client);
+      const categories = await listTodoCategories(db, tripId);
+      const items = await listTodoViews(db, tripId);
+      await client.query("COMMIT");
+      return { categories, items };
+    } catch (error) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        client.release(
+          rollbackError instanceof Error
+            ? rollbackError
+            : new Error("ROLLBACK に失敗しました", {
+                cause: rollbackError,
+              }),
+        );
+        released = true;
+        throw error;
+      }
+      throw error;
+    } finally {
+      if (!released) {
+        client.release();
+      }
+    }
   }
 }

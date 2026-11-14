@@ -1,0 +1,11 @@
+issue: 359
+title: 'feat(planning): 未完了のToDoを予定と関連付け、予定の詳細に「関連するToDo」を出す'
+agent: 'devin'
+model: 'swe-2-flash-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-11-14T10:31:30Z'
+reviews: []
+escalations: 0
+outcome: null
+gh: null

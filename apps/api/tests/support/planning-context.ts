@@ -20,6 +20,11 @@ import type {
 import type { WriteLog, WriteLogEntry } from "../../src/modules/planning/adapter/outbound/write-log.port";
 import type { Plan } from "../../src/modules/planning/domain/plan";
 import type { Todo } from "../../src/modules/planning/domain/todo";
+import type { TodoCategory } from "../../src/modules/planning/domain/todo-category";
+import type {
+  NewTodoCategory,
+  TodoCategoryRepository,
+} from "../../src/modules/planning/adapter/outbound/todo-category.repository";
 import type { NewTodo, TodoRepository } from "../../src/modules/planning/adapter/outbound/todo.repository";
 import type { Trip } from "../../src/modules/planning/domain/trip";
 import { TripPeriod } from "../../src/modules/planning/domain/trip-period";
@@ -96,6 +101,19 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
   private nextPlanId = 0;
   readonly todoRows = new Map<string, Todo>();
   private nextTodoId = 0;
+  readonly categoryRows = new Map<string, TodoCategory>();
+  private nextCategoryId = 0;
+
+  private categoryList(tripId: string): TodoCategory[] {
+    return [...this.categoryRows.values()]
+      .filter((category) => category.tripId === tripId)
+      .sort(
+        (a, b) =>
+          a.position - b.position ||
+          a.createdAt.getTime() - b.createdAt.getTime() ||
+          a.id.localeCompare(b.id),
+      );
+  }
 
   readonly trips: TripRepository = {
     lockForUpdate: (tripId, actorId) => {
@@ -200,6 +218,9 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
         doneAt: null,
         doneBy: null,
         planId: null,
+        categoryId: todo.categoryId,
+        assigneeId: null,
+        dueOn: null,
         version: 1,
         updatedAt: BASE_TIME,
       };
@@ -226,14 +247,105 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
       }
       return Promise.resolve();
     },
+    countByCategory: (tripId, categoryId) => {
+      this.calls.push("todos.countByCategory");
+      return Promise.resolve(
+        [...this.todoRows.values()].filter(
+          (todo) => todo.tripId === tripId && todo.categoryId === categoryId,
+        ).length,
+      );
+    },
+    deleteByCategory: (tripId, categoryId) => {
+      this.calls.push("todos.deleteByCategory");
+      let deleted = 0;
+      for (const todo of [...this.todoRows.values()]) {
+        if (todo.tripId === tripId && todo.categoryId === categoryId) {
+          this.todoRows.delete(todo.id);
+          deleted += 1;
+        }
+      }
+      return Promise.resolve(deleted);
+    },
     planLink: (tripId, planId) => {
       this.calls.push("todos.planLink");
       const plan = this.planRows.get(planId);
       return Promise.resolve(
         plan === undefined || plan.tripId !== tripId
           ? null
-          : { id: plan.id, date: plan.date, cancelled: plan.cancelledAt !== null },
+          : {
+              id: plan.id,
+              name: plan.name,
+              date: plan.date,
+              cancelled: plan.cancelledAt !== null,
+            },
       );
+    },
+  };
+
+  readonly todoCategories: TodoCategoryRepository = {
+    listByTrip: (tripId) => {
+      this.calls.push("todoCategories.listByTrip");
+      return Promise.resolve(this.categoryList(tripId));
+    },
+    lockAllForUpdate: (tripId) => {
+      this.calls.push("todoCategories.lockAllForUpdate");
+      return Promise.resolve(this.categoryList(tripId));
+    },
+    lockForUpdate: (tripId, categoryId) => {
+      this.calls.push("todoCategories.lockForUpdate");
+      const category = this.categoryRows.get(categoryId);
+      return Promise.resolve(
+        category === undefined || category.tripId !== tripId
+          ? null
+          : category,
+      );
+    },
+    lockForShare: (tripId, categoryId) => {
+      this.calls.push("todoCategories.lockForShare");
+      const category = this.categoryRows.get(categoryId);
+      return Promise.resolve(
+        category === undefined || category.tripId !== tripId
+          ? null
+          : category,
+      );
+    },
+    insert: (category: NewTodoCategory) => {
+      this.calls.push("todoCategories.insert");
+      const stored: TodoCategory = {
+        id: `55555555-5555-4555-8555-${String(++this.nextCategoryId).padStart(12, "0")}`,
+        tripId: category.tripId,
+        name: category.name,
+        position: category.position,
+        createdBy: category.createdBy,
+        version: 1,
+        createdAt: BASE_TIME,
+        updatedAt: BASE_TIME,
+      };
+      this.categoryRows.set(stored.id, stored);
+      return Promise.resolve(stored);
+    },
+    update: (category) => {
+      this.calls.push("todoCategories.update");
+      this.categoryRows.set(category.id, category);
+      return Promise.resolve();
+    },
+    updatePositions: (tripId, order) => {
+      this.calls.push("todoCategories.updatePositions");
+      order.forEach((categoryId, index) => {
+        const category = this.categoryRows.get(categoryId);
+        if (category !== undefined && category.tripId === tripId) {
+          this.categoryRows.set(categoryId, { ...category, position: index });
+        }
+      });
+      return Promise.resolve();
+    },
+    delete: (tripId, categoryId) => {
+      this.calls.push("todoCategories.delete");
+      const category = this.categoryRows.get(categoryId);
+      if (category !== undefined && category.tripId === tripId) {
+        this.categoryRows.delete(categoryId);
+      }
+      return Promise.resolve();
     },
   };
 
@@ -317,6 +429,10 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
     this.todoRows.set(todo.id, todo);
   }
 
+  seedCategory(category: TodoCategory): void {
+    this.categoryRows.set(category.id, category);
+  }
+
   seedHistory(planId: string): void {
     this.historyPlanIds.add(planId);
   }
@@ -352,6 +468,7 @@ export class RecordingWriteLog implements WriteLog {
 }
 
 export const TODO_ID = "55555555-5555-4555-8555-555555555555";
+export const CATEGORY_ID = "44444444-4444-4444-8444-444444444444";
 
 export function testTodo(overrides: Partial<Todo> = {}): Todo {
   return {
@@ -364,7 +481,26 @@ export function testTodo(overrides: Partial<Todo> = {}): Todo {
     doneAt: null,
     doneBy: null,
     planId: null,
+    categoryId: null,
+    assigneeId: null,
+    dueOn: null,
     version: 1,
+    updatedAt: BASE_TIME,
+    ...overrides,
+  };
+}
+
+export function testCategory(
+  overrides: Partial<TodoCategory> = {},
+): TodoCategory {
+  return {
+    id: CATEGORY_ID,
+    tripId: "99999999-9999-4999-8999-999999999999",
+    name: BoundedText.parse("持ちもの", 30),
+    position: 0,
+    createdBy: ACTOR,
+    version: 1,
+    createdAt: BASE_TIME,
     updatedAt: BASE_TIME,
     ...overrides,
   };

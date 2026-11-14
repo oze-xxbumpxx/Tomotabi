@@ -240,7 +240,7 @@ async function listTodos(cookie: string, tripId: string) {
 }
 
 describe("ToDoのAPI（trip-todo）", () => {
-  it("追加は201、一覧は未完了 → 完了の順で、相手にも見える", async () => {
+  it("追加は201、一覧は追加した順で、相手にも見える", async () => {
     const tripId = await createTrip(hinataCookie);
     const a = await postTodo(hinataCookie, tripId, "清水寺");
     const b = await postTodo(aoiCookie, tripId, "両替する");
@@ -252,10 +252,11 @@ describe("ToDoのAPI（trip-todo）", () => {
     const list = await listTodos(aoiCookie, tripId);
     expect(list.status).toBe(200);
     expect(list.headers["cache-control"]).toBe("private, no-store");
+    // 一覧は追加した順（完了かどうかで並べ替えない）。
     expect(
       (list.body.items as { name: string }[]).map((item) => item.name),
-    ).toEqual(["両替する", "湯豆腐", "清水寺"]);
-    expect(list.body.items[2]).toMatchObject({
+    ).toEqual(["清水寺", "両替する", "湯豆腐"]);
+    expect(list.body.items[0]).toMatchObject({
       createdBy: hinata.userId,
       doneBy: aoi.userId,
     });
@@ -376,7 +377,15 @@ describe("ToDoのAPI（trip-todo）", () => {
     expect(plans.rows[0].c).toBe(1);
 
     const reopened = await todoAction(hinataCookie, tripId, todoId, "reopen");
-    expect(reopened.body).toMatchObject({ doneAt: null, plan: null });
+    expect(reopened.body).toMatchObject({
+      doneAt: null,
+      plan: {
+        id: plan.body.id,
+        name: "湯豆腐",
+        date: "2026-09-11",
+        cancelled: false,
+      },
+    });
   });
 
   it("予定の追加でToDoの更新が失敗したら、予定もできない", async () => {
@@ -411,8 +420,13 @@ describe("ToDoのAPI（trip-todo）", () => {
     expect(plans.rows[0].c).toBe(0);
   });
 
-  it("表の決まり: 完了の対・予定は完了のときだけ・別の旅行の予定は指せない", async () => {
+  it("表の決まり: 完了の対・別の旅行の予定は指せない（未完了でも予定と結べる）", async () => {
     const tripId = await createTrip(hinataCookie);
+    const ownPlan = await createPlan(hinataCookie, tripId, {
+      name: "清水寺",
+      kind: "place",
+      date: "2026-09-11",
+    });
     const otherTrip = await createTrip(hinataCookie);
     const otherPlan = await createPlan(hinataCookie, otherTrip, {
       name: "金閣寺",
@@ -425,7 +439,12 @@ describe("ToDoのAPI（trip-todo）", () => {
         [tripId, hinata.userId, ...params],
       );
     await expect(insert(", done_at", ", now()", [])).rejects.toThrow();
-    await expect(insert(", plan_id", ", $3", [otherPlan.id])).rejects.toThrow();
+    // F-18の変更で、未完了でも予定と結べる（todo_plan_requires_doneを外した）。
+    const linked = await insert(", plan_id", ", $3", [ownPlan.id]);
+    expect(linked.rowCount).toBe(1);
+    await expect(
+      insert(", plan_id", ", $3", [otherPlan.id]),
+    ).rejects.toThrow();
     await expect(
       insert(", done_at, done_by, plan_id", ", now(), $2, $3", [otherPlan.id]),
     ).rejects.toThrow();

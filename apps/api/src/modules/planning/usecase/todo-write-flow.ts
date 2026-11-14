@@ -55,13 +55,17 @@ export async function todoBody(
 
 /**
  * ToDoの書き込みの共通の流れ（予定の`runPlanUpdate`と同じ形）:
- * 旅行行FOR SHARE → receipt → ToDo行FOR NO KEY UPDATE → 版の確認 →
- * Domain → 更新とreceiptを同じトランザクションで保存。ロックは旅行 → ToDoの順。
+ * 旅行行FOR SHARE → receipt → 付ける欄の確かめ → ToDo行FOR NO KEY UPDATE →
+ * 版の確認 → Domain → 更新とreceiptを同じトランザクションで保存。
+ * ロックは旅行 → カテゴリ → ToDoの順（設計書 todo-organize）。
+ * `precheck`はカテゴリ・担当の確かめのようにreceiptのあと・ToDo行のロックの
+ * 前に行う確認（同じトランザクションで確かめる）。
  */
 export async function runTodoUpdate(
   ctx: PlanningWorkContext,
   command: TodoWriteCommand,
   change: (todo: Todo) => Todo,
+  precheck?: (ctx: PlanningWorkContext) => Promise<void>,
 ): Promise<WriteOutcome<TodoContract>> {
   const trip = await ctx.trips.lockForShare(command.tripId, command.userId);
   if (trip === null) {
@@ -76,6 +80,9 @@ export async function runTodoUpdate(
   );
   if (replayed !== null) {
     return replayed;
+  }
+  if (precheck !== undefined) {
+    await precheck(ctx);
   }
   const todo = await ctx.todos.lockForUpdate(command.tripId, command.todoId);
   if (todo === null) {

@@ -3,6 +3,7 @@ import type { LocalDate } from "../../../../common/domain/local-date.js";
 import type { Plan } from "../../domain/plan.js";
 import type { Trip, TripStatus } from "../../domain/trip.js";
 import type { ActivePlanEvent } from "./record-history.port.js";
+import type { TodoCategory } from "../../domain/todo-category.js";
 import type { TodoView } from "./todo.repository.js";
 
 export const PLANNING_READ_PORT = Symbol("PLANNING_READ_PORT");
@@ -42,6 +43,12 @@ export type PlanView = Readonly<{
   achievement: ActivePlanEvent | null;
   booking: ActivePlanEvent | null;
   hasRecordHistory: boolean;
+}>;
+
+/** ToDoの一覧の読み取り結果（カテゴリ + ToDo、同じ時点のもの）。 */
+export type TodoListView = Readonly<{
+  categories: TodoCategory[];
+  items: TodoView[];
 }>;
 
 /**
@@ -90,8 +97,11 @@ export interface PlanningReadPort {
   listPlansForDay(tripId: string, date: LocalDate): Promise<PlanView[]>;
 
   /**
-   * 旅行のToDoを、未完了 → 完了、それぞれ追加した順で返す。
+   * 旅行のカテゴリ（二人の決めた順）とToDo（追加した順）を返す。
+   * カテゴリとToDoはREPEATABLE READの読み取り専用トランザクションの中で
+   * 続けて読み、同じ時点のものにする（itemsがcategoriesに無いカテゴリを
+   * 指さないため。設計書 todo-organize「バックエンド設計」）。
    * 参加確認は呼び出し側がfindTripForParticipantで済ませている前提。
    */
-  listTodos(tripId: string): Promise<TodoView[]>;
+  listTodos(tripId: string): Promise<TodoListView>;
 }

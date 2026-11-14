@@ -13,6 +13,9 @@ export function toTodoDto(todo: Todo, plan: TodoPlanLink | null): TodoContract {
     doneAt: todo.doneAt === null ? null : todo.doneAt.toISOString(),
     doneBy: todo.doneBy,
     plan: todo.planId === null || plan === null ? null : plan,
+    categoryId: todo.categoryId,
+    assigneeId: todo.assigneeId,
+    dueOn: todo.dueOn,
     version: String(todo.version),
   };
 }

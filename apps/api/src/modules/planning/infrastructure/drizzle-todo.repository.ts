@@ -1,6 +1,7 @@
-import { and, asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { BoundedText } from "../../../common/domain/bounded-text.js";
+import { LocalDate } from "../../../common/domain/local-date.js";
 import { UserId } from "../../../common/domain/user-id.js";
 import {
   plans,
@@ -27,14 +28,19 @@ export function toTodoDomain(row: TodoRow): Todo {
     doneAt: row.doneAt,
     doneBy: row.doneBy === null ? null : UserId.parse(row.doneBy),
     planId: row.planId,
+    categoryId: row.categoryId,
+    assigneeId:
+      row.assigneeId === null ? null : UserId.parse(row.assigneeId),
+    dueOn: row.dueOn === null ? null : LocalDate.parse(row.dueOn),
     version: row.version,
     updatedAt: row.updatedAt,
   };
 }
 
 /**
- * 旅行のToDoを、未完了 → 完了、それぞれ追加した順で返す（設計書「API 設計」）。
- * つないだ予定の日付と取りやめは同じ問い合わせのLEFT JOINで取る。
+ * 旅行のToDoを追加した順で返す（todo-organize「API 設計」: 未完了・完了の
+ * 並べ替えとカテゴリごとの振り分けは画面でする）。つないだ予定の名前・
+ * 日付・取りやめは同じ問い合わせのLEFT JOINで取る。
  */
 export async function listTodoViews(
   db: NodePgDatabase,
@@ -44,6 +50,7 @@ export async function listTodoViews(
     .select({
       todo: todos,
       planId: plans.id,
+      planName: plans.name,
       planDate: plans.plannedDate,
       planCancelledAt: plans.cancelledAt,
     })
@@ -53,18 +60,15 @@ export async function listTodoViews(
       and(eq(plans.tripId, todos.tripId), eq(plans.id, todos.planId)),
     )
     .where(eq(todos.tripId, tripId))
-    .orderBy(
-      sql`(${todos.doneAt} IS NOT NULL)`,
-      asc(todos.createdAt),
-      asc(todos.id),
-    );
+    .orderBy(asc(todos.createdAt), asc(todos.id));
   return rows.map((row) => ({
     todo: toTodoDomain(row.todo),
     plan:
-      row.planId === null || row.planDate === null
+      row.planId === null || row.planName === null || row.planDate === null
         ? null
         : {
             id: row.planId,
+            name: row.planName,
             date: row.planDate,
             cancelled: row.planCancelledAt !== null,
           },
@@ -89,6 +93,7 @@ export class DrizzleTodoRepository implements TodoRepository {
         tripId: todo.tripId,
         name: todo.name,
         createdBy: todo.createdBy,
+        categoryId: todo.categoryId,
       })
       .returning();
     return toTodoDomain(rows[0]!);
@@ -113,6 +118,9 @@ export class DrizzleTodoRepository implements TodoRepository {
         doneAt: todo.doneAt,
         doneBy: todo.doneBy,
         planId: todo.planId,
+        categoryId: todo.categoryId,
+        assigneeId: todo.assigneeId,
+        dueOn: todo.dueOn,
         version: todo.version,
         updatedAt: todo.updatedAt,
       })
@@ -125,14 +133,54 @@ export class DrizzleTodoRepository implements TodoRepository {
       .where(and(eq(todos.tripId, tripId), eq(todos.id, todoId)));
   }
 
+  async countByCategory(
+    tripId: string,
+    categoryId: string,
+  ): Promise<number> {
+    const rows = await this.db
+      .select({ value: count() })
+      .from(todos)
+      .where(
+        and(
+          eq(todos.tripId, tripId),
+          eq(todos.categoryId, categoryId),
+        ),
+      );
+    return rows[0]?.value ?? 0;
+  }
+
+  async deleteByCategory(
+    tripId: string,
+    categoryId: string,
+  ): Promise<number> {
+    const deleted = await this.db
+      .delete(todos)
+      .where(
+        and(
+          eq(todos.tripId, tripId),
+          eq(todos.categoryId, categoryId),
+        ),
+      );
+    return deleted.rowCount ?? 0;
+  }
+
   async planLink(tripId: string, planId: string): Promise<TodoPlanLink | null> {
     const rows = await this.db
-      .select({ date: plans.plannedDate, cancelledAt: plans.cancelledAt })
+      .select({
+        name: plans.name,
+        date: plans.plannedDate,
+        cancelledAt: plans.cancelledAt,
+      })
       .from(plans)
       .where(and(eq(plans.tripId, tripId), eq(plans.id, planId)));
     const row = rows[0];
     return row === undefined
       ? null
-      : { id: planId, date: row.date, cancelled: row.cancelledAt !== null };
+      : {
+          id: planId,
+          name: row.name,
+          date: row.date,
+          cancelled: row.cancelledAt !== null,
+        };
   }
 }

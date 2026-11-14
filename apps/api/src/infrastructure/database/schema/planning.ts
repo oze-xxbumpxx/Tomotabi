@@ -5,6 +5,7 @@ import {
   date,
   foreignKey,
   index,
+  integer,
   pgSchema,
   primaryKey,
   smallint,
@@ -145,9 +146,45 @@ export const plans = planning.table(
   ],
 );
 
-// ToDo items of a trip (design docs/designs/trip-todo.md "DB 設計"). plan_id is set only
-// when the item was turned into a plan; the composite FK keeps it inside the same trip.
-// Plans are never deleted (only cancelled), so the FK needs no ON DELETE.
+// ToDoのカテゴリ（設計 docs/designs/todo-organize.md「DB 設計」）。
+// positionは二人が決めた順。同じ値を許し、(position, created_at, id)で並べる。
+export const todoCategories = planning.table(
+  "todo_categories",
+  {
+    id: id(),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    name: varchar("name", { length: 30 }).notNull(),
+    position: integer("position").notNull(),
+    createdBy: uuid("created_by").notNull(),
+    version: version(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("todo_categories_trip_id_id_unique").on(table.tripId, table.id),
+    check("todo_categories_version_check", sql`${table.version} > 0`),
+    check("todo_category_name_nonempty", sql`char_length(btrim(${table.name})) > 0`),
+    check("todo_category_position_check", sql`${table.position} >= 0`),
+    foreignKey({
+      name: "todo_category_creator_member",
+      columns: [table.tripId, table.createdBy],
+      foreignColumns: [tripParticipants.tripId, tripParticipants.userId],
+    }),
+    index("todo_categories_list_idx").on(
+      table.tripId,
+      table.position,
+      table.createdAt,
+      table.id,
+    ),
+  ],
+);
+
+// ToDo items of a trip (design docs/designs/trip-todo.md "DB 設計" + todo-organize).
+// plan_idは「予定にする」または関連付けで入り、完了かどうかに関係なく持つ。
+// 複合FKで同じ旅行の中に留める。Plansは消されず、カテゴリは削除のUseCaseが
+// ToDoを先に消すため、どちらのFKにもON DELETEは付けない。
 export const todos = planning.table(
   "todos",
   {
@@ -161,6 +198,9 @@ export const todos = planning.table(
     doneAt: timestamp("done_at", withTimezone),
     doneBy: uuid("done_by"),
     planId: uuid("plan_id"),
+    categoryId: uuid("category_id"),
+    assigneeId: uuid("assignee_id"),
+    dueOn: date("due_on", { mode: "string" }),
     version: version(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -170,7 +210,6 @@ export const todos = planning.table(
     check("todos_version_check", sql`${table.version} > 0`),
     check("todo_name_nonempty", sql`char_length(btrim(${table.name})) > 0`),
     check("todo_done_pair", sql`(${table.doneAt} IS NULL) = (${table.doneBy} IS NULL)`),
-    check("todo_plan_requires_done", sql`${table.planId} IS NULL OR ${table.doneAt} IS NOT NULL`),
     foreignKey({
       name: "todo_creator_member",
       columns: [table.tripId, table.createdBy],
@@ -185,6 +224,16 @@ export const todos = planning.table(
       name: "todo_plan_same_trip",
       columns: [table.tripId, table.planId],
       foreignColumns: [plans.tripId, plans.id],
+    }),
+    foreignKey({
+      name: "todo_category_same_trip",
+      columns: [table.tripId, table.categoryId],
+      foreignColumns: [todoCategories.tripId, todoCategories.id],
+    }),
+    foreignKey({
+      name: "todo_assignee_member",
+      columns: [table.tripId, table.assigneeId],
+      foreignColumns: [tripParticipants.tripId, tripParticipants.userId],
     }),
     index("todos_list_idx").on(table.tripId, table.createdAt, table.id),
   ],

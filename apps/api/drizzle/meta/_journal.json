@@ -92,6 +92,20 @@
       "when": 1794122838776,
       "tag": "0012_planning_todos_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794641749810,
+      "tag": "0013_todo_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794641750000,
+      "tag": "0014_todo_categories_grants",
+      "breakpoints": true
     }
   ]
 }

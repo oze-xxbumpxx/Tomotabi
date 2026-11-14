@@ -1,6 +1,6 @@
 # 設計書: todo-organize（ToDoのカテゴリ分けと予定との関連付け）
 
-- ステータス: draft
+- ステータス: confirmed（PR #351）
 - レベル: L3
 - 関連: docs/requirements/todo-organize.md（PR #350で承認）、docs/designs/trip-todo.md（元の設計）、ADR-0003（DBのロールとmigration）、ADR-0006（結果不明の要求を端末に残す）、論点の記録 docs/discussions/todo-organize.md
 - 画面の見本: https://claude.ai/artifact/LRsVh7g3KmuPN4bfVNtXrE
@@ -281,4 +281,4 @@ migrationは1のPRで流す。結合検証環境と本番のどちらも、今�
 
 ## 未決事項
 
-論点の記録で、仮決定が4件。カテゴリの変更・並べ替え・削除は欄の見出しのメニューから行う、ToDoの詳細の選ぶ欄はすぐ保存する、カテゴリはToDoの一覧と同じ応答で返す、3つのPRに分けて出す。設計の承認までに異議がなければ決定にする。
+なし。仮決定の4件は、設計の承認（PR #351のマージ）までに異議が無かったので決定にした。

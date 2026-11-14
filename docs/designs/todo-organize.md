@@ -194,16 +194,17 @@ export type TodoList = {
 - `todo_plan_requires_done`の制約を外す。`done_at`と`done_by`が対である制約は残す。
 - 今ある行は、3列ともnullになる。データの書き換えは無い。
 - `infra.command_receipts`の`resource_type`の制約に、`todo_category`・`todo_category_deletion`・`todo_category_order`を足す。
-- migrationは3本。表と列（0013）と、アプリのロールへの権限（0014）は、今の0011・0012と同じ分け方（ADR-0003）で1つ目のPRに入れる。`todo_plan_requires_done`を外すmigration（0015）は、今の動きが変わる3つ目のPRに入れる。
+- migrationは、表・列・`todo_plan_requires_done`を外す変更（0013）と、アプリのロールへの権限（0014）の2本。今の0011・0012と同じ分け方（ADR-0003）で、どちらも1つ目のPRに入れる。
 
 ## フロントエンド設計
 
-- ToDoのリスト（`screens/todos`）: 上に「4件済み · 残り6件」と進み具合の棒、その下に絞り込み（すべて・自分の担当・期限が近い）。カテゴリごとの欄を二人が決めた順に出し、最後に未分類の欄を出す。欄の見出しは名前・「1 / 3 件済み」・メニュー（名前を変更・上へ移動・下へ移動・削除）で、押すとたためる。行は完了の印・名前・印（期限・担当・関連する予定）。追加の欄は画面の下に置き、入れるカテゴリを選べる。カテゴリが0個のときは見出しを出さない（要件B-01）。
+\1 完了の印を押した直後の見た目（今の`withDone`）は、関連する予定（`plan`）を消さずに残す。
+
 - たたんだ欄と、追加の欄で最後に選んだカテゴリは、端末の`localStorage`に旅行ごとに覚える。絞り込みは覚えない。
 - カテゴリの追加・名前の変更・削除の確かめは、今の画面と同じシートで出す。削除の確かめには名前と「ToDo 3件も削除されます」を出す。
 - ToDoの詳細（`screens/todo-detail`）: 内容の下に、カテゴリ・担当・期限の行と「関連する予定」の欄を足す。この4つは選んだらすぐ保存する。内容とメモは今のまま「変更を保存」。主ボタン「新しく予定を作る」は、未完了で関連する予定が無いときだけ出す。
 - 予定を選ぶシート（`screens/todo-detail`の中の部品）: 旅行の期間の予定を日付ごとに並べ、1つ選んで「決定」。予定は今あるしおりの取得（日付ごとの`getItinerary`）を旅行の全部の日で読む。取りやめた予定は出さない。
-- 予定の詳細（`screens/plan-detail`）: メモの下に「関連するToDo」の欄を足す。ToDoの一覧（`useTodos`）を`plan.id`で絞って出す。完了の印の付け外しと、一行の追加（`POST /todos`に`planId`）ができる。取りやめた予定では、追加の欄を出さない。
+  \1 絞ったあと、未完了を上・完了を下にし、それぞれの中は一覧の順（追加した順）のままにする（要件F-21）。完了の印の付け外しと、一行の追加（`POST /todos`に`planId`）ができる。取りやめた予定では、追加の欄を出さない。
 - 予定の追加（`screens/plan-form`）: ToDoから開いたときの文を「ToDoの「…」から作ります。保存すると、このToDoと関連付けられます。」に変える。
 - 期限の印: 「今日」は日本の日付で決める（`shared/lib/local-date`）。3日以内は「あと3日」「あと1日」「今日まで」、過ぎたら「期限切れ」。
 - 端末に残す仕組みの許可リストに、カテゴリの4つの経路を足す。
@@ -211,14 +212,14 @@ export type TodoList = {
 
 ## バックエンド設計
 
-- Domain: `domain/todo-category.ts`（`rename`）。`domain/todo.ts`の`update`にカテゴリ・担当・期限・予定を足し、`complete`から`planId`の引数を外し、`reopen`が`planId`を消さないようにする。予定と結ぶ`linkPlan(todo, planId, at)`を足す。
+- Domain: `domain/todo-category.ts`（`rename`）。`domain/todo.ts`の`update`にカテゴリ・担当・期限・予定を足す。`complete`は、引数の`planId`がnullなら今の関連付けを残す（1のPRでは「予定にする」のときだけ値を渡す。3のPRで引数を外す）。`reopen`は`planId`を消さない。予定と結ぶ`linkPlan(todo, planId, at)`を足す。
 - Repository: `adapter/outbound/todo-category.repository.ts`と`infrastructure/drizzle-todo-category.repository.ts`。`listByTrip`・`lockAllForUpdate(tripId)`・`lockForUpdate(tripId, id)`・`insert`・`update`・`updatePositions`・`delete`。`TodoRepository`に`countByCategory`・`deleteByCategory`を足す。`PlanningWorkContext`に`todoCategories`を足す。
 - UseCase: カテゴリの追加・名前の変更・並べ替え・削除の4つ。流れはToDoの`runTodoUpdate`と同じ（旅行行 → 受領 → 行のロック → 版 → Domain → 保存と受領）。
 - 追加と並べ替えは、旅行のカテゴリを全部`FOR UPDATE`でロックしてから数える・順を比べる。二人が同時に足しても20個を超えず、同時に並べ替えても片方が409になる。
 - ToDoの編集で`categoryId`・`planId`・`assigneeId`を付けるときは、同じトランザクションで相手の行を確かめる。カテゴリと予定は`FOR SHARE`で読み、無ければ（予定は取りやめなら）422。担当は旅行の参加者か確かめる。
 - ロックの順は、旅行 → 予定 → カテゴリ → ToDo。今の順（旅行 → 予定 → ToDo）のあいだにカテゴリを入れる。
 - 予定の追加（`CreatePlanUseCase`）: `completeSourceTodo`を、ToDoに関連する予定が無いときだけ`linkPlan`する形に変える。
-- 一覧（`PlanningReadPort.listTodos`）: カテゴリの一覧を足し、ToDoは追加した順で返す。予定の名前も`LEFT JOIN`で取る。
+- 一覧（`PlanningReadPort.listTodos`）: カテゴリの一覧を足し、ToDoは追加した順で返す。予定の名前も`LEFT JOIN`で取る。カテゴリとToDoは、`REPEATABLE READ`の読み取り専用のトランザクションの中で続けて読み、同じ時点のものにする。応答の`categories`に無いカテゴリを指すToDoを返さないため（今の`PgPlanningRead`はプールから1文ずつ読んでいて、2文のあいだに相手の書き込みが入りうる）。
 - 通知のイベントは出さない（要件F-14）。
 
 ## エラー処理
@@ -244,7 +245,7 @@ export type TodoList = {
 
 ## 性能
 
-1つの旅行でToDoは最大200件、カテゴリは最大20個。一覧は、カテゴリを1回、ToDoを1回の問い合わせで読む。応答は200件で約60KB以内（推測。今の約40KBに3つの欄と予定の名前を足した分）。予定を選ぶシートは、旅行の日数ぶんのしおりを読む。しおりは今の画面でも日ごとに読んでいて、読んだ分は端末に残っている。
+1つの旅行でToDoは最大200件、カテゴリは最大20個。一覧は、1つの読み取りのトランザクションの中で、カテゴリを1回、ToDoを1回の問い合わせで読む。応答は200件で約60KB以内（推測。今の約40KBに3つの欄と予定の名前を足した分）。予定を選ぶシートは、旅行の日数ぶんのしおりを読む。しおりは今の画面でも日ごとに読んでいて、読んだ分は端末に残っている。
 
 ## テスト方針
 
@@ -259,11 +260,13 @@ export type TodoList = {
 
 3つのPRに分ける（論点の記録「今のToDoの動きが変わる部分を、どの順で出すか」）。
 
-1. DB・契約・API。カテゴリと3つの欄を足す。今の動き（予定にすると完了、未完了に戻すとつながりが消える）は変えない。古い画面は増えた欄を読まないので、表示は変わらない。
+1. DB・契約・API。カテゴリと3つの欄を足し、`todo_plan_requires_done`を外す。完了の付け外しで関連付けを変えない（要件F-18）のも、このPRで入れる。「予定にすると完了になる」（今のF-10）は変えない。古い画面は増えた欄を読まないので、表示は、未完了に戻したToDoの行に予定が残ることだけが変わる。
 2. ToDoのリストと詳細（カテゴリ・担当・期限・絞り込み）。
-3. 予定との関連付け。APIの動きの変更（F-18・F-19・未完了での関連付け）と、ToDoの詳細の「関連する予定」、予定の詳細の「関連するToDo」、予定の追加の画面の文を同じPRで出す。
+3. 予定との関連付け。APIの動きの変更（F-19の「予定を作っても完了にしない」と、未完了のToDoへの関連付け）と、ToDoの詳細の「関連する予定」、予定の詳細の「関連するToDo」、予定の追加の画面の文を同じPRで出す。
 
-migrationは1のPR（表・列・権限）と3のPR（制約を外す）で流す。結合検証環境と本番のどちらも、今の手順（デプロイの前にmigrationを流す）のまま。戻すときは、画面 → API → DBの順。列と表は残しても古いAPIは動く。
+migrationは1のPRで流す。結合検証環境と本番のどちらも、今の手順（デプロイの前にmigrationを流す）のまま。
+
+戻すときは、画面 → API → DBの順。3のPRを出したあとは、未完了で予定と関連付いたToDoがあるので、APIは1のPR以降の版までしか戻さない。1のPRより前のAPIは、完了にするときに関連付けを消し、制約も戻せないため。1のPRより前まで戻す必要が出たら、未完了のToDoの`plan_id`をどうするかをユーザーが決めてから戻す。
 
 ## リスク
 

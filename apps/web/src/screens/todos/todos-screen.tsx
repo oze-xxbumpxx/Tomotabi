@@ -603,7 +603,10 @@ export function TodosScreen({ tripId }: { tripId: string }) {
         <p className="record-empty-text">当てはまるToDoはありません</p>
       ) : categories.length === 0 ? (
         <ul className="todo-list">
-          {filtered.map((todo) => (
+          {[
+            ...filtered.filter((entry) => entry.doneAt === null),
+            ...filtered.filter((entry) => entry.doneAt !== null),
+          ].map((todo) => (
             <TodoRow
               key={todo.id}
               todo={todo}

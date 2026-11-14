@@ -106,3 +106,44 @@ test('PW-07: 実行の条件: 権限は最小、全体20分、結果を要約に
   // webで失敗したときも、出たapiのURLとcommitを要約に残す。
   assert.match(workflow, /Write deployed URLs to summary[\s\S]{0,200}?if: always\(\)/);
 });
+
+// migrationの確かめ（docs/tests/migration-deploy-check.md のMD-30〜32）。
+const stepBlock = (name) => {
+  const start = workflow.indexOf(`- name: ${name}`);
+  assert.ok(start > -1, `${name}の手順がある`);
+  const next = workflow.indexOf('\n      - ', start + 1);
+  return workflow.slice(start, next === -1 ? undefined : next);
+};
+
+test('MD-30: migrationの確かめはsetup-nodeの後、npm ciとapi・webを出す手順より前', () => {
+  const setupNode = workflow.indexOf('uses: actions/setup-node@');
+  const verify = workflow.indexOf('- name: Verify database migrations are applied');
+  const npmCi = workflow.indexOf('- run: npm ci');
+  const api = workflow.indexOf('- name: Deploy api to Vercel');
+  const web = workflow.indexOf('- name: Deploy web to Vercel');
+  assert.ok(setupNode > -1 && setupNode < verify, 'setup-nodeの後');
+  assert.ok(verify < npmCi && verify < api && verify < web, 'npm ciとapi・webを出す手順より前');
+});
+
+test('MD-31: 確かめるスクリプトはワークフロー側の版から取り出し、出すcommitの_journal.jsonを渡す', () => {
+  const tooling = stepBlock('Checkout deploy tooling from the workflow ref');
+  assert.match(tooling, /uses: actions\/checkout@v\d+/);
+  assert.match(tooling, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(tooling, /path: \.workflow\n/);
+  assert.match(tooling, /sparse-checkout: \.github\/scripts\n/);
+  assert.match(tooling, /persist-credentials: false/);
+  const verify = stepBlock('Verify database migrations are applied');
+  assert.match(
+    verify,
+    /run: node \.workflow\/\.github\/scripts\/check-deployed-migrations\.mjs "\$API_ORIGIN" apps\/api\/drizzle\/meta\/_journal\.json/,
+  );
+  // 出すcommitのcheckoutは今のまま（inputs.shaを使う）。
+  assert.match(workflow, /ref: \$\{\{ inputs\.sha \|\| github\.sha \}\}/);
+});
+
+test('MD-32: 確かめは失敗を握りつぶさず、API_ORIGINはenvで渡す', () => {
+  const verify = stepBlock('Verify database migrations are applied');
+  assert.doesNotMatch(verify, /continue-on-error|if: always\(\)|\|\| true/);
+  assert.match(verify, /env:\n\s+API_ORIGIN: \$\{\{ vars\.API_ORIGIN \}\}/);
+  assert.doesNotMatch(verify, /run: .*\$\{\{/);
+});

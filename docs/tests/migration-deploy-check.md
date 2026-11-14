@@ -16,6 +16,7 @@ DBに流していないmigrationがあるcommitを出そうとすると、ワー
 | 種別                     | 置き場所                                                                   | 動かすコマンド                                     |
 | ------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------- |
 | apiの単体（DBなし）      | `apps/api/tests/http/health-migrations.http.test.ts`                       | `npm test -w @tomotabi/api`                        |
+| DBを読む回数（DBなし）   | `apps/api/tests/usecase/get-migration-status.usecase.test.ts`              | `npm test -w @tomotabi/api`                        |
 | apiの結合（DBつき）      | `apps/api/tests/db/migration-status.db.test.ts`                            | `npm run test:db -w @tomotabi/api`（CIの`api-db`） |
 | 確かめるスクリプトの単体 | `.claude/tests/check-deployed-migrations.test.mjs`                         | `npm run test:harness`（CIの`harness`）            |
 | ワークフローの形         | `.claude/tests/deploy-integration-workflow.test.mjs`（今のファイルに足す） | `npm run test:harness`                             |
@@ -33,6 +34,16 @@ DBに流していないmigrationがあるcommitを出そうとすると、ワー
 | MD-02 | ログインしていても同じ（B-04） | セッションの検証が「ログイン済み」 | 同じ                         | 200、本文が同じ                                       | 正常 |
 | MD-03 | `/api/health`は変わらない      | 同じ                               | `GET /api/health`            | 200、`{ status: "ok" }`（既存のA-15がそのまま通る）   | 回帰 |
 
+### DBを読む回数（`get-migration-status.usecase.test.ts`）
+
+口はログインなしで読めるので、連続して呼ばれてもDBの接続をふさがないようにする（PRのレビューでDevinが指摘）。時計と読み手を偽物にして、`GetMigrationStatusUseCase`だけを試す。
+
+| #     | 観点                                   | 前提                                | 操作                                | 期待結果                                       | 分類 |
+| ----- | -------------------------------------- | ----------------------------------- | ----------------------------------- | ---------------------------------------------- | ---- |
+| MD-45 | 覚えている間は読まず、過ぎたら読み直す | 1回目は`1`、2回目は`2`を返す読み手  | 0ms・9,999ms・10,000msに1回ずつ呼ぶ | `1`・`1`・`2`。読み手を呼んだのは2回           | 境界 |
+| MD-46 | 同時に来た要求はDBを1回だけ読む        | 読み手が答えを止めている            | 20回呼んでから答えを返させる        | 20回とも同じ答え。読み手を呼んだのは1回        | 正常 |
+| MD-47 | 読めなかったときは覚えない             | 1回目は失敗、2回目は`3`を返す読み手 | 2回呼ぶ                             | 1回目は失敗、2回目は`3`。読み手を呼んだのは2回 | 異常 |
+
 ### DBつき（`migration-status.db.test.ts`）
 
 `startPostgres`・`createRoles`・`migrateAsMigrator`で、本番と同じ手順で全migrationを流したDBを作る。読むのは`app_runtime`の接続（`poolFor("app_runtime")`）。
@@ -40,10 +51,10 @@ DBに流していないmigrationがあるcommitを出そうとすると、ワー
 | #     | 観点                                             | 前提                                                                     | 操作                                                                      | 期待結果                                                                              | 分類 |
 | ----- | ------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---- |
 | MD-04 | 最後に流したmigrationの時刻を返す（F-01）        | 全migrationを流した                                                      | `PgMigrationStatus(app_runtimeのpool).lastAppliedAt()`                    | `_journal.json`の`when`の最大と一致し、型は`number`                                   | 正常 |
-| MD-05 | 1本も流していない（B-02の前提）                  | ロールだけ作り、`drizzle`スキーマと表を空で作り、`0013`と同じGRANTを流す | 同じ                                                                      | `null`                                                                                | 境界 |
+| MD-05 | 1本も流していない（B-02の前提）                  | ロールだけ作り、`drizzle`スキーマと表を空で作り、`0015`と同じGRANTを流す | 同じ                                                                      | `null`                                                                                | 境界 |
 | MD-06 | 実行用のロールは読むだけ（非機能のセキュリティ） | 全migrationを流した                                                      | `app_runtime`で`INSERT INTO drizzle.__drizzle_migrations`と`DELETE`を試す | どちらも権限のエラー（SQLSTATE `42501`）                                              | 異常 |
 | MD-07 | HTTPで返すのは時刻1つだけ（F-02）                | `DATABASE_URL`を`app_runtime`のURLにして`AppModule`を立てる              | `GET /api/health/migrations`をログインなしで                              | 200。本文のキーが`["lastAppliedAt"]`だけ（`Object.keys`を`toEqual`）、値はMD-04と同じ | 正常 |
-| MD-08 | 読む権限が無いと500（E-04）                      | `0013`のGRANTを`REVOKE`で外した                                          | MD-07と同じ要求                                                           | 500。本文に表の名前・SQLの文が出ない（共通のエラーの形）                              | 異常 |
+| MD-08 | 読む権限が無いと500（E-04）                      | `0015`のGRANTを`REVOKE`で外した                                          | MD-07と同じ要求                                                           | 500。本文に表の名前・SQLの文が出ない（共通のエラーの形）                              | 異常 |
 
 MD-05は、`drizzle-kit`の`migrate`を通さずに空の表を作る。作る文は`drizzle-orm`の`migrate`が使う文と同じ列（`id`・`hash`・`created_at`）にする。
 
@@ -72,14 +83,14 @@ MD-05は、`drizzle-kit`の`migrate`を通さずに空の表を作る。作る�
 
 ### 本体（`main`）
 
-| #     | 観点                                     | 前提                                                                  | 操作                                                                                                                                                        | 期待結果                                                                                                     | 分類 |
-| ----- | ---------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---- |
-| MD-24 | 終了コード                               | MD-10・MD-16・MD-12の答え                                             | `main`                                                                                                                                                      | 0・0・1                                                                                                      | 正常 |
-| MD-25 | 聞く先と打ち切り                         | `API_ORIGIN`が`https://api.example.test`（末尾の`/`あり・なしの両方） | `main`                                                                                                                                                      | `fetchImpl`が`https://api.example.test/api/health/migrations`で1回だけ呼ばれ、`signal`が渡る。再試行しない   | 正常 |
-| MD-26 | ワークフローの記録に書く                 | `summaryPath`に一時ファイル、MD-13の答え                              | `main`                                                                                                                                                      | 要約に、DBの時刻・commitの最後の時刻・足りない2つの名前が出る。標準出力に`::error::`、MD-16では`::warning::` | 正常 |
-| MD-27 | 出すcommitの作業ツリーに依らない（N-03） | `_journal.json`だけを一時フォルダに置き、作業フォルダをそこへ移す     | `node .github/scripts/check-deployed-migrations.mjs <origin> <一時フォルダの_journal.json>`を子プロセスで動かす（聞く先は試験の中で立てた`http`のサーバー） | 終了コード0。スクリプトは一時フォルダの外のファイルを読まない                                                | 正常 |
-| MD-28 | 引数が足りない                           | 引数なし / 1つだけ                                                    | `main`                                                                                                                                                      | 使い方を出して1                                                                                              | 異常 |
-| MD-29 | importしただけでは動かない               | なし                                                                  | 試験からimportする                                                                                                                                          | `fetch`も`process.exitCode`の変更も起きない                                                                  | 防御 |
+| #     | 観点                                     | 前提                                                                  | 操作                                                                                                                                                        | 期待結果                                                                                                                                         | 分類 |
+| ----- | ---------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---- |
+| MD-24 | 終了コード                               | MD-10・MD-16・MD-12の答え                                             | `main`                                                                                                                                                      | 0・0・1                                                                                                                                          | 正常 |
+| MD-25 | 聞く先と打ち切り                         | `API_ORIGIN`が`https://api.example.test`（末尾の`/`あり・なしの両方） | `main`                                                                                                                                                      | `fetchImpl`が`https://api.example.test/api/health/migrations`で1回だけ呼ばれ、`signal`が渡る。再試行しない                                       | 正常 |
+| MD-26 | ワークフローの記録に書く                 | `summaryPath`に一時ファイル、MD-13の答え                              | `main`                                                                                                                                                      | 要約に、DBの時刻・commitの最後の時刻・足りない2つの名前が出る。標準出力に`::error::`、MD-16では`::warning::`                                     | 正常 |
+| MD-27 | 出すcommitの作業ツリーに依らない（N-03） | `_journal.json`だけを一時フォルダに置き、作業フォルダをそこへ移す     | `node .github/scripts/check-deployed-migrations.mjs <origin> <一時フォルダの_journal.json>`を子プロセスで動かす（聞く先は試験の中で立てた`http`のサーバー） | 通す答えで終了コード0と`::notice::`、`0011`の時刻を返すと終了コード1と`::error::`。本体が動かずに0で終わる壊れ方を見分ける（reviewerの指摘R-01） | 正常 |
+| MD-28 | 引数が足りない                           | 引数なし / 1つだけ                                                    | `main`                                                                                                                                                      | 使い方を出して1                                                                                                                                  | 異常 |
+| MD-29 | importしただけでは動かない               | なし                                                                  | 試験からimportする                                                                                                                                          | `fetch`も`process.exitCode`の変更も起きない                                                                                                      | 防御 |
 
 ## ワークフローの形（`deploy-integration-workflow.test.mjs`に足す）
 
@@ -95,9 +106,9 @@ MD-05は、`drizzle-kit`の`migrate`を通さずに空の表を作る。作る�
 
 | #     | 観点                                   | 前提                                                | 操作                                                           | 期待結果                                       |
 | ----- | -------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
-| MD-40 | 最初の1回は警告で進む（F-06、E-03）    | 検証用のDBに`0011`〜`0013`を流した。動くapiは前の版 | `deploy-integration`（SHAは空）                                | 確かめで`::warning::`が出て、apiとwebが出る    |
+| MD-40 | 最初の1回は警告で進む（F-06、E-03）    | 検証用のDBに`0011`〜`0015`を流した。動くapiは前の版 | `deploy-integration`（SHAは空）                                | 確かめで`::warning::`が出て、apiとwebが出る    |
 | MD-41 | 2回目は通る（N-01、N-02）              | MD-40のあと                                         | もう一度`deploy-integration`                                   | 確かめが通り、要約に2つの時刻が同じ値で出る    |
-| MD-42 | 口がログインなしで読める（F-01）       | MD-41のあと                                         | 検証用の`API_ORIGIN`の`/api/health/migrations`をブラウザで開く | `{"lastAppliedAt":<0013のwhen>}`だけが返る     |
+| MD-42 | 口がログインなしで読める（F-01）       | MD-41のあと                                         | 検証用の`API_ORIGIN`の`/api/health/migrations`をブラウザで開く | `{"lastAppliedAt":<0015のwhen>}`だけが返る     |
 | MD-43 | この機能より前のcommitへ戻せる（N-03） | MD-41のあと                                         | この機能のマージより前のmainのcommitのSHAを指定して出す        | 確かめが通り（DBの方が新しい）、apiとwebが出る |
 | MD-44 | 戻したあとの1回は警告で進む（F-06）    | MD-43のあと（動くapiに口が無い）                    | SHAを空にして出す                                              | `::warning::`が出て進む。その次の回は通る      |
 
@@ -118,6 +129,7 @@ MD-05は、`drizzle-kit`の`migrate`を通さずに空の表を作る。作る�
 - 権限: 口はログインなしで読める（MD-01・02・07）。実行用のロールは履歴の表を読むだけで、書けない（MD-06）。
 - データ整合性: 返す時刻は`_journal.json`の`when`と同じ数（MD-04）。bigintの文字列から数へ直すとき、安全な整数でなければ500にする（実装計画）。
 - 冪等性: 対象外。口は読むだけで、スクリプトも何も書き換えない。
+- 負荷: 口のDBを読む回数は、同じプロセスで10秒に1回まで。同時の要求は1回の読み取りを待つ（MD-45〜47）。
 - 障害系: つながらない・打ち切り・404以外のエラーは止める（MD-17〜19）。再試行はしない（MD-25）。
 - フロントエンド: 対象外（webは変えない）。
 - 防御性: 返す形の違い（MD-20）、`entries`の並び（MD-23）、importしただけで動かない（MD-29）。EntityとValue Objectは足さないので、防御的コピー・`updatedAt`は対象外。
@@ -128,7 +140,7 @@ MD-05は、`drizzle-kit`の`migrate`を通さずに空の表を作る。作る�
 | ------------------------------- | -------------------- | ----------------- |
 | `PgMigrationStatus`             | `lastAppliedAt`      | MD-04・05・06     |
 | `InMemoryMigrationStatus`       | `lastAppliedAt`      | MD-01             |
-| `GetMigrationStatusUseCase`     | `execute`            | MD-01・07         |
+| `GetMigrationStatusUseCase`     | `execute`            | MD-01・07・45〜47 |
 | `HealthController`              | `get`（既存）        | MD-03             |
 | `HealthController`              | `migrations`（新規） | MD-01・02・07・08 |
 | `check-deployed-migrations.mjs` | `lastJournalEntry`   | MD-21・22・23     |
@@ -165,7 +177,7 @@ MD-05は、`drizzle-kit`の`migrate`を通さずに空の表を作る。作る�
 - `/api/health`: 既存の`probe.http.test.ts`（A-15）と`server-timing.db.test.ts`の「DBの時間が0」がそのまま通る。
 - E2Eの起動待ち（`e2e/playwright.config.ts`）が`/api/health`のままで、CIの`e2e`が通る。
 - 既存の`deploy-integration-workflow.test.mjs`の試験（PW-01〜）が全部通る。
-- DBの試験全部（`api-db`）。`0013`が既存の権限を変えないこと。
+- DBの試験全部（`api-db`）。`0015`が既存の権限を変えないこと。
 
 ## 試験データ
 

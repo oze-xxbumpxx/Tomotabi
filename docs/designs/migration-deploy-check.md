@@ -83,6 +83,7 @@ sequenceDiagram
 - `lastAppliedAt`: 最後に流したmigrationの`when`（ミリ秒の整数）。1本も無ければ`null`。
 - ログインの有無で答えは変わらない。If-Matchなどの書き込み用のヘッダーは要らない。
 - DBにつながらない・権限が無いときは、今の共通のエラー処理のまま500を返す。
+- 同じプロセスでは、DBを読むのは10秒に1回まで。答えを10秒覚えておき、読んでいる間に来た要求はその1回を待つ。失敗は覚えない。誰でも呼べる口なので、連続して呼ばれてもDBの接続をふさがないようにする（PRのレビューでDevinが指摘）。回数の制限（429で断る）と比べて、こちらは確かめの手順が断られて止まることがなく、仕組みも足さずに済む。10秒古い答えでも困らないのは、migrationを流すのは人が手で、デプロイのボタンを押すより前だから。古い答えで止まっても、押し直せば通る。
 
 置き場所は、確認のページの選択肢の文（「`/api/health`に足す」）から変えて、`/api/health`の下の別の口にした。`/api/health`はプロセスが動いているかだけを返し、DBを読まない作りで、次の2つがそれに頼っている。
 
@@ -95,7 +96,7 @@ sequenceDiagram
 
 ## DB 設計
 
-カスタムmigration `0013_app_runtime_read_migrations.sql`を1本足す。
+カスタムmigration `0015_app_runtime_read_migrations.sql`を1本足す。
 
 ```sql
 GRANT USAGE ON SCHEMA "drizzle" TO app_runtime;
@@ -119,7 +120,7 @@ GRANT SELECT ON "drizzle"."__drizzle_migrations" TO app_runtime;
 | `adapter/outbound/migration-status.port.ts`    | `lastAppliedAt(): Promise<number \| null>`                            |
 | `infrastructure/pg-migration-status.ts`        | `SELECT max(created_at)`を1回。bigintは文字列で返るので`Number`にする |
 | `infrastructure/in-memory-migration-status.ts` | `DATABASE_URL`が無いとき（DBなしの試験）。`null`を返す                |
-| `usecase/get-migration-status.usecase.ts`      | 上の口を呼び、`{ lastAppliedAt }`を返す                               |
+| `usecase/get-migration-status.usecase.ts`      | 上の口を呼び、`{ lastAppliedAt }`を返す。答えを10秒覚える             |
 | `controller/health.controller.ts`              | `GET migrations`を足す。`@PublicRoute()`                              |
 
 DBの接続は既存の`getPool()`を使う。トランザクションは要らない。
@@ -200,14 +201,14 @@ DBの接続は既存の`getPool()`を使う。トランザクションは要ら�
 
 この機能を最初に出す順番は次のとおり。
 
-1. 検証用のDBに、管理者の端末から`0011`〜`0013`を流す（ToDoの分と、この機能の権限）。
+1. 検証用のDBに、管理者の端末から`0011`〜`0015`を流す（ToDoの分、ToDoのカテゴリの分、この機能の権限）。
 2. `deploy-integration`で出す。今のapiに口がまだ無いので、警告が出て進む（F-06）。
 3. もう一度`deploy-integration`を押し、今度は確かめが通ることを見る。
 4. 結合検証環境で、この機能より前のcommitのSHAを指定して出し、確かめの手順で止まらないことを見る。
 5. 4で戻したので、動くapiに口が無い。検証用を最新へ出し直し、404の警告で進むことを見る（F-06）。
-6. 本番は、バックアップを取って照合してから`0011`〜`0013`を流し、`deploy-production`で出す。
+6. 本番は、バックアップを取って照合してから`0011`〜`0015`を流し、`deploy-production`で出す。
 
-`0013`を流さずに出すと、新しいapiの口が500を返し、次のデプロイから止まる。流し忘れは次の回で必ず見つかる。
+`0015`を流さずに出すと、新しいapiの口が500を返し、次のデプロイから止まる。流し忘れは次の回で必ず見つかる。
 
 ## リスク
 

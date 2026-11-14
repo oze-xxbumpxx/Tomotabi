@@ -6,6 +6,14 @@
  * OpenAPI spec version: 0.0.0
  */
 import { httpClient } from '../http-client';
+export interface MigrationStatusView {
+  /**
+     * Milliseconds, same value as "when" in apps/api/drizzle/meta/_journal.json. null when no migration is applied.
+     * @nullable
+     */
+  lastAppliedAt: number | null;
+}
+
 export interface ProbeView {
   /** @minimum 0 */
   count: number;
@@ -38,6 +46,42 @@ export const getGetHealthUrl = () => {
 export const getHealth = async ( options?: Parameters<typeof httpClient>[1]): Promise<getHealthResponse> => {
 
   return httpClient<getHealthResponse>(getGetHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getMigrationStatusResponse200 = {
+  data: MigrationStatusView
+  status: 200
+}
+
+export type getMigrationStatusResponseSuccess = (getMigrationStatusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getMigrationStatusResponse = (getMigrationStatusResponseSuccess)
+
+export const getGetMigrationStatusUrl = () => {
+
+
+
+
+  return `/api/health/migrations`
+}
+
+/**
+ * Last applied migration time for the deploy workflow. Public, returns one timestamp only.
+ */
+export const getMigrationStatus = async ( options?: Parameters<typeof httpClient>[1]): Promise<getMigrationStatusResponse> => {
+
+  return httpClient<getMigrationStatusResponse>(getGetMigrationStatusUrl(),
   {
     ...options,
     method: 'GET'

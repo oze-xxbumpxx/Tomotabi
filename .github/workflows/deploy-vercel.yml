@@ -83,6 +83,22 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      # 出す前に、DBに流したmigrationが出すcommitに追いついているかを今のapiに聞いて確かめる
+      # （設計書 migration-deploy-check）。スクリプトはワークフローを動かした版（mainの先頭）から取り出す。
+      # 出すcommitの作業ツリーに置くと、この機能より前のcommitへ戻して出すときにスクリプトが無く止まるため。
+      # 依存が要らないので、npm ciより前に動かして早く止める。
+      - name: Checkout deploy tooling from the workflow ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: .workflow
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Verify database migrations are applied
+        env:
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
+        run: node .workflow/.github/scripts/check-deployed-migrations.mjs "$API_ORIGIN" apps/api/drizzle/meta/_journal.json
       - run: npm ci
       - name: Deploy api to Vercel
         id: deploy-api

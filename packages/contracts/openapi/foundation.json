@@ -27,6 +27,22 @@
         }
       }
     },
+    "/api/health/migrations": {
+      "get": {
+        "operationId": "getMigrationStatus",
+        "description": "Last applied migration time for the deploy workflow. Public, returns one timestamp only.",
+        "responses": {
+          "200": {
+            "description": "Last applied migration time",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MigrationStatusView" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/foundation/probes": {
       "get": {
         "operationId": "getProbe",
@@ -60,6 +76,17 @@
   },
   "components": {
     "schemas": {
+      "MigrationStatusView": {
+        "type": "object",
+        "required": ["lastAppliedAt"],
+        "additionalProperties": false,
+        "properties": {
+          "lastAppliedAt": {
+            "type": ["integer", "null"],
+            "description": "Milliseconds, same value as \"when\" in apps/api/drizzle/meta/_journal.json. null when no migration is applied."
+          }
+        }
+      },
       "ProbeView": {
         "type": "object",
         "required": ["count"],

@@ -1,0 +1,11 @@
+issue: 356
+title: 'feat(web): ToDoのリストをカテゴリごとの欄にし、担当・期限・絞り込みを足す'
+agent: 'devin'
+model: 'swe-2-flash-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-11-14T09:09:09Z'
+reviews: []
+escalations: 0
+outcome: null
+gh: null

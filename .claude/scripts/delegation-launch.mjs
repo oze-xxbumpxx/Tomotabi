@@ -103,7 +103,7 @@ export async function observeLocalSession({ before, clone, exportFile, listSessi
   return found[0];
 }
 
-const CLOUD_URL = /https:\/\/app\.devin\.ai\/sessions\/([A-Za-z0-9_-]{1,128})(?![A-Za-z0-9_-])/g;
+const CLOUD_URL = /https:\/\/app\.devin\.ai\/sessions\/([A-Za-z0-9_-]{1,128})(?=[^A-Za-z0-9_-])/g;
 
 /** 起動のログのうち、今回の起動より後ろだけを読む。まだ無い・読めなければ空文字。 */
 function readLogFrom(path, offset) {
@@ -113,17 +113,20 @@ function readLogFrom(path, offset) {
 /**
  * クラウドのセッションを、起動のログに出たURLで決める。クラウドには専用クローンの一覧が使えないので、
  * 手元のID決めとは別に、ログの`https://app.devin.ai/sessions/<ID>`だけを見る。
- * ちょうど1種類のIDが出た時点で返す。2種類以上が出たら、取り違えを避けてnullにする。待つ時間までに出なければnull。
+ * 待つ時間いっぱい読み、途中で2種類以上のIDが出たらnullにする（取り違えを避けるため）。最後まで1種類だったときだけ返す。
+ * URLは直後に区切りの文字（改行など）がある完成したものだけ数える。書きかけのURLで不完全なIDを確定しないため。
  */
 export async function observeCloudSession({ logPath, offset, sleep, now = Date.now, observeMs = OBSERVE_MS, intervalMs = OBSERVE_INTERVAL_MS }) {
   const deadline = now() + observeMs;
+  let ids = new Set();
   while (now() < deadline) {
     await sleep(Math.min(intervalMs, Math.max(0, deadline - now())));
-    const ids = new Set([...readLogFrom(logPath, offset).matchAll(CLOUD_URL)].map((match) => match[1]));
+    ids = new Set([...readLogFrom(logPath, offset).matchAll(CLOUD_URL)].map((match) => match[1]));
     if (ids.size > 1) return null;
-    if (ids.size === 1) { const [sessionId] = ids; return { session_id: sessionId, session_url: `https://app.devin.ai/sessions/${sessionId}` }; }
   }
-  return null;
+  if (ids.size !== 1) return null;
+  const [sessionId] = ids;
+  return { session_id: sessionId, session_url: `https://app.devin.ai/sessions/${sessionId}` };
 }
 
 function processAlive(pid) {
@@ -260,6 +263,8 @@ export async function launchDelegation(options, dependencies = {}) {
  * クラウドの起動。作業は離れた場所で動くので、専用クローンのロックと一覧は使わず、起動は1回だけ行う。
  * クローンは、Devinが対象のリポジトリを知るための作業フォルダとして渡す。
  * IDはログのURLで決め、決まらなければ`launch_unknown`にして、自動で起動し直さない。
+ * クラウドのCLIは`--model`を無視し、モデルはDevin Webのセッションエージェントで決まる（logs/2026-09-26.md）。
+ * 実際のモデルは分からないので、`observed_model`は`unknown`で返す。
  */
 async function launchCloud({ options, promptFile, stateDir, dependencies }) {
   let clone;
@@ -277,7 +282,7 @@ async function launchCloud({ options, promptFile, stateDir, dependencies }) {
     if (log !== undefined) closeSync(log.fd);
   }
   const session = observed === null ? null : await observeCloudSession({ logPath: log.path, offset, sleep: dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))), now: dependencies.now, observeMs: dependencies.observeMs, intervalMs: dependencies.intervalMs });
-  if (session !== null) return { exitCode: 0, state: 'running', issue: options.issue, runner: 'cloud', requested_model: options.model, session_id: session.session_id, session_url: session.session_url, pid: observed.pid ?? null };
+  if (session !== null) return { exitCode: 0, state: 'running', issue: options.issue, runner: 'cloud', requested_model: options.model, observed_model: 'unknown', session_id: session.session_id, session_url: session.session_url, pid: observed.pid ?? null };
   return { exitCode: 4, state: 'launch_unknown', issue: options.issue, reason: '起動結果を確かめてください（Devin Webとログ）。自動で起動し直しません' };
 }
 

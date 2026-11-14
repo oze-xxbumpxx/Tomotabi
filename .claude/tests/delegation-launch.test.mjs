@@ -294,7 +294,7 @@ test('LS-10: クラウドは起動を1回だけ行い、ログのURLでIDを決�
   await fixture(async ({ dir, dependencies, options }) => {
     const counter = { n: 0 };
     const result = await launchDelegation({ ...options, runner: 'cloud' }, { ...dependencies, listSessions: async () => { throw new Error('一覧は読まない'); }, spawnOnce: cloudSpawn('started\nSession: https://app.devin.ai/sessions/abc-123_X\n', counter) });
-    assert.deepEqual([result.exitCode, result.state, result.runner, result.session_id, result.session_url, result.pid], [0, 'running', 'cloud', 'abc-123_X', 'https://app.devin.ai/sessions/abc-123_X', 4242]);
+    assert.deepEqual([result.exitCode, result.state, result.runner, result.session_id, result.session_url, result.pid, result.requested_model, result.observed_model], [0, 'running', 'cloud', 'abc-123_X', 'https://app.devin.ai/sessions/abc-123_X', 4242, 'swe-2-flash-high', 'unknown']);
     assert.equal(counter.n, 1);
     assert.equal(existsSync(join(dir, 'devin-clone.lock')), false);
   });
@@ -305,7 +305,7 @@ test('LS-11: クラウドはURLが出ない・2種類出たとき、IDを決め�
     const counter = { n: 0 };
     const cloud = { ...options, runner: 'cloud' };
     assert.equal((await launchDelegation(cloud, { ...dependencies, spawnOnce: cloudSpawn(null, counter) })).state, 'launch_unknown');
-    assert.equal((await launchDelegation(cloud, { ...dependencies, spawnOnce: cloudSpawn('https://app.devin.ai/sessions/a1 https://app.devin.ai/sessions/b2', counter) })).state, 'launch_unknown');
+    assert.equal((await launchDelegation(cloud, { ...dependencies, spawnOnce: cloudSpawn('https://app.devin.ai/sessions/a1 https://app.devin.ai/sessions/b2\n', counter) })).state, 'launch_unknown');
     // 前の起動のURLがログに残っていても、今回の起動の出力だけを見る。
     assert.equal((await launchDelegation(cloud, { ...dependencies, spawnOnce: cloudSpawn(null, counter) })).state, 'launch_unknown');
     assert.equal(counter.n, 3);
@@ -323,6 +323,27 @@ test('LS-12: observeCloudSessionは待つ時間までに出たURLだけを拾う
     assert.equal(await observeCloudSession(base), null);
     writeFileSync(logPath, 'https://app.devin.ai/sessions/old1\nhttps://app.devin.ai/sessions/new2\n');
     assert.equal((await observeCloudSession({ ...base, offset: 35 })).session_id, 'new2');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('LS-13: observeCloudSessionは時間差で出た2種類目のURLと、書きかけのURLを見逃さない', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cloud-observe-'));
+  try {
+    const logPath = join(dir, 'log');
+    // 1種類目のあとで2種類目が出る。
+    writeFileSync(logPath, 'https://app.devin.ai/sessions/a1\n');
+    let clock = 0;
+    const late = await observeCloudSession({ logPath, offset: 0, now: () => clock, observeMs: 6, intervalMs: 2, sleep: async (ms) => { clock += ms; if (clock >= 4) writeFileSync(logPath, 'https://app.devin.ai/sessions/a1\nhttps://app.devin.ai/sessions/b2\n'); } });
+    assert.equal(late, null);
+    // 書きかけ（末尾まででIDが切れているかもしれない）のURLは数えない。完成したら拾う。
+    writeFileSync(logPath, 'https://app.devin.ai/sessions/abc');
+    clock = 0;
+    assert.equal(await observeCloudSession({ logPath, offset: 0, now: () => clock, observeMs: 4, intervalMs: 2, sleep: async (ms) => { clock += ms; } }), null);
+    clock = 0;
+    const done = await observeCloudSession({ logPath, offset: 0, now: () => clock, observeMs: 4, intervalMs: 2, sleep: async (ms) => { clock += ms; writeFileSync(logPath, 'https://app.devin.ai/sessions/abc-123_X\n'); } });
+    assert.equal(done.session_id, 'abc-123_X');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -274,11 +274,17 @@ export function TodoDetailScreen({
   const updateLocked =
     update.state.status === "saving" ||
     update.state.status === "unknown" ||
+    updateFields.state.status === "saving" ||
+    updateFields.state.status === "unknown" ||
     updateCheck.check.status !== "none";
   // 行からすぐ保存する操作も、保留の照合中・保存中は押せない（E-11）。
+  // 内容の保存と同じversionで同時に送ると自分の保存と競合するため、
+  // 両方を互いに押せなくする。
   const fieldsLocked =
     updateFields.state.status === "saving" ||
     updateFields.state.status === "unknown" ||
+    update.state.status === "saving" ||
+    update.state.status === "unknown" ||
     updateCheck.check.status !== "none";
   const toggleSaving =
     complete.state.status === "saving" || reopen.state.status === "saving";
@@ -324,9 +330,15 @@ export function TodoDetailScreen({
         : (participants?.find((p) => p.userId === todo.assigneeId)
             ?.displayName ?? "相手");
   const fieldsBusy =
+    !online ||
+    update.state.status === "saving" ||
+    update.state.status === "unknown" ||
     updateFields.state.status === "saving" ||
     updateFields.state.status === "unknown";
   const patchFields = (patch: TodoPatch) => {
+    if (!online) {
+      return;
+    }
     void updateFields.submit(
       updateTodoDraft(tripId, todoId, patch, todo.version),
     );

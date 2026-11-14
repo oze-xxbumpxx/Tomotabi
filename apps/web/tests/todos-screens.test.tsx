@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -1160,6 +1161,84 @@ describe("ToDoの詳細", () => {
     });
     // 内容の欄は変えない。
     expect(screen.getByLabelText("内容")).toHaveValue("湯豆腐を食べる");
+  });
+
+  it("内容の保存中はカテゴリの行が押せず、カテゴリの保存中は「変更を保存」が押せない", async () => {
+    let resolvePatch!: (response: Response) => void;
+    const fetchMock = stubApi({
+      todos: () => ({
+        categories: [cat(categoryA, "洗濯物")],
+        items: [todo()],
+      }),
+      update: () =>
+        new Promise<Response>((resolve) => {
+          resolvePatch = resolve;
+        }),
+    });
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
+    const path = `/api/trips/${tripId}/todos/${todoId}`;
+
+    // 内容の保存の応答を待つあいだは、カテゴリの行を押せない。
+    const nameInput = await screen.findByLabelText("内容");
+    await waitFor(() => expect(nameInput).not.toHaveAttribute("readonly"));
+    await userEvent.type(nameInput, "変更した内容");
+    const saveButton = screen.getByRole("button", { name: "変更を保存" });
+    await waitFor(() => expect(saveButton).toBeEnabled());
+    await userEvent.click(saveButton);
+    await waitFor(() =>
+      expect(callsTo(fetchMock, path, "PATCH")).toHaveLength(1),
+    );
+    expect(
+      screen.getByRole("button", { name: /カテゴリ/ }),
+    ).toBeDisabled();
+    resolvePatch(json(todo({ name: "変更した内容", version: "2" })));
+
+    // 逆に、カテゴリの保存中は「変更を保存」を押せない。
+    const row = await screen.findByRole("button", { name: /カテゴリ/ });
+    await waitFor(() => expect(row).toBeEnabled());
+    await userEvent.click(row);
+    const sheet = await screen.findByRole("dialog", { name: "カテゴリ" });
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "洗濯物" }),
+    );
+    await waitFor(() =>
+      expect(callsTo(fetchMock, path, "PATCH")).toHaveLength(2),
+    );
+    expect(screen.getByRole("button", { name: "変更を保存" })).toBeDisabled();
+    expect(
+      within(sheet).getByRole("button", { name: "未分類" }),
+    ).toBeDisabled();
+    resolvePatch(json(todo({ categoryId: categoryA, version: "3" })));
+  });
+
+  it("オフラインでは、カテゴリ・担当・期限のシートの保存を押せない（E-11）", async () => {
+    stubApi({
+      todos: () => ({
+        categories: [cat(categoryA, "洗濯物")],
+        items: [todo({ dueOn: "2099-01-01" })],
+      }),
+    });
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
+    const row = await screen.findByRole("button", { name: /期限/ });
+    await waitFor(() => expect(row).toBeEnabled());
+    await userEvent.click(row);
+    const sheet = await screen.findByRole("dialog", { name: "期限" });
+    // シートを開いたあとに電波が切れても、保存の操作は押せない。
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    await act(async () => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    expect(
+      within(sheet).getByRole("button", { name: "決定" }),
+    ).toBeDisabled();
+    expect(
+      within(sheet).getByRole("button", { name: "期限を消す" }),
+    ).toBeDisabled();
+    // React QueryのonlineManagerもofflineになるため、あとの試験のために戻す。
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
   });
 
   it("期限が過ぎたToDoは「期限切れ」を出す（W-S11・F-12）", async () => {

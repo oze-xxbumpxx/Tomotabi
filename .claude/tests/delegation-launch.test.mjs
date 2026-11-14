@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync, writeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildDevinArgs, launchDelegation, lockNameFor, observeLocalSession, parseLaunchArgs, readExportSessionId, runLaunchCli, sessionIdsIn } from '../scripts/delegation-launch.mjs';
+import { buildDevinArgs, launchDelegation, lockNameFor, observeCloudSession, observeLocalSession, parseLaunchArgs, readExportSessionId, runLaunchCli, sessionIdsIn } from '../scripts/delegation-launch.mjs';
 
 const id = (n) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
 const config = JSON.parse(readFileSync(new URL('../config/delegation-review.json', import.meta.url), 'utf8'));
@@ -274,10 +274,77 @@ test('LS-08: 手元の起動は非公開の書き出し先を--exportで渡し�
   });
 });
 
-test('LS-09: クラウドは起動しない（内部の再送とURLの形を確かめていないため）', async () => {
+test('LS-09: クラウドは、確認の設定がtrueでないあいだは起動しない', async () => {
   await fixture(async ({ dependencies, options, count }) => {
-    const result = await launchDelegation({ ...options, runner: 'cloud' }, dependencies);
+    const result = await launchDelegation({ ...options, runner: 'cloud' }, { ...dependencies, config: { ...config, cloud_launch_verified: false } });
     assert.equal(result.exitCode, 4);
     assert.equal(count(), 0);
   });
+});
+
+const cloudSpawn = (text, counter) => async (input) => {
+  counter.n += 1;
+  assert.equal(input.args[0], '--cloud');
+  assert.equal(input.args.includes('--export'), false);
+  if (text !== null) writeSync(input.logFd, text);
+  return { pid: 4242 };
+};
+
+test('LS-10: クラウドは起動を1回だけ行い、ログのURLでIDを決める。専用クローンのロックは使わない', async () => {
+  await fixture(async ({ dir, dependencies, options }) => {
+    const counter = { n: 0 };
+    const result = await launchDelegation({ ...options, runner: 'cloud' }, { ...dependencies, listSessions: async () => { throw new Error('一覧は読まない'); }, spawnOnce: cloudSpawn('started\nSession: https://app.devin.ai/sessions/abc-123_X\n', counter) });
+    assert.deepEqual([result.exitCode, result.state, result.runner, result.session_id, result.session_url, result.pid, result.requested_model, result.observed_model], [0, 'running', 'cloud', 'abc-123_X', 'https://app.devin.ai/sessions/abc-123_X', 4242, 'swe-2-flash-high', 'unknown']);
+    assert.equal(counter.n, 1);
+    assert.equal(existsSync(join(dir, 'devin-clone.lock')), false);
+  });
+});
+
+test('LS-11: クラウドはURLが出ない・2種類出たとき、IDを決めず起動し直さない。前回のログのURLは使わない', async () => {
+  await fixture(async ({ dir, dependencies, options }) => {
+    const counter = { n: 0 };
+    const cloud = { ...options, runner: 'cloud' };
+    assert.equal((await launchDelegation(cloud, { ...dependencies, spawnOnce: cloudSpawn(null, counter) })).state, 'launch_unknown');
+    assert.equal((await launchDelegation(cloud, { ...dependencies, spawnOnce: cloudSpawn('https://app.devin.ai/sessions/a1 https://app.devin.ai/sessions/b2\n', counter) })).state, 'launch_unknown');
+    // 前の起動のURLがログに残っていても、今回の起動の出力だけを見る。
+    assert.equal((await launchDelegation(cloud, { ...dependencies, spawnOnce: cloudSpawn(null, counter) })).state, 'launch_unknown');
+    assert.equal(counter.n, 3);
+    assert.equal(existsSync(join(dir, 'devin-clone.lock')), false);
+  });
+});
+
+test('LS-12: observeCloudSessionは待つ時間までに出たURLだけを拾う', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cloud-observe-'));
+  try {
+    const logPath = join(dir, 'log');
+    writeFileSync(logPath, 'https://app.devin.ai/sessions/old1\n');
+    let clock = 0;
+    const base = { logPath, offset: 35, now: () => clock, sleep: async (ms) => { clock += ms; }, observeMs: 4, intervalMs: 2 };
+    assert.equal(await observeCloudSession(base), null);
+    writeFileSync(logPath, 'https://app.devin.ai/sessions/old1\nhttps://app.devin.ai/sessions/new2\n');
+    assert.equal((await observeCloudSession({ ...base, offset: 35 })).session_id, 'new2');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('LS-13: observeCloudSessionは時間差で出た2種類目のURLと、書きかけのURLを見逃さない', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cloud-observe-'));
+  try {
+    const logPath = join(dir, 'log');
+    // 1種類目のあとで2種類目が出る。
+    writeFileSync(logPath, 'https://app.devin.ai/sessions/a1\n');
+    let clock = 0;
+    const late = await observeCloudSession({ logPath, offset: 0, now: () => clock, observeMs: 6, intervalMs: 2, sleep: async (ms) => { clock += ms; if (clock >= 4) writeFileSync(logPath, 'https://app.devin.ai/sessions/a1\nhttps://app.devin.ai/sessions/b2\n'); } });
+    assert.equal(late, null);
+    // 書きかけ（末尾まででIDが切れているかもしれない）のURLは数えない。完成したら拾う。
+    writeFileSync(logPath, 'https://app.devin.ai/sessions/abc');
+    clock = 0;
+    assert.equal(await observeCloudSession({ logPath, offset: 0, now: () => clock, observeMs: 4, intervalMs: 2, sleep: async (ms) => { clock += ms; } }), null);
+    clock = 0;
+    const done = await observeCloudSession({ logPath, offset: 0, now: () => clock, observeMs: 4, intervalMs: 2, sleep: async (ms) => { clock += ms; writeFileSync(logPath, 'https://app.devin.ai/sessions/abc-123_X\n'); } });
+    assert.equal(done.session_id, 'abc-123_X');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

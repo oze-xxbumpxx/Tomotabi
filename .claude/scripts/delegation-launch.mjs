@@ -11,7 +11,7 @@ const MODELS = ['swe-2-flash-medium', 'swe-2-flash-high', 'swe-2-flash-max'];
 const CONFIG = join(dirname(fileURLToPath(import.meta.url)), '../config/delegation-review.json');
 
 /**
- * 使い方: delegation-launch.mjs <Issue番号> --runner local --model <swe-2-flash-medium|swe-2-flash-high|swe-2-flash-max>
+ * 使い方: delegation-launch.mjs <Issue番号> --runner <local|cloud> --model <swe-2-flash-medium|swe-2-flash-high|swe-2-flash-max>
  *   --prompt-file <本人だけが読めるファイル> [--clone <専用クローン>]
  * Issueは`delegation.mjs open-task`で作ったもの。起動の結果は1行のJSONで出し、自動で起動し直さない。
  */
@@ -103,6 +103,32 @@ export async function observeLocalSession({ before, clone, exportFile, listSessi
   return found[0];
 }
 
+const CLOUD_URL = /https:\/\/app\.devin\.ai\/sessions\/([A-Za-z0-9_-]{1,128})(?=[^A-Za-z0-9_-])/g;
+
+/** 起動のログのうち、今回の起動より後ろだけを読む。まだ無い・読めなければ空文字。 */
+function readLogFrom(path, offset) {
+  try { return readFileSync(path).subarray(offset).toString('utf8'); } catch { return ''; }
+}
+
+/**
+ * クラウドのセッションを、起動のログに出たURLで決める。クラウドには専用クローンの一覧が使えないので、
+ * 手元のID決めとは別に、ログの`https://app.devin.ai/sessions/<ID>`だけを見る。
+ * 待つ時間いっぱい読み、途中で2種類以上のIDが出たらnullにする（取り違えを避けるため）。最後まで1種類だったときだけ返す。
+ * URLは直後に区切りの文字（改行など）がある完成したものだけ数える。書きかけのURLで不完全なIDを確定しないため。
+ */
+export async function observeCloudSession({ logPath, offset, sleep, now = Date.now, observeMs = OBSERVE_MS, intervalMs = OBSERVE_INTERVAL_MS }) {
+  const deadline = now() + observeMs;
+  let ids = new Set();
+  while (now() < deadline) {
+    await sleep(Math.min(intervalMs, Math.max(0, deadline - now())));
+    ids = new Set([...readLogFrom(logPath, offset).matchAll(CLOUD_URL)].map((match) => match[1]));
+    if (ids.size > 1) return null;
+  }
+  if (ids.size !== 1) return null;
+  const [sessionId] = ids;
+  return { session_id: sessionId, session_url: `https://app.devin.ai/sessions/${sessionId}` };
+}
+
 function processAlive(pid) {
   try {
     process.kill(pid, 0);
@@ -182,8 +208,8 @@ export async function launchDelegation(options, dependencies = {}) {
   const config = dependencies.config ?? JSON.parse(readFileSync(CONFIG, 'utf8'));
   if (config.cli_launch_verified !== true) return { exitCode: 4, state: 'unknown', reason: '手元の起動の確認待ちです' };
   if (!Number.isSafeInteger(options.issue) || options.issue <= 0 || !MODELS.includes(options.model)) return { exitCode: 2, state: 'invalid' };
-  // クラウドは内部の再送とURLの形を確かめるまで止める（docs/designs/devin-local-session.md）。
-  if (options.runner !== 'local') return { exitCode: 4, state: 'unknown', reason: 'クラウドの起動は確認待ちです' };
+  if (options.runner === 'cloud' && config.cloud_launch_verified !== true) return { exitCode: 4, state: 'unknown', reason: 'クラウドの起動は確認待ちです' };
+  if (!['local', 'cloud'].includes(options.runner)) return { exitCode: 2, state: 'invalid' };
   let promptFile;
   let stateDir;
   try {
@@ -194,6 +220,7 @@ export async function launchDelegation(options, dependencies = {}) {
   } catch {
     return { exitCode: 2, state: 'invalid', reason: '非公開ファイルと状態保存先を確認してください' };
   }
+  if (options.runner === 'cloud') return launchCloud({ options, promptFile, stateDir, dependencies });
   let clone;
   let lock;
   try {
@@ -230,6 +257,33 @@ export async function launchDelegation(options, dependencies = {}) {
   } finally {
     lock.finish();
   }
+}
+
+/**
+ * クラウドの起動。作業は離れた場所で動くので、専用クローンのロックと一覧は使わず、起動は1回だけ行う。
+ * クローンは、Devinが対象のリポジトリを知るための作業フォルダとして渡す。
+ * IDはログのURLで決め、決まらなければ`launch_unknown`にして、自動で起動し直さない。
+ * クラウドのCLIは`--model`を無視し、モデルはDevin Webのセッションエージェントで決まる（logs/2026-09-26.md）。
+ * 実際のモデルは分からないので、`observed_model`は`unknown`で返す。
+ */
+async function launchCloud({ options, promptFile, stateDir, dependencies }) {
+  let clone;
+  try { clone = realpathSync(options.clone ?? DEFAULT_CLONE); } catch { return { exitCode: 4, state: 'unknown', reason: 'クローンがありません' }; }
+  let log;
+  let observed = null;
+  let offset = 0;
+  try {
+    log = privateLog(stateDir, options.issue);
+    offset = statSync(log.path).size;
+    observed = await (dependencies.spawnOnce ?? spawnDevin)({ args: buildDevinArgs({ runner: 'cloud', model: options.model, promptFile }), clone, logFd: log.fd });
+  } catch {
+    observed = null;
+  } finally {
+    if (log !== undefined) closeSync(log.fd);
+  }
+  const session = observed === null ? null : await observeCloudSession({ logPath: log.path, offset, sleep: dependencies.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))), now: dependencies.now, observeMs: dependencies.observeMs, intervalMs: dependencies.intervalMs });
+  if (session !== null) return { exitCode: 0, state: 'running', issue: options.issue, runner: 'cloud', requested_model: options.model, observed_model: 'unknown', session_id: session.session_id, session_url: session.session_url, pid: observed.pid ?? null };
+  return { exitCode: 4, state: 'launch_unknown', issue: options.issue, reason: '起動結果を確かめてください（Devin Webとログ）。自動で起動し直しません' };
 }
 
 export async function runLaunchCli(argv, dependencies = {}) {

@@ -416,6 +416,7 @@ export function TodoDetailScreen({
             className="btn-secondary"
             onClick={() => {
               update.backToEditing();
+              updateFields.backToEditing();
               setName(null);
               setMemo(null);
               setBase(null);
@@ -613,7 +614,7 @@ export function TodoDetailScreen({
         <Sheet
           title="カテゴリ"
           onClose={() => setFieldSheet(null)}
-          closable={!fieldsBusy}
+          closable={updateFields.state.status !== "saving"}
         >
           <div className="menu-card">
             <FieldOption
@@ -640,7 +641,7 @@ export function TodoDetailScreen({
         <Sheet
           title="担当"
           onClose={() => setFieldSheet(null)}
-          closable={!fieldsBusy}
+          closable={updateFields.state.status !== "saving"}
         >
           <div className="menu-card">
             {userId !== null && (
@@ -676,6 +677,7 @@ export function TodoDetailScreen({
           todo={todo}
           today={today}
           disabled={fieldsBusy}
+          closable={updateFields.state.status !== "saving"}
           onPick={(dueOn) => patchFields({ dueOn })}
           onClose={() => setFieldSheet(null)}
         />
@@ -760,12 +762,14 @@ function DueSheet({
   todo,
   today,
   disabled,
+  closable,
   onPick,
   onClose,
 }: {
   todo: Todo;
   today: string;
   disabled: boolean;
+  closable: boolean;
   onPick: (dueOn: string | null) => void;
   onClose: () => void;
 }) {
@@ -775,7 +779,7 @@ function DueSheet({
     <Sheet
       title="期限"
       onClose={onClose}
-      closable={!disabled}
+      closable={closable}
       footer={
         <>
           {todo.dueOn !== null && (

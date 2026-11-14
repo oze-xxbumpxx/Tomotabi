@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../../src/common/http/api-error";
 import { UserId } from "../../../src/common/domain/user-id";
 import { CreateTodoCategoryUseCase } from "../../../src/modules/planning/usecase/create-todo-category.usecase";
@@ -210,11 +210,9 @@ describe("カテゴリの並べ替え", () => {
       ids[0],
       ids[1],
     ]);
-    expect(
-      ids.map(
-        (id) => ctx.categoryRows.get(id)?.position,
-      ),
-    ).toEqual([1, 2, 0]);
+    expect(ids.map((id) => ctx.categoryRows.get(id)?.position)).toEqual([
+      1, 2, 0,
+    ]);
     expect([...ctx.receiptRows.values()][0]?.resourceType).toBe(
       "todo_category_order",
     );
@@ -232,6 +230,33 @@ describe("カテゴリの並べ替え", () => {
     );
     expect(error.code).toBe("TODO_CATEGORY_ORDER_CHANGED");
     expect(error.status).toBe(409);
+  });
+
+  it("ロックが古い順を返しても、読み直した今の順と比べて409にする（A-I07）", async () => {
+    const { ctx, uow, writeLog } = setup();
+    const ids = seed3(ctx);
+    const stale = await ctx.todoCategories.listByTrip(TRIP_ID);
+    // 相手が先に並べ替えた。ロックは待つ前に並べた古い順を返す。
+    ctx.categoryRows.set(ids[0]!, {
+      ...ctx.categoryRows.get(ids[0]!)!,
+      position: 2,
+    });
+    ctx.categoryRows.set(ids[2]!, {
+      ...ctx.categoryRows.get(ids[2]!)!,
+      position: 0,
+    });
+    vi.spyOn(ctx.todoCategories, "lockAllForUpdate").mockResolvedValue(stale);
+    const error = await rejection(
+      new ReorderTodoCategoriesUseCase(uow, writeLog).execute({
+        ...command(),
+        from: ids,
+        to: [ids[1], ids[0], ids[2]],
+      }),
+    );
+    expect(error.code).toBe("TODO_CATEGORY_ORDER_CHANGED");
+    expect(ids.map((id) => ctx.categoryRows.get(id)?.position)).toEqual([
+      2, 1, 0,
+    ]);
   });
 
   it("toがfromの並べ替えでなければ422 VALIDATION_FAILED", async () => {

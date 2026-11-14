@@ -646,7 +646,9 @@ export function PlanDetailScreen({
         createTodoCheck.check.status === "unavailable" ||
         createAchievement.state.status === "storage-unavailable" ||
         createBooking.state.status === "storage-unavailable" ||
-        createTodo.state.status === "storage-unavailable") && (
+        createTodo.state.status === "storage-unavailable" ||
+        completeTodo.state.status === "storage-unavailable" ||
+        reopenTodo.state.status === "storage-unavailable") && (
         <StorageUnavailable />
       )}
       {createRejected !== undefined && (

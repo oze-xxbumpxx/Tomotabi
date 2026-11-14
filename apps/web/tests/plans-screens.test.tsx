@@ -2478,6 +2478,44 @@ describe("予定の詳細の「関連するToDo」（todo-organize F-21〜F-23�
     );
   });
 
+  it("完了の印で端末への保存に失敗したら案内を出し、要求は送らない", async () => {
+    const fetchMock = stubApi({
+      todos: () =>
+        json({ categories: [], items: [todoRow({ plan: planLink })] }),
+    });
+    renderLinkedDetail();
+    const region = await screen.findByRole("region", {
+      name: "関連するToDo",
+    });
+    // 保留の確認が通ったあとで、送る直前の書き込みだけ失敗させる。
+    const putSpy = vi
+      .spyOn(IDBObjectStore.prototype, "put")
+      .mockImplementation(() => {
+        throw new DOMException("writes blocked", "InvalidStateError");
+      });
+    try {
+      await userEvent.click(
+        within(region).getByRole("button", {
+          name: "「湯豆腐を食べる」を完了にする",
+        }),
+      );
+      expect(
+        await screen.findByText(
+          "この端末では保存の確認に使う領域が使えません",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) =>
+            String(url).includes("/complete") &&
+            (init?.method ?? "GET") === "POST",
+        ),
+      ).toBe(false);
+    } finally {
+      putSpy.mockRestore();
+    }
+  });
+
   it("一行入れて「追加する」でplanIdつきの追加を送る（L-S06）", async () => {
     const fetchMock = stubApi({});
     renderLinkedDetail();

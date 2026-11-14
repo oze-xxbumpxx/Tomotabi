@@ -100,7 +100,7 @@ test("ToDo: 追加したものを相手が見て、新しく予定を作ると�
     }),
   ).toBeVisible();
   await hinataPage
-    .getByRole("link", { name: /湯豆腐を食べる/ })
+    .getByRole("link", { name: "湯豆腐を食べる", exact: true })
     .click();
   await expect(
     hinataPage.getByRole("button", { name: /関連する予定/ }),

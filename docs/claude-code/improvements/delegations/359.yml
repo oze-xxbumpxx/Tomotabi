@@ -18,6 +18,9 @@ reviews:
       - severity: 'must'
         category: 'scope-creep'
         summary: 'apps/web/next-env.d.tsが範囲の外で書き換わっている'
+      - severity: 'must'
+        category: 'test-failure'
+        summary: 'e2eのL-E01がToDoの名前のリンクと予定のリンクの両方に当たって落ちる'
 escalations: 0
 outcome: null
 gh: null

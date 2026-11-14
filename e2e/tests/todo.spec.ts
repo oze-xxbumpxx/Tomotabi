@@ -2,10 +2,10 @@ import { daysFromToday } from "../support/dates";
 import { expect, test } from "../support/fixtures";
 import { createTrip } from "../support/trips";
 
-// 旅行のToDoリスト（docs/tests/todo-organize.md の W-E01 と回帰）:
+// 旅行のToDoリスト（docs/tests/todo-organize.md の W-E01・L-E01 と回帰）:
 // ひなたがカテゴリを作ってToDoを分けると、あおいの画面でも同じ欄に出る。
-// あおいが「予定にする」で予定を作ると、ToDoは済みになり、
-// 「日付 名前 ›」のリンクから予定の詳細が開く。
+// あおいが「新しく予定を作る」で予定を作ると、ToDoは完了にならず予定と結ばれ、
+// 「日付 名前 ›」のリンクから予定の詳細が開く。予定の詳細には「関連するToDo」が出る。
 const TRIP = {
   name: "京都 ToDo",
   startsOn: daysFromToday(30),
@@ -53,7 +53,7 @@ test("ToDo: カテゴリを作って分けると、もう一人の画面でも�
   ).toBeVisible();
 });
 
-test("ToDo: 追加したものを相手が見て、予定にすると完了になる", async ({
+test("ToDo: 追加したものを相手が見て、新しく予定を作ると完了にならず予定と結ばれる（L-E01）", async ({
   hinataPage,
   aoiPage,
 }) => {
@@ -74,9 +74,11 @@ test("ToDo: 追加したものを相手が見て、予定にすると完了に�
     aoiPage.getByRole("link", { name: /湯豆腐を食べる/ }),
   ).toBeVisible();
 
-  // あおいが詳細から「予定にする」。名前が入った予定の追加が開く。
+  // あおいが詳細から「新しく予定を作る」。名前が入った予定の追加が開く。
   await aoiPage.getByRole("link", { name: /湯豆腐を食べる/ }).click();
-  await aoiPage.getByRole("button", { name: "予定にする" }).click();
+  await aoiPage
+    .getByRole("button", { name: "新しく予定を作る" })
+    .click();
   const sheet = aoiPage.getByRole("dialog", { name: "予定を追加" });
   await expect(sheet.getByRole("textbox", { name: /名前/ })).toHaveValue(
     "湯豆腐を食べる",
@@ -89,16 +91,33 @@ test("ToDo: 追加したものを相手が見て、予定にすると完了に�
   await expect(aoiPage).toHaveURL(new RegExp(`/trips/${tripId}/itinerary`));
   await expect(aoiPage.getByText("湯豆腐を食べる")).toBeVisible();
 
-  // ToDoは済みになり、「日付 名前 ›」のリンクから予定の詳細が開く。
+  // ToDoは完了にならず、関連する予定と結ばれる（F-19）。
+  // 詳細には「関連する予定」が出る。
   await hinataPage.reload();
   await expect(
     hinataPage.getByRole("button", {
-      name: "「湯豆腐を食べる」を未完了に戻す",
+      name: "「湯豆腐を食べる」を完了にする",
     }),
   ).toBeVisible();
+  await hinataPage
+    .getByRole("link", { name: "湯豆腐を食べる", exact: true })
+    .click();
+  await expect(
+    hinataPage.getByRole("button", { name: /関連する予定/ }),
+  ).toContainText("湯豆腐を食べる");
+
+  // リストに戻り、「日付 名前 ›」のリンクから予定の詳細が開き、「関連するToDo」が出る。
+  await hinataPage.goto(`/trips/${tripId}/todos`);
   await hinataPage
     .getByRole("link", { name: /湯豆腐を食べる ›$/ })
     .click();
   await expect(hinataPage).toHaveURL(new RegExp(`/trips/${tripId}/plans/`));
-  await expect(hinataPage.getByText("湯豆腐を食べる")).toBeVisible();
+  const todosRegion = hinataPage.getByRole("region", {
+    name: "関連するToDo",
+  });
+  await expect(todosRegion).toBeVisible();
+  await expect(todosRegion.getByText("湯豆腐を食べる")).toBeVisible();
+  await expect(
+    todosRegion.getByText("未完了のToDoが1件あります"),
+  ).toBeVisible();
 });

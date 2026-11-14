@@ -62,8 +62,9 @@ export type PlanCreate = {
   time?: string | null;
   memo?: string | null;
   /**
-   * 「予定にする」で元にしたToDoのID。予定の保存と同じトランザクションで
-   * そのToDoを完了にして予定とつなぐ。見つからない・完了済みなら何もしない。
+   * 「新しく予定を作る」で元にしたToDoのID。予定の保存と同じトランザクションで
+   * そのToDoに予定を関連付ける（ToDoは完了にしない）。
+   * 見つからない・関連する予定がすでにあるなら何もしない。
    */
   fromTodoId?: string | null;
 };
@@ -156,6 +157,8 @@ export type TodoCreate = {
   name: string;
   /** 入れるカテゴリ。未分類はnull・省略。 */
   categoryId?: string | null;
+  /** 関連付ける予定。無ければnull・省略。 */
+  planId?: string | null;
 };
 
 export type TodoPatch = {
@@ -168,6 +171,8 @@ export type TodoPatch = {
   assigneeId?: string | null;
   /** `YYYY-MM-DD`。期限を消すときはnull。 */
   dueOn?: string | null;
+  /** 関連付ける予定。関連付けを外すときはnull。 */
+  planId?: string | null;
 };
 
 /** カテゴリの追加。 */

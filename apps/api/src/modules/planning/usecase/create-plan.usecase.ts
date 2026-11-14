@@ -65,23 +65,24 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
   }
 
   /**
-   * 「予定にする」の元のToDoを、予定の保存と同じトランザクションで完了にして
-   * 予定とつなぐ（要件F-10）。ロックは旅行 → 予定 → ToDoの順。
-   * 無い（削除済み・別の旅行）・完了済みなら何もしない（E-05・E-06）。
+   * 「新しく予定を作る」の元のToDoを、予定の保存と同じトランザクションで
+   * 関連付ける（要件F-19。ToDoは完了にしない）。
+   * 関連する予定がすでに入っているToDoは変えない（E-08）。
+   * ロックは旅行 → 予定 → ToDoの順。無い（削除済み・別の旅行）なら何もしない。
    */
-  private async completeSourceTodo(
+  private async linkSourceTodo(
     ctx: PlanningWorkContext,
     input: CreatePlanInput,
     todoId: string,
     planId: string,
   ): Promise<void> {
     const todo = await ctx.todos.lockForUpdate(input.tripId, todoId);
-    if (todo === null) {
+    if (todo === null || todo.planId !== null) {
       return;
     }
-    const done = Todo.complete(todo, input.userId, this.clock.now(), planId);
-    if (done !== todo) {
-      await ctx.todos.update(done);
+    const linked = Todo.linkPlan(todo, planId, this.clock.now());
+    if (linked !== todo) {
+      await ctx.todos.update(linked);
     }
   }
 
@@ -123,7 +124,7 @@ export class CreatePlanUseCase implements CreatePlanInputPort {
           memo,
         });
         if (input.fromTodoId !== null) {
-          await this.completeSourceTodo(ctx, input, input.fromTodoId, plan.id);
+          await this.linkSourceTodo(ctx, input, input.fromTodoId, plan.id);
         }
         const body = toPlanDto(plan, {
           achievement: null,

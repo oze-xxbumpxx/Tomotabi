@@ -60,9 +60,11 @@ export class CreateTodoCategoryUseCase implements CreateTodoCategoryInputPort {
             if (stored !== null) {
               return stored;
             }
-            const categories = await ctx.todoCategories.lockAllForUpdate(
-              trip.id,
-            );
+            await ctx.todoCategories.lockAllForUpdate(trip.id);
+            // lockAllForUpdateは文開始時の一覧を返す。ロック待ちのあいだに
+            // 同時に追加された行は見えないので、数は別の文で数え直す
+            // （READ COMMITTEDでは文ごとに新しいスナップショットを取る）。
+            const categories = await ctx.todoCategories.listByTrip(trip.id);
             if (categories.length >= TODO_CATEGORY_LIMIT) {
               throw new ApiError({
                 code: "TODO_CATEGORY_LIMIT_REACHED",

@@ -95,11 +95,15 @@ export function createTodoDraft(
   tripId: string,
   name: string,
   categoryId?: string | null,
+  planId?: string | null,
 ): MutationDraft {
-  const body: TodoCreate =
-    categoryId === null || categoryId === undefined
-      ? { name }
-      : { name, categoryId };
+  const body: TodoCreate = {
+    name,
+    ...(categoryId === null || categoryId === undefined
+      ? {}
+      : { categoryId }),
+    ...(planId === null || planId === undefined ? {} : { planId }),
+  };
   return {
     operation: CREATE_TODO_OPERATION,
     url: getCreateTodoUrl(tripId),

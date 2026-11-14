@@ -36,6 +36,8 @@ export type CreateTodoInput = Command &
     name: string;
     /** 入れるカテゴリ。未分類はnull。 */
     categoryId: string | null;
+    /** 関連付ける予定。無ければnull。 */
+    planId: string | null;
   }>;
 export type UpdateTodoInput = Command &
   Readonly<{
@@ -48,6 +50,8 @@ export type UpdateTodoInput = Command &
     assigneeId: string | null | undefined;
     /** `YYYY-MM-DD`。 */
     dueOn: string | null | undefined;
+    /** 関連付ける予定。nullは関連付けを外す。 */
+    planId: string | null | undefined;
   }>;
 export type TodoCommandInput = Command & Readonly<{ todoId: string }>;
 
@@ -59,13 +63,17 @@ export interface ListTodosInputPort {
 export interface CreateTodoInputPort {
   /**
    * @throws 403 TRIP_NOT_ACCESSIBLE、名前の規則違反は422 VALIDATION_FAILED、
-   *   200件あるときは422 TODO_LIMIT_REACHED。
+   *   200件あるときは422 TODO_LIMIT_REACHED、
+   *   同じ旅行に無い・取りやめた予定は422 TODO_PLAN_NOT_AVAILABLE。
    */
   execute(input: CreateTodoInput): Promise<TodoWriteResult>;
 }
 
 export interface UpdateTodoInputPort {
-  /** @throws 403 TRIP_NOT_ACCESSIBLE、404 TODO_NOT_FOUND、409 VERSION_CONFLICT、422 VALIDATION_FAILED。 */
+  /**
+   * @throws 403 TRIP_NOT_ACCESSIBLE、404 TODO_NOT_FOUND、409 VERSION_CONFLICT、
+   *   422 VALIDATION_FAILED、422 TODO_PLAN_NOT_AVAILABLE。
+   */
   execute(input: UpdateTodoInput): Promise<TodoWriteResult>;
 }
 

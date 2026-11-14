@@ -68,29 +68,30 @@ describe("ToDoのDomain", () => {
     });
   });
 
-  it("完了にすると、完了した人・時刻・予定が入る", () => {
-    const done = Todo.complete(testTodo(), ACTOR, AT, PLAN_ID);
+  it("完了にすると、完了した人・時刻が入る。予定とのつながりは変えない（L-D01）", () => {
+    const done = Todo.complete(testTodo(), ACTOR, AT);
     expect(done).toMatchObject({
       doneAt: AT,
       doneBy: ACTOR,
-      planId: PLAN_ID,
+      planId: null,
       version: 2,
+    });
+    // 関連付いた予定は完了の印では変わらない（F-18）。
+    const linked = testTodo({ planId: PLAN_ID });
+    expect(Todo.complete(linked, ACTOR, AT)).toMatchObject({
+      doneAt: AT,
+      doneBy: ACTOR,
+      planId: PLAN_ID,
     });
   });
 
-  it("完了にするときplanIdがnullなら、今の予定とのつながりはそのまま", () => {
-    const linked = testTodo({ planId: PLAN_ID });
-    const done = Todo.complete(linked, ACTOR, AT, null);
-    expect(done).toMatchObject({ doneAt: AT, doneBy: ACTOR, planId: PLAN_ID });
-  });
-
   it("完了済みを完了にしても、最初の人・時刻・予定のまま", () => {
-    const done = Todo.complete(testTodo(), ACTOR, AT, null);
-    expect(Todo.complete(done, PARTNER, LATER, PLAN_ID)).toBe(done);
+    const done = Todo.complete(testTodo({ planId: PLAN_ID }), ACTOR, AT);
+    expect(Todo.complete(done, PARTNER, LATER)).toBe(done);
   });
 
   it("未完了に戻すと、完了の人・時刻は消えるが予定とのつながりは残る", () => {
-    const done = Todo.complete(testTodo(), ACTOR, AT, PLAN_ID);
+    const done = Todo.complete(testTodo({ planId: PLAN_ID }), ACTOR, AT);
     const reopened = Todo.reopen(done, LATER);
     expect(reopened).toMatchObject({
       doneAt: null,

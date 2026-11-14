@@ -10,7 +10,13 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Todo, TodoCategory, TodoList, Trip } from "@tomotabi/contracts";
+import type {
+  Plan,
+  Todo,
+  TodoCategory,
+  TodoList,
+  Trip,
+} from "@tomotabi/contracts";
 import { deleteTodoDraft, updateTodoDraft } from "@/features/todos";
 import { createMutationRequest } from "@/shared/api/mutation-request";
 import { createQueryClient } from "@/shared/api/query-client";
@@ -91,6 +97,27 @@ function todo(overrides: Partial<Todo> = {}): Todo {
   };
 }
 
+let planSeq = 0;
+function linkedPlan(name: string, date: string, cancelled = false): Plan {
+  planSeq += 1;
+  return {
+    id: `88888888-8888-4888-8888-88888888${String(planSeq).padStart(4, "0")}`,
+    tripId,
+    name,
+    kind: "place",
+    date,
+    time: null,
+    memo: null,
+    cancelledAt: cancelled ? "2026-09-20T00:00:00.000Z" : null,
+    cancelledBy: cancelled ? userId : null,
+    version: "1",
+    achievement: null,
+    booking: null,
+    canChangeKind: true,
+    kindChangeReason: null,
+  };
+}
+
 function balanceBody() {
   return {
     tripId,
@@ -128,6 +155,7 @@ type Handler = (init?: RequestInit) => Response | Promise<Response>;
 /** /api/me・旅行・残額・ToDo・カテゴリ・予定の追加をURLとメソッドで振り分けるfake。 */
 function stubApi(handlers: {
   todos?: () => Todo[] | TodoList | Response;
+  itinerary?: (date: string) => Response;
   create?: Handler;
   complete?: Handler;
   update?: Handler;
@@ -150,6 +178,19 @@ function stubApi(handlers: {
     }
     if (url === `${base}/balance`) {
       return Promise.resolve(json(balanceBody()));
+    }
+    if (url.startsWith(`${base}/itinerary`) && method === "GET") {
+      const date = url.split("date=")[1] ?? trip().startsOn;
+      return Promise.resolve(
+        handlers.itinerary !== undefined
+          ? handlers.itinerary(date)
+          : json({
+              trip: trip(),
+              date,
+              plans: [],
+              fetchedAt: "2026-09-27T12:00:00.000Z",
+            }),
+      );
     }
     if (url === `${base}/todos` && method === "GET") {
       const result = handlers.todos?.() ?? { categories: [], items: [] };
@@ -888,15 +929,145 @@ describe("ToDoのリスト", () => {
 });
 
 describe("ToDoの詳細", () => {
-  it("未完了なら主ボタンは「予定にする」で、予定の追加をToDoから開く", async () => {
+  it("未完了で関連する予定が無ければ主ボタンは「新しく予定を作る」で、予定の追加をToDoから開く", async () => {
     stubApi({ todos: () => [todo()] });
     renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
-    const button = await screen.findByRole("button", { name: "予定にする" });
+    const button = await screen.findByRole("button", {
+      name: "新しく予定を作る",
+    });
     await waitFor(() => expect(button).toBeEnabled());
     await userEvent.click(button);
     expect(pushMock).toHaveBeenCalledWith(
       `/trips/${tripId}/plans/new?fromTodo=${todoId}`,
     );
+  });
+
+  it("関連する予定がすでにあれば主ボタンを出さない（L-S02）", async () => {
+    stubApi({
+      todos: () => [
+        todo({
+          plan: {
+            id: planId,
+            name: "清水寺へ行く",
+            date: "2026-10-12",
+            cancelled: false,
+          },
+        }),
+      ],
+    });
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
+    expect(
+      await screen.findByRole("button", { name: /関連する予定/ }),
+    ).toHaveTextContent("10/12(月) 清水寺へ行く");
+    expect(
+      screen.queryByRole("button", { name: "新しく予定を作る" }),
+    ).toBeNull();
+  });
+
+  it("「関連する予定」を押すと予定を日付ごとに並べて選び、決定でplanIdを送る（L-S01）", async () => {
+    const planA = linkedPlan("清水寺へ行く", "2026-10-12");
+    const cancelled = linkedPlan("金閣寺", "2026-10-12", true);
+    const planB = linkedPlan("錦市場", "2026-10-13");
+    const fetchMock = stubApi({
+      todos: () => [todo()],
+      itinerary: (date) =>
+        json({
+          trip: trip(),
+          date,
+          plans:
+            date === "2026-10-12"
+              ? [planA, cancelled]
+              : date === "2026-10-13"
+                ? [planB]
+                : [],
+          fetchedAt: "2026-09-27T12:00:00.000Z",
+        }),
+    });
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
+    const row = await screen.findByRole("button", {
+      name: /関連する予定/,
+    });
+    await waitFor(() => expect(row).toBeEnabled());
+    await userEvent.click(row);
+    const sheet = await screen.findByRole(
+      "dialog",
+      { name: "予定を選ぶ" },
+      { timeout: 5000 },
+    );
+    const group = await within(sheet).findByRole("radiogroup", {
+      name: "予定",
+    });
+    // 取りやめた予定は出ない。
+    expect(within(group).queryByRole("radio", { name: /金閣寺/ })).toBeNull();
+    await userEvent.click(
+      within(group).getByRole("radio", { name: /錦市場/ }),
+    );
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "決定" }),
+    );
+    await waitFor(() =>
+      expect(
+        callsTo(fetchMock, `/api/trips/${tripId}/todos/${todoId}`, "PATCH"),
+      ).toHaveLength(1),
+    );
+    const [, init] = callsTo(
+      fetchMock,
+      `/api/trips/${tripId}/todos/${todoId}`,
+      "PATCH",
+    )[0]!;
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      planId: planB.id,
+    });
+  });
+
+  it("関連付いたToDoのシートは「予定を変更」と「関連付けを外す」があり、外すとplanId:nullを送る（L-S02）", async () => {
+    const plan = linkedPlan("清水寺へ行く", "2026-10-12");
+    const fetchMock = stubApi({
+      todos: () => [
+        todo({
+          plan: {
+            id: plan.id,
+            name: plan.name,
+            date: plan.date,
+            cancelled: false,
+          },
+        }),
+      ],
+      itinerary: (date) =>
+        json({
+          trip: trip(),
+          date,
+          plans: date === "2026-10-12" ? [plan] : [],
+          fetchedAt: "2026-09-27T12:00:00.000Z",
+        }),
+    });
+    renderScreen(<TodoDetailScreen tripId={tripId} todoId={todoId} />);
+    const row = await screen.findByRole("button", {
+      name: /関連する予定/,
+    });
+    await waitFor(() => expect(row).toBeEnabled());
+    await userEvent.click(row);
+    const sheet = await screen.findByRole(
+      "dialog",
+      { name: "予定を選ぶ" },
+      { timeout: 5000 },
+    );
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "関連付けを外す" }),
+    );
+    await waitFor(() =>
+      expect(
+        callsTo(fetchMock, `/api/trips/${tripId}/todos/${todoId}`, "PATCH"),
+      ).toHaveLength(1),
+    );
+    const [, init] = callsTo(
+      fetchMock,
+      `/api/trips/${tripId}/todos/${todoId}`,
+      "PATCH",
+    )[0]!;
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      planId: null,
+    });
   });
 
   it("完了なら主ボタンを出さない", async () => {
@@ -909,7 +1080,9 @@ describe("ToDoの詳細", () => {
     expect(
       await screen.findByRole("button", { name: "未完了に戻す" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "予定にする" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "新しく予定を作る" }),
+    ).toBeNull();
     expect(screen.queryByRole("link", { name: "支払いを記録" })).toBeNull();
   });
 
@@ -1321,7 +1494,7 @@ describe("予定の追加をToDoから開いたとき（F-09・F-10）", () => {
     );
     expect(
       await screen.findByText(
-        "ToDoの「湯豆腐を食べる」から作ります。保存すると、ToDoは完了になります。",
+        "ToDoの「湯豆腐を食べる」から作ります。保存すると、このToDoと関連付けられます。",
       ),
     ).toBeInTheDocument();
     // シートはeffectでshowModalしてから読み上げの木に入るので、開くまで待つ。

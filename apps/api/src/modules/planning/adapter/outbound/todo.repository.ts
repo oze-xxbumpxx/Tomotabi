@@ -9,6 +9,8 @@ export type NewTodo = Readonly<{
   createdBy: UserId;
   /** 入れるカテゴリ。未分類はnull。 */
   categoryId: string | null;
+  /** 関連付ける予定。無ければnull。 */
+  planId: string | null;
 }>;
 
 /** ToDoをつないだ予定の、画面に出す分（名前・日付・取りやめ）。 */

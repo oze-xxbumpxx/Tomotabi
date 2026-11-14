@@ -194,7 +194,7 @@ export type TodoList = {
 - `todo_plan_requires_done`の制約を外す。`done_at`と`done_by`が対である制約は残す。
 - 今ある行は、3列ともnullになる。データの書き換えは無い。
 - `infra.command_receipts`の`resource_type`の制約に、`todo_category`・`todo_category_deletion`・`todo_category_order`を足す。
-- migrationは、表と列（0013）と、アプリのロールへの権限（0014）の2本に分ける。今の0011・0012と同じ分け方（ADR-0003）。
+- migrationは3本。表と列（0013）と、アプリのロールへの権限（0014）は、今の0011・0012と同じ分け方（ADR-0003）で1つ目のPRに入れる。`todo_plan_requires_done`を外すmigration（0015）は、今の動きが変わる3つ目のPRに入れる。
 
 ## フロントエンド設計
 
@@ -263,7 +263,7 @@ export type TodoList = {
 2. ToDoのリストと詳細（カテゴリ・担当・期限・絞り込み）。
 3. 予定との関連付け。APIの動きの変更（F-18・F-19・未完了での関連付け）と、ToDoの詳細の「関連する予定」、予定の詳細の「関連するToDo」、予定の追加の画面の文を同じPRで出す。
 
-migrationは1のPRで流す。結合検証環境と本番のどちらも、今の手順（デプロイの前にmigrationを流す）のまま。戻すときは、画面 → API → DBの順。列と表は残しても古いAPIは動く。
+migrationは1のPR（表・列・権限）と3のPR（制約を外す）で流す。結合検証環境と本番のどちらも、今の手順（デプロイの前にmigrationを流す）のまま。戻すときは、画面 → API → DBの順。列と表は残しても古いAPIは動く。
 
 ## リスク
 

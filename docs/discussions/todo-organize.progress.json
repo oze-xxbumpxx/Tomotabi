@@ -3,7 +3,7 @@
   "title": "ToDoのカテゴリ分けと予定との関連付け",
   "level": "L3",
   "page": "https://claude.ai/artifact/RkrTGDx64nX4sjzjk8zJAT",
-  "round": 3,
+  "round": 4,
   "stages": {
     "requirements": {
       "state": "done",
@@ -16,13 +16,20 @@
       }
     },
     "design": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/designs/todo-organize.md"
-      ]
+      ],
+      "approved": {
+        "pr": 351,
+        "at": "2026-11-14"
+      }
     },
     "plan": {
-      "state": "pending"
+      "state": "approval",
+      "docs": [
+        "docs/implementation-plans/todo-organize.md"
+      ]
     },
     "implement": {
       "state": "pending"
@@ -37,5 +44,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-14T02:22:54.955Z"
+  "updated_at": "2026-11-14T07:22:19.024Z"
 }

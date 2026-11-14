@@ -21,6 +21,18 @@ reviews:
       - severity: 'must'
         category: 'test-failure'
         summary: 'e2eのL-E01がToDoの名前のリンクと予定のリンクの両方に当たって落ちる'
+  - round: 1
+    reviewed_at: '2026-11-14T11:12:05Z'
+    reviewed_sha: '5d3ba1a2f26e2f530a403709979055bfd0e0ee99'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-failure'
+        summary: 'e2eのL-E01がToDoの詳細の画面でリストの行のリンクを探して落ちる'
+      - severity: 'nit'
+        category: 'process'
+        summary: 'CIを動かすために空のコミットをpushした'
 escalations: 0
 outcome: null
 gh: null

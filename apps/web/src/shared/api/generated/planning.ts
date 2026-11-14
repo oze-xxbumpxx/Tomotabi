@@ -278,6 +278,12 @@ export interface Error {
 
 export interface TodoPlan {
   id: string;
+  /**
+     * 予定の名前
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
   date: string;
   cancelled: boolean;
 }
@@ -299,13 +305,40 @@ export interface Todo {
   createdAt: string;
   doneAt: string | null;
   doneBy: string | null;
+  /** つないだ予定。関連付けは完了の付け外しとは別で、完了の印を外してもそのまま。 */
   plan: TodoPlan | null;
+  /** @pattern ^[1-9][0-9]*$ */
+  version: string;
+  /** 移す・未分類に戻すときはnull */
+  categoryId: string | null;
+  /** 担当を変える・未定に戻すときはnull */
+  assigneeId: string | null;
+  /** 期限。YYYY-MM-DD。消すときはnull */
+  dueOn: string | null;
+}
+
+export interface TodoCategory {
+  id: string;
+  tripId: string;
+  /**
+     * @minLength 1
+     * @maxLength 30
+     */
+  name: string;
   /** @pattern ^[1-9][0-9]*$ */
   version: string;
 }
 
 export interface TodoList {
-  /** @maxItems 1000 */
+  /**
+     * 二人の決めた順
+     * @maxItems 20
+     */
+  categories: TodoCategory[];
+  /**
+     * 追加した順
+     * @maxItems 1000
+     */
   items: Todo[];
 }
 
@@ -315,6 +348,8 @@ export interface TodoCreate {
      * @maxLength 100
      */
   name: string;
+  /** 入れるカテゴリ。未分類はnull・省略 */
+  categoryId?: string | null;
 }
 
 export interface TodoPatch {
@@ -328,10 +363,66 @@ export interface TodoPatch {
      * @nullable
      */
   memo?: string | null;
+  /** 移す・未分類に戻すときはnull */
+  categoryId?: string | null;
+  /** 担当を変える・未定に戻すときはnull */
+  assigneeId?: string | null;
+  /** 期限。YYYY-MM-DD。消すときはnull */
+  dueOn?: string | null;
 }
 
 export interface TodoDeletion {
   id: string;
+}
+
+export interface TodoCategoryCreate {
+  /**
+     * @minLength 1
+     * @maxLength 30
+     */
+  name: string;
+}
+
+export interface TodoCategoryPatch {
+  /**
+     * @minLength 1
+     * @maxLength 30
+     */
+  name: string;
+}
+
+export interface TodoCategoryReorder {
+  /**
+     * 今の並び（変更の起点）
+     * @minItems 0
+     * @maxItems 20
+     */
+  from: string[];
+  /**
+     * 新しい並び。`from`の並べ替え
+     * @minItems 0
+     * @maxItems 20
+     */
+  to: string[];
+}
+
+export interface TodoCategoryOrder {
+  /** @maxItems 20 */
+  categories: TodoCategory[];
+}
+
+export interface TodoCategoryDelete {
+  /**
+     * 画面が数えたカテゴリ内のToDoの件数
+     * @minimum 0
+     */
+  expectedTodoCount: number;
+}
+
+export interface TodoCategoryDeletion {
+  id: string;
+  /** @minimum 0 */
+  deletedTodoCount: number;
 }
 
 /**
@@ -1378,7 +1469,7 @@ export const getListTodosUrl = (tripId: string,) => {
 }
 
 /**
- * 旅行のToDoの一覧。未完了 → 完了の順、それぞれ追加した順。予定にしたToDoは予定の日付と取りやめを含む。
+ * 旅行のToDoの一覧。categoriesは二人の決めた順、itemsは追加した順。予定にしたToDoは予定の名前・日付・取りやめを含む。
  */
 export const listTodos = async (tripId: string, options?: Parameters<typeof httpClient>[1]): Promise<listTodosResponse> => {
 
@@ -1695,7 +1786,7 @@ export const getReopenTodoUrl = (tripId: string,
 }
 
 /**
- * ToDoを未完了に戻す。予定とのつながりも消す。未完了なら変えずに返す。Idempotency-Key 必須。版は要らない。
+ * ToDoを未完了に戻す。予定とのつながりはそのまま。未完了なら変えずに返す。Idempotency-Key 必須。版は要らない。
  */
 export const reopenTodo = async (tripId: string,
     todoId: string, options?: Parameters<typeof httpClient>[1]): Promise<reopenTodoResponse> => {
@@ -1776,5 +1867,356 @@ export const deleteTodo = async (tripId: string,
     method: 'POST'
 
 
+  }
+);}
+
+
+
+export type createTodoCategoryResponse201 = {
+  data: TodoCategory
+  status: 201
+}
+
+export type createTodoCategoryResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type createTodoCategoryResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type createTodoCategoryResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type createTodoCategoryResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type createTodoCategoryResponse422 = {
+  data: Error
+  status: 422
+}
+
+export type createTodoCategoryResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type createTodoCategoryResponseSuccess = (createTodoCategoryResponse201) & {
+  headers: Headers;
+};
+export type createTodoCategoryResponseError = (createTodoCategoryResponse400 | createTodoCategoryResponse401 | createTodoCategoryResponse403 | createTodoCategoryResponse409 | createTodoCategoryResponse422 | createTodoCategoryResponse503) & {
+  headers: Headers;
+};
+
+export type createTodoCategoryResponse = (createTodoCategoryResponseSuccess | createTodoCategoryResponseError)
+
+export const getCreateTodoCategoryUrl = (tripId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todo-categories`
+}
+
+/**
+ * カテゴリの追加。Idempotency-Key 必須。1つの旅行に20個まで。
+ */
+export const createTodoCategory = async (tripId: string,
+    todoCategoryCreate: TodoCategoryCreate, options?: Parameters<typeof httpClient>[1]): Promise<createTodoCategoryResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return httpClient<createTodoCategoryResponse>(getCreateTodoCategoryUrl(tripId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(todoCategoryCreate)
+  }
+);}
+
+
+
+export type updateTodoCategoryResponse200 = {
+  data: TodoCategory
+  status: 200
+}
+
+export type updateTodoCategoryResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type updateTodoCategoryResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type updateTodoCategoryResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type updateTodoCategoryResponse404 = {
+  data: Error
+  status: 404
+}
+
+export type updateTodoCategoryResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type updateTodoCategoryResponse422 = {
+  data: Error
+  status: 422
+}
+
+export type updateTodoCategoryResponse428 = {
+  data: Error
+  status: 428
+}
+
+export type updateTodoCategoryResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type updateTodoCategoryResponseSuccess = (updateTodoCategoryResponse200) & {
+  headers: Headers;
+};
+export type updateTodoCategoryResponseError = (updateTodoCategoryResponse400 | updateTodoCategoryResponse401 | updateTodoCategoryResponse403 | updateTodoCategoryResponse404 | updateTodoCategoryResponse409 | updateTodoCategoryResponse422 | updateTodoCategoryResponse428 | updateTodoCategoryResponse503) & {
+  headers: Headers;
+};
+
+export type updateTodoCategoryResponse = (updateTodoCategoryResponseSuccess | updateTodoCategoryResponseError)
+
+export const getUpdateTodoCategoryUrl = (tripId: string,
+    categoryId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todo-categories/${categoryId}`
+}
+
+/**
+ * カテゴリの名前の変更。Idempotency-Key・X-Expected-Version 必須。
+ */
+export const updateTodoCategory = async (tripId: string,
+    categoryId: string,
+    todoCategoryPatch: TodoCategoryPatch, options?: Parameters<typeof httpClient>[1]): Promise<updateTodoCategoryResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return httpClient<updateTodoCategoryResponse>(getUpdateTodoCategoryUrl(tripId,categoryId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(todoCategoryPatch)
+  }
+);}
+
+
+
+export type reorderTodoCategoriesResponse200 = {
+  data: TodoCategoryOrder
+  status: 200
+}
+
+export type reorderTodoCategoriesResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type reorderTodoCategoriesResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type reorderTodoCategoriesResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type reorderTodoCategoriesResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type reorderTodoCategoriesResponse422 = {
+  data: Error
+  status: 422
+}
+
+export type reorderTodoCategoriesResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type reorderTodoCategoriesResponseSuccess = (reorderTodoCategoriesResponse200) & {
+  headers: Headers;
+};
+export type reorderTodoCategoriesResponseError = (reorderTodoCategoriesResponse400 | reorderTodoCategoriesResponse401 | reorderTodoCategoriesResponse403 | reorderTodoCategoriesResponse409 | reorderTodoCategoriesResponse422 | reorderTodoCategoriesResponse503) & {
+  headers: Headers;
+};
+
+export type reorderTodoCategoriesResponse = (reorderTodoCategoriesResponseSuccess | reorderTodoCategoriesResponseError)
+
+export const getReorderTodoCategoriesUrl = (tripId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todo-categories/order`
+}
+
+/**
+ * カテゴリの並べ替え。`from`が今の順と同じときだけ保存し、`to`は`from`の並べ替え。Idempotency-Key 必須。
+ */
+export const reorderTodoCategories = async (tripId: string,
+    todoCategoryReorder: TodoCategoryReorder, options?: Parameters<typeof httpClient>[1]): Promise<reorderTodoCategoriesResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return httpClient<reorderTodoCategoriesResponse>(getReorderTodoCategoriesUrl(tripId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(todoCategoryReorder)
+  }
+);}
+
+
+
+export type deleteTodoCategoryResponse200 = {
+  data: TodoCategoryDeletion
+  status: 200
+}
+
+export type deleteTodoCategoryResponse400 = {
+  data: Error
+  status: 400
+}
+
+export type deleteTodoCategoryResponse401 = {
+  data: Error
+  status: 401
+}
+
+export type deleteTodoCategoryResponse403 = {
+  data: Error
+  status: 403
+}
+
+export type deleteTodoCategoryResponse404 = {
+  data: Error
+  status: 404
+}
+
+export type deleteTodoCategoryResponse409 = {
+  data: Error
+  status: 409
+}
+
+export type deleteTodoCategoryResponse422 = {
+  data: Error
+  status: 422
+}
+
+export type deleteTodoCategoryResponse503 = {
+  data: Error
+  status: 503
+}
+
+export type deleteTodoCategoryResponseSuccess = (deleteTodoCategoryResponse200) & {
+  headers: Headers;
+};
+export type deleteTodoCategoryResponseError = (deleteTodoCategoryResponse400 | deleteTodoCategoryResponse401 | deleteTodoCategoryResponse403 | deleteTodoCategoryResponse404 | deleteTodoCategoryResponse409 | deleteTodoCategoryResponse422 | deleteTodoCategoryResponse503) & {
+  headers: Headers;
+};
+
+export type deleteTodoCategoryResponse = (deleteTodoCategoryResponseSuccess | deleteTodoCategoryResponseError)
+
+export const getDeleteTodoCategoryUrl = (tripId: string,
+    categoryId: string,) => {
+
+
+
+
+  return `/api/trips/${tripId}/todo-categories/${categoryId}/delete`
+}
+
+/**
+ * カテゴリの削除。中のToDoも消える。`expectedTodoCount`と保存のときの件数が違えば止める。Idempotency-Key 必須。同じキーの再送は、行が無くても同じ本文を返す。
+ */
+export const deleteTodoCategory = async (tripId: string,
+    categoryId: string,
+    todoCategoryDelete: TodoCategoryDelete, options?: Parameters<typeof httpClient>[1]): Promise<deleteTodoCategoryResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return httpClient<deleteTodoCategoryResponse>(getDeleteTodoCategoryUrl(tripId,categoryId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(todoCategoryDelete)
   }
 );}

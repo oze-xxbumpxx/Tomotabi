@@ -39,7 +39,8 @@ export const tripFinanceGuards = infra.table(
 );
 
 // resource_type includes the M3-M4 kinds; todo / todo_deletion were added for the ToDo list
-// (migration 0011, design docs/designs/trip-todo.md).
+// (migration 0011, design docs/designs/trip-todo.md) and todo_category* for the
+// ToDo categories (migration 0013, design docs/designs/todo-organize.md).
 export const commandReceipts = infra.table(
   "command_receipts",
   {
@@ -63,7 +64,7 @@ export const commandReceipts = infra.table(
     check("command_receipts_request_hash_check", sql`${table.requestHash} ~ '^[0-9a-f]{64}$'`),
     check(
       "command_receipts_resource_type_check",
-      sql`${table.resourceType} IN ('payment', 'payment_cancellation', 'preview', 'settlement', 'settlement_cancellation', 'plan', 'trip', 'plan_event', 'plan_event_cancellation', 'todo', 'todo_deletion')`,
+      sql`${table.resourceType} IN ('payment', 'payment_cancellation', 'preview', 'settlement', 'settlement_cancellation', 'plan', 'trip', 'plan_event', 'plan_event_cancellation', 'todo', 'todo_deletion', 'todo_category', 'todo_category_order', 'todo_category_deletion')`,
     ),
     check("command_receipts_http_status_check", sql`${table.httpStatus} IN (200, 201)`),
     check(

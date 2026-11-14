@@ -7,11 +7,14 @@ export type NewTodo = Readonly<{
   tripId: string;
   name: BoundedText;
   createdBy: UserId;
+  /** 入れるカテゴリ。未分類はnull。 */
+  categoryId: string | null;
 }>;
 
-/** ToDoをつないだ予定の、画面に出す分（日付と取りやめ）。 */
+/** ToDoをつないだ予定の、画面に出す分（名前・日付・取りやめ）。 */
 export type TodoPlanLink = Readonly<{
   id: string;
+  name: string;
   date: string;
   cancelled: boolean;
 }>;
@@ -36,6 +39,13 @@ export interface TodoRepository {
   update(todo: Todo): Promise<void>;
   /** ToDo行を消す。呼び出し前に行ロックを持っていること。 */
   delete(tripId: string, todoId: string): Promise<void>;
-  /** 旅行の中の予定の日付と取りやめ。無ければnull。 */
+  /** カテゴリの中のToDoの件数（カテゴリの削除の確かめ用）。 */
+  countByCategory(tripId: string, categoryId: string): Promise<number>;
+  /**
+   * カテゴリの中のToDoを全部消し、消えた件数を返す。
+   * 呼び出し前にカテゴリ行のロックを持っていること。
+   */
+  deleteByCategory(tripId: string, categoryId: string): Promise<number>;
+  /** 旅行の中の予定の名前・日付・取りやめ。無ければnull。 */
   planLink(tripId: string, planId: string): Promise<TodoPlanLink | null>;
 }

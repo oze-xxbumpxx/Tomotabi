@@ -82,6 +82,7 @@ import {
 import { HomeController } from "./controller/home.controller.js";
 import { PlansController } from "./controller/plans.controller.js";
 import { TripsController } from "./controller/trips.controller.js";
+import { TodoCategoriesController } from "./controller/todo-categories.controller.js";
 import { TodosController } from "./controller/todos.controller.js";
 import {
   COMPLETE_TODO_INPUT_PORT,
@@ -91,6 +92,16 @@ import {
   REOPEN_TODO_INPUT_PORT,
   UPDATE_TODO_INPUT_PORT,
 } from "./adapter/inbound/todo.input-port.js";
+import {
+  CREATE_TODO_CATEGORY_INPUT_PORT,
+  DELETE_TODO_CATEGORY_INPUT_PORT,
+  REORDER_TODO_CATEGORIES_INPUT_PORT,
+  UPDATE_TODO_CATEGORY_INPUT_PORT,
+} from "./adapter/inbound/todo-category.input-port.js";
+import { CreateTodoCategoryUseCase } from "./usecase/create-todo-category.usecase.js";
+import { DeleteTodoCategoryUseCase } from "./usecase/delete-todo-category.usecase.js";
+import { ReorderTodoCategoriesUseCase } from "./usecase/reorder-todo-categories.usecase.js";
+import { UpdateTodoCategoryUseCase } from "./usecase/update-todo-category.usecase.js";
 import { CompleteTodoUseCase } from "./usecase/complete-todo.usecase.js";
 import { CreateTodoUseCase } from "./usecase/create-todo.usecase.js";
 import { DeleteTodoUseCase } from "./usecase/delete-todo.usecase.js";
@@ -131,7 +142,13 @@ const PLAN_WRITE_INJECT = [
 
 @Module({
   imports: [PlanningCompositionModule],
-  controllers: [TripsController, PlansController, HomeController, TodosController],
+  controllers: [
+    TripsController,
+    PlansController,
+    HomeController,
+    TodosController,
+    TodoCategoriesController,
+  ],
   providers: [
     {
       provide: CREATE_TRIP_INPUT_PORT,
@@ -253,6 +270,29 @@ const PLAN_WRITE_INJECT = [
       provide: DELETE_TODO_INPUT_PORT,
       useFactory: (uow: UnitOfWork<PlanningWorkContext>, writeLog: WriteLog) =>
         new DeleteTodoUseCase(uow, writeLog),
+      inject: [PLANNING_UNIT_OF_WORK, WRITE_LOG],
+    },
+    {
+      provide: CREATE_TODO_CATEGORY_INPUT_PORT,
+      useFactory: (uow: UnitOfWork<PlanningWorkContext>, writeLog: WriteLog) =>
+        new CreateTodoCategoryUseCase(uow, writeLog),
+      inject: [PLANNING_UNIT_OF_WORK, WRITE_LOG],
+    },
+    {
+      provide: UPDATE_TODO_CATEGORY_INPUT_PORT,
+      useFactory: (...deps: WriteDeps) => new UpdateTodoCategoryUseCase(...deps),
+      inject: WRITE_INJECT,
+    },
+    {
+      provide: REORDER_TODO_CATEGORIES_INPUT_PORT,
+      useFactory: (uow: UnitOfWork<PlanningWorkContext>, writeLog: WriteLog) =>
+        new ReorderTodoCategoriesUseCase(uow, writeLog),
+      inject: [PLANNING_UNIT_OF_WORK, WRITE_LOG],
+    },
+    {
+      provide: DELETE_TODO_CATEGORY_INPUT_PORT,
+      useFactory: (uow: UnitOfWork<PlanningWorkContext>, writeLog: WriteLog) =>
+        new DeleteTodoCategoryUseCase(uow, writeLog),
       inject: [PLANNING_UNIT_OF_WORK, WRITE_LOG],
     },
   ],

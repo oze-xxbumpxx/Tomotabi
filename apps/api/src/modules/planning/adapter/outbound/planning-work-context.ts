@@ -5,6 +5,7 @@ import type { UserId } from "../../../../common/domain/user-id.js";
 import type { ParticipantsPort } from "./participants.port.js";
 import type { PlanRepository } from "./plan.repository.js";
 import type { RecordHistoryPort } from "./record-history.port.js";
+import type { TodoCategoryRepository } from "./todo-category.repository.js";
 import type { TodoRepository } from "./todo.repository.js";
 import type { TripRepository } from "./trip.repository.js";
 
@@ -36,6 +37,7 @@ export interface PlanningWorkContext {
   trips: TripRepository;
   plans: PlanRepository;
   todos: TodoRepository;
+  todoCategories: TodoCategoryRepository;
   participants: ParticipantsPort;
   receipts: CommandReceiptStore;
   financeGuards: FinanceGuardWriter;

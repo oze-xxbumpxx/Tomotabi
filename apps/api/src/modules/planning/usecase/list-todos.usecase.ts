@@ -5,6 +5,7 @@ import type {
 } from "../adapter/inbound/todo.input-port.js";
 import type { PlanningReadPort } from "../adapter/outbound/planning-read.port.js";
 import { toTodoDto } from "./todo-dto.js";
+import { toTodoCategoryDto } from "./todo-category-write-flow.js";
 import { tripNotAccessible } from "./trip-write-flow.js";
 
 export class ListTodosUseCase implements ListTodosInputPort {
@@ -18,7 +19,10 @@ export class ListTodosUseCase implements ListTodosInputPort {
     if (trip === null) {
       throw tripNotAccessible();
     }
-    const views = await this.read.listTodos(input.tripId);
-    return { items: views.map((view) => toTodoDto(view.todo, view.plan)) };
+    const view = await this.read.listTodos(input.tripId);
+    return {
+      categories: view.categories.map(toTodoCategoryDto),
+      items: view.items.map((item) => toTodoDto(item.todo, item.plan)),
+    };
   }
 }

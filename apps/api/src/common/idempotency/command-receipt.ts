@@ -28,7 +28,10 @@ export type CommandReceipt = Readonly<{
     | "plan_event"
     | "plan_event_cancellation"
     | "todo"
-    | "todo_deletion";
+    | "todo_deletion"
+    | "todo_category"
+    | "todo_category_order"
+    | "todo_category_deletion";
   resourceId: string;
   httpStatus: 200 | 201;
   responseBody: unknown;

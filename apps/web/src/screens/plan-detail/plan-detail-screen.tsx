@@ -633,11 +633,13 @@ export function PlanDetailScreen({
           confirming={createTodo.state.status === "saving"}
         />
       )}
-      {createTodo.state.status === "unknown" && (
-        <SaveUnknown
-          onConfirm={() => void createTodo.confirmWithSameRequest()}
-          confirming={false}
-        />
+      {[createTodo, completeTodo, reopenTodo].map((s, index) =>
+        s.state.status === "unknown" ? (
+          <SaveUnknown
+            key={index}
+            onConfirm={() => void s.confirmWithSameRequest()}
+          />
+        ) : null,
       )}
       {(achieveCheck.check.status === "unavailable" ||
         bookCheck.check.status === "unavailable" ||

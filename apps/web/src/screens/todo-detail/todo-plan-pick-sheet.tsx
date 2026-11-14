@@ -54,6 +54,15 @@ export function TodoPlanPickSheet({
   const loading =
     trip.isPending || itineraries.some((result) => result.isPending);
   const failedIndex = itineraries.findIndex((result) => result.isError);
+  const failed = trip.isError || failedIndex !== -1;
+  const retry = () => {
+    if (trip.isError) {
+      void trip.refetch();
+    }
+    if (failedIndex !== -1) {
+      void itineraries[failedIndex]?.refetch();
+    }
+  };
   const groups = dates
     .map((date, index) => ({
       date,
@@ -83,7 +92,7 @@ export function TodoPlanPickSheet({
           <button
             type="button"
             className="btn-ink"
-            disabled={saving || loading || failedIndex !== -1}
+            disabled={saving || loading || failed}
             onClick={() => onPick(picked)}
           >
             {currentPlanId === null ? "決定" : "予定を変更"}
@@ -92,13 +101,13 @@ export function TodoPlanPickSheet({
       }
     >
       {loading && <Loading />}
-      {!loading && failedIndex !== -1 && (
+      {!loading && failed && (
         <FetchFailed
           message="旅行の予定を取得できませんでした"
-          onRetry={() => void itineraries[failedIndex]?.refetch()}
+          onRetry={retry}
         />
       )}
-      {!loading && failedIndex === -1 && (
+      {!loading && !failed && (
         <div className="pay-plan-list" role="radiogroup" aria-label="予定">
           {groups.map((group) => (
             <div key={group.date}>

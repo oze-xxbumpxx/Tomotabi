@@ -36,17 +36,21 @@
       }
     },
     "implement": {
-      "state": "active"
+      "state": "done"
     },
     "review": {
-      "state": "pending"
+      "state": "done"
     },
     "merge": {
-      "state": "pending"
+      "state": "done",
+      "approved": {
+        "pr": 360,
+        "at": "2026-11-14"
+      }
     },
     "reflect": {
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-14T07:27:44.926Z"
+  "updated_at": "2026-11-14T13:01:05.578Z"
 }

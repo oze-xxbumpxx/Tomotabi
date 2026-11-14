@@ -33,6 +33,12 @@ reviews:
       - severity: 'nit'
         category: 'process'
         summary: 'CIを動かすために空のコミットをpushした'
+  - round: 2
+    reviewed_at: '2026-11-14T13:01:05Z'
+    reviewed_sha: 'ebe477bf632a8d52591ef9d4711687b72df28000'
+    verdict: 'merge'
+    posted: false
+    findings: []
 escalations: 0
 outcome: null
 gh: null

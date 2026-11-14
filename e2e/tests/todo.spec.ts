@@ -106,7 +106,8 @@ test("ToDo: 追加したものを相手が見て、新しく予定を作ると�
     hinataPage.getByRole("button", { name: /関連する予定/ }),
   ).toContainText("湯豆腐を食べる");
 
-  // 「日付 名前 ›」のリンクから予定の詳細が開き、「関連するToDo」が出る。
+  // リストに戻り、「日付 名前 ›」のリンクから予定の詳細が開き、「関連するToDo」が出る。
+  await hinataPage.goto(`/trips/${tripId}/todos`);
   await hinataPage
     .getByRole("link", { name: /湯豆腐を食べる ›$/ })
     .click();

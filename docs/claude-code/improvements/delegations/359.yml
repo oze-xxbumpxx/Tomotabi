@@ -5,7 +5,19 @@ model: 'swe-2-flash-high'
 runner: 'cloud'
 change_level: 3
 delegated_at: '2026-11-14T10:31:30Z'
-reviews: []
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-14T11:01:24Z'
+    reviewed_sha: 'bcd2ce6314e8560cd719905b1c6783284a7f381d'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'error-handling'
+        summary: '予定の詳細で完了の付け外しの端末への保存の失敗が表示されない（Codexの指摘）'
+      - severity: 'must'
+        category: 'scope-creep'
+        summary: 'apps/web/next-env.d.tsが範囲の外で書き換わっている'
 escalations: 0
 outcome: null
 gh: null

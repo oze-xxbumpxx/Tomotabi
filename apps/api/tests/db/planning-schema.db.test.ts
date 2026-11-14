@@ -306,7 +306,7 @@ describe("planning / record / infra schema migrations and runtime privileges", (
   describe("todo_categories and todos organize columns (todo-organize)", () => {
     it("rejects an empty name, a negative position, and a non-participant creator", async () => {
       const { tripId, slot0 } = await seedTrip(db.admin);
-      const outsider = await insertUser(db.admin, "outsider");
+      const outsider = await insertUser(db.admin, "outsider-category");
       await expect(
         db.admin.query(
           "INSERT INTO planning.todo_categories (trip_id, name, position, created_by) VALUES ($1, '   ', 0, $2)",
@@ -331,7 +331,7 @@ describe("planning / record / infra schema migrations and runtime privileges", (
       const { tripId, slot0 } = await seedTrip(db.admin);
       const { tripId: otherTripId, slot0: otherSlot0 } =
         await seedTrip(db.admin);
-      const outsider = await insertUser(db.admin, "outsider2");
+      const outsider = await insertUser(db.admin, "outsider-assignee");
       const otherCategory = await db.admin.query<{ id: string }>(
         "INSERT INTO planning.todo_categories (trip_id, name, position, created_by) VALUES ($1, 'x', 0, $2) RETURNING id",
         [otherTripId, otherSlot0],
@@ -366,10 +366,10 @@ describe("planning / record / infra schema migrations and runtime privileges", (
         "todo_category_order",
         "todo_category_deletion",
       ]) {
-        const inserted = await db.admin.query<{ id: string }>(
+        const inserted = await db.admin.query(
           `INSERT INTO infra.command_receipts
              (actor_id, operation, idempotency_key, trip_id, request_hash, resource_type, resource_id, http_status, response_body)
-           VALUES ($1, 'x', $2, $3, $4, $5, $3, 200, '{}'::jsonb) RETURNING id`,
+           VALUES ($1, 'x', $2, $3, $4, $5, $3, 200, '{}'::jsonb)`,
           [
             slot0,
             crypto.randomUUID(),

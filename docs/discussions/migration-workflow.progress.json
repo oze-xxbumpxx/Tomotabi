@@ -1,0 +1,34 @@
+{
+  "feature": "migration-workflow",
+  "title": "migrationを出先からも流せるようにする",
+  "level": "L3",
+  "page": "https://claude.ai/artifact/AfuqoRSjeQbEJsVyrupZPt",
+  "round": 2,
+  "stages": {
+    "requirements": {
+      "state": "approval",
+      "docs": [
+        "docs/requirements/migration-workflow.md"
+      ]
+    },
+    "design": {
+      "state": "pending"
+    },
+    "plan": {
+      "state": "pending"
+    },
+    "implement": {
+      "state": "pending"
+    },
+    "review": {
+      "state": "pending"
+    },
+    "merge": {
+      "state": "pending"
+    },
+    "reflect": {
+      "state": "pending"
+    }
+  },
+  "updated_at": "2026-11-15T00:41:59.694Z"
+}

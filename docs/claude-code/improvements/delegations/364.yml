@@ -1,0 +1,12 @@
+issue: 364
+title: 'feat(ci): migrationを出先から流せるボタン（検証用と本番のワークフロー）'
+agent: 'devin'
+model: 'swe-2-flash-high'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-11-15T22:58:54Z'
+reviews: []
+escalations: 0
+outcome: null
+gh: null
+task_key: 'migration-workflow:workflow'

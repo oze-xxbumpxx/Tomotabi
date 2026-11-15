@@ -14,7 +14,7 @@ export type {
   TargetItem,
   Transfer,
 } from "./finance";
-export type { HealthView } from "./health";
+export type { HealthView, MigrationStatusView } from "./health";
 export type {
   BalanceSummary,
   Context,

@@ -26,19 +26,19 @@
 
 ## 新規作成ファイル
 
-| path                                                                                 | 役割                                                                            |
-| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| `apps/api/drizzle/0015_app_runtime_read_migrations.sql`                              | `app_runtime`に`drizzle`スキーマの`USAGE`と履歴の表の`SELECT`を足す             |
-| `apps/api/drizzle/meta/0015_snapshot.json`                                           | `generate --custom`が作るもの。中身は`0014`と同じ                               |
-| `apps/api/src/modules/foundation/adapter/outbound/migration-status.port.ts`          | `MigrationStatusReader`（`lastAppliedAt(): Promise<number \| null>`）とトークン |
-| `apps/api/src/modules/foundation/adapter/inbound/get-migration-status.input-port.ts` | UseCaseの入口の型とトークン（`get-probe.input-port.ts`と同じ形）                |
-| `apps/api/src/modules/foundation/infrastructure/pg-migration-status.ts`              | `SELECT max(created_at)`を1回。bigintの文字列を`Number`にする                   |
-| `apps/api/src/modules/foundation/infrastructure/in-memory-migration-status.ts`       | DBなしで`null`を返す                                                            |
-| `apps/api/src/modules/foundation/usecase/get-migration-status.usecase.ts`            | `{ lastAppliedAt }`を返す                                                       |
-| `.github/scripts/check-deployed-migrations.mjs`                                      | 確かめるスクリプト。判定の純粋関数`compareMigrations`と、直接実行したときの本体 |
-| `.claude/tests/check-deployed-migrations.test.mjs`                                   | スクリプトの試験（`npm run test:harness`で動く）                                |
-| `apps/api/tests/http/health-migrations.http.test.ts`                                 | DBなしで、ログインなしに200と`{ lastAppliedAt: null }`が返る                    |
-| `apps/api/tests/db/migration-status.db.test.ts`                                      | 全migrationを流したDBで、`app_runtime`の接続から最後の`when`が返る              |
+| path                                                                                 | 役割                                                                                |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `apps/api/drizzle/0015_app_runtime_read_migrations.sql`                              | `app_runtime`に`drizzle`スキーマの`USAGE`と履歴の表の`SELECT`を足す                 |
+| `apps/api/drizzle/meta/0015_snapshot.json`                                           | `generate --custom`が作るもの。中身は`0013`と同じ（`0014`は手書きでsnapshotが無い） |
+| `apps/api/src/modules/foundation/adapter/outbound/migration-status.port.ts`          | `MigrationStatusReader`（`lastAppliedAt(): Promise<number \| null>`）とトークン     |
+| `apps/api/src/modules/foundation/adapter/inbound/get-migration-status.input-port.ts` | UseCaseの入口の型とトークン（`get-probe.input-port.ts`と同じ形）                    |
+| `apps/api/src/modules/foundation/infrastructure/pg-migration-status.ts`              | `SELECT max(created_at)`を1回。bigintの文字列を`Number`にする                       |
+| `apps/api/src/modules/foundation/infrastructure/in-memory-migration-status.ts`       | DBなしで`null`を返す                                                                |
+| `apps/api/src/modules/foundation/usecase/get-migration-status.usecase.ts`            | `{ lastAppliedAt }`を返す                                                           |
+| `.github/scripts/check-deployed-migrations.mjs`                                      | 確かめるスクリプト。判定の純粋関数`compareMigrations`と、直接実行したときの本体     |
+| `.claude/tests/check-deployed-migrations.test.mjs`                                   | スクリプトの試験（`npm run test:harness`で動く）                                    |
+| `apps/api/tests/http/health-migrations.http.test.ts`                                 | DBなしで、ログインなしに200と`{ lastAppliedAt: null }`が返る                        |
+| `apps/api/tests/db/migration-status.db.test.ts`                                      | 全migrationを流したDBで、`app_runtime`の接続から最後の`when`が返る                  |
 
 ## ファイルごとの変更内容
 
@@ -137,6 +137,7 @@ DBに流していないmigrationがあるcommitを、検証用にも本番にも
 - `npm run lint` / `npm run type-check` / `npm test` / `npm run build`が通る。
 - `npm run test:harness` / `npm run db:check` / `npm run api:check`が通る。
 - PRの説明の「マージのあとの作業」に、「検証用と本番で`0015`を流す」と書く。
+
 <!-- /delegation-task -->
 
 ## 依存関係

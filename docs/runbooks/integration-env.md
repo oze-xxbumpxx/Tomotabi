@@ -29,6 +29,7 @@ Googleの戻り先にVercelの画面のURLが要るので、Vercelのプロジ�
   brew install libpq
   echo "export PATH=\"$(brew --prefix libpq)/bin:\$PATH\"" >> ~/.zshrc && source ~/.zshrc
   ```
+
 - このリポジトリの最新のmainと`npm ci`
 - 秘密情報を一時的に書いておく場所（パスワード管理ソフトなど）。リポジトリの中や`.env`には書かない
 
@@ -123,15 +124,15 @@ npm run cli:generate-vapid-key -w @tomotabi/api -- "$HOME/tomotabi-vapid-test.js
 
 Settings > Environment Variablesで、Environmentは**Production**、秘密情報は種類を**Sensitive**にして登録する。
 
-| プロジェクト | 名前 | 値 | Sensitive |
-| --- | --- | --- | --- |
-| api-test | `DATABASE_URL` | 2章の実行用（app_runtime・pooled）の接続文字列 | する |
-| api-test | `PUBLIC_APP_ORIGIN` | webのURL | しない |
-| api-test | `BETTER_AUTH_SECRET` | 新しく作った乱数（例: `openssl rand -base64 32`） | する |
-| api-test | `GOOGLE_CLIENT_ID` | 4章のログイン用のクライアントID | しない |
-| api-test | `GOOGLE_CLIENT_SECRET` | 4章のログイン用のシークレット | する |
-| api-test | `VAPID_KEYS` | `[<5章の1要素>]` | する |
-| api-test | `VAPID_SUBJECT` | `https://github.com/oze-xxbumpxx/Tomotabi` | しない |
+| プロジェクト | 名前                   | 値                                                | Sensitive |
+| ------------ | ---------------------- | ------------------------------------------------- | --------- |
+| api-test     | `DATABASE_URL`         | 2章の実行用（app_runtime・pooled）の接続文字列    | する      |
+| api-test     | `PUBLIC_APP_ORIGIN`    | webのURL                                          | しない    |
+| api-test     | `BETTER_AUTH_SECRET`   | 新しく作った乱数（例: `openssl rand -base64 32`） | する      |
+| api-test     | `GOOGLE_CLIENT_ID`     | 4章のログイン用のクライアントID                   | しない    |
+| api-test     | `GOOGLE_CLIENT_SECRET` | 4章のログイン用のシークレット                     | する      |
+| api-test     | `VAPID_KEYS`           | `[<5章の1要素>]`                                  | する      |
+| api-test     | `VAPID_SUBJECT`        | `https://github.com/oze-xxbumpxx/Tomotabi`        | しない    |
 
 登録したら、一覧に7つそろっているかを数える。値の前後に`http://`や`/`が付いていないかも見る（貼るときにURLと見なされて付くことがある）。環境変数を変えたら、9章のボタンで出し直すまで反映されない。Vercelの画面の「Redeploy」は、このワークフローで出したデプロイでは使えない。
 
@@ -184,20 +185,22 @@ slot 1も同じように、もう一人のアカウントで行う。二人が�
 3. ワークフローは次の順に進み、どこかで失敗したらそこで止まる。自動で再試行はしない。手順は本番と共通の`deploy-vercel.yml`にあり、実行の画面では「deploy / deploy」のジョブの中に出る。
    1. 入力のSHAの形と、変数`API_ORIGIN`が`https://`で始まるかを確かめる
    2. そのcommitがmainの履歴に入っていて、`ci.yml`が成功しているかを確かめる
-   3. apiを出す（`vercel pull`→`vercel build`→`vercel deploy --prebuilt`）
-   4. webを出す（ビルドに`API_ORIGIN`を渡す）
-   5. 出したcommitとURLを実行の要約に書く（失敗した回も書く）
+   3. 今動いているapiに最後に流したmigrationの時刻を聞き、出すcommitのmigrationに追いついているかを確かめる（追いついていなければ止める。今のapiに確かめの口がまだ無いときは警告を出して進む）
+   4. apiを出す（`vercel pull`→`vercel build`→`vercel deploy --prebuilt`）
+   5. webを出す（ビルドに`API_ORIGIN`を渡す）
+   6. 出したcommitとURLを実行の要約に書く（失敗した回も書く）
 4. 実行の要約に出るURLは、デプロイごとに変わるURLで、Deployment Protectionがかかっている。確かめるときは3章の固定のURLを開く。
 
 失敗したときは、実行のログで止まった手順を見る。
 
-| 止まった手順 | よくある原因 | 直し方 |
-| --- | --- | --- |
-| Verify sha input shape | SHAが短い・余計な文字がある | 40桁のSHAを入れ直すか、空にする |
-| Verify API_ORIGIN is set | 7章の変数`API_ORIGIN`が無い・`https://`で始まらない | 変数を直して押し直す |
-| Verify commit is on main | mainに入っていないcommitを指定した | マージしてから出す |
-| Verify ci.yml succeeded | そのcommitのCIが失敗・実行中 | CIが通ってから押し直す |
-| Deploy api / Deploy web | トークンの期限切れ・プロジェクトのID違い・ビルドの失敗 | 7章の値を見直す。ビルドの失敗はログの内容をClaude Codeに伝える |
+| 止まった手順                           | よくある原因                                                                                                                            | 直し方                                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Verify sha input shape                 | SHAが短い・余計な文字がある                                                                                                             | 40桁のSHAを入れ直すか、空にする                                                                             |
+| Verify API_ORIGIN is set               | 7章の変数`API_ORIGIN`が無い・`https://`で始まらない                                                                                     | 変数を直して押し直す                                                                                        |
+| Verify commit is on main               | mainに入っていないcommitを指定した                                                                                                      | マージしてから出す                                                                                          |
+| Verify ci.yml succeeded                | そのcommitのCIが失敗・実行中                                                                                                            | CIが通ってから押し直す                                                                                      |
+| Verify database migrations are applied | DBに流していないmigrationがある（要約に名前が出る）。今のapiが落ちている。`0015_app_runtime_read_migrations`を流しておらず口が500を返す | 2章の手順で、管理者の端末から足りないmigrationを流してから押し直す。apiが落ちているときは本番の手順書の13章 |
+| Deploy api / Deploy web                | トークンの期限切れ・プロジェクトのID違い・ビルドの失敗                                                                                  | 7章の値を見直す。ビルドの失敗はログの内容をClaude Codeに伝える                                              |
 
 apiだけ出てwebで止まったときは、直してからもう一度押す（apiも出し直されるが、同じcommitなので問題ない）。続けて押した実行は、前の実行が終わるまで順に待つ。
 

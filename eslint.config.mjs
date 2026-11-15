@@ -122,7 +122,8 @@ export default defineConfig(
   },
   {
     // e2eのスクリプト・設定はNodeで動く（Playwrightは実行時にページ側を別処理）。
-    files: ["e2e/**/*.{js,mjs,cjs,ts}"],
+    // .github/scriptsはワークフローがNodeで直接動かす。
+    files: ["e2e/**/*.{js,mjs,cjs,ts}", ".github/scripts/**/*.mjs"],
     languageOptions: {
       globals: globals.node,
     },

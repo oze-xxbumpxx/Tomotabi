@@ -125,7 +125,7 @@ npm run cli:generate-vapid-key -w @tomotabi/api -- "$HOME/tomotabi-vapid-product
 2. DBを変えるcommitなら、[バックアップの手順書](backup-and-restore.md)できっかけ`before-change`のバックアップを取り、戻して照合する。合ってから、migrationを管理者の端末から1回だけ流す（`npm run db:migrate -w @tomotabi/api`、`MIGRATION_DATABASE_URL`は本番のmigrator）。
 3. GitHubのActionsで「deploy-production」を選び、Run workflowを押す。出すcommitのSHAは、1で確かめたcommitの40桁のSHAを入れる。
 4. 承認を求められたら、実行の名前（`deploy-production <出すcommitのSHA>`）とEnvironmentが`tomotabi-production`であることを見て承認する。
-5. ワークフローは、SHAの形・`API_ORIGIN`・mainの履歴・CIの成功を確かめ、apiを出してからwebを出す。止まったときの直し方は検証用の手順書の9章の表と同じ。
+5. ワークフローは、SHAの形・`API_ORIGIN`・mainの履歴・CIの成功を確かめる。次に、今動いている本番のapiに最後に流したmigrationの時刻を聞き、出すcommitのmigrationに追いついていなければ止める（2で流し忘れたとき）。そのあとapiを出してからwebを出す。止まったときの直し方は検証用の手順書の9章の表と同じ。
 6. 本番のwebのURLで、二人のログインとホームの表示を確かめる。
 7. [公開の記録](../releases/README.md)を書く。
 
@@ -141,12 +141,15 @@ npm run cli:generate-vapid-key -w @tomotabi/api -- "$HOME/tomotabi-vapid-product
 
 1. 戻したいcommitを決める。公開の記録の「対象commit」から、直前に問題が無かった版を選ぶ。
 2. 10章の3〜5と同じく、そのcommitの40桁のSHAで「deploy-production」を動かす。
-3. DBは戻さない。migrationは後方互換の追加だけにしているので、前の版は今のスキーマで動く。
+3. DBは戻さない。migrationは後方互換の追加だけにしているので、前の版は今のスキーマで動く。migrationの確かめは、DBの方が新しいときは通す。
+   - migrationの確かめ（2026-11に追加）より前のcommitへ戻したときは、その次に出す1回だけ、確かめが「口がまだありません」の警告を出して進む。戻した版のapiに確かめの口が無いため。
 4. 公開の記録に、戻した理由とcommitを書く。
 
 ## 13. 障害のとき最初に残すこと
 
 発生した時刻、画面の操作、`requestId`、保存が成功したか分からない操作、webとapiの版（公開の記録のcommit）、VercelとNeonの障害情報、最後に取ったバックアップの日時を書き留める。認証のトークンや通知のendpointは、スクリーンショットやIssueに貼らない。
+
+本番のapiが落ちていて、直す版を出そうとしても`Verify database migrations are applied`で止まることがある（今のapiに聞けないため）。原因がDBでないと分かっているときだけ、管理者がこの手順を外すPRをマージしてから出し、直ったら手順を戻す。
 
 通知だけの失敗、アプリの不具合、DBのデータの損失を分けて考える。アプリの不具合なら12章、データの損失なら14章で止めてから[バックアップの手順書](backup-and-restore.md)の6章へ進む。結果が分からない送金をやり直さない。
 

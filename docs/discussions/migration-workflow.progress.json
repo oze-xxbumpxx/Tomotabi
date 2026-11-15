@@ -22,7 +22,10 @@
       ]
     },
     "plan": {
-      "state": "pending"
+      "state": "approval",
+      "docs": [
+        "docs/implementation-plans/migration-workflow.md"
+      ]
     },
     "implement": {
       "state": "pending"
@@ -37,5 +40,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-15T07:35:42.419Z"
+  "updated_at": "2026-11-15T07:38:31.794Z"
 }

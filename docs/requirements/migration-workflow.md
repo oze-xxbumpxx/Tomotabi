@@ -133,4 +133,4 @@ DBのmigrationは、管理者の端末から`npm run db:migrate`で流すと決�
 
 ## 未決事項
 
-論点の記録で、仮決定が4件。migratorの接続はmigration専用のEnvironmentに置く、流せるのは`main`のcommitだけ、承認の前の一覧は今動いているapiが返す時刻から作る、`migration-deploy-check`をこの機能より先に実装する。設計の承認までに異議がなければ決定にする。
+なし。論点の記録の問いは、すべて決定した。

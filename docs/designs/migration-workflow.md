@@ -2,7 +2,7 @@
 
 - ステータス: draft
 - レベル: L3
-- 関連: docs/requirements/migration-workflow.md（PR #362で承認）、ADR-0011（承認つきの手動のワークフローからも流す）、ADR-0003（migrationの方式とDBロール）、docs/designs/migration-deploy-check.md（流し忘れをデプロイの前に止める）、論点の記録 docs/discussions/migration-workflow.md
+- 関連: docs/requirements/migration-workflow.md（PR #362で承認）、ADR-0011（承認つきの手動のワークフローからも流す）、ADR-0003（migrationの方式とDBロール）、docs/designs/migration-deploy-check.md（流し忘れをデプロイの前に止める）、論点の記録`docs/discussions/migration-workflow.md`
 
 ## この設計を一言で
 
@@ -119,7 +119,7 @@ planのジョブは、Environmentを使わない。GitHubは、承認が必須�
 2. 流すcommitを`fetch-depth: 0`で取り出し、`main`の履歴にあるかを確かめる（`git merge-base --is-ancestor`。デプロイと同じ）。
 3. ワークフローを動かした版（`github.sha`）の`.github/scripts/`を別の場所に取り出す。流すcommitの作業ツリーのスクリプトは使わない（`migration-deploy-check`と同じ理由。古いcommitにはスクリプトが無い）。
 4. `node <ワークフローの版>/plan-migrations.mjs <apiのURL> <流すcommitの_journal.json>`を動かす。
-5. 結果を実行のまとめ（`GITHUB_STEP_SUMMARY`）に書き、applyへ渡す値（`state`と`count`）を出力する。`backup_reminder`が付いていれば、バックアップの確かめの文と手順書の場所を足す。
+5. 結果を、読みに行ったapiのホスト名とあわせて実行のまとめ（`GITHUB_STEP_SUMMARY`）に書き、applyへ渡す値（`state`と`count`）を出力する。`backup_reminder`が付いていれば、バックアップの確かめの文と手順書の場所を足す。
 
 apiのURLは、リポジトリの変数（Environmentの変数ではない）から読む。デプロイ用のEnvironmentの`API_ORIGIN`は、承認の前は読めないため。URLは秘密ではない。
 
@@ -149,6 +149,7 @@ Node 24の`fetch`だけを使う。`npm ci`は要らない。判定は純粋関�
 6. 流したあとの時刻を読み、`_journal.json`から、時刻が4より新しく6以下のmigrationの名前を実行のまとめに書く。0本なら「流すものはありませんでした」。
 
 - 接続文字列は環境変数で渡し、コマンドの引数に置かない。GitHubは、登録した秘密と同じ文字列をログで伏せる。
+- `MIGRATION_DATABASE_URL`は、使う手順（1・4・5・6）の`env`にだけ置く。ジョブの`env`と、3番目の`npm ci`の手順には置かない。`npm ci`は依存パッケージのinstallスクリプトを動かすので、そこに秘密があると、乗っ取られた依存パッケージがDBの持ち主の接続を読める。
 - Drizzleは、1回の実行で流すmigrationを1つのトランザクションにまとめる（`drizzle-orm` 0.45.4の`pg-core/dialect.js`の`migrate`。SQLと履歴への追加を、全部まとめて`session.transaction`の中で流す）。途中のSQLが失敗すると、その回に流そうとしたmigrationは全部が巻き戻り、履歴にも入らない（要件E-04）。5が失敗しても6を動かし（`if: always()`）、流す前と同じ時刻であることを読んで「何も流れていません」と出す。
 - planとapplyのあいだに端末から流されていても、`drizzle-kit migrate`は流していないものだけを流す（要件E-06）。
 
@@ -205,7 +206,7 @@ Node 24の`fetch`だけを使う。`npm ci`は要らない。判定は純粋関�
 
 - `drizzle-kit migrate`のログに、つながらないときの接続先の名前が出ることがある。秘密そのものはGitHubが伏せるが、検証用の最初の実行でログを見て確かめる。
 - Environmentの保護を付ける前に秘密を置くと、保護なしで読める時間ができる。手順書で順番を決め、保護の付いていることを確かめてから置く。
-- apiのURLの変数を取り違えると、別の環境の時刻で一覧を作ってしまう。applyのジョブが流す前後の時刻をDBから読み直して実際に流したものを出すので、流れるものは変わらない。一覧と違っていたら、まとめで分かる。
+- apiのURLの変数を取り違えると、別の環境の時刻で一覧を作ってしまう。その時刻が最新なら`none`になり、applyのジョブは動かず、何も流れずに終わる（例: 本番用の変数に検証用のURLを置き、検証用に流したあとで本番のボタンを押す）。一覧が実際と違っても、applyのジョブは流す前後の時刻をDBから読み直すので、違うものが流れることはない。planのまとめに、読みに行ったapiのホスト名を出して気づけるようにする。流し忘れたままデプロイしても、`migration-deploy-check`が止める。
 
 ## 調べたこと: Neonの「時点を指定して戻す」機能
 
@@ -216,7 +217,7 @@ Node 24の`fetch`だけを使う。`npm ci`は要らない。判定は純粋関�
 - 今のバックアップ（端末で取るdump）は、戻して照合するところまでが手順に入っている。6時間の窓は、流した直後の失敗には足りるが、数日後に気づいた不具合には足りない。
 - 出先で本番に流す前の備えとして、Neonの画面からスナップショットを取る方法はありうる。戻す手順と、戻したあとの照合を確かめていないので、今回は採らない。試す価値があるかは、ユーザーに決めてもらう。
 
-出典: https://neon.com/docs/introduction/plans 、 https://neon.com/docs/introduction/history-window 、 https://neon.com/docs/postgres/backup-restore/backups
+出典: https://neon.com/docs/introduction/plans 、https://neon.com/docs/introduction/history-window 、https://neon.com/docs/postgres/backup-restore/backups
 
 ## 決めたこと（問いと答え）
 
@@ -224,4 +225,4 @@ Node 24の`fetch`だけを使う。`npm ci`は要らない。判定は純粋関�
 
 ## 未決事項
 
-論点の記録で、仮決定が5件。migratorの接続はmigration専用のEnvironmentに置く、流せるのは`main`のcommitだけ、承認の前の一覧は今動いているapiが返す時刻から作る、`migration-deploy-check`を先に実装する、planのジョブが読むapiのURLはリポジトリの変数に置く。設計の承認までに異議がなければ決定にする。
+なし。論点の記録の問いは、すべて決定した。

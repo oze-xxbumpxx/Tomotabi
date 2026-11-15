@@ -36,7 +36,7 @@ apiとwebのコードは変えないので、アプリの単体の試験とE2E�
 | MW-12 | `_journal.json`が読めない・空       | `readFile`が`ENOENT`／`{ "entries": [] }`         | 終了コード1                                                                                   | 異常 |
 | MW-13 | 出力                                | MW-03の答え                                       | `outputPath`に`state=pending`と`count=1`の行                                                  | 正常 |
 | MW-14 | バックアップの確かめの文（F-07）    | `--backup-reminder`つき、MW-03の答え              | まとめに、バックアップを取って照合したかの確かめの文と、手順書の場所。`none`のときは出さない  | 正常 |
-| MW-15 | 聞く先と打ち切り                    | apiのURLが`https://api.example.test`              | `https://api.example.test/api/health/migrations`を、10秒の打ち切りつきで1回だけ呼ぶ           | 正常 |
+| MW-15 | 聞く先と打ち切り                    | apiのURLが`https://api.example.test`              | `https://api.example.test/api/health/migrations`を、10秒の打ち切りつきで1回だけ呼ぶ。まとめにホスト名`api.example.test`が出る           | 正常 |
 | MW-16 | 引数なし                            | 引数なしで直接動かす                              | 使い方を出して終了コード1                                                                     | 異常 |
 | MW-17 | 比べる関数は共有                    | なし                                              | `plan-migrations.mjs`が、`check-deployed-migrations.mjs`の`compareMigrations`をimportして使う | 正常 |
 
@@ -47,7 +47,7 @@ apiとwebのコードは変えないので、アプリの単体の試験とE2E�
 | MW-20 | ボタンは手で押すときだけ動く（制約）      | `migrate-integration.yml`・`migrate-production.yml`の`on`は`workflow_dispatch`だけ。`push`・`pull_request`・`schedule`が無い       |
 | MW-21 | 環境の取り違えが無い（B-03）              | 検証用は`migrate-integration`と`MIGRATE_API_ORIGIN_INTEGRATION`、本番は`migrate-production`と`MIGRATE_API_ORIGIN_PRODUCTION`を渡す |
 | MW-22 | planは秘密を読まない                      | planのジョブに`environment`が無く、`secrets.`を1つも読まない                                                                       |
-| MW-23 | 秘密を読むのはapplyだけ                   | `secrets.MIGRATION_DATABASE_URL`を読むのは、applyのジョブの手順だけ。`secrets: inherit`でほかのワークフローに渡さない              |
+| MW-23 | 秘密を読むのはapplyだけ                   | `secrets.MIGRATION_DATABASE_URL`を読むのは、applyのジョブの手順だけ。applyのジョブの`env`に`secrets.`が無く、`npm ci`の手順に`MIGRATION_DATABASE_URL`が無い。`secrets: inherit`でほかのワークフローに渡さない              |
 | MW-24 | applyは承認のあと、流すものがあるときだけ | applyに`environment`と`needs: plan`があり、`if`が`state`が`none`でないことを見る                                                   |
 | MW-25 | `main`のcommitだけ（F-03、E-01）          | planとapplyの両方に、SHAの形の確かめと`git merge-base --is-ancestor`の確かめがある。applyは、planが決めたSHAを使う                 |
 | MW-26 | 同時に動かない（F-09）                    | 2つのボタンに、環境ごとの`concurrency`の組があり、`cancel-in-progress: false`                                                      |

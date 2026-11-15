@@ -1,0 +1,36 @@
+name: migrate-production
+# 承認の画面と実行の一覧で、どのcommitのmigrationを流すかが見えるようにする。
+run-name: "migrate-production ${{ inputs.sha || 'main latest' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "migrationを流すcommitのSHA。空ならmainの最新"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# 本番のmigrationが同時に流れないようにする。実行中は止めず、続けて起動したものは
+# queue: maxで順に待つ（deploy-productionと同じ）。
+concurrency:
+  group: migrate-production
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: migrate
+    uses: ./.github/workflows/migrate-db.yml
+    with:
+      environment: migrate-production
+      api_origin: ${{ vars.MIGRATE_API_ORIGIN_PRODUCTION }}
+      api_origin_var: MIGRATE_API_ORIGIN_PRODUCTION
+      sha: ${{ inputs.sha }}
+      backup_reminder: true
+    secrets:
+      # Environmentの秘密は、名前で渡す。値はapplyのジョブのenvironmentが解決する
+      # （secrets: inheritは使わない）。
+      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}

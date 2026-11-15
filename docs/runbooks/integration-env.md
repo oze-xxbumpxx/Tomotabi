@@ -199,7 +199,7 @@ slot 1も同じように、もう一人のアカウントで行う。二人が�
 | Verify API_ORIGIN is set               | 7章の変数`API_ORIGIN`が無い・`https://`で始まらない                                                                                     | 変数を直して押し直す                                                                                        |
 | Verify commit is on main               | mainに入っていないcommitを指定した                                                                                                      | マージしてから出す                                                                                          |
 | Verify ci.yml succeeded                | そのcommitのCIが失敗・実行中                                                                                                            | CIが通ってから押し直す                                                                                      |
-| Verify database migrations are applied | DBに流していないmigrationがある（要約に名前が出る）。今のapiが落ちている。`0015_app_runtime_read_migrations`を流しておらず口が500を返す | 2章の手順で、管理者の端末から足りないmigrationを流してから押し直す。apiが落ちているときは本番の手順書の13章 |
+| Verify database migrations are applied | DBに流していないmigrationがある（要約に名前が出る）。今のapiが落ちている。`0015_app_runtime_read_migrations`を流しておらず口が500を返す | `migrate-integration`のボタンで流すか、2章の手順で管理者の端末から流してから押し直す（11章）。apiが落ちているときは本番の手順書の13章 |
 | Deploy api / Deploy web                | トークンの期限切れ・プロジェクトのID違い・ビルドの失敗                                                                                  | 7章の値を見直す。ビルドの失敗はログの内容をClaude Codeに伝える                                              |
 
 apiだけ出てwebで止まったときは、直してからもう一度押す（apiも出し直されるが、同じcommitなので問題ない）。続けて押した実行は、前の実行が終わるまで順に待つ。
@@ -207,6 +207,54 @@ apiだけ出てwebで止まったときは、直してからもう一度押す�
 ## 10. 確かめる
 
 [docs/tests/integration-env.md](../tests/integration-env.md)のIE-01から順に確かめ、記録の表に書く（Claude Codeに結果を伝えれば、Claude Codeが書く）。
+
+## 11. migrationをボタンで流す
+
+DBのmigrationは、これまで管理者の端末から`npm run db:migrate`で流していた。出先からも流せるように、GitHub Actionsに承認つきの手動のワークフロー`migrate-integration`を足した（設計: [docs/designs/migration-workflow.md](../designs/migration-workflow.md)、ADR-0011）。本番は`migrate-production`（[docs/runbooks/production.md](production.md)）。
+
+### Environmentと変数を作る（最初の1回）
+
+**順番を守る。** 保護を付けてから秘密を置く。保護の無いうちに置くと、承認なしで読める時間ができる（7章と同じ理由）。
+
+1. Settings > Environmentsで`migrate-integration`を作り、保護を付けて保存する。
+   - Required reviewers: 自分
+   - Deployment branches and tags: Selected branchesで`main`だけ
+2. Environment secretsに`MIGRATION_DATABASE_URL`を登録する。値は2章で作ったmigratorの直接の接続。デプロイ用のEnvironment（`integration`）には置かない。migrationのボタンのapplyのジョブだけが読む。
+3. Settings > Secrets and variables > Actionsの「Repository secrets」に`MIGRATION_DATABASE_URL`が無いことを確かめる。ここにあると、mainでないブランチのワークフローからも読める。
+4. Settings > Secrets and variables > Actions > Variablesで、リポジトリの変数`MIGRATE_API_ORIGIN_INTEGRATION`を作る。値は3章のapiのURL（`https://`で始まり、末尾にスラッシュを付けない）。一覧を作るために、今動いているapiに聞きに行く先。変数は検証用と本番の2つあり、本番用は`MIGRATE_API_ORIGIN_PRODUCTION`。
+
+### ボタンで流す
+
+1. GitHubのActionsで「migrate-integration」を選び、Run workflowを押す。
+   - Use workflow from: `main`のまま
+   - migrationを流すcommitのSHA: 空ならmainの最新。指定するときは40桁の完全なSHA
+2. planのジョブが、秘密を使わずに「これから流すmigration」の一覧を実行のまとめに出す。読みに行ったapiのホスト名も出る。
+   - 「流すものはありません」→ そこで終わる。applyは動かない
+   - 「一覧を出せません」→ apiのURLの変数が無い・apiが落ちているなど。承認すると、DBの履歴を見て流していないものだけを流す
+3. 一覧を読んで承認する（Review deployments）。承認しなければ何も流れない。
+4. applyのジョブが、流す前とあとのDBの最後のmigrationの時刻を読み、流したmigrationの名前を実行のまとめに出す。
+
+migrationを流したあとは、deploy-integrationで出す。デプロイのボタンはmigrationを流さない。
+
+### 止まったとき
+
+| 止まったところ | よくある原因 | 直し方 |
+| --- | --- | --- |
+| planのVerify sha input shape | SHAが短い・余計な文字がある | 40桁のSHAを入れ直すか、空にする |
+| planのVerify commit is on main | mainに入っていないcommitを指定した | マージしてから押す |
+| planが「一覧を出せません」 | 変数`MIGRATE_API_ORIGIN_INTEGRATION`が無い・apiが落ちている | 変数を確かめる。承認して進んでも、流していないものだけは流れる |
+| planが「1本も流れていません」 | DBにmigrationが無い（最初の構築） | ボタンでは扱わない。2章の手順で端末から行う |
+| applyのVerify MIGRATION_DATABASE_URL is set | Environmentに秘密が無い | 上の節で秘密を登録して押し直す |
+| applyのApply migrations | SQLの失敗・DBにつながらない | 実行のまとめに「何も流れていません。流す前の状態のままです」と出る。migrationは全部巻き戻るので、直したmigrationをマージして押し直す |
+| 承認が来ない | Required reviewersが自分でない | Environmentの保護を確かめる |
+
+### migratorのパスワードを替えたとき
+
+2章の手順でmigratorのパスワードを替えたら、`migrate-integration`と`migrate-production`の両方のEnvironment secretsの`MIGRATION_DATABASE_URL`を入れ直す。入れ直さないと、ボタンは古い接続で失敗する。
+
+### リポジトリを非公開にするとき
+
+EnvironmentのRequired reviewersは、公開のリポジトリかGitHub Enterpriseでしか使えない。リポジトリを非公開にすると承認が外れ、migrationのボタンは守りが効かなくなる。非公開にする前に、このボタンをやめるか、プランを確かめる。
 
 ## 使わないとき
 

@@ -11,7 +11,6 @@
 import { appendFile, readFile as readFileFromDisk } from 'node:fs/promises';
 
 const TIMEOUT_MS = 10_000;
-const RUNBOOK = 'docs/runbooks/production.md の10章';
 
 const usage = 'usage: node .github/scripts/check-deployed-migrations.mjs <API_ORIGIN> <_journal.jsonのパス>';
 
@@ -89,7 +88,7 @@ export function compareMigrations({ journal, response }) {
     .map((entry) => entry.tag);
   return {
     result: 'fail',
-    message: `DBに流していないmigrationがあります: ${missing.join(', ')}。管理者の端末でmigrationを流してから、もう一度出してください（${RUNBOOK}）`,
+    message: `DBに流していないmigrationがあります: ${missing.join(', ')}。migrate-integration（本番はmigrate-production）のボタンで流してください。端末からも流せます`,
     missing,
     applied,
     expected,

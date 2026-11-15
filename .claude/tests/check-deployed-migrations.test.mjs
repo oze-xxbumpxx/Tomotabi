@@ -46,7 +46,7 @@ test('MD-13: 足りないものを全部出し、案内の1文を出す', () => 
   assert.deepEqual(outcome.missing, ['0011_planning_todos', '0012_planning_todos_grants']);
   assert.equal(
     outcome.message,
-    'DBに流していないmigrationがあります: 0011_planning_todos, 0012_planning_todos_grants。管理者の端末でmigrationを流してから、もう一度出してください（docs/runbooks/production.md の10章）',
+    'DBに流していないmigrationがあります: 0011_planning_todos, 0012_planning_todos_grants。migrate-integration（本番はmigrate-production）のボタンで流してください。端末からも流せます',
   );
 });
 

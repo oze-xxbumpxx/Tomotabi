@@ -5,8 +5,35 @@ model: 'swe-2-flash-high'
 runner: 'local'
 change_level: 3
 delegated_at: '2026-11-15T22:58:54Z'
-reviews: []
-escalations: 0
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-15T23:35:54Z'
+    reviewed_sha: 'f12f94178d74737211d027dc007d607ea5785343'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'decision'
+        category: 'design-gap'
+        summary: '本番のボタンを起動・承認できる範囲の判断'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '呼ばれる側の秘密をrequired: trueにしたため、呼ぶ側が空を渡して起動できない見込み'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'MW-32とMW-15の試験が、壊しても通る'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: '手順書の止まったときの表が、実際に止まる手順と合わない'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: 'PRの説明と試験のコメントの文章の小さな誤り'
+escalations: 1
 outcome: null
 gh: null
 task_key: 'migration-workflow:workflow'

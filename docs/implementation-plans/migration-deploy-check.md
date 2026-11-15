@@ -4,14 +4,14 @@
 - 要件定義: docs/requirements/migration-deploy-check.md
 - 試験計画: docs/tests/migration-deploy-check.md
 - レベル: L3
-- 実装ルート: メインのセッション
-- 判断理由: 既定。公開の口と実行用のロールの権限を足すので`security-reviewer`の対象になり、デプロイのワークフローも同じPRで変える。分けるとワークフローだけ先に入り、口の無いapiに聞いて404の警告が続く
+- 実装ルート: Devin委譲（承認済みのタスクだけ）
+- 判断理由: 実装はDevinで行う（2026-11-15 ユーザーの指示）。公開の口と実行用のロールの権限を足すので、DevinのPRのレビューで`security-reviewer`を起動する。口とワークフローは同じPRで変える（分けるとワークフローだけ先に入り、口の無いapiに聞いて404の警告が続く）。権限のmigrationの番号は、`0013`・`0014`をToDoのカテゴリが使ったので`0015`に直した（2026-11-15）。
 
 ## 変更対象ファイル
 
 | path                                                                  | なぜ変えるか                                                                                |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `apps/api/drizzle/meta/_journal.json`                                 | `0013`の行を足す（`drizzle-kit generate --custom`が書く）                                   |
+| `apps/api/drizzle/meta/_journal.json`                                 | `0015`の行を足す（`drizzle-kit generate --custom`が書く）                                   |
 | `apps/api/src/modules/foundation/controller/health.controller.ts`     | `GET /api/health/migrations`を足す                                                          |
 | `apps/api/src/modules/foundation/foundation.module.ts`                | 新しい口・UseCaseを登録する。`DATABASE_URL`の有無でPgとメモリを切り替える（今の作りと同じ） |
 | `packages/contracts/openapi/foundation.json`                          | `getMigrationStatus`と`MigrationStatusView`を足す                                           |
@@ -28,8 +28,8 @@
 
 | path                                                                                 | 役割                                                                            |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| `apps/api/drizzle/0013_app_runtime_read_migrations.sql`                              | `app_runtime`に`drizzle`スキーマの`USAGE`と履歴の表の`SELECT`を足す             |
-| `apps/api/drizzle/meta/0013_snapshot.json`                                           | `generate --custom`が作るもの。中身は`0012`と同じ                               |
+| `apps/api/drizzle/0015_app_runtime_read_migrations.sql`                              | `app_runtime`に`drizzle`スキーマの`USAGE`と履歴の表の`SELECT`を足す             |
+| `apps/api/drizzle/meta/0015_snapshot.json`                                           | `generate --custom`が作るもの。中身は`0014`と同じ                               |
 | `apps/api/src/modules/foundation/adapter/outbound/migration-status.port.ts`          | `MigrationStatusReader`（`lastAppliedAt(): Promise<number \| null>`）とトークン |
 | `apps/api/src/modules/foundation/adapter/inbound/get-migration-status.input-port.ts` | UseCaseの入口の型とトークン（`get-probe.input-port.ts`と同じ形）                |
 | `apps/api/src/modules/foundation/infrastructure/pg-migration-status.ts`              | `SELECT max(created_at)`を1回。bigintの文字列を`Number`にする                   |
@@ -42,10 +42,10 @@
 
 ## ファイルごとの変更内容
 
-### `apps/api/drizzle/0013_app_runtime_read_migrations.sql`
+### `apps/api/drizzle/0015_app_runtime_read_migrations.sql`
 
 - 変更内容: `npm run db:generate -w @tomotabi/api -- --custom --name=app_runtime_read_migrations`で空のファイルと`_journal.json`の行を作り、設計書の2行（`GRANT USAGE ON SCHEMA "drizzle"`・`GRANT SELECT ON "drizzle"."__drizzle_migrations"`）を`--> statement-breakpoint`で区切って書く。先頭に、なぜ足すかのコメントを1〜2行（`0012`と同じ書き方）。
-- 完了条件: `npm run db:check -w @tomotabi/api`が通る。`_journal.json`の最後の`when`が`0012`より大きい。
+- 完了条件: `npm run db:check -w @tomotabi/api`が通る。`_journal.json`の最後の`when`が`0014`より大きい。
 
 ### `packages/contracts/openapi/foundation.json`・`packages/contracts/src/health.ts`
 
@@ -84,12 +84,12 @@
   - PRのひな形: 「品質確認」の前に「マージのあとの作業」の欄。コメントで「`apps/api/drizzle/`を変えたら、どの環境で、どのmigrationを流すか。無ければ『なし』」。
   - `implement-change`の「やること」に1行: `apps/api/drizzle/`を変えたPRは、PRの説明の「マージのあとの作業」に流す環境とmigrationの名前を書く。
   - `production.md`の10章の5に「apiを出す前に、DBに流したmigrationが出すcommitに追いついているかを確かめる」。12章に「この機能より前のcommitへ戻したあとの1回は、確かめが警告を出して進む」。13章に「apiが落ちていて、原因がDBでないのに確かめで止まるときは、管理者が`Verify database migrations are applied`の手順を一時的に外したPRで出す」。
-  - `integration-env.md`の9章の手順の並びに確かめを1つ足し、止まったときの表に`Verify database migrations are applied`の行（原因: migrationの流し忘れ・`0013`の流し忘れで500・apiが落ちている。直し方: 2章の手順でmigrationを流してから押し直す）を足す。
+  - `integration-env.md`の9章の手順の並びに確かめを1つ足し、止まったときの表に`Verify database migrations are applied`の行（原因: migrationの流し忘れ・`0015`の流し忘れで500・apiが落ちている。直し方: 2章の手順でmigrationを流してから押し直す）を足す。
 - 完了条件: 文書の`prettier --check`が通る。ひな形と手順書の言葉が`writing-style.md`に沿っている。
 
 ## 実装手順
 
-1. migration … `0013`のSQLと`_journal.json`・snapshot / 設計書のGRANT 2行 / `db:check`が通る。
+1. migration … `0015`のSQLと`_journal.json`・snapshot / 設計書のGRANT 2行 / `db:check`が通る。
 2. 契約 … `foundation.json`・`health.ts`・`index.ts`、`api:generate` / `MigrationStatusView` / `api:check`が通る。
 3. apiの口 … `foundation`の6ファイル / 上の「apiの口」の内容 / `type-check`が通る。
 4. apiの試験 … `health-migrations.http.test.ts`・`migration-status.db.test.ts` / 試験計画のMD-01〜08 / `npm test`と`npm run test:db -w @tomotabi/api`が通る（DBの試験はDockerが要る。手元に無ければCIの`api-db`で確かめる）。
@@ -98,9 +98,50 @@
 7. 文書 … ひな形・`implement-change`・手順書2つ / 上の「文書」の内容 / `prettier --check`。
 8. 品質ゲートと検証 … `bash .claude/scripts/run-quality-gates.sh`、`npm run db:check`、`npm run api:check`。`reviewer`と`security-reviewer`を並行で起動し、指摘を突き合わせて直す。
 
+## Devinに渡すタスク
+
+<!-- delegation-task:all -->
+
+## 目的
+
+DBに流していないmigrationがあるcommitを、検証用にも本番にも出せないようにする。apiに「最後に流したmigrationの時刻」を返す口を足し、デプロイのワークフローが出す前にそれを確かめる。L3、ユーザー承認: 済み（要件と設計はPR #331、実装計画はこの計画のPRで承認）。
+
+## 読む資料
+
+- 実装計画: `docs/implementation-plans/migration-deploy-check.md`（「ファイルごとの変更内容」と「実装手順」の1〜7）
+- 設計書: `docs/designs/migration-deploy-check.md`
+- 要件: `docs/requirements/migration-deploy-check.md`
+- 試験計画: `docs/tests/migration-deploy-check.md`（MD-01〜MD-32）
+- ADR-0003（migrationの方式とDBロール）、今の`apps/api/drizzle/0014_todo_categories_grants.sql`（権限のmigrationの書き方）
+
+## やること
+
+- [ ] 実装計画の「実装手順」の1〜7を、その順に行う。migration（`0015_app_runtime_read_migrations.sql`）、契約、apiの口（`GET /api/health/migrations`）、apiの試験、確かめるスクリプト（`.github/scripts/check-deployed-migrations.mjs`）、ワークフロー（`deploy-vercel.yml`）、文書。
+- [ ] `/api/health`は変えない（DBを読まないまま）。
+- [ ] 確かめるスクリプトは、Node 24の`fetch`だけで動かし、判定を純粋関数`compareMigrations`に分ける（あとの機能がこの関数を使う）。
+
+## テスト
+
+- [ ] 試験計画のMD-01〜MD-32を、試験計画に書いた置き場に書く。
+- [ ] `npm run test:harness`・`npm run db:check`・`npm run api:check`が通る。DBつきの試験は、手元にDockerが無ければCIの`api-db`で確かめる。
+
+## やらないこと
+
+- migrationを流すこと（結合検証環境・本番のどちらも。流すのは管理者）。
+- migrationを流すボタン（`migrate-integration`など）を作ること。別のタスクで作る。
+- webの画面の変更。
+- 実装手順の8（検証役の起動）。レビューはClaude Codeが行う。
+
+## 完了条件
+
+- `npm run lint` / `npm run type-check` / `npm test` / `npm run build`が通る。
+- `npm run test:harness` / `npm run db:check` / `npm run api:check`が通る。
+- PRの説明の「マージのあとの作業」に、「検証用と本番で`0015`を流す」と書く。
+<!-- /delegation-task -->
+
 ## 依存関係
 
-- 1は3・4より前（DBの試験は`0013`の権限が無いと`app_runtime`で読めない）。
+- 1は3・4より前（DBの試験は`0015`の権限が無いと`app_runtime`で読めない）。
 - 2は3より前（Controllerが`MigrationStatusView`を使う）。
 - 5は1〜4と独立。6は5のあと（ワークフローがスクリプトのパスを呼ぶ）。
 - 7はどこでもよいが、手順書の手順名は6の名前に合わせる。
@@ -122,13 +163,13 @@
 | `generate --custom`のsnapshotに差分が出て`db:check`が落ちる        | 手順1                                           | 表は変えないので差分は出ない想定。出たら実装を止めて生成の結果を見る                                                                                  |
 | 2つ目の`actions/checkout`が出すcommitの作業ツリーを消す            | 手順6のあとの結合での確かめ（MD-40）            | `path: .workflow`で別のフォルダに置くので消さない。消えたら、確かめの2手順を出すcommitのcheckoutより前に動かし、`_journal.json`の読み取りだけ後に回す |
 | `.workflow`のフォルダがVercelのビルドに混ざる                      | MD-40                                           | `vercel deploy --prebuilt`は`.vercel/output`だけを上げるので混ざらない想定。混ざったら確かめのあとに`rm -rf .workflow`を足す                          |
-| `drizzle`スキーマの持ち主がmigrator以外で、`0013`のGRANTが通らない | 手順4のDBの試験、結合検証環境で`0013`を流すとき | 試験も本番もmigratorが`drizzle-kit migrate`で作るので持ち主はmigrator。通らなければ止めてユーザーに聞く                                               |
+| `drizzle`スキーマの持ち主がmigrator以外で、`0015`のGRANTが通らない | 手順4のDBの試験、結合検証環境で`0015`を流すとき | 試験も本番もmigratorが`drizzle-kit migrate`で作るので持ち主はmigrator。通らなければ止めてユーザーに聞く                                               |
 
 ## ロールバック方法
 
 - アプリ: 前のcommitを`deploy-vercel`で出す。確かめるスクリプトはワークフロー側の版で動くので、この機能より前のcommitにも戻せる（MD-27・MD-43）。
 - 確かめそのものが邪魔になったとき: `Verify database migrations are applied`の手順を外すPRをマージしてから出す。
-- DB: `0013`は権限を足すだけで、戻さなくても前の版は動く。戻すなら管理者が`REVOKE`を手で流す（migrationは足さない）。
+- DB: `0015`は権限を足すだけで、戻さなくても前の版は動く。戻すなら管理者が`REVOKE`を手で流す（migrationは足さない）。
 
 ## ドキュメント更新対象
 

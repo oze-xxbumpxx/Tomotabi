@@ -604,6 +604,23 @@ describe("読み出した保留の検証", () => {
         operation: "delete-todo",
         url: `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/delete`,
       },
+      // ToDoのカテゴリの書き込み（todo-organize）。
+      {
+        operation: "create-todo-category",
+        url: `/api/trips/${TRIP_ID}/todo-categories`,
+      },
+      {
+        operation: "update-todo-category",
+        url: `/api/trips/${TRIP_ID}/todo-categories/${crypto.randomUUID()}`,
+      },
+      {
+        operation: "reorder-todo-categories",
+        url: `/api/trips/${TRIP_ID}/todo-categories/order`,
+      },
+      {
+        operation: "delete-todo-category",
+        url: `/api/trips/${TRIP_ID}/todo-categories/${crypto.randomUUID()}/delete`,
+      },
       // 許可済みの経路であれば操作名は許可リストに依らない。
       { operation: OPERATION, url: TEST_URL },
     ];
@@ -631,6 +648,10 @@ describe("読み出した保留の検証", () => {
       `/api/trips/${TRIP_ID}/todos/abc`,
       `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/archive`,
       `/api/trips/${TRIP_ID}/todos/${crypto.randomUUID()}/complete/extra`,
+      // カテゴリの経路でも同じ決まり。
+      `/api/trips/${TRIP_ID}/todo-categories/abc`,
+      `/api/trips/${TRIP_ID}/todo-categories/${crypto.randomUUID()}/archive`,
+      `/api/trips/${TRIP_ID}/todo-categories/${crypto.randomUUID()}/delete/extra`,
     ]) {
       const request = createMutationRequest({
         operation: "complete-todo",

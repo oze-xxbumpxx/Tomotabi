@@ -350,6 +350,8 @@ export interface TodoCreate {
   name: string;
   /** 入れるカテゴリ。未分類はnull・省略 */
   categoryId?: string | null;
+  /** 関連付ける予定。無ければnull・省略 */
+  planId?: string | null;
 }
 
 export interface TodoPatch {
@@ -369,6 +371,8 @@ export interface TodoPatch {
   assigneeId?: string | null;
   /** 期限。YYYY-MM-DD。消すときはnull */
   dueOn?: string | null;
+  /** 関連付ける予定。関連付けを外すときはnull */
+  planId?: string | null;
 }
 
 export interface TodoDeletion {

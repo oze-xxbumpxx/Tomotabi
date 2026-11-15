@@ -31,6 +31,12 @@ export interface PlanRepository {
    * 同じロックでM4の記録操作と調和する（E-19）。
    */
   lockForUpdate(tripId: string, planId: string): Promise<Plan | null>;
+  /**
+   * 予定行をFOR SHAREで読む。無ければnull。
+   * ToDoと関連付ける予定の確かめに使う。ロックは必ず旅行行のあと
+   * （旅行 → 予定。todo-organize「UseCase 設計」）。
+   */
+  lockForShare(tripId: string, planId: string): Promise<Plan | null>;
   /** 予定を追加して、DBが埋めた値を含めて返す。 */
   insert(plan: NewPlan): Promise<Plan>;
   /** 予定行をまるごと更新する。呼び出し前に行ロックを持っていること。 */

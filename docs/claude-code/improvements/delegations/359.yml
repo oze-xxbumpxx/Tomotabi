@@ -1,0 +1,44 @@
+issue: 359
+title: 'feat(planning): 未完了のToDoを予定と関連付け、予定の詳細に「関連するToDo」を出す'
+agent: 'devin'
+model: 'swe-2-flash-high'
+runner: 'cloud'
+change_level: 3
+delegated_at: '2026-11-14T10:31:30Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-14T11:01:24Z'
+    reviewed_sha: 'bcd2ce6314e8560cd719905b1c6783284a7f381d'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'error-handling'
+        summary: '予定の詳細で完了の付け外しの端末への保存の失敗が表示されない（Codexの指摘）'
+      - severity: 'must'
+        category: 'scope-creep'
+        summary: 'apps/web/next-env.d.tsが範囲の外で書き換わっている'
+      - severity: 'must'
+        category: 'test-failure'
+        summary: 'e2eのL-E01がToDoの名前のリンクと予定のリンクの両方に当たって落ちる'
+  - round: 1
+    reviewed_at: '2026-11-14T11:12:05Z'
+    reviewed_sha: '5d3ba1a2f26e2f530a403709979055bfd0e0ee99'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'test-failure'
+        summary: 'e2eのL-E01がToDoの詳細の画面でリストの行のリンクを探して落ちる'
+      - severity: 'nit'
+        category: 'process'
+        summary: 'CIを動かすために空のコミットをpushした'
+  - round: 2
+    reviewed_at: '2026-11-14T13:01:05Z'
+    reviewed_sha: 'ebe477bf632a8d52591ef9d4711687b72df28000'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: null
+gh: null

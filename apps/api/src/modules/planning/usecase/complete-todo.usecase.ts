@@ -33,7 +33,7 @@ export class CompleteTodoUseCase implements CompleteTodoInputPort {
       () =>
         runTodoTransaction(this.unitOfWork, command, (ctx) =>
           runTodoUpdate(ctx, { ...command, ifMatch: null }, (todo) =>
-            Todo.complete(todo, input.userId, this.clock.now(), null),
+            Todo.complete(todo, input.userId, this.clock.now()),
           ),
         ),
     );

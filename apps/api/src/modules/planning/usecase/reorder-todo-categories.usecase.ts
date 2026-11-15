@@ -21,9 +21,7 @@ import type { TodoCategoryOrder } from "@tomotabi/contracts";
  * （要件E-03）。同時の並べ替えは、ロックで片方が待ち、待った側は新しい
  * 並びと`from`が違って409になる。
  */
-export class ReorderTodoCategoriesUseCase
-  implements ReorderTodoCategoriesInputPort
-{
+export class ReorderTodoCategoriesUseCase implements ReorderTodoCategoriesInputPort {
   constructor(
     private readonly unitOfWork: UnitOfWork<PlanningWorkContext>,
     private readonly writeLog: WriteLog,
@@ -60,9 +58,11 @@ export class ReorderTodoCategoriesUseCase
             if (stored !== null) {
               return stored;
             }
-            const categories = await ctx.todoCategories.lockAllForUpdate(
-              trip.id,
-            );
+            await ctx.todoCategories.lockAllForUpdate(trip.id);
+            // lockAllForUpdateは、ロックを待つ前に並べた順で行を返す。相手の
+            // 並べ替えを待ったあとでも古い順のことがあるので、今の順は別の文で
+            // 読み直す（READ COMMITTEDでは文ごとに新しいスナップショットを取る）。
+            const categories = await ctx.todoCategories.listByTrip(trip.id);
             const current = categories.map((c) => c.id);
             if (!sameOrder(current, input.from)) {
               throw new ApiError({

@@ -74,6 +74,7 @@ export class UpdateTodoUseCase implements UpdateTodoInputPort {
           ...(input.dueOn === undefined
             ? {}
             : { dueOn: parseTodoDueOn(input.dueOn) }),
+          ...(input.planId === undefined ? {} : { planId: input.planId }),
         };
         return runTodoTransaction(
           this.unitOfWork,
@@ -84,8 +85,24 @@ export class UpdateTodoUseCase implements UpdateTodoInputPort {
               { ...input, operation: UPDATE_TODO_OPERATION },
               (todo) => Todo.update(todo, patch, this.clock.now()),
               async (lockedCtx) => {
-                // 付ける欄は同じトランザクションで確かめる。カテゴリは
-                // FOR SHARE（ロックの順は旅行 → カテゴリ → ToDo）。
+                // 付ける欄は同じトランザクションで確かめる（FOR SHARE。
+                // ロックの順は旅行 → 予定 → カテゴリ → ToDo）。
+                if (
+                  patch.planId !== undefined &&
+                  patch.planId !== null
+                ) {
+                  const plan = await lockedCtx.plans.lockForShare(
+                    input.tripId,
+                    patch.planId,
+                  );
+                  if (plan === null || plan.cancelledAt !== null) {
+                    throw new ApiError({
+                      code: "TODO_PLAN_NOT_AVAILABLE",
+                      status: 422,
+                      message: "Plan is not available to link in the trip",
+                    });
+                  }
+                }
                 if (
                   patch.categoryId !== undefined &&
                   patch.categoryId !== null

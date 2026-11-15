@@ -3180,6 +3180,18 @@
               }
             ],
             "description": "入れるカテゴリ。未分類はnull・省略"
+          },
+          "planId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "関連付ける予定。無ければnull・省略"
           }
         },
         "required": [
@@ -3237,6 +3249,18 @@
               }
             ],
             "description": "期限。YYYY-MM-DD。消すときはnull"
+          },
+          "planId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "関連付ける予定。関連付けを外すときはnull"
           }
         }
       },

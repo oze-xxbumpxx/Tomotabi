@@ -172,6 +172,14 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
       }
       return Promise.resolve(plan);
     },
+    lockForShare: (tripId, planId) => {
+      this.calls.push("plans.lockForShare");
+      const plan = this.planRows.get(planId);
+      if (plan === undefined || plan.tripId !== tripId) {
+        return Promise.resolve(null);
+      }
+      return Promise.resolve(plan);
+    },
     insert: (plan: NewPlan) => {
       this.calls.push("plans.insert");
       const stored: Plan = {
@@ -217,7 +225,7 @@ export class InMemoryPlanningContext implements PlanningWorkContext {
         createdAt: BASE_TIME,
         doneAt: null,
         doneBy: null,
-        planId: null,
+        planId: todo.planId,
         categoryId: todo.categoryId,
         assigneeId: null,
         dueOn: null,

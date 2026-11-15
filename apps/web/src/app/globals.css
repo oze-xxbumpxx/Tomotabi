@@ -3902,3 +3902,185 @@ a.plan-record-row-link {
   line-height: 1.6;
   color: var(--color-info);
 }
+
+/* リストの上の進み具合（「4件済み · 残り6件」と細い棒） */
+.todo-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+
+.todo-progress-text {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.todo-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  overflow: hidden;
+}
+
+.todo-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-accent);
+  transition: width 160ms ease-out;
+}
+
+/* 欄の見出し（たためる見出し + 件数 + メニュー） */
+.todo-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.todo-section-head .todo-section-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.todo-section-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.todo-section-caret {
+  flex: none;
+  transition: transform 120ms ease-out;
+}
+
+.todo-section-caret-closed {
+  transform: rotate(-90deg);
+}
+
+.todo-section-count {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.todo-section-menu {
+  width: 32px;
+  height: 32px;
+}
+
+/* 行の期限・担当・関連する予定 */
+.todo-attrs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.todo-attr {
+  flex: none;
+}
+
+.todo-attr-over {
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.todo-category-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.todo-add-category {
+  flex: none;
+  width: auto;
+  max-width: 42%;
+}
+
+/* シート内の説明文 */
+.sheet-lead {
+  margin: 0 0 var(--space-4);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* ToDoの詳細の「カテゴリ・担当・期限」の行（選んだらすぐ保存） */
+.todo-fields {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+}
+
+.todo-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.todo-field-row:last-child {
+  border-bottom: 0;
+}
+
+.todo-field-row:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.todo-field-label {
+  flex: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.todo-field-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.todo-field-badge {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-warning-bg);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-warning);
+}
+
+.todo-field-badge-over {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}

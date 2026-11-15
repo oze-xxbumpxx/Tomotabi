@@ -750,7 +750,8 @@ export const CreateTodoHeader = zod.object({
 
 export const CreateTodoBody = zod.strictObject({
   "name": zod.string().min(1),
-  "categoryId": zod.union([zod.uuid(),zod.null()]).optional().describe('入れるカテゴリ。未分類はnull・省略')
+  "categoryId": zod.union([zod.uuid(),zod.null()]).optional().describe('入れるカテゴリ。未分類はnull・省略'),
+  "planId": zod.union([zod.uuid(),zod.null()]).optional().describe('関連付ける予定。無ければnull・省略')
 })
 
 export const createTodoResponseNameMax = 100;
@@ -810,7 +811,8 @@ export const UpdateTodoBody = zod.strictObject({
   "memo": zod.string().nullish(),
   "categoryId": zod.union([zod.uuid(),zod.null()]).optional().describe('移す・未分類に戻すときはnull'),
   "assigneeId": zod.union([zod.uuid(),zod.null()]).optional().describe('担当を変える・未定に戻すときはnull'),
-  "dueOn": zod.union([zod.string().regex(updateTodoBodyDueOnOneRegExp),zod.null()]).optional().describe('期限。YYYY-MM-DD。消すときはnull')
+  "dueOn": zod.union([zod.string().regex(updateTodoBodyDueOnOneRegExp),zod.null()]).optional().describe('期限。YYYY-MM-DD。消すときはnull'),
+  "planId": zod.union([zod.uuid(),zod.null()]).optional().describe('関連付ける予定。関連付けを外すときはnull')
 })
 
 export const updateTodoResponseNameMax = 100;

@@ -4,8 +4,9 @@ import type { UserId } from "../../../common/domain/user-id.js";
 
 /**
  * 旅行のToDoの1件（設計書 trip-todo「DB 設計」+ todo-organize）。
- * doneAtとdoneByは必ず対。planIdは「予定にする」または関連付けで入り、
+ * doneAtとdoneByは必ず対。planIdは関連付けで入り、
  * 完了かどうかに関係なく持つ（todo-organizeのF-18で完了の付け外しから分離）。
+ * 「予定にする」でも完了にはならず、関連付けだけが入る（todo-organize F-19）。
  */
 export type Todo = Readonly<{
   id: string;
@@ -37,6 +38,8 @@ export type TodoPatch = Readonly<{
   categoryId?: string | null;
   assigneeId?: UserId | null;
   dueOn?: LocalDate | null;
+  /** 関連付ける予定。nullは関連付けを外す。 */
+  planId?: string | null;
 }>;
 
 export const Todo = {
@@ -48,7 +51,8 @@ export const Todo = {
         | "memo"
         | "categoryId"
         | "assigneeId"
-        | "dueOn"]?: Todo[K];
+        | "dueOn"
+        | "planId"]?: Todo[K];
     } = {};
     if (patch.name !== undefined && patch.name !== todo.name) {
       changes.name = patch.name;
@@ -71,6 +75,9 @@ export const Todo = {
     if (patch.dueOn !== undefined && patch.dueOn !== todo.dueOn) {
       changes.dueOn = patch.dueOn;
     }
+    if (patch.planId !== undefined && patch.planId !== todo.planId) {
+      changes.planId = patch.planId;
+    }
     if (Object.keys(changes).length === 0) {
       return todo;
     }
@@ -78,11 +85,11 @@ export const Todo = {
   },
 
   /**
-   * 完了にする。完了済みなら同じTodoを返し、完了にした人・時刻・予定は最初のまま。
-   * @param planId「予定にする」でつなぐ予定。nullなら今の関連付けを残す
-   *   （完了の印だけでは変わらない。todo-organize F-18）。
+   * 完了にする。完了済みなら同じTodoを返し、完了にした人・時刻は最初のまま。
+   * 予定とのつながりは変えない（関連付けはlinkPlanかplanIdのパッチで入れる。
+   * todo-organize F-18・F-19）。
    */
-  complete(todo: Todo, by: UserId, at: Date, planId: string | null): Todo {
+  complete(todo: Todo, by: UserId, at: Date): Todo {
     if (todo.doneAt !== null) {
       return todo;
     }
@@ -90,7 +97,6 @@ export const Todo = {
       ...todo,
       doneAt: at,
       doneBy: by,
-      planId: planId === null ? todo.planId : planId,
       version: todo.version + 1,
       updatedAt: at,
     };

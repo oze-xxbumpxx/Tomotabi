@@ -287,7 +287,7 @@ describe("ToDoの削除", () => {
   });
 });
 
-describe("予定にする（予定の追加のfromTodoId）", () => {
+describe("新しく予定を作る（予定の追加のfromTodoId）", () => {
   function createPlan(
     uow: ReturnType<typeof setup>["uow"],
     writeLog: RecordingWriteLog,
@@ -308,12 +308,13 @@ describe("予定にする（予定の追加のfromTodoId）", () => {
     });
   }
 
-  it("予定を作り、元のToDoを保存した人で完了にして予定とつなぐ", async () => {
+  it("予定を作ると元のToDoとつなぐが、ToDoは完了にしない（F-19）", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedTodo(testTodo());
     const result = await createPlan(uow, writeLog, TODO_ID, PARTNER);
     expect(ctx.todoRows.get(TODO_ID)).toMatchObject({
-      doneBy: PARTNER,
+      doneAt: null,
+      doneBy: null,
       planId: result.body.id,
     });
     expect(ctx.calls.indexOf("plans.insert")).toBeLessThan(
@@ -327,14 +328,23 @@ describe("予定にする（予定の追加のfromTodoId）", () => {
     expect(result.httpStatus).toBe(201);
   });
 
-  it("元のToDoが完了済みなら、完了した人と予定は変えない", async () => {
+  it("元のToDoが完了済みで予定と結んでいなければ、完了のまま予定とつなぐ", async () => {
     const { ctx, uow, writeLog } = setup();
     ctx.seedTodo(testTodo({ doneAt: NOW, doneBy: PARTNER, version: 2 }));
-    await createPlan(uow, writeLog, TODO_ID);
+    const result = await createPlan(uow, writeLog, TODO_ID);
     expect(ctx.todoRows.get(TODO_ID)).toMatchObject({
+      doneAt: NOW,
       doneBy: PARTNER,
-      planId: null,
+      planId: result.body.id,
     });
+  });
+
+  it("元のToDoに関連する予定がすでにあれば、その予定のまま変えない（E-08）", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedTodo(testTodo({ planId: "existing-plan" }));
+    const result = await createPlan(uow, writeLog, TODO_ID);
+    expect(result.httpStatus).toBe(201);
+    expect(ctx.todoRows.get(TODO_ID)?.planId).toBe("existing-plan");
   });
 
   it("別の旅行のToDoは変えない", async () => {
@@ -536,5 +546,92 @@ describe("ToDoのカテゴリ・担当・期限", () => {
     );
     expect(error.code).toBe("VALIDATION_FAILED");
     expect(error.status).toBe(422);
+  });
+});
+
+describe("予定との関連付け（planId）", () => {
+  const PLAN_ID = "88888888-8888-4888-8888-888888888888";
+
+  it("追加でplanIdを付けると、作ったToDoが予定と結ばれる", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedPlan(testPlan());
+    const result = await new CreateTodoUseCase(uow, writeLog).execute({
+      userId: ACTOR,
+      tripId: TRIP_ID,
+      key: KEY,
+      requestHash: "hash-c",
+      name: "清水寺",
+      categoryId: null,
+      planId: PLAN_ID,
+    });
+    expect(result.httpStatus).toBe(201);
+    expect(result.body.plan).toMatchObject({ id: PLAN_ID, cancelled: false });
+  });
+
+  it("取りやめた・別の旅行の・無い予定は付けられない（422 TODO_PLAN_NOT_AVAILABLE）", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedPlan(
+      testPlan({ id: "cancelled-plan", cancelledAt: NOW, cancelledBy: ACTOR }),
+    );
+    ctx.seedPlan(testPlan({ id: "other-plan", tripId: "other-trip" }));
+    const usecase = new CreateTodoUseCase(uow, writeLog);
+    for (const planId of ["cancelled-plan", "other-plan", "missing-plan"]) {
+      const error = await rejection(
+        usecase.execute({
+          userId: ACTOR,
+          tripId: TRIP_ID,
+          key: KEY,
+          requestHash: "hash-c",
+          name: "清水寺",
+          categoryId: null,
+          planId,
+        }),
+      );
+      expect(error.code).toBe("TODO_PLAN_NOT_AVAILABLE");
+      expect(error.status).toBe(422);
+    }
+    expect(ctx.todoRows.size).toBe(0);
+  });
+
+  it("編集で予定と結び、nullで外せる", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedPlan(testPlan());
+    ctx.seedTodo(testTodo());
+    const usecase = new UpdateTodoUseCase(uow, fixedClock(), writeLog);
+    const linked = await usecase.execute({
+      ...command(),
+      ifMatch: "1",
+      planId: PLAN_ID,
+    });
+    expect(linked.body.plan).toMatchObject({ id: PLAN_ID });
+    const unlinked = await usecase.execute({
+      ...command({
+        key: "22222222-2222-4222-8222-222222222222" as typeof KEY,
+        requestHash: "hash-t2",
+      }),
+      ifMatch: "2",
+      planId: null,
+    });
+    expect(unlinked.body.plan).toBeNull();
+  });
+
+  it("取りやめた予定とは結べない（422）。結んだ予定があとで取りやめになっても、ほかの欄の編集は通る", async () => {
+    const { ctx, uow, writeLog } = setup();
+    ctx.seedPlan(testPlan({ cancelledAt: NOW, cancelledBy: ACTOR }));
+    const usecase = new UpdateTodoUseCase(uow, fixedClock(), writeLog);
+    ctx.seedTodo(testTodo());
+    const error = await rejection(
+      usecase.execute({ ...command(), ifMatch: "1", planId: PLAN_ID }),
+    );
+    expect(error.code).toBe("TODO_PLAN_NOT_AVAILABLE");
+    // すでに結んでいる予定が取りやめでも、名前の編集は通る。
+    ctx.seedTodo(testTodo({ planId: PLAN_ID }));
+    const renamed = await usecase.execute({
+      ...command(),
+      ifMatch: "1",
+      name: "南禅寺の湯豆腐",
+    });
+    expect(renamed.body.name).toBe("南禅寺の湯豆腐");
+    expect(renamed.body.plan).toMatchObject({ id: PLAN_ID, cancelled: true });
   });
 });

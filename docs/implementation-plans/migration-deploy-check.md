@@ -4,8 +4,8 @@
 - 要件定義: docs/requirements/migration-deploy-check.md
 - 試験計画: docs/tests/migration-deploy-check.md
 - レベル: L3
-- 実装ルート: メインのセッション
-- 判断理由: 既定。公開の口と実行用のロールの権限を足すので`security-reviewer`の対象になり、デプロイのワークフローも同じPRで変える。分けるとワークフローだけ先に入り、口の無いapiに聞いて404の警告が続く
+- 実装ルート: Devin委譲（承認済みのタスクだけ）
+- 判断理由: 実装はDevinで行う（2026-11-15 ユーザーの指示）。公開の口と実行用のロールの権限を足すので、DevinのPRのレビューで`security-reviewer`を起動する。口とワークフローは同じPRで変える（分けるとワークフローだけ先に入り、口の無いapiに聞いて404の警告が続く）。権限のmigrationの番号は、`0013`・`0014`をToDoのカテゴリが使ったので`0015`に直した（2026-11-15）。
 
 ## 変更対象ファイル
 
@@ -45,7 +45,7 @@
 ### `apps/api/drizzle/0015_app_runtime_read_migrations.sql`
 
 - 変更内容: `npm run db:generate -w @tomotabi/api -- --custom --name=app_runtime_read_migrations`で空のファイルと`_journal.json`の行を作り、設計書の2行（`GRANT USAGE ON SCHEMA "drizzle"`・`GRANT SELECT ON "drizzle"."__drizzle_migrations"`）を`--> statement-breakpoint`で区切って書く。先頭に、なぜ足すかのコメントを1〜2行（`0012`と同じ書き方）。
-- 完了条件: `npm run db:check -w @tomotabi/api`が通る。`_journal.json`の最後の`when`が`0012`より大きい。
+- 完了条件: `npm run db:check -w @tomotabi/api`が通る。`_journal.json`の最後の`when`が`0014`より大きい。
 
 ### `packages/contracts/openapi/foundation.json`・`packages/contracts/src/health.ts`
 
@@ -97,6 +97,48 @@
 6. ワークフロー … `deploy-vercel.yml`の2手順と`deploy-integration-workflow.test.mjs` / MD-30〜32 / `npm run test:harness`が通る。
 7. 文書 … ひな形・`implement-change`・手順書2つ / 上の「文書」の内容 / `prettier --check`。
 8. 品質ゲートと検証 … `bash .claude/scripts/run-quality-gates.sh`、`npm run db:check`、`npm run api:check`。`reviewer`と`security-reviewer`を並行で起動し、指摘を突き合わせて直す。
+
+## Devinに渡すタスク
+
+<!-- delegation-task:all -->
+
+## 目的
+
+DBに流していないmigrationがあるcommitを、検証用にも本番にも出せないようにする。apiに「最後に流したmigrationの時刻」を返す口を足し、デプロイのワークフローが出す前にそれを確かめる。L3、ユーザー承認: 済み（要件と設計はPR #331、実装計画はこの計画のPRで承認）。
+
+## 読む資料
+
+- 実装計画: `docs/implementation-plans/migration-deploy-check.md`（「ファイルごとの変更内容」と「実装手順」の1〜7）
+- 設計書: `docs/designs/migration-deploy-check.md`
+- 要件: `docs/requirements/migration-deploy-check.md`
+- 試験計画: `docs/tests/migration-deploy-check.md`（MD-01〜MD-32）
+- ADR-0003（migrationの方式とDBロール）、今の`apps/api/drizzle/0014_todo_categories_grants.sql`（権限のmigrationの書き方）
+
+## やること
+
+- [ ] 実装計画の「実装手順」の1〜7を、その順に行う。migration（`0015_app_runtime_read_migrations.sql`）、契約、apiの口（`GET /api/health/migrations`）、apiの試験、確かめるスクリプト（`.github/scripts/check-deployed-migrations.mjs`）、ワークフロー（`deploy-vercel.yml`）、文書。
+- [ ] `/api/health`は変えない（DBを読まないまま）。
+- [ ] 確かめるスクリプトは、Node 24の`fetch`だけで動かし、判定を純粋関数`compareMigrations`に分ける（あとの機能がこの関数を使う）。
+
+## テスト
+
+- [ ] 試験計画のMD-01〜MD-32を、試験計画に書いた置き場に書く。
+- [ ] `npm run test:harness`・`npm run db:check`・`npm run api:check`が通る。DBつきの試験は、手元にDockerが無ければCIの`api-db`で確かめる。
+
+## やらないこと
+
+- migrationを流すこと（結合検証環境・本番のどちらも。流すのは管理者）。
+- migrationを流すボタン（`migrate-integration`など）を作ること。別のタスクで作る。
+- webの画面の変更。
+- 実装手順の8（検証役の起動）。レビューはClaude Codeが行う。
+
+## 完了条件
+
+- `npm run lint` / `npm run type-check` / `npm test` / `npm run build`が通る。
+- `npm run test:harness` / `npm run db:check` / `npm run api:check`が通る。
+- PRの説明の「マージのあとの作業」に、「検証用と本番で`0015`を流す」と書く。
+
+<!-- /delegation-task -->
 
 ## 依存関係
 

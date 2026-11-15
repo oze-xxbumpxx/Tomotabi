@@ -1,6 +1,6 @@
 # ADR-0011: migrationを、承認つきの手動のワークフローからも流せるようにする
 
-- Status: Proposed（要件のPRのマージで Accepted にする）
+- Status: Accepted（2026-11-15 ユーザー承認。PR #362）
 - Date: 2026-11-15
 - 関連feature: migration-workflow
 

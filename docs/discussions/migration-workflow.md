@@ -226,3 +226,25 @@ DBのmigrationは、管理者の端末から`npm run db:migrate`で流すと決�
     - 利点: 作りが一番少ない
     - 欠点: 流れるものを見てから承認する、ができない（決定「流す前に、承認を挟むか」と合わない）
 - 推奨: A（秘密を増やさず、一覧を見てから承認できる）
+
+### planのジョブが読むapiのURLを、どこに置くか
+
+<!-- id: api-origin-variable -->
+
+- 工程: 設計
+- 種類: 設計
+- 優先度: 中
+- 状態: 仮決定
+- なぜ今: 承認の前の一覧は、今動いているapiに時刻を聞いて作る。そのURLは、デプロイ用のEnvironmentの変数`API_ORIGIN`にあるが、承認が必須のEnvironmentの変数は、承認されるまで読めない。
+- 根拠: `.github/workflows/deploy-vercel.yml`（`vars.API_ORIGIN`をEnvironmentから読む）。
+- 選択肢:
+  - A) リポジトリの変数に、検証用と本番のapiのURLを置く（`MIGRATE_API_ORIGIN_INTEGRATION`・`MIGRATE_API_ORIGIN_PRODUCTION`）
+    - 利点: 承認の前に読める。URLは秘密ではない
+    - 欠点: 同じURLを、デプロイ用のEnvironmentとリポジトリの2か所に置く
+  - B) ワークフローのファイルにURLを書く
+    - 利点: 設定が要らない
+    - 欠点: URLを変えるたびにPRが要る。公開のリポジトリにURLが載る
+  - C) 承認の要らないEnvironmentをもう2つ作って置く
+    - 利点: 環境ごとにまとまる
+    - 欠点: Environmentが合わせて4つ増える
+- 推奨: A（設定は2つで済む。取り違えても、流すジョブはDBを見て流すので、流れるものは変わらない）

@@ -3,16 +3,23 @@
   "title": "migrationを出先からも流せるようにする",
   "level": "L3",
   "page": "https://claude.ai/artifact/AfuqoRSjeQbEJsVyrupZPt",
-  "round": 2,
+  "round": 3,
   "stages": {
     "requirements": {
-      "state": "approval",
+      "state": "done",
       "docs": [
         "docs/requirements/migration-workflow.md"
-      ]
+      ],
+      "approved": {
+        "pr": 362,
+        "at": "2026-11-15"
+      }
     },
     "design": {
-      "state": "pending"
+      "state": "approval",
+      "docs": [
+        "docs/designs/migration-workflow.md"
+      ]
     },
     "plan": {
       "state": "pending"
@@ -30,5 +37,5 @@
       "state": "pending"
     }
   },
-  "updated_at": "2026-11-15T00:41:59.694Z"
+  "updated_at": "2026-11-15T07:35:42.419Z"
 }

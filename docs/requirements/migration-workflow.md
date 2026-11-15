@@ -2,9 +2,9 @@
 
 - 変更レベル: L3（本番のDBに触る運用を変える。ADR-0003の決定を1つ改める。migratorの接続をGitHubに置く）
 - 作成日: 2026-11-15
-- ステータス: 承認待ち
+- ステータス: approved（PR #362）
 - 決めたこと: `docs/discussions/migration-workflow.md`（確認のページ: https://claude.ai/artifact/AfuqoRSjeQbEJsVyrupZPt ）
-- ADRの案: `docs/decisions/ADR-0011-migration-by-manual-workflow.md`（Proposed。この要件のPRのマージで承認とする）
+- ADRの案: `docs/decisions/ADR-0011-migration-by-manual-workflow.md`（Accepted）
 
 ## この文書の読み方
 

@@ -54,6 +54,15 @@ reviews:
       - severity: 'nit'
         category: 'error-feedback'
         summary: 'pgが見つからないときも「DBにつながりませんでした」と出る'
+  - round: 2
+    reviewed_at: '2026-11-16T13:38:45Z'
+    reviewed_sha: 'b3aae2883941f9a3b174697eff8b01f1712713b4'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'pr-metadata'
+        summary: 'PRの説明の試験の範囲（MW-34〜36）と実行のしかたが古い'
 escalations: 2
 outcome: null
 gh: null

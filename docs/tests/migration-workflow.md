@@ -59,8 +59,8 @@ apiとwebのコードは変えないので、アプリの単体の試験とE2E�
 | MW-31 | デプロイのワークフローは変えない（F-02）  | `deploy-vercel.yml`・`deploy-integration.yml`・`deploy-production.yml`に、`db:migrate`と`MIGRATION_DATABASE_URL`が無い             |
 | MW-32 | 失敗したときの報告（E-04）                | 報告の手順の`run`をbashで動かし、偽の時刻読み取りと`MIGRATE_OUTCOME`の組み合わせで、流す前後の時刻が同じで流す手順が失敗していたら「何も流れていません。流す前の状態のままです」、成功なら「流すものはありませんでした」と出ることを確かめる |
 | MW-33 | 秘密の確認で接続先を伏せる                | applyの`Verify MIGRATION_DATABASE_URL is set`の手順の中に`::add-mask::`の登録があり、`Apply migrations`より前にある。値を`echo`の引数に置かない |
-| MW-38 | 秘密が無いときEnvironmentの名前を出して止める（E-02） | applyの`Verify MIGRATION_DATABASE_URL is set`の手順を`bash -e`で動かし、`MIGRATION_DATABASE_URL`を空にする | 終了コード1。`MIGRATION_DATABASE_URL`とEnvironmentの名前が出る。DBへはつながない |
-| MW-39 | 本番だけバックアップの確かめを出す（F-07） | `migrate-integration.yml`・`migrate-production.yml`・`migrate-db.yml`を読む | 本番だけが`backup_reminder: true`を渡し、検証用は渡さない。`migrate-db.yml`は入力を`--backup-reminder`に変える |
+| MW-38 | 秘密が無いときEnvironmentの名前を出して止める（E-02） | applyの`Verify MIGRATION_DATABASE_URL is set`の手順を`bash -e`で動かし、`MIGRATION_DATABASE_URL`を空にすると、終了コード1で、`MIGRATION_DATABASE_URL`とEnvironmentの名前が出る。DBへはつながない |
+| MW-39 | 本番だけバックアップの確かめを出す（F-07） | `migrate-integration.yml`・`migrate-production.yml`・`migrate-db.yml`を読むと、本番だけが`backup_reminder: true`を渡し、検証用は渡さない。`migrate-db.yml`は入力を`--backup-reminder`に変える |
 
 ### 時刻を読むスクリプト（`read-last-migration-time.mjs`）
 
@@ -93,7 +93,7 @@ MW-44は、試しのワークフローをブランチに置く必要がある。
 ## 特性観点
 
 - 権限: 秘密を読めるのがapplyだけ（MW-22・MW-23）、`main`だけ（MW-25・MW-44）。
-- データ整合性: 途中で失敗したら、その回に流そうとしたmigrationは全部が巻き戻る（Drizzleが1つのトランザクションにまとめる）。ワークフローの試験では、失敗しても流したあとの報告の手順が動くこと（MW-30）と、流す前後の時刻が同じなら「何も流れていません」と出す文を確かめる（MW-32）。
+- データ整合性: 途中で失敗したら、その回に流そうとしたmigrationは全部が巻き戻る（Drizzleが1つのトランザクションにまとめる）。ワークフローの試験では、流す前の時刻を読んだあとなら、流す手順が失敗しても報告の手順が動くこと（MW-30）と、流す前後の時刻が同じなら「何も流れていません」と出す文を確かめる（MW-32）。
 - 冪等性: 続けて押しても2回目は流れない（MW-40・MW-46）。
 - 障害系: apiを読めないとき（MW-07〜MW-10・MW-43）。DBにつながらないときは、流す手順が失敗して止まる（手の確かめはしない。秘密を外して試すと、置き直しが要るため）。
 - フロントエンド・防御性: 対象外（画面もDomainも変えない）。

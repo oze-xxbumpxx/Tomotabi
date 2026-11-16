@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// ワークフローの形の試験（docs/tests/migration-workflow.mdのMW-20〜39）。
+// ワークフローの形の試験（docs/tests/migration-workflow.mdのMW-20〜33・MW-38・MW-39）。
 // ファイルを読んで、planにEnvironmentが無いこと・秘密を読むのがapplyだけであること等を確かめる。
 const read = (name) => readFileSync(new URL(`../../.github/workflows/${name}`, import.meta.url), 'utf8');
 const onBlockOf = (text) => text.match(/^on:\n([\s\S]*?)(?=\n\S)/m)[1];

@@ -72,7 +72,7 @@
 
 ## テスト
 
-- [ ] 試験計画のMW-01〜MW-17を`.claude/tests/plan-migrations.test.mjs`に、MW-20〜MW-39を`.claude/tests/migrate-workflow.test.mjs`に書く。
+- [ ] 試験計画のMW-01〜MW-17を`.claude/tests/plan-migrations.test.mjs`に、MW-20〜MW-33・MW-38・MW-39を`.claude/tests/migrate-workflow.test.mjs`に、MW-34〜MW-37を`.claude/tests/read-last-migration-time.test.mjs`に書く。
 - [ ] `.claude/tests/check-deployed-migrations.test.mjs`の、案内の文を確かめている観点を直す。
 - [ ] `npm run test:harness`が通る。
 

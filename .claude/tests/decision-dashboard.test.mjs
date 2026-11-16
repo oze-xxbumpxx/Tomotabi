@@ -98,6 +98,13 @@ test('選択肢の無い決定済みの問いは通る', () => {
   assert.deepEqual(validateState({ title: 't', items: [decided] }), []);
 });
 
+test('不具合の選択肢の確かめ方と影響範囲は文字列だけ通す', () => {
+  const opt = (over) => ({ key: 'A', title: 'a', pros: 'p', cons: 'c', ...over });
+  const bug = (a) => validateState({ title: 't', items: [question({ kind: '不具合', options: [a, opt({ key: 'B' })] })] });
+  assert.deepEqual(bug(opt({ verify: 'ログを見る', scope: '`apps/web`の予定の画面' })), []);
+  assert.ok(bug(opt({ verify: ['ログ'] })).some((e) => e.includes('verify')));
+});
+
 test('埋め込むJSONは</script>で閉じられない', () => {
   const s = embedJson({ x: '</script><script>alert(1)</script>' });
   assert.ok(!s.includes('<'));

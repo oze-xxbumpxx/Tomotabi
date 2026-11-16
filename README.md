@@ -1,166 +1,45 @@
 # Tomotabi
 
-本人とパートナー向けの旅行Webアプリ。ログイン（Googleと二人の初期登録）、旅行と予定（しおり）、支払いと精算、記録とホーム、通知まで実装済みです。いまは、Vercel・Neonの検証用の環境で、実機の点検をしています（結合検証環境）。本番への公開はまだです。
+本人とパートナー向けの旅行Webアプリです。二人で旅行を作り、しおり（日ごとの予定）、ToDo、支払いと精算、記録、ホーム、通知を使います。
 
-## 採用構成
+ログインはGoogleです。使えるアカウントは、管理者端末で二人を初期登録したものだけです。アプリは送金しません。精算は、二人の間の立て替えを確認するためのものです。
 
-| 領域 | 内容 |
+いまは、VercelとNeonの検証用の環境で、実機の点検をしています（結合検証環境）。本番への公開はまだです。
+
+言葉の意味は`docs/glossary.md`にあります。
+
+## できること
+
+画面とAPIがある範囲です。
+
+- 旅行を作り、選ぶ
+- しおりに予定を置く
+- 旅行ごとのToDoを書く（カテゴリ、担当、期限。予定との関連付け）
+- 支払いを記録し、精算を確認する
+- 達成、予約、支払いの履歴を見る
+- ホームで予定、記録、残額をまとめて見る
+- この端末への通知を受け取る
+
+## 作り方
+
+Claude Codeと、リポジトリの`.claude`（スキル、フック、試験）を使って、AI駆動で作っています。作業の分担とブランチのルールは`AGENTS.md`、ハーネスの導入記録は`docs/harness-setup.md`です。
+
+手元での起動、環境変数、コマンド、ディレクトリは`docs/development.md`です。
+
+## 確認したこと
+
+2026-09-11の検証の表は、試験の件数と依存の版を含んでいました。件数と版は、このファイルには書きません。この更新では試験を回していません。下は、ファイルを開いて確認したことです。
+
+| 項目 | 確認したこと |
 |---|---|
-| 言語 | TypeScript / Node 24.x |
-| web | Next.js App Router。`app` → `screens` → `features` → `shared`。機能内は`ui` / `model` / `api` |
-| api | NestJSモジュラーモノリス。業務モジュール内はController / UseCase / Service / Domain / Infrastructure / Adapter |
-| 契約 | `packages/contracts`に公開APIの型とOpenAPIだけを置く |
-| webのAPI通信 | OpenAPIからOrvalでfetch関数とZodスキーマを生成（`apps/web/src/shared/api/generated/`、手編集禁止）。応答はZodで検証し、neverthrowの`ResultAsync`で成功と失敗を返す |
-| DB | Drizzle ORM + `pg`。スキーマは`identity`・`planning`・`record`・`settlement`・`notification`・`infra`（`apps/api/src/infrastructure/database/schema/`） |
-| テスト | Vitest（web / api共通ランナー）。APIは`@nestjs/testing`とSupertest。実PostgreSQLはTestcontainers |
-| CI | GitHub Actionsのquality / build / api-db / harness / e2e。検証用と本番へのデプロイは手動のワークフロー`deploy-integration`・`deploy-production`（承認つき、mainだけ。確かめとデプロイの手順は共通の`deploy-vercel`） |
+| E2E | 作成済み。`e2e/tests/`に、旅行の流れ、二人での操作、選択中の旅行、結果不明、通知、支払いと精算、記録とホーム、ToDo、結果不明の支払いの仕様がある。`npm run test:e2e`は、Playwrightを絞り込みなしで起動する |
+| 結合検証の記録 | `docs/tests/integration-env.md`の記録の表に、最初のデプロイから、main以外を出さない制限まで、結果の行がある。時間の測定の行は一部合格 |
+| 最後の受け入れ | `docs/tests/final-acceptance.md`の2行（二人の端末で記録が見えること、実機の通知）は、結果が「まだ」 |
+| Actionsの固定 | `.github/workflows/`のactionは、commit SHAではなくタグのまま（例: `actions/checkout@v5`） |
 
-**Adapterの意味**: このリポジトリではAdapterは **IF定義の置き場** です。一般的なPorts and Adaptersでいう「外部接続の実装」はInfrastructureに置きます。UseCaseはIFに依存し、Service / Infrastructureの実装はModuleで注入します。
+## 文書
 
-## ディレクトリ
-
-```text
-apps/web/src/
-  app/                 ルートと layout（Server Component）
-  screens/             画面の組立（ホーム・旅行・しおり・記録・支払い・精算・通知の設定など）
-  features/            機能ごとの UI / model / api
-  shared/              汎用 UI と HTTP
-apps/api/src/
-  modules/             identity・planning・record・settlement・notification・foundation
-  adapter/transaction/ 共通 UnitOfWork の IF
-  infrastructure/      pool・DBのスキーマ・ログなど
-packages/contracts/    wire 型と OpenAPI
-```
-
-`apps/api`はESM（ADR-0009）。相対importには`.js`を付けます。
-
-## 前提
-
-- Node 24.x（ADR-0008。リポジトリは24.22.0で確認）
-- Docker Desktopが動いていること（`npm run test:api-db`と`npm run test:e2e`。単体テストとbuildには不要）
-- E2Eを初めて動かす前に`npx playwright install chromium`（ブラウザの取得。以後は不要）
-
-## コマンド
-
-```bash
-npm install
-npm run dev:api    # http://localhost:3001
-npm run dev:web    # http://localhost:3000  （/api を 3001 へ転送）
-npm run lint
-npm run type-check
-npm test           # web / api の単体・HTTP。Testcontainers は含まない
-npm run test:coverage  # web / api のカバレッジを計測（apps/*/coverage/ に html と coverage-summary.json）
-npm run test:api-db
-npm run build
-npm run test:harness
-npm run test:e2e   # Playwright E2E（Docker が必要。DB・API・web を起動して M-01 を流す）
-npm run manual:push  # 通知の手動確認（Docker・本物のChrome が必要。DB・API・web を起動してひなた・あおいの画面を開く。Ctrl-C で全部止める。dev と同じ 3000/3001 を使うので npm run dev:api・dev:web は止めておく）
-npm run api:generate  # OpenAPI から web の API クライアントを再生成
-npm run api:check     # 再生成して差分が無いことを確認（CI でも実行）
-```
-
-`DATABASE_URL`が無いときのAPIはin-memoryです。起動確認用であり、実PostgreSQL検証の合格には使いません。PGliteへの自動フォールバックはありません。
-
-```bash
-npm run db:check      # migration の整合と、スキーマ変更の生成漏れが無いことを確認（CI でも実行）
-```
-
-## ローカルDBとmigration（M1）
-
-DBのスキーマは`apps/api/src/infrastructure/database/schema/`のDrizzle定義が正で、`apps/api/drizzle/`にmigrationのSQL履歴を残します（ADR-0003）。アプリの起動時にmigrationは適用しません。
-
-| ロール | 用途 | 権限 |
-|---|---|---|
-| `migrator` | migrationの適用（管理者だけ） | スキーマと表の所有、DDL |
-| `app_runtime` | APIの実行時接続（`DATABASE_URL`） | 表ごとに必要なDMLだけ（`drizzle/0001_app_runtime_grants.sql`）。`statement_timeout` 5秒 |
-
-```bash
-docker compose up -d --wait                  # 初回起動時にロールと DB の権限を作り、healthcheck が通るまで待つ
-MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
-  npm run db:migrate -w @tomotabi/api        # identity スキーマを作る。2 回目以降は差分だけ
-```
-
-- ローカルのパスワード（`migrator` / `app_runtime`）はcompose.yamlの既定値で、ローカル専用です。本番のロールとパスワードは別の管理手順で作ります。
-- 管理手順は2つのSQLに分かれています（`apps/api/db/admin/`）。どちらもsuperuserで、`psql -v ON_ERROR_STOP=1`を付けて実行します。
-  1. `create-roles.sql`: ロールの作成。ロールはクラスタ全体で共有されるため、**クラスタごとに1回だけ**。2回目はわざと失敗します（パスワードの変更は`ALTER ROLE`で明示的に行う）。
-  2. `grant-database.sql`: DBごとの接続・作成権限。**DBごとに**実行し、何度実行しても同じ結果になります。
-- スキーマを変えたら`npm run db:generate -w @tomotabi/api`でmigrationを作り、生成されたSQLをレビューしてコミットします。GRANTなどは`npx drizzle-kit generate --custom`の空ファイルに書きます。
-- 表を追加したら、`0001_app_runtime_grants.sql`と同じ形でGRANTのmigrationを追加し、`apps/api/tests/db/identity-schema.db.test.ts`と同じ形で権限テストを足します。
-- `DATABASE_URL`をローカルDBに向けると、検証用のfoundationカウンタ（`infra.m0_probes`）は使えません。この表はmigrationに含めていないためです（M2の開始時に撤去予定）。
-
-## 管理CLI：Googleアカウントの初期登録と利用停止（M1-c）
-
-管理者端末でだけ実行します。アプリのHTTPルートには載せません。接続には`MIGRATION_DATABASE_URL`（migratorロール）を使います。
-
-**初期登録（`cli:enroll`）**
-
-Google Cloudで **デスクトップ型** のOAuthクライアントを別途作り、`.env`の`ENROLL_GOOGLE_CLIENT_ID` / `ENROLL_GOOGLE_CLIENT_SECRET`に入れます（リダイレクトURIの登録は不要。クライアントは動作中のポートを自動で使います）。
-
-```bash
-MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
-ENROLL_GOOGLE_CLIENT_ID=... ENROLL_GOOGLE_CLIENT_SECRET=... \
-  npm run cli:enroll -w @tomotabi/api -- --slot 0   # スロットは 0 か 1
-```
-
-表示されるURLをブラウザで開き（5分以内）、表示名・メール・subの末尾4文字を確認して`yes`と入力すると、users → accounts → allowlistを1トランザクションで登録します。重複（同じスロットや同じGoogleアカウント）は失敗して何も残りません。
-
-**利用停止（`cli:disable`）**
-
-```bash
-MIGRATION_DATABASE_URL=postgres://migrator:migrator@127.0.0.1:5432/tomotabi \
-  npm run cli:disable -w @tomotabi/api -- --slot 0
-```
-
-allowlistを`enabled = false`にして、そのユーザーの全セッションを削除します。再実行しても同じ結果で成功します。
-
-## 検証用HTTP
-
-| 方法 | 経路 | 意味 |
-|---|---|---|
-| GET | `/api/health` | プロセス生存 |
-| GET | `/api/foundation/probes` | 検証カウンタ |
-| POST | `/api/foundation/probes/increment` | 検証カウンタを1加算 |
-
-公開用のログイン裏口はありません。foundation経路はM0検証専用で、本番公開前に閉じます。
-
-## 確認した依存バージョン
-
-確認環境: Node 22.23.2 / npm 10.9.8（2026-09-11）。lockfileで固定。2026-10-15にNode 24.22.0 / npm 11.19.1でも、lint・型・試験・ビルドが通ることを確かめた。
-
-| パッケージ | 実測 |
-|---|---|
-| next | 16.3.4 |
-| react / react-dom | 19.3.0 |
-| @nestjs/core / common / platform-express / testing | 11.2.3 |
-| drizzle-orm | 0.45.2 |
-| pg | 8.23.0 |
-| vitest | 3.2.7 |
-| typescript | 5.9.3 |
-| orval | 8.36.0（2026-09-23） |
-| zod | 4.6.5（2026-09-23） |
-| neverthrow | 8.2.0（2026-09-23） |
-| eslint | 9.39.5 |
-| @testcontainers/postgresql | 11.14.0 |
-| Testcontainersのイメージ | `postgres:16-alpine`（2026-09-12に起動・破棄を確認） |
-
-## 検証結果（2026-09-11）
-
-| 項目 | 結果 |
-|---|---|
-| 層間依存制約 | PASS。禁止importのfixture 4件をESLintが検知 |
-| IF経由のNest DI | PASS。`@nestjs/testing`でInputPort tokenからUseCaseを解決しincrementが成立 |
-| web単体 | PASS。5件 |
-| api単体 + HTTP | PASS。13件（Supertestでhealth / increment / get） |
-| web本番build | PASS（Next.js 16.3.4 Turbopack） |
-| api本番build | PASS（`nest build`） |
-| 画面入口とClient境界 | PASS。`/`はServer Component。加算UIはClient。表示は「現在の件数: 2」まで確認。rewrite経由のGET/POST `/api/*`も成功 |
-| 実PostgreSQL起動・破棄 | PASS（2026-09-12）。Testcontainersで`postgres:16-alpine`を起動し、IF経由のincrement後に破棄。PGliteには置換していない |
-| Playwright E2E | 未作成。成功扱いにしていない |
-| ハーネス | PASS。`node --test .claude/tests/*.test.mjs` 88件 |
-
-## 残課題
-
-- 結合検証環境の残りの点検（`docs/tests/integration-env.md`の記録の表）
-- 公開準備: 本番の設定、本番のmigrationと初期登録、DBのバックアップと戻し方、運用の確認項目（詳細設計08）
-- 初回公開と、iPhone・Androidでの最後の受け入れ（`docs/tests/final-acceptance.md`）
-- GitHub Actionsのactionをcommit SHAで固定する
+- 起動と開発コマンド: `docs/development.md`
+- 開発ルール: `AGENTS.md`
+- 用語: `docs/glossary.md`
+- ハーネスの導入: `docs/harness-setup.md`

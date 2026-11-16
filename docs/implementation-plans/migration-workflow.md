@@ -63,7 +63,7 @@
 
 - [ ] `.github/scripts/plan-migrations.mjs`: 今動いているapiの`GET /api/health/migrations`と、流すcommitの`_journal.json`を比べ、`state`（`none`・`pending`・`unknown`）と`count`を決める。比べる関数は`check-deployed-migrations.mjs`の`compareMigrations`をimportして使う。判定は設計書の表のとおり。実行のまとめ（`GITHUB_STEP_SUMMARY`。読みに行ったapiのホスト名も書く）と出力（`GITHUB_OUTPUT`）に書く。Node 24の`fetch`だけで動かし、直接動かしたときだけ本体を動かす。
 - [ ] `.github/workflows/migrate-db.yml`（`workflow_call`）: planのジョブ（Environmentなし。秘密を読まない）と、applyのジョブ（`needs: plan`、`state`が`none`でないときだけ、migration専用のEnvironment）。手順は設計書の「planのジョブ」「applyのジョブ」のとおり。
-- [ ] `.github/workflows/migrate-integration.yml`・`migrate-production.yml`（`workflow_dispatch`、入力`sha`）: Environmentの名前とapiのURLの変数を渡して`migrate-db.yml`を呼ぶ。実行の名前、`concurrency`、`permissions`はデプロイのボタンと同じ形にする。本番は、バックアップの確かめの文を出す印を渡す。
+- [ ] `.github/workflows/migrate-integration.yml`・`migrate-production.yml`（`workflow_dispatch`、入力`sha`）: Environmentの名前とapiのURLの変数を渡して`migrate-db.yml`を呼ぶ。秘密は渡さない（applyのジョブが自分のEnvironmentの秘密を読む）。実行の名前、`concurrency`、`permissions`はデプロイのボタンと同じ形にする。本番は、バックアップの確かめの文を出す印を渡す。
 - [ ] 入力と変数は、環境変数で受けてから使う。`run`の中に`${{ inputs.… }}`を直接書かない。
 - [ ] applyは、`MIGRATION_DATABASE_URL`を環境変数で渡して`npm run db:migrate -w @tomotabi/api`を動かす。渡すのは使う手順（秘密の確認、流す前の時刻、流す、流したあとの時刻）の`env`だけにして、ジョブの`env`と`npm ci`の手順には置かない。流す前後の時刻を`.github/scripts/read-last-migration-time.mjs`で読み、流したmigrationの名前をまとめに書く（流す手順が失敗しても動かす）。Drizzleは1回に流すmigrationを1つのトランザクションにまとめるので、失敗したときは流す前後の時刻が同じになる。そのときは「何も流れていません。流す前の状態のままです」と書く。
 - [ ] `check-deployed-migrations.mjs`が止めるときの案内の文を、「`migrate-integration`（本番は`migrate-production`）のボタンで流してください。端末からも流せます」に変える。設計書の同じ文も直す。

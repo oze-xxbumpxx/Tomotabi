@@ -32,7 +32,7 @@ on:
         default: false
     secrets:
       MIGRATION_DATABASE_URL:
-        description: "migratorの直接の接続。applyのジョブのEnvironmentの秘密が使われる。呼ぶ側の値は使わない"
+        description: "migratorの直接の接続。applyのジョブのEnvironmentの秘密から読む。呼ぶ側は渡さない"
         required: false
 
 permissions:

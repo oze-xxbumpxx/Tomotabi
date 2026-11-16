@@ -62,24 +62,23 @@ test('MW-20: ボタンはworkflow_dispatchだけで動く', () => {
   }
 });
 
-test('MW-21: 環境の取り違えが無い（B-03）。本番はバックアップの確かめの文を出す', () => {
+test('MW-21: 環境の取り違えが無い（B-03）。本番はバックアップの確かめの文を出す。呼ぶ側は秘密を渡さない', () => {
   for (const [name, expected] of Object.entries(buttons)) {
     const button = read(name);
     assert.match(button, new RegExp(`environment: ${expected.environment}\\n`), name);
     assert.match(button, new RegExp(`${expected.originVar}`), name);
     assert.match(button, /sha: \$\{\{ inputs\.sha \}\}/, name);
     assert.match(button, /uses: \.\/\.github\/workflows\/migrate-db\.yml/, name);
-    // 秘密は名前で渡す（inheritは使わない）。
-    assert.match(button, /MIGRATION_DATABASE_URL: \$\{\{ secrets\.MIGRATION_DATABASE_URL \}\}/, name);
-    assert.doesNotMatch(button, /^\s*secrets:\s*inherit\s*$/m, name);
+    // 秘密は渡さない。applyのジョブが自分のEnvironmentの秘密を直接読む。
+    assert.doesNotMatch(button, /\bsecrets\b/, name);
   }
   assert.doesNotMatch(read('migrate-integration.yml'), /backup_reminder/);
   assert.match(read('migrate-production.yml'), /backup_reminder: true/);
-  // 呼ばれる側の秘密はrequired:false。呼ぶ側はEnvironmentを持たずリポジトリの秘密も置かない運用なので、
-  // 空を渡しても起動できるようにする。値はapplyのジョブのenvironmentが解決する。
+  // 呼ばれる側の秘密はrequired:false。呼ぶ側は秘密を渡さないので、必須にすると
+  // 呼び出しが止まる。値はapplyのジョブのenvironmentが解決する。
   const secretDecl = shared.match(/MIGRATION_DATABASE_URL:\n\s+description: "[^"]*"\n\s+required: (true|false)/);
   assert.equal(secretDecl?.[1], 'false');
-  assert.match(shared, /呼ぶ側の値は使わない/);
+  assert.match(shared, /呼ぶ側は渡さない/);
 });
 
 test('MW-22: planはEnvironmentを持たず、秘密を読まない', () => {
@@ -87,7 +86,7 @@ test('MW-22: planはEnvironmentを持たず、秘密を読まない', () => {
   assert.doesNotMatch(planJob, /secrets\./);
 });
 
-test('MW-23: 秘密を読むのはapplyのジョブの使う手順だけ', () => {
+test('MW-23: 秘密を読むのはapplyのジョブの手順だけ。呼ぶ側は秘密を渡さない', () => {
   assert.doesNotMatch(planJob, /secrets\./);
   // applyのジョブのenv（stepsより前）にsecrets.が無い。
   const applyHead = applyJob.slice(0, applyJob.indexOf('    steps:'));
@@ -108,10 +107,12 @@ test('MW-23: 秘密を読むのはapplyのジョブの使う手順だけ', () =>
   assert.ok(npmCiStart > -1);
   const npmCi = applyJob.slice(npmCiStart, applyJob.indexOf('\n      - ', npmCiStart));
   assert.doesNotMatch(npmCi, /MIGRATION_DATABASE_URL|secrets\./);
-  // 呼ぶ側・呼ばれる側のどこにもsecrets: inheritが無い。
-  for (const name of [...Object.keys(buttons), 'migrate-db.yml']) {
-    assert.doesNotMatch(read(name), /^\s*secrets:\s*inherit\s*$/m, name);
+  // 呼ぶ側は秘密を渡さない。secrets:の指定（inheritを含む）が無い。
+  for (const name of Object.keys(buttons)) {
+    assert.doesNotMatch(read(name), /^\s*secrets:/m, name);
   }
+  // 呼ばれる側もsecrets: inheritを使わない。
+  assert.doesNotMatch(shared, /^\s*secrets:\s*inherit\s*$/m);
 });
 
 test('MW-24: applyは承認のあと、流すものがあるときだけ動く', () => {
@@ -228,7 +229,8 @@ const runReportStep = async ({ before, after, outcome, readFails = false }) => {
     const summaryPath = join(dir, 'summary.md');
     const report = stepBlock(applyJob, 'Report applied migrations');
     await writeFile(join(dir, 'report.sh'), runBody(report));
-    execFileSync('bash', ['report.sh'], {
+    // GitHubはshellの指定が無い手順をbash -eで動かすので、同じ形で動かす。
+    execFileSync('bash', ['-e', 'report.sh'], {
       cwd: dir,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {

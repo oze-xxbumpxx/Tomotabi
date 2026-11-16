@@ -30,7 +30,3 @@ jobs:
       api_origin_var: MIGRATE_API_ORIGIN_PRODUCTION
       sha: ${{ inputs.sha }}
       backup_reminder: true
-    secrets:
-      # Environmentの秘密は、名前で渡す。値はapplyのジョブのenvironmentが解決する
-      # （secrets: inheritは使わない）。
-      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}

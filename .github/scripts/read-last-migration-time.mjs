@@ -38,6 +38,10 @@ export async function main({
   let client;
   try {
     client = await connect(url);
+    // pg.Clientは、接続が成り立ったあとに切れるとerrorをemitする。リスナーが無いと
+    // processが落ちて元のエラー（接続先を含むことがある）が出るので、ここで受ける。
+    // 切れたあとの失敗はqueryが拾い、catchが決まった文だけを出す。
+    client.on?.('error', () => {});
     const result = await client.query(QUERY);
     log(String(result.rows[0].last));
   } catch {

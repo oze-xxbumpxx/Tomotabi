@@ -29,7 +29,3 @@ jobs:
       api_origin: ${{ vars.MIGRATE_API_ORIGIN_INTEGRATION }}
       api_origin_var: MIGRATE_API_ORIGIN_INTEGRATION
       sha: ${{ inputs.sha }}
-    secrets:
-      # Environmentの秘密は、名前で渡す。値はapplyのジョブのenvironmentが解決する
-      # （secrets: inheritは使わない）。
-      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}

@@ -84,3 +84,29 @@ test('MW-36: MIGRATION_DATABASE_URLが無ければ接続せず1', async () => {
     assert.deepEqual(d.err, ['MIGRATION_DATABASE_URLが設定されていません']);
   }
 });
+
+test('MW-37: 接続のあとにerrorが発火しても、元のエラーの文字列を出さず1', async () => {
+  const secretish = 'connection terminated postgres://migrator:s3cret@db.example.test:5432/app';
+  const handlers = {};
+  const d = deps({
+    client: {
+      on: (event, fn) => {
+        handlers[event] = fn;
+      },
+      query: async () => {
+        // 接続が成り立ったあとに切れた。errorを受けてからqueryが失敗する。
+        handlers.error?.(new Error(secretish));
+        throw new Error(secretish);
+      },
+      end: async () => {},
+    },
+  });
+  assert.equal(await main(d.options), 1);
+  assert.equal(typeof handlers.error, 'function', 'errorのリスナーが付いている');
+  assert.deepEqual(d.out, []);
+  assert.deepEqual(d.err, ['DBにつながりませんでした']);
+  const shown = [...d.out, ...d.err].join('\n');
+  for (const leak of ['connection terminated', 'db.example.test', 'migrator', 's3cret', 'postgres://']) {
+    assert.ok(!shown.includes(leak), `${leak}が出ていない`);
+  }
+});

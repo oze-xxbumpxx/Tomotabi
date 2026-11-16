@@ -64,6 +64,13 @@ reviews:
         category: 'pr-metadata'
         summary: 'PRの説明の試験の範囲（MW-34〜36）と実行のしかたが古い'
 escalations: 2
-outcome: null
-gh: null
+outcome: 'merged'
+gh:
+  pr: 367
+  pr_created_at: '2026-11-15T23:30:25Z'
+  merged_at: '2026-11-16T22:34:46Z'
+  closed_at: '2026-11-16T22:34:46Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true
 task_key: 'migration-workflow:workflow'

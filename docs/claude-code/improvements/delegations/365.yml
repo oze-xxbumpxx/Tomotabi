@@ -1,0 +1,11 @@
+issue: 365
+title: 'test(ci): migrationのボタンの試験に、秘密が無いときの案内と本番だけのバックアップの確かめの観点を足す'
+agent: 'devin'
+model: 'swe-2-flash-medium'
+runner: 'local'
+change_level: 1
+delegated_at: '2026-11-15T22:59:40Z'
+reviews: []
+escalations: 0
+outcome: null
+gh: null

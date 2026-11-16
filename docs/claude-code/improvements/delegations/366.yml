@@ -1,0 +1,11 @@
+issue: 366
+title: 'fix(ci): migrationのボタンの報告の手順を、流す手順まで進んだときだけ動かす'
+agent: 'devin'
+model: 'swe-2-flash-medium'
+runner: 'local'
+change_level: 1
+delegated_at: '2026-11-15T22:59:41Z'
+reviews: []
+escalations: 0
+outcome: null
+gh: null

@@ -937,8 +937,8 @@ function QuestionBody({
   model,
   picked,
   onPick,
-  decidedOpen,
-  onCloseDecided,
+  open,
+  onClose,
   memo,
   onMemo,
 }: {
@@ -946,8 +946,8 @@ function QuestionBody({
   model: Question;
   picked: string;
   onPick: (id: string) => void;
-  decidedOpen: boolean;
-  onCloseDecided: () => void;
+  open: boolean;
+  onClose: () => void;
   memo: string;
   onMemo: (value: string) => void;
 }) {
@@ -955,33 +955,42 @@ function QuestionBody({
   const rest = model.choices.slice(2);
   return (
     <div>
-      {model.decided && decidedOpen ? (
+      {model.decided ? (
         <div className="rounded-2xl bg-[#F8F9FB] px-3 py-3">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[13px] font-semibold text-[#1F2937]">{item.title}</p>
-              <p className="mt-0.5 text-[11px] text-[#6B7280]">
-                {item.step}
-                {item.time ? ` · ${item.time}` : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onCloseDecided}
-              aria-label="決めたことを閉じる"
-              className="text-[16px] leading-none text-[#6B7280]"
-            >
-              ×
-            </button>
-          </div>
+          <p className="text-[13px] font-semibold text-[#1F2937]">{item.title}</p>
+          <p className="mt-0.5 text-[11px] text-[#6B7280]">
+            {item.step}
+            {item.time ? ` · ${item.time}` : ""}
+          </p>
           <p className="mt-1 flex items-start gap-2 text-[12px] leading-5 text-[#4B5563]">
             <CheckIcon />
             <span>{model.decided}</span>
           </p>
         </div>
       ) : null}
-      <p className="mt-4 text-[12px] text-[#6B7280]">{model.kicker}</p>
-      <h2 className="mt-1 text-[22px] font-bold leading-7 text-[#111827]">{model.heading}</h2>
+      <div className="mt-4 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[12px] text-[#6B7280]">{model.kicker}</p>
+          <h2 className="mt-1 text-[22px] font-bold leading-7 text-[#111827]">{model.heading}</h2>
+        </div>
+        {open ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="問いを閉じる"
+            className="text-[16px] leading-none text-[#6B7280]"
+          >
+            ×
+          </button>
+        ) : null}
+      </div>
+      {open ? null : (
+        <p className="mt-3 text-[13px] leading-6 text-[#6B7280]">
+          閉じています。左の一覧から開き直せます。
+        </p>
+      )}
+      {open ? (
+        <>
       <div className="mt-3 space-y-2">
         {model.paragraphs.map((paragraph) => (
           <p key={paragraph} className="text-[14px] leading-6 text-[#1F2937]">
@@ -1023,6 +1032,8 @@ function QuestionBody({
         ))}
       </div>
       <MemoField value={memo} onChange={onMemo} />
+        </>
+      ) : null}
     </div>
   );
 }
@@ -1105,7 +1116,7 @@ export default function DecisionBoardExample() {
   const [tab, setTab] = useState<Tab>("now");
   const [selected, setSelected] = useState("q1");
   const [away, setAway] = useState(false);
-  const [decidedOpen, setDecidedOpen] = useState(true);
+  const [closedQuestions, setClosedQuestions] = useState<Record<string, boolean>>({});
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [memos, setMemos] = useState<Record<string, string>>({});
 
@@ -1114,26 +1125,33 @@ export default function DecisionBoardExample() {
   const detail = current ? detailFor(mode, selected) : null;
   const memoKey = `${mode}:${selected}`;
   const pickKey = `${mode}:${selected}`;
+  const questionOpen = closedQuestions[pickKey] !== true;
+
+  function openQuestion(nextMode: Mode, id: string) {
+    setClosedQuestions((prev) => ({ ...prev, [`${nextMode}:${id}`]: false }));
+  }
 
   function changeMode(next: Mode) {
+    const id = next === "design" ? "q1" : "cause";
     setMode(next);
     setTab("now");
-    setSelected(next === "design" ? "q1" : "cause");
-    setDecidedOpen(true);
+    setSelected(id);
+    openQuestion(next, id);
   }
 
   function changeTab(next: Tab) {
     const nextItems = itemsFor(mode).filter((item) => item.tab === next);
+    const nextId = nextItems.some((item) => item.id === selected)
+      ? selected
+      : (nextItems[0]?.id ?? selected);
     setTab(next);
-    setSelected((current) =>
-      nextItems.some((item) => item.id === current) ? current : (nextItems[0]?.id ?? current),
-    );
-    setDecidedOpen(true);
+    setSelected(nextId);
+    openQuestion(mode, nextId);
   }
 
   function selectItem(id: string) {
     setSelected(id);
-    setDecidedOpen(true);
+    openQuestion(mode, id);
   }
 
   const question = detail?.kind === "question" ? detail.question : null;
@@ -1291,8 +1309,8 @@ export default function DecisionBoardExample() {
                 model={question}
                 picked={pickedId}
                 onPick={(id) => setPicked((prev) => ({ ...prev, [pickKey]: id }))}
-                decidedOpen={decidedOpen}
-                onCloseDecided={() => setDecidedOpen(false)}
+                open={questionOpen}
+                onClose={() => setClosedQuestions((prev) => ({ ...prev, [pickKey]: true }))}
                 memo={memos[memoKey] ?? ""}
                 onMemo={(value) => setMemos((prev) => ({ ...prev, [memoKey]: value }))}
               />

@@ -141,7 +141,7 @@ DBの接続は既存の`getPool()`を使う。トランザクションは要ら�
 | それ以外の状態・つながらない・返す形が違う        | 止める                                                | 1          |
 | `_journal.json`が読めない・空                     | 止める                                                | 1          |
 
-止めたときの案内は次の1文にする。「DBに流していないmigrationがあります: 0011_planning_todos, 0012_planning_todos_grants。管理者の端末でmigrationを流してから、もう一度出してください（docs/runbooks/production.md の10章）」。
+止めたときの案内は次の1文にする。「DBに流していないmigrationがあります: 0011_planning_todos, 0012_planning_todos_grants。migrate-integration（本番はmigrate-production）のボタンで流してください。端末からも流せます」
 
 `fetch`は10秒で打ち切る。再試行はしない（失敗したら人がもう一度ボタンを押す）。
 

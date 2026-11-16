@@ -6,11 +6,12 @@
 
 ## 試験種別
 
-| 種別                 | 置き場                                    | 実行                        |
-| -------------------- | ----------------------------------------- | --------------------------- |
-| 一覧を作るスクリプト | `.claude/tests/plan-migrations.test.mjs`  | `npm run test:harness`      |
-| ワークフローの形     | `.claude/tests/migrate-workflow.test.mjs` | `npm run test:harness`      |
-| 検証用での手の確かめ | GitHubの画面                              | ユーザーとClaude Codeが行う |
+| 種別                 | 置き場                                       | 実行                   |
+| -------------------- | -------------------------------------------- | ---------------------- |
+| 一覧を作るスクリプト | `.claude/tests/plan-migrations.test.mjs`     | `npm run test:harness` |
+| 時刻を読むスクリプト | `.claude/tests/read-last-migration-time.test.mjs` | `npm run test:harness` |
+| ワークフローの形     | `.claude/tests/migrate-workflow.test.mjs`    | `npm run test:harness` |
+| 検証用での手の確かめ | GitHubの画面                                 | ユーザーとClaude Codeが行う |
 
 apiとwebのコードは変えないので、アプリの単体の試験とE2Eは足さない。
 
@@ -45,18 +46,30 @@ apiとwebのコードは変えないので、アプリの単体の試験とE2E�
 | #     | 観点                                      | 期待結果                                                                                                                           |
 | ----- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | MW-20 | ボタンは手で押すときだけ動く（制約）      | `migrate-integration.yml`・`migrate-production.yml`の`on`は`workflow_dispatch`だけ。`push`・`pull_request`・`schedule`が無い       |
-| MW-21 | 環境の取り違えが無い（B-03）              | 検証用は`migrate-integration`と`MIGRATE_API_ORIGIN_INTEGRATION`、本番は`migrate-production`と`MIGRATE_API_ORIGIN_PRODUCTION`を渡す |
+| MW-21 | 環境の取り違えが無い（B-03）              | 検証用は`migrate-integration`と`MIGRATE_API_ORIGIN_INTEGRATION`、本番は`migrate-production`と`MIGRATE_API_ORIGIN_PRODUCTION`を渡す。呼ぶ側は秘密を渡さない（`MIGRATION_DATABASE_URL:`も`secrets: inherit`も無い） |
 | MW-22 | planは秘密を読まない                      | planのジョブに`environment`が無く、`secrets.`を1つも読まない                                                                       |
-| MW-23 | 秘密を読むのはapplyだけ                   | `secrets.MIGRATION_DATABASE_URL`を読むのは、applyのジョブの手順だけ。applyのジョブの`env`に`secrets.`が無く、`npm ci`の手順に`MIGRATION_DATABASE_URL`が無い。`secrets: inherit`でほかのワークフローに渡さない              |
+| MW-23 | 秘密を読むのはapplyだけ                   | `secrets.MIGRATION_DATABASE_URL`を読むのは、applyのジョブの手順だけ。applyのジョブの`env`に`secrets.`が無く、`npm ci`の手順に`MIGRATION_DATABASE_URL`が無い。`secrets: inherit`でほかのワークフローに渡さない。呼ぶ側は秘密を渡さず、applyのジョブが自分のEnvironmentの秘密を直接読む              |
 | MW-24 | applyは承認のあと、流すものがあるときだけ | applyに`environment`と`needs: plan`があり、`if`が`state`が`none`でないことを見る                                                   |
 | MW-25 | `main`のcommitだけ（F-03、E-01）          | planとapplyの両方に、SHAの形の確かめと`git merge-base --is-ancestor`の確かめがある。applyは、planが決めたSHAを使う                 |
 | MW-26 | 同時に動かない（F-09）                    | 2つのボタンに、環境ごとの`concurrency`の組があり、`cancel-in-progress: false`                                                      |
 | MW-27 | 権限は読むだけ                            | `permissions`は`contents: read`だけ                                                                                                |
 | MW-28 | 入力をシェルに直接埋め込まない            | `run`の中に`${{ inputs.`と`${{ github.event.inputs.`が無い（環境変数で渡す）                                                       |
-| MW-29 | スクリプトはワークフロー側の版            | planが、`github.sha`の`.github/scripts/`を別の場所に取り出して使う                                                                 |
+| MW-29 | スクリプトはワークフロー側の版            | planとapplyの両方が、`github.sha`の`.github/scripts/`を別の場所に取り出して使う（一覧は`plan-migrations.mjs`、時刻は`read-last-migration-time.mjs`） |
 | MW-30 | 流したあとの報告は失敗しても動く（E-04）  | 流したmigrationの名前を書く手順に`if: always()`がある。流す手順に`continue-on-error`が無い                                         |
 | MW-31 | デプロイのワークフローは変えない（F-02）  | `deploy-vercel.yml`・`deploy-integration.yml`・`deploy-production.yml`に、`db:migrate`と`MIGRATION_DATABASE_URL`が無い             |
-| MW-32 | 失敗したときの報告（E-04）                | 流したあとの報告の手順が、流す前後の時刻が同じで、流す手順が失敗していたら「何も流れていません。流す前の状態のままです」と書く     |
+| MW-32 | 失敗したときの報告（E-04）                | 報告の手順の`run`をbashで動かし、偽の時刻読み取りと`MIGRATE_OUTCOME`の組み合わせで、流す前後の時刻が同じで流す手順が失敗していたら「何も流れていません。流す前の状態のままです」、成功なら「流すものはありませんでした」と出ることを確かめる |
+| MW-33 | 秘密の確認で接続先を伏せる                | applyの`Verify MIGRATION_DATABASE_URL is set`の手順の中に`::add-mask::`の登録があり、`Apply migrations`より前にある。値を`echo`の引数に置かない |
+
+### 時刻を読むスクリプト（`read-last-migration-time.mjs`）
+
+`connect`を差し替えて試す。本物のDBにはつながない。
+
+| #     | 観点                              | 前提                                | 期待結果                                                                 | 分類 |
+| ----- | --------------------------------- | ----------------------------------- | ------------------------------------------------------------------------ | ---- |
+| MW-34 | 数だけを出す                      | `MIGRATION_DATABASE_URL`あり        | `drizzle.__drizzle_migrations`の`max(created_at)`を標準出力に1行で出し、終了コード0 | 正常 |
+| MW-35 | 失敗しても元のエラーを出さない    | `connect`または`query`が接続先入りのエラーを投げる | 「DBにつながりませんでした」だけを出し、終了コード1。ホスト名・ユーザー名・パスワード・元のエラーの文字列が出ない | 異常 |
+| MW-36 | 環境変数が無い                     | `MIGRATION_DATABASE_URL`が無い・空  | 接続せず終了コード1                                                      | 異常 |
+| MW-37 | 接続のあとにerrorが発火しても元のエラーを出さない | 接続のあとにClientが`error`をemitし、queryが失敗する | `error`のリスナーが付いていて、「DBにつながりませんでした」だけを出し、終了コード1。元のエラーの文字列が出ない | 異常 |
 
 ## 結合試験観点（検証用での手の確かめ）
 
@@ -65,7 +78,7 @@ apiとwebのコードは変えないので、アプリの単体の試験とE2E�
 | #     | 観点                                 | 操作                                                                  | 期待結果                                                                       |
 | ----- | ------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | MW-40 | 流すものが無い（F-06）               | 全部流し済みの検証用で`migrate-integration`を押す                     | 「流すものはありません」。承認を求められない                                   |
-| MW-41 | 流すものがある（F-04・F-05・F-08）   | 流していないmigrationがある状態で押す                                 | 一覧が出て承認で止まる。承認すると流れ、流した名前が出る                       |
+| MW-41 | 流すものがある（F-04・F-05・F-08）   | 流していないmigrationがある状態で押す                                 | 一覧が出て承認で止まる。承認すると流れ、流した名前が出る。applyが呼ばれる側から自分のEnvironmentの秘密を読めたことの確かめを兼ねる |
 | MW-42 | 承認しない（E-05）                   | MW-41の一覧のあと、拒む                                               | 何も流れない                                                                   |
 | MW-43 | 一覧を出せない（F-12）               | リポジトリの変数`MIGRATE_API_ORIGIN_INTEGRATION`を一時的に外して押す  | 「一覧を出せません」と出て承認で止まる。承認すると、流していないものだけ流れる |
 | MW-44 | ブランチからは秘密を読めない（E-08） | `main`以外のブランチで、同じEnvironmentを指定したワークフローを動かす | 始まらない（ブランチの決まりで止まる）                                         |
@@ -90,6 +103,7 @@ MW-44は、試しのワークフローをブランチに置く必要がある。
 | `plan-migrations.mjs` | `planMigrations(journal, answer)` | MW-01〜MW-06、MW-11        |
 | `plan-migrations.mjs` | `main(argv, deps)`                | MW-07〜MW-10、MW-12〜MW-16 |
 | `plan-migrations.mjs` | まとめの文を作る関数              | MW-01、MW-03、MW-07、MW-14 |
+| `read-last-migration-time.mjs` | `main(deps)`              | MW-34〜MW-37               |
 
 ## 回帰試験範囲
 
@@ -103,6 +117,6 @@ MW-44は、試しのワークフローをブランチに置く必要がある。
 
 ## 完了条件
 
-- MW-01〜MW-32が`npm run test:harness`で通る。
+- MW-01〜MW-37が`npm run test:harness`で通る。
 - MW-40〜MW-47を検証用で確かめ、結果をPRか公開の記録に書く。
 - `npm run lint` / `npm run type-check` / `npm test` / `npm run build`が通る（アプリのコードは変えないので、通ったままであること）。

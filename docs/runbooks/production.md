@@ -122,7 +122,7 @@ npm run cli:generate-vapid-key -w @tomotabi/api -- "$HOME/tomotabi-vapid-product
 公開の順番は、毎回次のとおり。最初の公開では、1と3はもう済んでいる。
 
 1. 出すcommitを、検証用のボタン（`deploy-integration`）で出し、検証用で確かめる。
-2. DBを変えるcommitなら、[バックアップの手順書](backup-and-restore.md)できっかけ`before-change`のバックアップを取り、戻して照合する。合ってから、migrationを管理者の端末から1回だけ流す（`npm run db:migrate -w @tomotabi/api`、`MIGRATION_DATABASE_URL`は本番のmigrator）。
+2. DBを変えるcommitなら、[バックアップの手順書](backup-and-restore.md)できっかけ`before-change`のバックアップを取り、戻して照合する。合ってから、migrationを1回だけ流す。流し方は2通り。GitHubのActionsで「migrate-production」のボタンを押すか（16章）、管理者の端末で`npm run db:migrate -w @tomotabi/api`を動かす（`MIGRATION_DATABASE_URL`は本番のmigrator）。どちらで流しても同じ記録が残る。
 3. GitHubのActionsで「deploy-production」を選び、Run workflowを押す。出すcommitのSHAは、1で確かめたcommitの40桁のSHAを入れる。
 4. 承認を求められたら、実行の名前（`deploy-production <出すcommitのSHA>`）とEnvironmentが`tomotabi-production`であることを見て承認する。
 5. ワークフローは、SHAの形・`API_ORIGIN`・mainの履歴・CIの成功を確かめる。次に、今動いている本番のapiに最後に流したmigrationの時刻を聞き、出すcommitのmigrationに追いついていなければ止める（2で流し忘れたとき）。そのあとapiを出してからwebを出す。止まったときの直し方は検証用の手順書の9章の表と同じ。
@@ -180,3 +180,52 @@ psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -f apps/api/db/admin/resume-runtime.sql
 | DBを変える前                                | バックアップを取り、戻して照合する（きっかけ`before-change`）                                                                                                                                                                                       |
 | 月に1回                                     | VercelのUsage（関数の呼び出し、Fluid Active CPU、Fluid Provisioned Memory、転送量）とNeonのUsage（Compute、Storage、Network transfer）を見る。Vercelの枠は検証用・本番・PRのプレビューで共有。9割に近いものがあれば、検証用とPRのプレビューを止める |
 | トークンの期限の前                          | `tomotabi-deploy-production`を作り直し、`VERCEL_TOKEN`を入れ替える                                                                                                                                                                                  |
+
+## 16. migrationをボタンで流す（出先から）
+
+DBを変えるmigrationは、これまで管理者の端末から`npm run db:migrate`で流していた。出先からも流せるように、GitHub Actionsに承認つきの手動のワークフロー`migrate-production`を足した（設計: [docs/designs/migration-workflow.md](../designs/migration-workflow.md)、ADR-0011）。検証用は`migrate-integration`（[docs/runbooks/integration-env.md](integration-env.md)の11章）。
+
+### Environmentと変数を作る（最初の1回）
+
+**順番を守る。** 保護を付けてから秘密を置く（7章と同じ理由）。
+
+1. Settings > Environmentsで`migrate-production`を作り、保護を付けて保存する。
+   - Required reviewers: 自分
+   - Deployment branches and tags: Selected branchesで`main`だけ
+2. Environment secretsに`MIGRATION_DATABASE_URL`を登録する。値は2章で作った本番のmigratorの直接の接続。デプロイ用のEnvironment（`tomotabi-production`）には置かない。migrationのボタンのapplyのジョブだけが読む。
+3. Settings > Secrets and variables > Actionsの「Repository secrets」に`MIGRATION_DATABASE_URL`が無いことを確かめる。ここにあると、mainでないブランチのワークフローからも読める（7章の5と同じ確かめ）。
+4. Settings > Secrets and variables > Actions > Variablesで、リポジトリの変数`MIGRATE_API_ORIGIN_PRODUCTION`を作る。値は3章の本番のapiのURL（`https://`で始まり、末尾にスラッシュを付けない）。一覧を作るために、今動いているapiに聞きに行く先。変数は検証用と本番の2つあり、検証用は`MIGRATE_API_ORIGIN_INTEGRATION`。
+
+### ボタンで流す
+
+10章の2の「migrationを流す」を、ボタンで行うときの手順。
+
+1. 出かける前に、10章の2どおりバックアップを取って戻して照合する。ボタンの一覧にも確かめの文が出るが、取ったかどうかは人が確かめる（ワークフローは確かめない）。
+2. GitHubのActionsで「migrate-production」を選び、Run workflowを押す。
+   - Use workflow from: `main`のまま
+   - migrationを流すcommitのSHA: 10章の1で検証用に確かめたcommitの40桁のSHAを入れる。空ならmainの最新
+3. planのジョブが一覧を出す。本番のボタンは、バックアップを取って照合したかの確かめの文と手順書の場所も出す。
+4. 一覧と確かめの文を読んで承認する（Review deployments）。承認しなければ何も流れない。
+5. applyのジョブが流し、流したmigrationの名前を実行のまとめに出す。
+6. 10章の3に進み、deploy-productionで出す。
+
+### 止まったとき
+
+| 止まったところ | よくある原因 | 直し方 |
+| --- | --- | --- |
+| planのVerify sha input shape | SHAが短い・余計な文字がある | 40桁のSHAを入れ直すか、空にする |
+| planのVerify commit is on main | mainに入っていないcommitを指定した | マージしてから押す |
+| planが「一覧を出せません」 | 変数`MIGRATE_API_ORIGIN_PRODUCTION`が無い・apiが落ちている | 変数を確かめる。承認して進んでも、流していないものだけは流れる |
+| planが「1本も流れていません」 | DBにmigrationが無い（最初の構築） | ボタンでは扱わない。2章の手順で端末から行う |
+| applyのVerify MIGRATION_DATABASE_URL is set | Environmentに秘密が無い | 上の節で秘密を登録して押し直す |
+| applyのRead last applied migration time (before) | DBにつながらない、または秘密の値の誤り | ログに「DBにつながりませんでした」と出る。Environmentの秘密を確かめて入れ直し、押し直す |
+| applyのApply migrations | SQLの失敗 | 実行のまとめに「何も流れていません。流す前の状態のままです」と出る。migrationは全部巻き戻るので、直したmigrationをマージして押し直す |
+| 承認が来ない | Required reviewersが自分でない | Environmentの保護を確かめる |
+
+### migratorのパスワードを替えたとき
+
+2章の手順でmigratorのパスワードを替えたら、`migrate-integration`と`migrate-production`の両方のEnvironment secretsの`MIGRATION_DATABASE_URL`を入れ直す。入れ直さないと、ボタンは古い接続で失敗する。
+
+### リポジトリを非公開にするとき
+
+EnvironmentのRequired reviewersは、公開のリポジトリかGitHub Enterpriseでしか使えない。リポジトリを非公開にすると承認が外れ、migrationのボタンは守りが効かなくなる。非公開にする前に、このボタンをやめるか、プランを確かめる（検証用の手順書の11章と同じ）。

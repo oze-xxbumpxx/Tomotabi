@@ -17,7 +17,7 @@
 
 ## マージのあとの作業
 
-<!-- マージしたあとに人がする作業。`apps/api/drizzle/`を変えたPRでは、どの環境（検証用・本番）で、どのmigrationを流すかを書く。無ければ「なし」。 -->
+<!-- マージしたあとに人がする作業。`apps/api/drizzle/`を変えたPRでは、どの環境（検証用・本番）で、どのmigrationを流すかを書く（流すボタンは`migrate-integration`・`migrate-production`）。無ければ「なし」。 -->
 
 - なし
 

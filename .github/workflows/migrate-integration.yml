@@ -1,0 +1,31 @@
+name: migrate-integration
+# 承認の画面と実行の一覧で、どのcommitのmigrationを流すかが見えるようにする。
+run-name: "migrate-integration ${{ inputs.sha || 'main latest' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "migrationを流すcommitのSHA。空ならmainの最新"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# 検証用のmigrationが同時に流れないようにする。実行中は止めず、続けて起動したものは
+# queue: maxで順に待つ（deploy-integrationと同じ）。
+concurrency:
+  group: migrate-integration
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: migrate
+    uses: ./.github/workflows/migrate-db.yml
+    with:
+      environment: migrate-integration
+      api_origin: ${{ vars.MIGRATE_API_ORIGIN_INTEGRATION }}
+      api_origin_var: MIGRATE_API_ORIGIN_INTEGRATION
+      sha: ${{ inputs.sha }}

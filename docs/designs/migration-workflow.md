@@ -112,6 +112,7 @@ planのジョブは、Environmentを使わない。GitHubは、承認が必須�
 - 実行の名前は`migrate-integration <SHA>`（空なら`main latest`）。承認の画面で、どの環境の何を流すかが見える。
 - 同時実行は、環境ごとの`concurrency`の組（`migrate-integration`・`migrate-production`）で1つにし、あとのものを待たせる（`queue: max`、`cancel-in-progress: false`。デプロイと同じ）。
 - 権限は`contents: read`だけ。
+- 秘密は渡さない。ボタンは`secrets:`も`secrets: inherit`も使わず、`MIGRATION_DATABASE_URL`はapplyのジョブが自分の`environment`の秘密から直接読む。
 
 ### planのジョブ（Environmentなし）
 
@@ -141,12 +142,12 @@ Node 24の`fetch`だけを使う。`npm ci`は要らない。判定は純粋関�
 
 `needs: plan`、`if: needs.plan.outputs.state != 'none'`、`environment: <migrate-…>`。承認のあとに始まる。
 
-1. `secrets.MIGRATION_DATABASE_URL`があるかを確かめる。無ければ、Environmentの名前を出して止める（値は出さない）。
+1. `secrets.MIGRATION_DATABASE_URL`（このジョブの`environment`の秘密。呼ぶ側からは渡さない）があるかを確かめる。無ければ、Environmentの名前を出して止める（値は出さない）。
 2. 流すcommitを取り出し、`main`の履歴にあるかをもう一度確かめる（承認を待つあいだに`main`が変わっても、同じSHAを使う。SHAはplanの出力から受け取る）。
 3. `actions/setup-node`（24）と`npm ci`。
-4. 流す前の時刻を読む（`psql`で`select coalesce(max(created_at), 0) from drizzle.__drizzle_migrations`）。
+4. 流す前の時刻を読む（planと同じくワークフローを動かした版から取り出した`.github/scripts/read-last-migration-time.mjs`を`node`で動かす。`MIGRATION_DATABASE_URL`は環境変数で渡す）。
 5. `npm run db:migrate -w @tomotabi/api`を、`MIGRATION_DATABASE_URL`を環境変数で渡して動かす。
-6. 流したあとの時刻を読み、`_journal.json`から、時刻が4より新しく6以下のmigrationの名前を実行のまとめに書く。0本なら「流すものはありませんでした」。
+6. 流したあとの時刻を同じスクリプトで読み、`_journal.json`から、時刻が4より新しく6以下のmigrationの名前を実行のまとめに書く。0本なら「流すものはありませんでした」。
 
 - 接続文字列は環境変数で渡し、コマンドの引数に置かない。GitHubは、登録した秘密と同じ文字列をログで伏せる。
 - `MIGRATION_DATABASE_URL`は、使う手順（1・4・5・6）の`env`にだけ置く。ジョブの`env`と、3番目の`npm ci`の手順には置かない。`npm ci`は依存パッケージのinstallスクリプトを動かすので、そこに秘密があると、乗っ取られた依存パッケージがDBの持ち主の接続を読める。

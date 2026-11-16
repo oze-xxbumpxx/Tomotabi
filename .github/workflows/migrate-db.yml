@@ -1,0 +1,234 @@
+name: migrate-db
+
+# 検証用（migrate-integration.yml）と本番（migrate-production.yml）のボタンから呼ぶ、
+# migrationを流す手順。planは秘密を読まずに「これから流すmigration」の一覧を出し、
+# applyはEnvironmentの承認のあとで、migratorの接続を使って流す。
+# migratorの接続は、applyのジョブが指定するEnvironmentの秘密から読む。
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "migrationを流す先のGitHubのEnvironment"
+        required: true
+        type: string
+      api_origin:
+        description: "今動いているapiのURL（リポジトリの変数の値）"
+        required: true
+        type: string
+      api_origin_var:
+        description: "apiのURLを置いたリポジトリの変数の名前。一覧を出せないときの理由に出す"
+        required: false
+        type: string
+        default: ""
+      sha:
+        description: "migrationを流すcommitのSHA。空ならmainの最新"
+        required: false
+        type: string
+        default: ""
+      backup_reminder:
+        description: "一覧にバックアップの確かめの文を出す（本番のボタン用）"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      MIGRATION_DATABASE_URL:
+        description: "migratorの直接の接続。applyのジョブのEnvironmentの秘密から読む。呼ぶ側は渡さない"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Environmentを付けない。一覧を作るこのジョブは秘密を読まない。
+    # GitHubは承認が必須のEnvironmentの秘密を承認までジョブに渡さないため、
+    # 承認の前に動くplanは、呼ばれた側でもEnvironmentを持たない形にする（設計書migration-workflow）。
+    outputs:
+      state: ${{ steps.plan.outputs.state }}
+      count: ${{ steps.plan.outputs.count }}
+      sha: ${{ steps.target.outputs.sha }}
+    steps:
+      - name: Verify sha input shape
+        env:
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          if [ -n "$INPUT_SHA" ] && ! echo "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "sha input must be a full 40-hex commit SHA. Aborting." >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve target commit
+        id: target
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Verify commit is on main
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "commit $SHA is not on the history of main. Aborting." >&2
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      # 一覧を作るスクリプトは、ワークフローを動かした版（github.sha）から取り出す。
+      # 流すcommitの作業ツリーに置くと、この機能より前のcommitへ戻すときにスクリプトが無く止まるため
+      # （deploy-vercel.ymlと同じ理由）。
+      - name: Checkout migration tooling from the workflow ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: .workflow
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Plan migrations
+        id: plan
+        env:
+          API_ORIGIN: ${{ inputs.api_origin }}
+          API_ORIGIN_VAR: ${{ inputs.api_origin_var }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+          ENVIRONMENT_NAME: ${{ inputs.environment }}
+          BACKUP_REMINDER: ${{ inputs.backup_reminder }}
+        run: |
+          EXTRA=()
+          if [ -n "$API_ORIGIN_VAR" ]; then EXTRA+=("$API_ORIGIN_VAR"); fi
+          if [ "$BACKUP_REMINDER" = "true" ]; then EXTRA+=(--backup-reminder); fi
+          node .workflow/.github/scripts/plan-migrations.mjs "$API_ORIGIN" apps/api/drizzle/meta/_journal.json "${EXTRA[@]}"
+
+  apply:
+    name: apply
+    needs: plan
+    # stateがnone（流すものが無い）のときと、planが失敗したときは動かさない。
+    # environmentを付けるので、承認のあとに始まり、Environmentの秘密を読める。
+    if: ${{ needs.plan.result == 'success' && needs.plan.outputs.state != 'none' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Verify MIGRATION_DATABASE_URL is set
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          ENVIRONMENT_NAME: ${{ inputs.environment }}
+        run: |
+          if [ -z "${MIGRATION_DATABASE_URL:-}" ]; then
+            echo "secrets.MIGRATION_DATABASE_URL is not set in Environment ${ENVIRONMENT_NAME}. Aborting." >&2
+            exit 1
+          fi
+          # ログに接続先が出ないよう、ホスト・ユーザー・パスワードを伏せる登録をする。
+          # 値はコマンドの引数に置かず、スクリプトが標準出力に直接書く（トレースは使わない）。
+          MIGRATION_DATABASE_URL="$MIGRATION_DATABASE_URL" python3 - <<'PY'
+          import os
+          import sys
+          import urllib.parse
+
+          try:
+              parts = urllib.parse.urlsplit(os.environ['MIGRATION_DATABASE_URL'])
+          except ValueError:
+              sys.exit(0)
+          masks = []
+          for raw in (parts.hostname or '', parts.username or '', parts.password or ''):
+              for value in (raw, urllib.parse.unquote(raw)):
+                  if value and value not in masks:
+                      masks.append(value)
+          for value in masks:
+              sys.stdout.write(f'::add-mask::{value}\n')
+          PY
+      - name: Verify sha input shape
+        env:
+          SHA: ${{ needs.plan.outputs.sha }}
+        run: |
+          if ! echo "$SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "sha from plan is not a full 40-hex commit SHA. Aborting." >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify commit is on main
+        env:
+          SHA: ${{ needs.plan.outputs.sha }}
+        run: |
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "commit $SHA is not on the history of main. Aborting." >&2
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      # 秘密は使う手順のenvにだけ置く。ジョブのenvとnpm ciには置かない。
+      # npm ciは依存パッケージのinstallスクリプトを動かすので、ここに秘密があると
+      # 乗っ取られた依存がmigratorの接続を読める（設計書migration-workflow）。
+      - run: npm ci
+      # 時刻を読むスクリプトは、planと同じくワークフローを動かした版（github.sha）から取り出す。
+      # 流すcommitの作業ツリーに置くと、この機能より前のcommitへ戻すときにスクリプトが無く止まるため。
+      # pgはこのあとnpm ciした作業ツリーのnode_modulesから解決する。
+      - name: Checkout migration tooling from the workflow ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: .workflow
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Read last applied migration time (before)
+        id: before
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+        run: |
+          BEFORE="$(node .workflow/.github/scripts/read-last-migration-time.mjs)"
+          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
+      - name: Apply migrations
+        id: migrate
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+        run: npm run db:migrate -w @tomotabi/api
+      # drizzle-kit migrateは、流すmigrationを1つのトランザクションにまとめる。
+      # 途中で失敗すると全部が巻き戻るので、流す前とあとの時刻が同じなら「何も流れていない」と出す。
+      - name: Report applied migrations
+        if: always()
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          BEFORE: ${{ steps.before.outputs.before }}
+          MIGRATE_OUTCOME: ${{ steps.migrate.outcome }}
+          ENVIRONMENT_NAME: ${{ inputs.environment }}
+          TARGET_SHA: ${{ needs.plan.outputs.sha }}
+        run: |
+          AFTER=""
+          if [ -n "${MIGRATION_DATABASE_URL:-}" ]; then
+            AFTER="$(node .workflow/.github/scripts/read-last-migration-time.mjs || true)"
+          fi
+          NAMES=""
+          if [ -n "$BEFORE" ] && [ -n "$AFTER" ] && [ "$BEFORE" != "$AFTER" ]; then
+            NAMES="$(BEFORE_TS="$BEFORE" AFTER_TS="$AFTER" node -e 'const j=JSON.parse(require("node:fs").readFileSync("apps/api/drizzle/meta/_journal.json","utf8"));const b=Number(process.env.BEFORE_TS),a=Number(process.env.AFTER_TS);process.stdout.write(j.entries.filter(e=>e.when>b&&e.when<=a).sort((x,y)=>x.when-y.when).map(e=>e.tag).join("\n"))' 2>/dev/null || true)"
+          fi
+          {
+            echo "## migrationの結果"
+            echo ""
+            echo "- 環境: ${ENVIRONMENT_NAME}"
+            echo "- commit: \`$TARGET_SHA\`"
+            echo "- 流す前の最後のmigrationの時刻: ${BEFORE:-（読めませんでした）}"
+            echo "- 流したあとの最後のmigrationの時刻: ${AFTER:-（読めませんでした）}"
+            if [ -n "$BEFORE" ] && [ -n "$AFTER" ] && [ "$BEFORE" = "$AFTER" ]; then
+              if [ "$MIGRATE_OUTCOME" = "success" ]; then
+                echo "- 結果: 流すものはありませんでした"
+              else
+                echo "- 結果: 何も流れていません。流す前の状態のままです"
+              fi
+            elif [ -n "$NAMES" ]; then
+              echo "- 流したmigration（流す順）:"
+              echo "$NAMES" | sed 's/^/  - /'
+            else
+              echo "- 結果: 流したかどうかは、DBの履歴（drizzle.__drizzle_migrations）で確かめてください"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

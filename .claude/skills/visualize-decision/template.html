@@ -156,8 +156,21 @@ textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px
     if (text != null) e.textContent = text;
     return e;
   }
-  // 図と見本はClaudeが書いたSVG/HTML。check時にscriptとon*属性を弾いてある
-  function rich(tag, cls, html) { var e = el(tag, cls); e.innerHTML = html; return e; }
+  // 図と見本はClaudeが書いたSVG/HTML。checkで弾いたうえで、描くときも<template>に読ませて
+  // （読み込むだけでは何も実行されない）危険な要素とon*属性・javascript:を取り除いてから挿入する
+  var UNSAFE_TAGS = "script,iframe,object,embed,foreignObject,animate,set,animateTransform,animateMotion";
+  function rich(tag, cls, html) {
+    var e = el(tag, cls), t = document.createElement("template");
+    t.innerHTML = html;
+    Array.prototype.forEach.call(t.content.querySelectorAll(UNSAFE_TAGS), function (n) { n.remove(); });
+    Array.prototype.forEach.call(t.content.querySelectorAll("*"), function (n) {
+      Array.prototype.slice.call(n.attributes).forEach(function (a) {
+        if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) n.removeAttribute(a.name);
+      });
+    });
+    e.appendChild(t.content);
+    return e;
+  }
 
   var qn = 0, tn = 0;
   S.items.forEach(function (it) { it.no = it.type === "task" ? "T" + (++tn) : "Q" + (++qn); });
@@ -248,7 +261,7 @@ textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px
       root.appendChild(r);
     }
     var opts = el("div", "opts");
-    it.options.forEach(function (o) {
+    (it.options || []).forEach(function (o) {
       var lab = el("label", "opt");
       var inp = el("input"); inp.type = "radio"; inp.name = "q-" + it.id; inp.value = o.key;
       inp.checked = a.choice === o.key;
@@ -267,7 +280,7 @@ textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px
       lab.appendChild(pc);
       opts.appendChild(lab);
     });
-    root.appendChild(opts);
+    if (opts.firstChild) root.appendChild(opts);
     if (it.recommend && it.reason) root.appendChild(el("div", "recbox", "推奨は " + it.recommend + "。" + it.reason));
     if (it.state === "waiting" || it.state === "tentative") {
       var ot = el("div", "other");
@@ -294,7 +307,7 @@ textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px
     lab.appendChild(cb); lab.appendChild(document.createTextNode("やった"));
     root.appendChild(lab);
     var nt = el("textarea"); nt.id = "note-" + it.id; nt.rows = 2; nt.value = a.note; nt.placeholder = "見たこと・気づいたことを書く";
-    nt.addEventListener("input", function () { a.note = nt.value; touched[it.id] = true; persist(it.id); });
+    nt.addEventListener("input", function () { a.note = nt.value; touched[it.id] = true; persist(it.id); renderSend(root); });
     root.appendChild(nt);
   }
 
@@ -392,6 +405,7 @@ textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px
       dbRef = db;
       return db.doc("submissions/r" + ROUND).get().then(function (snap) {
         var d = snap.exists ? snap.data() : null;
+        var submittedAt = d && d.submittedAt ? d.submittedAt : "";
         if (d && d.answers) {
           savedRound = true;
           Object.keys(d.answers).forEach(function (id) {
@@ -400,8 +414,16 @@ textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px
             if ("done" in s) { a.done = !!s.done; a.note = s.note || ""; } else { a.choice = s.choice; a.other = s.other || ""; a.note = s.note || ""; }
           });
         }
-        renderAll();
-      });
+        // 送る前に閉じたときの書きかけ。同じ回で、送った答えより新しいものだけ重ねる
+        return Promise.all(S.items.filter(function (it) { return it.state === "waiting" || it.state === "tentative"; }).map(function (it) {
+          return db.doc("drafts/" + it.id).get().then(function (ds) {
+            var x = ds.exists ? ds.data() : null, a = answers[it.id];
+            if (!x || x.round !== ROUND || touched[it.id]) return;
+            if (submittedAt && !(x.updatedAt > submittedAt)) return;
+            a.choice = x.choice || null; a.other = x.other || ""; a.note = x.note || ""; a.done = !!x.done;
+          }).catch(function () {});
+        }));
+      }).then(function () { renderAll(); });
     }).catch(function () {});
   }
 })();

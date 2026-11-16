@@ -73,6 +73,8 @@ test('図と見本のscript・on*属性・javascript:を止める', () => {
   assert.ok(bad('<svg><script>1</script></svg>').length > 0);
   assert.ok(bad('<svg onload="x()"></svg>').length > 0);
   assert.ok(bad('<a href="javascript:x()">a</a>').length > 0);
+  assert.ok(bad('<svg/onload=alert(1)>').length > 0);
+  assert.ok(bad('<svg><animate attributeName="x"/></svg>').length > 0);
   assert.deepEqual(bad('<svg viewBox="0 0 1 1"><rect/></svg>'), []);
   const mock = validateState({ title: 't', items: [question({ options: [{ key: 'A', title: 'a', pros: 'p', cons: 'c', mock: '<img onerror=x>' }, { key: 'B', title: 'b', pros: 'p', cons: 'c' }] })] });
   assert.ok(mock.some((e) => e.includes('mock')));
@@ -82,6 +84,18 @@ test('作業にはbodyかstepsが要る', () => {
   const task = { id: 't1', type: 'task', state: 'waiting', label: '見る' };
   assert.ok(validateState({ title: 't', items: [task] }).length > 0);
   assert.deepEqual(validateState({ title: 't', items: [{ ...task, steps: ['開く'] }] }), []);
+});
+
+test('stepsとpanelsの形の誤りは、例外でなく誤りとして返す', () => {
+  const task = { id: 't1', type: 'task', state: 'waiting', label: '見る', body: '確認する' };
+  assert.ok(validateState({ title: 't', items: [{ ...task, steps: '画面を開く' }] }).some((e) => e.includes('steps')));
+  assert.ok(validateState({ title: 't', items: [{ ...task, steps: [1] }] }).some((e) => e.includes('steps')));
+  assert.ok(validateState({ title: 't', items: [question({ panels: { title: 'p' } })] }).some((e) => e.includes('panels')));
+});
+
+test('選択肢の無い決定済みの問いは通る', () => {
+  const decided = { id: 'd', type: 'question', state: 'decided', label: 'x', decision: { choice: 'A' } };
+  assert.deepEqual(validateState({ title: 't', items: [decided] }), []);
 });
 
 test('埋め込むJSONは</script>で閉じられない', () => {

@@ -27,7 +27,7 @@ export class UsageError extends Error {}
 export class FormError extends Error {}
 
 const ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const UNSAFE_RE = /<\s*script|<\s*iframe|<\s*object|<\s*embed|\son[a-z]+\s*=|javascript:/i;
+const UNSAFE_RE = /<\s*(?:script|iframe|object|embed|foreignobject|animate|set)\b|(?:^|[^a-z0-9])on[a-z]+\s*=|javascript:/i;
 
 function isText(v) {
   return typeof v === 'string' && v.trim() !== '';
@@ -93,15 +93,19 @@ export function validateState(state) {
     if (it.facts != null && !(Array.isArray(it.facts) && it.facts.every(isText))) errors.push(`${where}: factsは文字列の配列`);
     if (it.evidence != null && !(Array.isArray(it.evidence) && it.evidence.every(isText))) errors.push(`${where}: evidenceは文字列の配列`);
 
-    for (const [j, p] of (it.panels ?? []).entries()) {
-      const w = `${where} 図${j + 1}`;
-      if (!isText(p?.title)) errors.push(`${w}: titleが無い`);
-      if (!isText(p?.body) && !isText(p?.figure)) errors.push(`${w}: bodyかfigureのどちらかは要る`);
-      if (p?.figure != null) checkRich(p.figure, `${w} figure`, errors);
+    if (it.panels != null && !Array.isArray(it.panels)) errors.push(`${where}: panelsは配列`);
+    else {
+      for (const [j, p] of (it.panels ?? []).entries()) {
+        const w = `${where} 図${j + 1}`;
+        if (!isText(p?.title)) errors.push(`${w}: titleが無い`);
+        if (!isText(p?.body) && !isText(p?.figure)) errors.push(`${w}: bodyかfigureのどちらかは要る`);
+        if (p?.figure != null) checkRich(p.figure, `${w} figure`, errors);
+      }
     }
 
     if (it.type === 'task') {
-      if (!isText(it.body) && !(Array.isArray(it.steps) && it.steps.length)) errors.push(`${where}: 作業にはbodyかstepsが要る`);
+      if (it.steps != null && !(Array.isArray(it.steps) && it.steps.every(isText))) errors.push(`${where}: stepsは文字列の配列`);
+      else if (!isText(it.body) && !(Array.isArray(it.steps) && it.steps.length)) errors.push(`${where}: 作業にはbodyかstepsが要る`);
     } else if (it.type === 'question') {
       if (it.state === 'decided') {
         if (!isText(it.decision?.choice)) errors.push(`${where}: 決定済みにはdecision.choiceが要る`);

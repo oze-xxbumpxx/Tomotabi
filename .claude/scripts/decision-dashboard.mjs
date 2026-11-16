@@ -56,6 +56,7 @@ function checkOptions(item, where, errors) {
     if (!isText(o?.title)) errors.push(`${w}: titleが無い`);
     if (!isText(o?.pros)) errors.push(`${w}: 利点（pros）が無い`);
     if (!isText(o?.cons)) errors.push(`${w}: 欠点（cons）が無い`);
+    for (const f of ['summary', 'verify', 'scope']) if (o?.[f] != null && !isText(o[f])) errors.push(`${w}: ${f}は文字列で書く`);
     if (o?.mock != null) checkRich(o.mock, `${w} mock`, errors);
   }
   const open = item.state === 'waiting' || item.state === 'tentative';
@@ -112,7 +113,7 @@ export function validateState(state) {
         if (it.options != null) checkOptions(it, where, errors);
       } else {
         checkOptions(it, where, errors);
-        if (it.state === 'waiting' && !isText(it.kind)) errors.push(`${where}: 回答待ちにはkind（画面 / アプリの決まり / API / 設計 / 実装 / 改善）が要る`);
+        if (it.state === 'waiting' && !isText(it.kind)) errors.push(`${where}: 回答待ちにはkind（画面 / アプリの決まり / API / 設計 / 実装 / 改善 / 不具合）が要る`);
       }
     }
   }

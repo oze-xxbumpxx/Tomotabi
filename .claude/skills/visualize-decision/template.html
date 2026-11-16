@@ -72,7 +72,7 @@ code{font-family:var(--font-mono);font-size:.86em;background:var(--accent-soft);
 .tag[data-kind="アプリの決まり"]{background:var(--ok-soft);color:var(--ok);border-color:transparent}
 .tag[data-kind="API"]{background:var(--wait-soft);color:var(--wait);border-color:transparent}
 .tag[data-kind="設計"],.tag[data-kind="実装"]{background:var(--skip-soft);color:var(--fg);border-color:transparent}
-.tag[data-kind="改善"]{background:var(--danger-soft);color:var(--danger);border-color:transparent}
+.tag[data-kind="改善"],.tag[data-kind="不具合"]{background:var(--danger-soft);color:var(--danger);border-color:transparent}
 .q{font-size:26px;font-weight:900}
 .lead{font-size:15.5px}
 .facts{background:var(--soft);border-radius:12px;padding:12px 18px;margin:0;list-style:disc;display:grid;gap:4px;font-size:14px}
@@ -93,6 +93,8 @@ code{font-family:var(--font-mono);font-size:.86em;background:var(--accent-soft);
 .pc span::before{font-weight:700;margin-right:6px}
 .pc .pro::before{content:"利点";color:var(--ok)}
 .pc .con::before{content:"欠点";color:var(--danger)}
+.pc .verify::before{content:"確かめ方";color:var(--muted)}
+.pc .scope::before{content:"影響範囲";color:var(--muted)}
 .other{display:grid;gap:6px}
 textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--bg);color:var(--fg);resize:vertical;min-height:44px}
 .recbox{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:10px 14px;font-size:14px}
@@ -277,6 +279,8 @@ textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;border:1px
       var pc = el("div", "pc");
       if (o.pros) pc.appendChild(el("span", "pro", o.pros));
       if (o.cons) pc.appendChild(el("span", "con", o.cons));
+      if (o.verify) pc.appendChild(el("span", "verify", o.verify));
+      if (o.scope) pc.appendChild(el("span", "scope", o.scope));
       lab.appendChild(pc);
       opts.appendChild(lab);
     });

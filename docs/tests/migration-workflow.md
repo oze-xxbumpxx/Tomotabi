@@ -55,10 +55,12 @@ apiとwebのコードは変えないので、アプリの単体の試験とE2E�
 | MW-27 | 権限は読むだけ                            | `permissions`は`contents: read`だけ                                                                                                |
 | MW-28 | 入力をシェルに直接埋め込まない            | `run`の中に`${{ inputs.`と`${{ github.event.inputs.`が無い（環境変数で渡す）                                                       |
 | MW-29 | スクリプトはワークフロー側の版            | planとapplyの両方が、`github.sha`の`.github/scripts/`を別の場所に取り出して使う（一覧は`plan-migrations.mjs`、時刻は`read-last-migration-time.mjs`） |
-| MW-30 | 流したあとの報告は失敗しても動く（E-04）  | 流したmigrationの名前を書く手順に`if: always()`がある。流す手順に`continue-on-error`が無い                                         |
+| MW-30 | 流したあとの報告は流す前の時刻まで進んだときだけ動く（E-04） | 流したmigrationの名前を書く手順は、流す前の時刻を読む手順が成功したときだけ動く（`always() && steps.before.outcome == 'success'`）。流す手順が失敗しても動く。流す手順に`continue-on-error`が無い |
 | MW-31 | デプロイのワークフローは変えない（F-02）  | `deploy-vercel.yml`・`deploy-integration.yml`・`deploy-production.yml`に、`db:migrate`と`MIGRATION_DATABASE_URL`が無い             |
 | MW-32 | 失敗したときの報告（E-04）                | 報告の手順の`run`をbashで動かし、偽の時刻読み取りと`MIGRATE_OUTCOME`の組み合わせで、流す前後の時刻が同じで流す手順が失敗していたら「何も流れていません。流す前の状態のままです」、成功なら「流すものはありませんでした」と出ることを確かめる |
 | MW-33 | 秘密の確認で接続先を伏せる                | applyの`Verify MIGRATION_DATABASE_URL is set`の手順の中に`::add-mask::`の登録があり、`Apply migrations`より前にある。値を`echo`の引数に置かない |
+| MW-38 | 秘密が無いときEnvironmentの名前を出して止める（E-02） | applyの`Verify MIGRATION_DATABASE_URL is set`の手順を`bash -e`で動かし、`MIGRATION_DATABASE_URL`を空にする | 終了コード1。`MIGRATION_DATABASE_URL`とEnvironmentの名前が出る。DBへはつながない |
+| MW-39 | 本番だけバックアップの確かめを出す（F-07） | `migrate-integration.yml`・`migrate-production.yml`・`migrate-db.yml`を読む | 本番だけが`backup_reminder: true`を渡し、検証用は渡さない。`migrate-db.yml`は入力を`--backup-reminder`に変える |
 
 ### 時刻を読むスクリプト（`read-last-migration-time.mjs`）
 
@@ -117,6 +119,6 @@ MW-44は、試しのワークフローをブランチに置く必要がある。
 
 ## 完了条件
 
-- MW-01〜MW-37が`npm run test:harness`で通る。
+- MW-01〜MW-39が`npm run test:harness`で通る。
 - MW-40〜MW-47を検証用で確かめ、結果をPRか公開の記録に書く。
 - `npm run lint` / `npm run type-check` / `npm test` / `npm run build`が通る（アプリのコードは変えないので、通ったままであること）。

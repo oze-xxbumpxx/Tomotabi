@@ -196,7 +196,7 @@ jobs:
       # drizzle-kit migrateは、流すmigrationを1つのトランザクションにまとめる。
       # 途中で失敗すると全部が巻き戻るので、流す前とあとの時刻が同じなら「何も流れていない」と出す。
       - name: Report applied migrations
-        if: always()
+        if: ${{ always() && steps.before.outcome == 'success' }}
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           BEFORE: ${{ steps.before.outputs.before }}

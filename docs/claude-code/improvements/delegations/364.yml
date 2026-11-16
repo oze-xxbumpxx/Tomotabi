@@ -33,7 +33,28 @@ reviews:
       - severity: 'nit'
         category: 'doc-accuracy'
         summary: 'PRの説明と試験のコメントの文章の小さな誤り'
-escalations: 1
+  - round: 1
+    reviewed_at: '2026-11-16T12:36:10Z'
+    reviewed_sha: '977c191b3849f256b25e07853239bc113d7ac57d'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '時刻を読むスクリプトに、接続後の切断のerrorリスナーが無い'
+      - severity: 'nit'
+        category: 'logging-gap'
+        summary: '秘密を伏せる登録の書き方の穴（%エンコード・改行・大文字ホスト）'
+      - severity: 'nit'
+        category: 'test-robustness'
+        summary: 'MW-32の試験をbash -eで動かしていない'
+      - severity: 'nit'
+        category: 'error-feedback'
+        summary: 'pgが見つからないときも「DBにつながりませんでした」と出る'
+escalations: 2
 outcome: null
 gh: null
 task_key: 'migration-workflow:workflow'

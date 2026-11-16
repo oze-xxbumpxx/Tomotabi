@@ -46,6 +46,20 @@
         ".claude/state/discussion-preview"
       ],
       "port": 8766
+    },
+    {
+      "name": "decision-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8767",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        ".claude/state/decision-preview"
+      ],
+      "port": 8767
     }
   ]
 }

@@ -245,7 +245,8 @@ migrationを流したあとは、deploy-integrationで出す。デプロイの�
 | planが「一覧を出せません」 | 変数`MIGRATE_API_ORIGIN_INTEGRATION`が無い・apiが落ちている | 変数を確かめる。承認して進んでも、流していないものだけは流れる |
 | planが「1本も流れていません」 | DBにmigrationが無い（最初の構築） | ボタンでは扱わない。2章の手順で端末から行う |
 | applyのVerify MIGRATION_DATABASE_URL is set | Environmentに秘密が無い | 上の節で秘密を登録して押し直す |
-| applyのApply migrations | SQLの失敗・DBにつながらない | 実行のまとめに「何も流れていません。流す前の状態のままです」と出る。migrationは全部巻き戻るので、直したmigrationをマージして押し直す |
+| applyのRead last applied migration time (before) | DBにつながらない、または秘密の値の誤り | ログに「DBにつながりませんでした」と出る。Environmentの秘密を確かめて入れ直し、押し直す |
+| applyのApply migrations | SQLの失敗 | 実行のまとめに「何も流れていません。流す前の状態のままです」と出る。migrationは全部巻き戻るので、直したmigrationをマージして押し直す |
 | 承認が来ない | Required reviewersが自分でない | Environmentの保護を確かめる |
 
 ### migratorのパスワードを替えたとき

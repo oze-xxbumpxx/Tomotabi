@@ -6,11 +6,12 @@
 
 ## 試験種別
 
-| 種別                 | 置き場                                    | 実行                        |
-| -------------------- | ----------------------------------------- | --------------------------- |
-| 一覧を作るスクリプト | `.claude/tests/plan-migrations.test.mjs`  | `npm run test:harness`      |
-| ワークフローの形     | `.claude/tests/migrate-workflow.test.mjs` | `npm run test:harness`      |
-| 検証用での手の確かめ | GitHubの画面                              | ユーザーとClaude Codeが行う |
+| 種別                 | 置き場                                       | 実行                   |
+| -------------------- | -------------------------------------------- | ---------------------- |
+| 一覧を作るスクリプト | `.claude/tests/plan-migrations.test.mjs`     | `npm run test:harness` |
+| 時刻を読むスクリプト | `.claude/tests/read-last-migration-time.test.mjs` | `npm run test:harness` |
+| ワークフローの形     | `.claude/tests/migrate-workflow.test.mjs`    | `npm run test:harness` |
+| 検証用での手の確かめ | GitHubの画面                                 | ユーザーとClaude Codeが行う |
 
 apiとwebのコードは変えないので、アプリの単体の試験とE2Eは足さない。
 
@@ -53,10 +54,21 @@ apiとwebのコードは変えないので、アプリの単体の試験とE2E�
 | MW-26 | 同時に動かない（F-09）                    | 2つのボタンに、環境ごとの`concurrency`の組があり、`cancel-in-progress: false`                                                      |
 | MW-27 | 権限は読むだけ                            | `permissions`は`contents: read`だけ                                                                                                |
 | MW-28 | 入力をシェルに直接埋め込まない            | `run`の中に`${{ inputs.`と`${{ github.event.inputs.`が無い（環境変数で渡す）                                                       |
-| MW-29 | スクリプトはワークフロー側の版            | planが、`github.sha`の`.github/scripts/`を別の場所に取り出して使う                                                                 |
+| MW-29 | スクリプトはワークフロー側の版            | planとapplyの両方が、`github.sha`の`.github/scripts/`を別の場所に取り出して使う（一覧は`plan-migrations.mjs`、時刻は`read-last-migration-time.mjs`） |
 | MW-30 | 流したあとの報告は失敗しても動く（E-04）  | 流したmigrationの名前を書く手順に`if: always()`がある。流す手順に`continue-on-error`が無い                                         |
 | MW-31 | デプロイのワークフローは変えない（F-02）  | `deploy-vercel.yml`・`deploy-integration.yml`・`deploy-production.yml`に、`db:migrate`と`MIGRATION_DATABASE_URL`が無い             |
-| MW-32 | 失敗したときの報告（E-04）                | 流したあとの報告の手順が、流す前後の時刻が同じで、流す手順が失敗していたら「何も流れていません。流す前の状態のままです」と書く     |
+| MW-32 | 失敗したときの報告（E-04）                | 報告の手順の`run`をbashで動かし、偽の時刻読み取りと`MIGRATE_OUTCOME`の組み合わせで、流す前後の時刻が同じで流す手順が失敗していたら「何も流れていません。流す前の状態のままです」、成功なら「流すものはありませんでした」と出ることを確かめる |
+| MW-33 | 秘密の確認で接続先を伏せる                | applyの`Verify MIGRATION_DATABASE_URL is set`の手順の中に`::add-mask::`の登録があり、`Apply migrations`より前にある。値を`echo`の引数に置かない |
+
+### 時刻を読むスクリプト（`read-last-migration-time.mjs`）
+
+`connect`を差し替えて試す。本物のDBにはつながない。
+
+| #     | 観点                              | 前提                                | 期待結果                                                                 | 分類 |
+| ----- | --------------------------------- | ----------------------------------- | ------------------------------------------------------------------------ | ---- |
+| MW-34 | 数だけを出す                      | `MIGRATION_DATABASE_URL`あり        | `drizzle.__drizzle_migrations`の`max(created_at)`を標準出力に1行で出し、終了コード0 | 正常 |
+| MW-35 | 失敗しても元のエラーを出さない    | `connect`または`query`が接続先入りのエラーを投げる | 「DBにつながりませんでした」だけを出し、終了コード1。ホスト名・ユーザー名・パスワード・元のエラーの文字列が出ない | 異常 |
+| MW-36 | 環境変数が無い                     | `MIGRATION_DATABASE_URL`が無い・空  | 接続せず終了コード1                                                      | 異常 |
 
 ## 結合試験観点（検証用での手の確かめ）
 
@@ -90,6 +102,7 @@ MW-44は、試しのワークフローをブランチに置く必要がある。
 | `plan-migrations.mjs` | `planMigrations(journal, answer)` | MW-01〜MW-06、MW-11        |
 | `plan-migrations.mjs` | `main(argv, deps)`                | MW-07〜MW-10、MW-12〜MW-16 |
 | `plan-migrations.mjs` | まとめの文を作る関数              | MW-01、MW-03、MW-07、MW-14 |
+| `read-last-migration-time.mjs` | `main(deps)`              | MW-34〜MW-36               |
 
 ## 回帰試験範囲
 
@@ -103,6 +116,6 @@ MW-44は、試しのワークフローをブランチに置く必要がある。
 
 ## 完了条件
 
-- MW-01〜MW-32が`npm run test:harness`で通る。
+- MW-01〜MW-36が`npm run test:harness`で通る。
 - MW-40〜MW-47を検証用で確かめ、結果をPRか公開の記録に書く。
 - `npm run lint` / `npm run type-check` / `npm test` / `npm run build`が通る（アプリのコードは変えないので、通ったままであること）。

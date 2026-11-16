@@ -32,8 +32,8 @@ on:
         default: false
     secrets:
       MIGRATION_DATABASE_URL:
-        description: "migratorの直接の接続。applyのジョブのEnvironmentの秘密が使われる"
-        required: true
+        description: "migratorの直接の接続。applyのジョブのEnvironmentの秘密が使われる。呼ぶ側の値は使わない"
+        required: false
 
 permissions:
   contents: read
@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 5
     # Environmentを付けない。一覧を作るこのジョブは秘密を読まない。
     # GitHubは承認が必須のEnvironmentの秘密を承認までジョブに渡さないため、
-    # 承認の前に動くplanは、呼ばれた側でもEnvironmentを持たない形にする（設計書 migration-workflow）。
+    # 承認の前に動くplanは、呼ばれた側でもEnvironmentを持たない形にする（設計書migration-workflow）。
     outputs:
       state: ${{ steps.plan.outputs.state }}
       count: ${{ steps.plan.outputs.count }}
@@ -122,6 +122,25 @@ jobs:
             echo "secrets.MIGRATION_DATABASE_URL is not set in Environment ${ENVIRONMENT_NAME}. Aborting." >&2
             exit 1
           fi
+          # ログに接続先が出ないよう、ホスト・ユーザー・パスワードを伏せる登録をする。
+          # 値はコマンドの引数に置かず、スクリプトが標準出力に直接書く（トレースは使わない）。
+          MIGRATION_DATABASE_URL="$MIGRATION_DATABASE_URL" python3 - <<'PY'
+          import os
+          import sys
+          import urllib.parse
+
+          try:
+              parts = urllib.parse.urlsplit(os.environ['MIGRATION_DATABASE_URL'])
+          except ValueError:
+              sys.exit(0)
+          masks = []
+          for raw in (parts.hostname or '', parts.username or '', parts.password or ''):
+              for value in (raw, urllib.parse.unquote(raw)):
+                  if value and value not in masks:
+                      masks.append(value)
+          for value in masks:
+              sys.stdout.write(f'::add-mask::{value}\n')
+          PY
       - name: Verify sha input shape
         env:
           SHA: ${{ needs.plan.outputs.sha }}
@@ -149,14 +168,25 @@ jobs:
           cache: npm
       # 秘密は使う手順のenvにだけ置く。ジョブのenvとnpm ciには置かない。
       # npm ciは依存パッケージのinstallスクリプトを動かすので、ここに秘密があると
-      # 乗っ取られた依存がmigratorの接続を読める（設計書 migration-workflow）。
+      # 乗っ取られた依存がmigratorの接続を読める（設計書migration-workflow）。
       - run: npm ci
+      # 時刻を読むスクリプトは、planと同じくワークフローを動かした版（github.sha）から取り出す。
+      # 流すcommitの作業ツリーに置くと、この機能より前のcommitへ戻すときにスクリプトが無く止まるため。
+      # pgはこのあとnpm ciした作業ツリーのnode_modulesから解決する。
+      - name: Checkout migration tooling from the workflow ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: .workflow
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Read last applied migration time (before)
         id: before
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
         run: |
-          BEFORE="$(psql "$MIGRATION_DATABASE_URL" -At -c 'select coalesce(max(created_at), 0) from drizzle.__drizzle_migrations')"
+          BEFORE="$(node .workflow/.github/scripts/read-last-migration-time.mjs)"
           echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
       - name: Apply migrations
         id: migrate
@@ -176,7 +206,7 @@ jobs:
         run: |
           AFTER=""
           if [ -n "${MIGRATION_DATABASE_URL:-}" ]; then
-            AFTER="$(psql "$MIGRATION_DATABASE_URL" -At -c 'select coalesce(max(created_at), 0) from drizzle.__drizzle_migrations' 2>/dev/null || true)"
+            AFTER="$(node .workflow/.github/scripts/read-last-migration-time.mjs || true)"
           fi
           NAMES=""
           if [ -n "$BEFORE" ] && [ -n "$AFTER" ] && [ "$BEFORE" != "$AFTER" ]; then

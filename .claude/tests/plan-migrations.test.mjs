@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { planMigrations, main } from '../../.github/scripts/plan-migrations.mjs';
 
-// 一覧を作るスクリプトの試験（docs/tests/migration-workflow.md のMW-01〜17）。
+// 一覧を作るスクリプトの試験（docs/tests/migration-workflow.mdのMW-01〜17）。
 const W10 = 1791384966637;
 const W11 = 1794122827791;
 const W12 = 1794122838776;
@@ -19,7 +19,7 @@ const journal = () => ({
 });
 const ok = (lastAppliedAt) => ({ status: 200, body: JSON.stringify({ lastAppliedAt }) });
 
-// planMigrations の判定（MW-01〜06、MW-11）。
+// planMigrationsの判定（MW-01〜06、MW-11）。
 test('MW-01: 全部流し済みならnoneで、まとめに「流すものはありません」', async () => {
   const plan = planMigrations(journal(), ok(W12));
   assert.equal(plan.state, 'none');
@@ -104,7 +104,7 @@ test('MW-11: DBに1本も流していなければ止める（B-02）', async () 
   }
 });
 
-// main は外とのやりとりを差し替えて試す。
+// mainは外とのやりとりを差し替えて試す。
 function deps({ response, journalText, summaryPath = null, outputPath = null } = {}) {
   const calls = [];
   const lines = [];
@@ -221,16 +221,28 @@ test('MW-14: --backup-reminderつきなら確かめの文と手順書の場所�
 });
 
 test('MW-15: 聞く先は口のURLで、10秒の打ち切りつきで1回だけ呼び、まとめにホスト名を出す', async () => {
-  await withSummary(async (summaryPath) => {
-    for (const origin of ['https://api.example.test', 'https://api.example.test/']) {
-      const d = deps({ response: ok(W12), summaryPath });
-      await main([origin, 'j'], d.options);
-      assert.equal(d.calls.length, 1, origin);
-      assert.equal(d.calls[0].url, 'https://api.example.test/api/health/migrations');
-      assert.ok(d.calls[0].init.signal instanceof AbortSignal);
-    }
-    assert.match(await readFile(summaryPath, 'utf8'), /api\.example\.test/);
-  });
+  // AbortSignal.timeoutに渡す時間を記録して、打ち切りが10秒であることを確かめる。
+  const original = AbortSignal.timeout;
+  const timeouts = [];
+  AbortSignal.timeout = (ms) => {
+    timeouts.push(ms);
+    return original.call(AbortSignal, ms);
+  };
+  try {
+    await withSummary(async (summaryPath) => {
+      for (const origin of ['https://api.example.test', 'https://api.example.test/']) {
+        const d = deps({ response: ok(W12), summaryPath });
+        await main([origin, 'j'], d.options);
+        assert.equal(d.calls.length, 1, origin);
+        assert.equal(d.calls[0].url, 'https://api.example.test/api/health/migrations');
+        assert.ok(d.calls[0].init.signal instanceof AbortSignal);
+      }
+      assert.match(await readFile(summaryPath, 'utf8'), /api\.example\.test/);
+    });
+  } finally {
+    AbortSignal.timeout = original;
+  }
+  assert.deepEqual(timeouts, [10_000, 10_000]);
 });
 
 test('MW-16: 引数なしなら使い方を出して1', async () => {

@@ -1,8 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-// ワークフローの形の試験（docs/tests/migration-workflow.md のMW-20〜32）。
+// ワークフローの形の試験（docs/tests/migration-workflow.mdのMW-20〜33）。
 // ファイルを読んで、planにEnvironmentが無いこと・秘密を読むのがapplyだけであること等を確かめる。
 const read = (name) => readFileSync(new URL(`../../.github/workflows/${name}`, import.meta.url), 'utf8');
 const onBlockOf = (text) => text.match(/^on:\n([\s\S]*?)(?=\n\S)/m)[1];
@@ -71,6 +75,11 @@ test('MW-21: 環境の取り違えが無い（B-03）。本番はバックアッ
   }
   assert.doesNotMatch(read('migrate-integration.yml'), /backup_reminder/);
   assert.match(read('migrate-production.yml'), /backup_reminder: true/);
+  // 呼ばれる側の秘密はrequired:false。呼ぶ側はEnvironmentを持たずリポジトリの秘密も置かない運用なので、
+  // 空を渡しても起動できるようにする。値はapplyのジョブのenvironmentが解決する。
+  const secretDecl = shared.match(/MIGRATION_DATABASE_URL:\n\s+description: "[^"]*"\n\s+required: (true|false)/);
+  assert.equal(secretDecl?.[1], 'false');
+  assert.match(shared, /呼ぶ側の値は使わない/);
 });
 
 test('MW-22: planはEnvironmentを持たず、秘密を読まない', () => {
@@ -149,11 +158,17 @@ test('MW-28: runの中に${{ inputs.…}}を直接書かない（環境変数で
   }
 });
 
-test('MW-29: 一覧を作るスクリプトはワークフロー側の版（github.sha）から取り出す', () => {
-  const tooling = stepBlock(planJob, 'Checkout migration tooling from the workflow ref');
-  assert.match(tooling, /ref: \$\{\{ github\.sha \}\}/);
-  assert.match(tooling, /path: \.workflow\n/);
-  assert.match(tooling, /sparse-checkout: \.github\/scripts\n/);
+test('MW-29: スクリプトはワークフロー側の版（github.sha）から取り出す', () => {
+  for (const [job, script] of [
+    [planJob, 'plan-migrations.mjs'],
+    [applyJob, 'read-last-migration-time.mjs'],
+  ]) {
+    const tooling = stepBlock(job, 'Checkout migration tooling from the workflow ref');
+    assert.match(tooling, /ref: \$\{\{ github\.sha \}\}/);
+    assert.match(tooling, /path: \.workflow\n/);
+    assert.match(tooling, /sparse-checkout: \.github\/scripts\n/);
+    assert.match(job, new RegExp(`node \\.workflow\\/.github/scripts/${script.replace('.', '\\.')}`));
+  }
   const plan = stepBlock(planJob, 'Plan migrations');
   assert.match(plan, /node \.workflow\/\.github\/scripts\/plan-migrations\.mjs "\$API_ORIGIN" apps\/api\/drizzle\/meta\/_journal\.json/);
 });
@@ -172,10 +187,109 @@ test('MW-31: デプロイのワークフローは変えない（F-02）', () => 
   }
 });
 
-test('MW-32: 失敗したときの報告。流す前後の時刻が同じで流す手順が失敗なら「何も流れていません」と書く（E-04）', () => {
-  const report = stepBlock(applyJob, 'Report applied migrations');
-  assert.match(report, /何も流れていません。流す前の状態のままです/);
-  assert.match(report, /\[ "\$BEFORE" = "\$AFTER" \]/);
-  assert.match(report, /MIGRATE_OUTCOME/);
-  assert.match(report, /流すものはありませんでした/);
+// `run: |`の中身を、字下げをそろえて取り出す。手順をbashで動かす試験に使う。
+const runBody = (step) => {
+  const lines = step.split('\n');
+  const i = lines.findIndex((line) => /^ {8}run: \|/.test(line));
+  assert.ok(i > -1, 'run: |がある');
+  const body = [];
+  for (let j = i + 1; j < lines.length; j++) {
+    const line = lines[j];
+    if (line.trim() === '') {
+      body.push('');
+      continue;
+    }
+    if (!/^ {10}/.test(line)) break;
+    body.push(line.slice(10));
+  }
+  return `${body.join('\n')}\n`;
+};
+
+const W10 = 1791384966637;
+const W11 = 1794122827791;
+const W12 = 1794122838776;
+const journalJson = JSON.stringify({
+  entries: [
+    { idx: 10, when: W10, tag: '0010_notification_grants' },
+    { idx: 11, when: W11, tag: '0011_planning_todos' },
+    { idx: 12, when: W12, tag: '0012_planning_todos_grants' },
+  ],
+});
+
+// 報告の手順のrunを、偽の時刻読み取りと_journal.jsonを置いた一時のディレクトリでbashに動かす。
+const runReportStep = async ({ before, after, outcome, readFails = false }) => {
+  const dir = await mkdtemp(join(tmpdir(), 'mw32-'));
+  try {
+    const scriptDir = join(dir, '.workflow/.github/scripts');
+    await mkdir(scriptDir, { recursive: true });
+    await mkdir(join(dir, 'apps/api/drizzle/meta'), { recursive: true });
+    await writeFile(join(scriptDir, 'read-last-migration-time.mjs'), fakeReader);
+    await writeFile(join(dir, 'apps/api/drizzle/meta/_journal.json'), journalJson);
+    const summaryPath = join(dir, 'summary.md');
+    const report = stepBlock(applyJob, 'Report applied migrations');
+    await writeFile(join(dir, 'report.sh'), runBody(report));
+    execFileSync('bash', ['report.sh'], {
+      cwd: dir,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        MIGRATION_DATABASE_URL: 'postgres://u:p@h/db',
+        BEFORE: before,
+        MIGRATE_OUTCOME: outcome,
+        ENVIRONMENT_NAME: 'migrate-integration',
+        TARGET_SHA: 'a'.repeat(40),
+        GITHUB_STEP_SUMMARY: summaryPath,
+        FAKE_AFTER: after,
+        FAKE_FAIL: readFails ? '1' : '0',
+      },
+    });
+    return await readFile(summaryPath, 'utf8');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+};
+
+// 偽の時刻読み取り。新しい読み方（node .workflow/.github/scripts/read-last-migration-time.mjs）に合わせる。
+const fakeReader = `if (process.env.FAKE_FAIL === '1') {
+  process.stderr.write('DBにつながりませんでした\\n');
+  process.exit(1);
+}
+process.stdout.write(\`\${process.env.FAKE_AFTER}\\n\`);
+`;
+
+test('MW-32: 失敗したときの報告。流す前後の時刻が同じで流す手順が失敗なら「何も流れていません」と書く（E-04）', async () => {
+  // 報告の手順のrunを実際にbashで動かし、出た文を比べる（文の有無だけでなく、outcomeごとの出し分けを見る）。
+  const same = String(W12);
+  const okSummary = await runReportStep({ before: same, after: same, outcome: 'success' });
+  assert.match(okSummary, /流すものはありませんでした/);
+  assert.doesNotMatch(okSummary, /何も流れていません/);
+
+  const failedSummary = await runReportStep({ before: same, after: same, outcome: 'failure' });
+  assert.match(failedSummary, /何も流れていません。流す前の状態のままです/);
+  assert.doesNotMatch(failedSummary, /流すものはありませんでした/);
+
+  // 時刻が違えば、間のmigrationの名前を流す順に出す。
+  const namesSummary = await runReportStep({ before: String(W11), after: same, outcome: 'success' });
+  assert.match(namesSummary, /0012_planning_todos_grants/);
+  assert.doesNotMatch(namesSummary, /0011_planning_todos/);
+
+  // あとの時刻が読めなくても、手順は動き「読めませんでした」と出す。
+  const unreadable = await runReportStep({ before: same, after: '', outcome: 'failure', readFails: true });
+  assert.match(unreadable, /流したあとの最後のmigrationの時刻: （読めませんでした）/);
+});
+
+test('MW-33: 秘密の確認の手順で接続先を伏せ、流す手順より前にある', () => {
+  const verify = stepBlock(applyJob, 'Verify MIGRATION_DATABASE_URL is set');
+  assert.match(verify, /::add-mask::/);
+  assert.match(verify, /parts\.hostname/);
+  assert.match(verify, /parts\.username/);
+  assert.match(verify, /parts\.password/);
+  assert.match(verify, /unquote/);
+  // 値が空のときは登録しない。
+  assert.match(verify, /if value/);
+  // 値をechoの引数に置かない（標準出力に直接書く）。
+  assert.doesNotMatch(verify, /echo[^\n]*add-mask/);
+  const posVerify = applyJob.indexOf('- name: Verify MIGRATION_DATABASE_URL is set');
+  const posMigrate = applyJob.indexOf('- name: Apply migrations');
+  assert.ok(posVerify > -1 && posMigrate > posVerify, '秘密の確認が流す手順より前にある');
 });

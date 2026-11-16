@@ -5,7 +5,22 @@ model: 'swe-2-flash-medium'
 runner: 'local'
 change_level: 1
 delegated_at: '2026-11-15T22:59:40Z'
-reviews: []
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-16T23:14:06Z'
+    reviewed_sha: 'b8ecf0e1a67fe0e902407d9ef84c67b8845cc6e4'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'doc-accuracy'
+        summary: '試験計画の表でMW-38とMW-39の行だけ列が4つあり、期待結果が表示されない'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: '試験の置き場所の説明が実際と違う'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: '特性観点の文が古い'
 escalations: 0
 outcome: null
 gh: null

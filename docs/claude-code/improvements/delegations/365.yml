@@ -21,6 +21,12 @@ reviews:
       - severity: 'nit'
         category: 'doc-accuracy'
         summary: '特性観点の文が古い'
+  - round: 1
+    reviewed_at: '2026-11-16T23:18:32Z'
+    reviewed_sha: '95665b88c819260082d31cddf63d27fa79bde2ad'
+    verdict: 'merge'
+    posted: false
+    findings: []
 escalations: 0
 outcome: null
 gh: null

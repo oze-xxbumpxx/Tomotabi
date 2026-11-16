@@ -15,6 +15,7 @@ Claude CodeとDevinは、このリポジトリの同じルール・成果物を�
 
 - 作業分担、変更レベル分類、日次ログ、危険操作ガード、実在する品質コマンド、ハーネス試験（日常は`bash .claude/scripts/run-quality-gates.sh`。全件は`node --test .claude/tests/*.test.mjs`）。
 - 機能の進め方は`develop-feature`スキル。畳んだあとに正しいスキルへ届くかの確認一覧は`.claude/evals/folded-loop-checklist.md`。
+- 設計案・実装方針・改善要望など、ユーザーに選んでもらう検討を図と見本つきのダッシュボードで見せるときは`visualize-decision`スキル（L2 / L3の要件・設計の問いは`ask-questions`が先）。
 
 **休眠（アプリのL2 / L3が複数回回るまで必須にしない）**
 

@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// ワークフローの形の試験（docs/tests/migration-workflow.mdのMW-20〜33）。
+// ワークフローの形の試験（docs/tests/migration-workflow.mdのMW-20〜33・MW-38・MW-39）。
 // ファイルを読んで、planにEnvironmentが無いこと・秘密を読むのがapplyだけであること等を確かめる。
 const read = (name) => readFileSync(new URL(`../../.github/workflows/${name}`, import.meta.url), 'utf8');
 const onBlockOf = (text) => text.match(/^on:\n([\s\S]*?)(?=\n\S)/m)[1];
@@ -174,9 +174,9 @@ test('MW-29: スクリプトはワークフロー側の版（github.sha）から
   assert.match(plan, /node \.workflow\/\.github\/scripts\/plan-migrations\.mjs "\$API_ORIGIN" apps\/api\/drizzle\/meta\/_journal\.json/);
 });
 
-test('MW-30: 流したあとの報告は失敗しても動き、流す手順は失敗を握りつぶさない', () => {
+test('MW-30: 流したあとの報告は流す前の時刻まで進んだときだけ動き、流す手順の失敗では止まらない', () => {
   const report = stepBlock(applyJob, 'Report applied migrations');
-  assert.match(report, /if: always\(\)/);
+  assert.match(report, /if: \$\{\{ always\(\) && steps\.before\.outcome == 'success' \}\}/);
   const migrate = stepBlock(applyJob, 'Apply migrations');
   assert.doesNotMatch(migrate, /continue-on-error/);
 });
@@ -294,4 +294,30 @@ test('MW-33: 秘密の確認の手順で接続先を伏せ、流す手順より�
   const posVerify = applyJob.indexOf('- name: Verify MIGRATION_DATABASE_URL is set');
   const posMigrate = applyJob.indexOf('- name: Apply migrations');
   assert.ok(posVerify > -1 && posMigrate > posVerify, '秘密の確認が流す手順より前にある');
+});
+
+test('MW-38: 秘密が無いときEnvironmentの名前を出して止める（E-02）', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'mw38-'));
+  try {
+    await writeFile(join(dir, 'verify.sh'), runBody(stepBlock(applyJob, 'Verify MIGRATION_DATABASE_URL is set')));
+    const result = spawnSync('bash', ['-e', 'verify.sh'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...process.env, MIGRATION_DATABASE_URL: '', ENVIRONMENT_NAME: 'migrate-production' },
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /MIGRATION_DATABASE_URL/);
+    assert.match(result.stderr, /migrate-production/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('MW-39: 本番だけbackup_reminder: trueを渡し、planが--backup-reminderにする（F-07）', () => {
+  assert.doesNotMatch(read('migrate-integration.yml'), /backup_reminder/);
+  assert.match(read('migrate-production.yml'), /backup_reminder: true/);
+  assert.match(shared, /backup_reminder:\n\s+description: "一覧にバックアップの確かめの文を出す（本番のボタン用）"\n\s+required: false\n\s+type: boolean\n\s+default: false/);
+  const plan = stepBlock(planJob, 'Plan migrations');
+  assert.match(plan, /BACKUP_REMINDER: \$\{\{ inputs\.backup_reminder \}\}/);
+  assert.match(plan, /if \[ "\$BACKUP_REMINDER" = "true" \]; then EXTRA\+=\(--backup-reminder\); fi/);
 });

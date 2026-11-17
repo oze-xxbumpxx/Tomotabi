@@ -151,7 +151,7 @@ Node 24の`fetch`だけを使う。`npm ci`は要らない。判定は純粋関�
 
 - 接続文字列は環境変数で渡し、コマンドの引数に置かない。GitHubは、登録した秘密と同じ文字列をログで伏せる。
 - `MIGRATION_DATABASE_URL`は、使う手順（1・4・5・6）の`env`にだけ置く。ジョブの`env`と、3番目の`npm ci`の手順には置かない。`npm ci`は依存パッケージのinstallスクリプトを動かすので、そこに秘密があると、乗っ取られた依存パッケージがDBの持ち主の接続を読める。
-- Drizzleは、1回の実行で流すmigrationを1つのトランザクションにまとめる（`drizzle-orm` 0.45.4の`pg-core/dialect.js`の`migrate`。SQLと履歴への追加を、全部まとめて`session.transaction`の中で流す）。途中のSQLが失敗すると、その回に流そうとしたmigrationは全部が巻き戻り、履歴にも入らない（要件E-04）。5が失敗しても6を動かし（`if: always()`）、流す前と同じ時刻であることを読んで「何も流れていません」と出す。
+- Drizzleは、1回の実行で流すmigrationを1つのトランザクションにまとめる（`drizzle-orm` 0.45.4の`pg-core/dialect.js`の`migrate`。SQLと履歴への追加を、全部まとめて`session.transaction`の中で流す）。途中のSQLが失敗すると、その回に流そうとしたmigrationは全部が巻き戻り、履歴にも入らない（要件E-04）。4が成功したあとなら、5が失敗しても6を動かし（`if: always() && steps.before.outcome == 'success'`）、流す前と同じ時刻であることを読んで「何も流れていません」と出す。4より前で止まったときは6を動かさない。
 - planとapplyのあいだに端末から流されていても、`drizzle-kit migrate`は流していないものだけを流す（要件E-06）。
 
 ### `migration-deploy-check`の案内の文

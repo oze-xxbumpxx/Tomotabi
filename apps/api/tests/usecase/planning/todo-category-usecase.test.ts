@@ -230,6 +230,8 @@ describe("カテゴリの並べ替え", () => {
     );
     expect(error.code).toBe("TODO_CATEGORY_ORDER_CHANGED");
     expect(error.status).toBe(409);
+    // 同じ要求を送り直しても同じ409になるので、送り直してよい印は付けない。
+    expect(error.retryable).toBe(false);
   });
 
   it("ロックが古い順を返しても、読み直した今の順と比べて409にする（A-I07）", async () => {
@@ -302,6 +304,7 @@ describe("カテゴリの削除", () => {
       ),
     );
     expect(error.code).toBe("TODO_COUNT_CHANGED");
+    expect(error.retryable).toBe(false);
     expect(ctx.categoryRows.has(CATEGORY_ID)).toBe(true);
     expect(ctx.todoRows.has("t-1")).toBe(true);
   });

@@ -472,6 +472,43 @@ describe("planning / record / infra schema migrations and runtime privileges", (
       }
     });
 
+    // 0014_todo_categories_grants.sql: 試験の他の箇所はadminの接続なので、権限の判定はここでだけ通る。
+    it("todo-organize: app_runtime updates only the mutable category and todo columns", async () => {
+      const category = await runtime.query<{ id: string }>(
+        "INSERT INTO planning.todo_categories (trip_id, name, position, created_by) VALUES ($1, '持ち物', 0, $2) RETURNING id",
+        [tripId, slot0],
+      );
+      const categoryId = category.rows[0]!.id;
+      const todo = await runtime.query<{ id: string }>(
+        "INSERT INTO planning.todos (trip_id, name, created_by) VALUES ($1, '充電器', $2) RETURNING id",
+        [tripId, slot0],
+      );
+      const todoId = todo.rows[0]!.id;
+
+      await runtime.query(
+        "UPDATE planning.todo_categories SET name = '準備', position = 1, version = version + 1, updated_at = now() WHERE id = $1",
+        [categoryId],
+      );
+      await runtime.query(
+        "UPDATE planning.todos SET category_id = $2, assignee_id = $3, due_on = '2026-08-31' WHERE id = $1",
+        [todoId, categoryId, slot1],
+      );
+
+      await expectPermissionDenied(
+        runtime,
+        "UPDATE planning.todo_categories SET trip_id = trip_id WHERE id = $1",
+        [categoryId],
+      );
+      await expectPermissionDenied(
+        runtime,
+        "UPDATE planning.todo_categories SET created_by = $2 WHERE id = $1",
+        [categoryId, slot1],
+      );
+
+      await runtime.query("DELETE FROM planning.todos WHERE id = $1", [todoId]);
+      await runtime.query("DELETE FROM planning.todo_categories WHERE id = $1", [categoryId]);
+    });
+
     it("D-09 cannot run anything the design does not grant", async () => {
       for (const table of ALL_TABLES) {
         // record.active_plan_events grants DELETE: occupancy rows are removed on cancel (0008).

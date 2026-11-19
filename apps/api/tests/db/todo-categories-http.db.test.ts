@@ -3,12 +3,13 @@ import { Test } from "@nestjs/testing";
 import type { Auth } from "better-auth";
 import type { TestHelpers } from "better-auth/plugins";
 import { testUtils } from "better-auth/plugins";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../../src/app.module";
 import { closePool, getPool } from "../../src/infrastructure/database/pool";
 import { createAuth } from "../../src/modules/identity/infrastructure/better-auth";
+import { PgPlanningRead } from "../../src/modules/planning/infrastructure/pg-planning-read";
 import {
   createRoles,
   migrateAsMigrator,
@@ -52,6 +53,48 @@ function authed(req: request.Test, cookie: string): request.Test {
 
 function newKey(): string {
   return crypto.randomUUID();
+}
+
+// 文がpatternに合う最初の読み取りが終わったところで、一度だけhookを挟むpool。
+function interleavingPool(
+  pool: Pool,
+  pattern: RegExp,
+  hook: () => Promise<void>,
+): Pool {
+  let fired = false;
+  const wrapClient = (client: PoolClient): PoolClient =>
+    new Proxy(client, {
+      get(target, prop, receiver) {
+        if (prop !== "query") {
+          const value: unknown = Reflect.get(target, prop, receiver);
+          return typeof value === "function" ? value.bind(target) : value;
+        }
+        return async (...args: unknown[]): Promise<unknown> => {
+          const first = args[0];
+          const text =
+            typeof first === "string"
+              ? first
+              : typeof first === "object" && first !== null && "text" in first
+                ? String(first.text)
+                : "";
+          const result: unknown = await Reflect.apply(target.query, target, args);
+          if (!fired && pattern.test(text)) {
+            fired = true;
+            await hook();
+          }
+          return result;
+        };
+      },
+    });
+  return new Proxy(pool, {
+    get(target, prop, receiver) {
+      if (prop === "connect") {
+        return async (): Promise<PoolClient> => wrapClient(await target.connect());
+      }
+      const value: unknown = Reflect.get(target, prop, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
 }
 
 async function login(userId: string): Promise<string> {
@@ -569,19 +612,32 @@ describe("カテゴリのAPI（todo-organize A-I）", () => {
   it("読み取りのあいだにカテゴリを足しても一覧は破れない（A-I18）", async () => {
     const tripId = await createTrip(hinataCookie);
     const cat = await createCategory(hinataCookie, tripId, "X");
-    await postTodo(hinataCookie, tripId, "x1", cat.id);
-    const [list] = await Promise.all([
-      listTodos(hinataCookie, tripId),
-      postCategory(aoiCookie, tripId, "Y"),
-    ]);
-    const categoryIds = new Set(
-      (list.body.categories as { id: string }[]).map((c) => c.id),
-    );
-    for (const item of list.body.items as { categoryId: string | null }[]) {
-      if (item.categoryId !== null) {
-        expect(categoryIds.has(item.categoryId)).toBe(true);
-      }
-    }
+    const todo = await postTodo(hinataCookie, tripId, "x1", cat.id);
+    const todoId = todo.body.id as string;
+
+    // カテゴリを読んだあと・ToDoを読む前に、別の接続でカテゴリを足してToDoを移す。
+    // 2つの読み取りが同じ時点でなければ、ToDoが一覧に無いカテゴリを指す。
+    let interleaved = false;
+    const interleave = async (): Promise<void> => {
+      interleaved = true;
+      const added = await db.admin.query<{ id: string }>(
+        "INSERT INTO planning.todo_categories (trip_id, name, position, created_by) VALUES ($1, 'Y', 1, $2) RETURNING id",
+        [tripId, hinata.userId],
+      );
+      await db.admin.query(
+        "UPDATE planning.todos SET category_id = $2 WHERE id = $1",
+        [todoId, added.rows[0]!.id],
+      );
+    };
+    const view = await new PgPlanningRead(
+      interleavingPool(runtimePool, /planning\.todo_categories|"todo_categories"/, interleave),
+    ).listTodos(tripId);
+
+    expect(interleaved).toBe(true);
+    const categoryIds = new Set(view.categories.map((c) => c.id));
+    expect(view.items).toHaveLength(1);
+    expect(view.items[0]!.todo.categoryId).toBe(cat.id);
+    expect(categoryIds.has(cat.id)).toBe(true);
   });
 
   it("担当は自分・相手・nullのどれでも通る（A-I19）", async () => {

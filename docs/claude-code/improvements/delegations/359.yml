@@ -40,5 +40,12 @@ reviews:
     posted: false
     findings: []
 escalations: 0
-outcome: null
-gh: null
+outcome: 'merged'
+gh:
+  pr: 360
+  pr_created_at: '2026-11-14T10:48:01Z'
+  merged_at: '2026-11-14T13:00:23Z'
+  closed_at: '2026-11-14T13:00:23Z'
+  commits: 9
+  ci_first_pass: false
+  closes_linked: true

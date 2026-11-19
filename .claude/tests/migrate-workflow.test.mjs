@@ -74,11 +74,11 @@ test('MW-21: 環境の取り違えが無い（B-03）。本番はバックアッ
   }
   assert.doesNotMatch(read('migrate-integration.yml'), /backup_reminder/);
   assert.match(read('migrate-production.yml'), /backup_reminder: true/);
-  // 呼ばれる側の秘密はrequired:false。呼ぶ側は秘密を渡さないので、必須にすると
-  // 呼び出しが止まる。値はapplyのジョブのenvironmentが解決する。
-  const secretDecl = shared.match(/MIGRATION_DATABASE_URL:\n\s+description: "[^"]*"\n\s+required: (true|false)/);
-  assert.equal(secretDecl?.[1], 'false');
-  assert.match(shared, /呼ぶ側は渡さない/);
+  // 呼ばれる側は秘密を宣言しない。宣言すると、呼ぶ側が渡した空の値がEnvironmentの秘密より
+  // 先に使われる（2026-11-20 検証用で実際に止まった）。値はapplyのジョブのenvironmentが解決する。
+  const onBlock = shared.slice(shared.indexOf('on:\n'), shared.indexOf('\npermissions:'));
+  assert.doesNotMatch(onBlock, /^\s+secrets:/m);
+  assert.doesNotMatch(onBlock, /^\s+MIGRATION_DATABASE_URL:/m);
 });
 
 test('MW-22: planはEnvironmentを持たず、秘密を読まない', () => {

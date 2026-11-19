@@ -1,0 +1,76 @@
+issue: 364
+title: 'feat(ci): migrationを出先から流せるボタン（検証用と本番のワークフロー）'
+agent: 'devin'
+model: 'swe-2-flash-high'
+runner: 'local'
+change_level: 3
+delegated_at: '2026-11-15T22:58:54Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-15T23:35:54Z'
+    reviewed_sha: 'f12f94178d74737211d027dc007d607ea5785343'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'decision'
+        category: 'design-gap'
+        summary: '本番のボタンを起動・承認できる範囲の判断'
+      - severity: 'must'
+        category: 'spec-mismatch'
+        summary: '呼ばれる側の秘密をrequired: trueにしたため、呼ぶ側が空を渡して起動できない見込み'
+      - severity: 'nit'
+        category: 'missing-test'
+        summary: 'MW-32とMW-15の試験が、壊しても通る'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: '手順書の止まったときの表が、実際に止まる手順と合わない'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: 'PRの説明と試験のコメントの文章の小さな誤り'
+  - round: 1
+    reviewed_at: '2026-11-16T12:36:10Z'
+    reviewed_sha: '977c191b3849f256b25e07853239bc113d7ac57d'
+    verdict: 'escalate'
+    posted: false
+    findings:
+      - severity: 'security'
+        category: 'security'
+        summary: '(非公開)'
+      - severity: 'nit'
+        category: 'robustness'
+        summary: '時刻を読むスクリプトに、接続後の切断のerrorリスナーが無い'
+      - severity: 'nit'
+        category: 'logging-gap'
+        summary: '秘密を伏せる登録の書き方の穴（%エンコード・改行・大文字ホスト）'
+      - severity: 'nit'
+        category: 'test-robustness'
+        summary: 'MW-32の試験をbash -eで動かしていない'
+      - severity: 'nit'
+        category: 'error-feedback'
+        summary: 'pgが見つからないときも「DBにつながりませんでした」と出る'
+  - round: 2
+    reviewed_at: '2026-11-16T13:38:45Z'
+    reviewed_sha: 'b3aae2883941f9a3b174697eff8b01f1712713b4'
+    verdict: 'merge'
+    posted: false
+    findings:
+      - severity: 'nit'
+        category: 'pr-metadata'
+        summary: 'PRの説明の試験の範囲（MW-34〜36）と実行のしかたが古い'
+escalations: 2
+outcome: 'merged'
+gh:
+  pr: 367
+  pr_created_at: '2026-11-15T23:30:25Z'
+  merged_at: '2026-11-16T22:34:46Z'
+  closed_at: '2026-11-16T22:34:46Z'
+  commits: 3
+  ci_first_pass: true
+  closes_linked: true
+task_key: 'migration-workflow:workflow'

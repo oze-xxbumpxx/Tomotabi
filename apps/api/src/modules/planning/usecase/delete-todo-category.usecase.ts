@@ -73,8 +73,8 @@ export class DeleteTodoCategoryUseCase implements DeleteTodoCategoryInputPort {
               throw new ApiError({
                 code: "TODO_COUNT_CHANGED",
                 status: 409,
-                retryable: true,
-                message: "Todo count in the category changed. Retry",
+                message:
+                  "Todo count in the category changed. Fetch it again and retry",
               });
             }
             const deletedTodoCount = await ctx.todos.deleteByCategory(

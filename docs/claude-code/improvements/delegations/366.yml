@@ -1,0 +1,39 @@
+issue: 366
+title: 'fix(ci): migrationのボタンの報告の手順を、流す手順まで進んだときだけ動かす'
+agent: 'devin'
+model: 'swe-2-flash-medium'
+runner: 'local'
+change_level: 1
+delegated_at: '2026-11-15T22:59:41Z'
+reviews:
+  - round: 0
+    reviewed_at: '2026-11-16T23:14:06Z'
+    reviewed_sha: 'b8ecf0e1a67fe0e902407d9ef84c67b8845cc6e4'
+    verdict: 'fix'
+    posted: true
+    findings:
+      - severity: 'must'
+        category: 'doc-accuracy'
+        summary: '試験計画の表でMW-38とMW-39の行だけ列が4つあり、期待結果が表示されない'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: '試験の置き場所の説明が実際と違う'
+      - severity: 'nit'
+        category: 'doc-accuracy'
+        summary: '特性観点の文が古い'
+  - round: 1
+    reviewed_at: '2026-11-16T23:18:32Z'
+    reviewed_sha: '95665b88c819260082d31cddf63d27fa79bde2ad'
+    verdict: 'merge'
+    posted: false
+    findings: []
+escalations: 0
+outcome: 'merged'
+gh:
+  pr: 373
+  pr_created_at: '2026-11-16T23:11:06Z'
+  merged_at: '2026-11-17T10:24:13Z'
+  closed_at: '2026-11-17T10:24:13Z'
+  commits: 2
+  ci_first_pass: true
+  closes_linked: true

@@ -134,9 +134,11 @@ test('MD-21: _journal.jsonが読めなければ止め、apiには聞かない', 
   const d = deps({ response: ok(W12), journalText: enoent });
   assert.equal(await main(['https://api.example.test', 'x.json'], d.options), 1);
   assert.equal(d.calls.length, 0);
-  const empty = deps({ response: ok(W12), journalText: 'not json' });
-  assert.equal(await main(['https://api.example.test', 'x.json'], empty.options), 1);
-  assert.equal(empty.calls.length, 0);
+  for (const journalText of ['not json', '{"entries":[]}', '{}']) {
+    const d2 = deps({ response: ok(W12), journalText });
+    assert.equal(await main(['https://api.example.test', 'x.json'], d2.options), 1, journalText);
+    assert.equal(d2.calls.length, 0, journalText);
+  }
 });
 
 test('MD-24: 終了コードは通す・警告で0、止めるで1', async () => {
@@ -231,7 +233,21 @@ test('MD-28: 引数が足りなければ使い方を出して1', async () => {
   }
 });
 
-test('MD-29: importしただけでは動かない', () => {
+test('MD-29: importしただけでは動かない', async () => {
   // このファイルが上でimportした時点で本体が動いていれば、exitCodeが変わっている。
   assert.ok(process.exitCode === undefined || process.exitCode === 0);
+  // fetchを数える別のプロセスでimportし、apiに聞いていないことを確かめる。
+  const code = [
+    'let n = 0;',
+    'globalThis.fetch = async () => { n += 1; throw new Error("fetch"); };',
+    `await import(${JSON.stringify(new URL('../../.github/scripts/check-deployed-migrations.mjs', import.meta.url).href)});`,
+    'await new Promise((r) => setTimeout(r, 50));',
+    'process.stdout.write(String(n));',
+  ].join('\n');
+  const child = spawn(process.execPath, ['--input-type=module', '-e', code], { stdio: ['ignore', 'pipe', 'inherit'] });
+  let out = '';
+  child.stdout.on('data', (chunk) => (out += chunk));
+  const exitCode = await new Promise((resolve) => child.on('close', resolve));
+  assert.equal(exitCode, 0);
+  assert.equal(out, '0');
 });

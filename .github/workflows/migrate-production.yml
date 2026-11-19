@@ -30,3 +30,7 @@ jobs:
       api_origin_var: MIGRATE_API_ORIGIN_PRODUCTION
       sha: ${{ inputs.sha }}
       backup_reminder: true
+    # secrets: inheritが無いと、呼ばれる側のapplyのジョブがEnvironmentを指定していても
+    # Environmentの秘密が空になる（2026-11-20 検証用で実際に止まった。deploy-integration.ymlと同じ形）。
+    # リポジトリの秘密にMIGRATION_DATABASE_URLは置かない（手順書）ので、渡るのはEnvironmentの秘密だけ。
+    secrets: inherit

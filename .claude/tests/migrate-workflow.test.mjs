@@ -62,20 +62,21 @@ test('MW-20: ボタンはworkflow_dispatchだけで動く', () => {
   }
 });
 
-test('MW-21: 環境の取り違えが無い（B-03）。本番はバックアップの確かめの文を出す。呼ぶ側は秘密を渡さない', () => {
+test('MW-21: 環境の取り違えが無い（B-03）。本番はバックアップの確かめの文を出す。呼ぶ側はsecrets: inheritだけを付ける', () => {
   for (const [name, expected] of Object.entries(buttons)) {
     const button = read(name);
     assert.match(button, new RegExp(`environment: ${expected.environment}\\n`), name);
     assert.match(button, new RegExp(`${expected.originVar}`), name);
     assert.match(button, /sha: \$\{\{ inputs\.sha \}\}/, name);
     assert.match(button, /uses: \.\/\.github\/workflows\/migrate-db\.yml/, name);
-    // 秘密は渡さない。applyのジョブが自分のEnvironmentの秘密を直接読む。
-    assert.doesNotMatch(button, /\bsecrets\b/, name);
+    // inheritが無いと、呼ばれる側のEnvironmentの秘密が空になる（2026-11-20 検証用で実際に止まった）。
+    // 名前を指定して渡す形（MIGRATION_DATABASE_URL: …）は使わない。
+    assert.match(button, /^    secrets: inherit$/m, name);
+    assert.doesNotMatch(button, /MIGRATION_DATABASE_URL:/, name);
   }
   assert.doesNotMatch(read('migrate-integration.yml'), /backup_reminder/);
   assert.match(read('migrate-production.yml'), /backup_reminder: true/);
-  // 呼ばれる側は秘密を宣言しない。宣言すると、呼ぶ側が渡した空の値がEnvironmentの秘密より
-  // 先に使われる（2026-11-20 検証用で実際に止まった）。値はapplyのジョブのenvironmentが解決する。
+  // 呼ばれる側は秘密を宣言しない。値はapplyのジョブのenvironmentが解決する。
   const onBlock = shared.slice(shared.indexOf('on:\n'), shared.indexOf('\npermissions:'));
   assert.doesNotMatch(onBlock, /^\s+secrets:/m);
   assert.doesNotMatch(onBlock, /^\s+MIGRATION_DATABASE_URL:/m);
@@ -86,7 +87,7 @@ test('MW-22: planはEnvironmentを持たず、秘密を読まない', () => {
   assert.doesNotMatch(planJob, /secrets\./);
 });
 
-test('MW-23: 秘密を読むのはapplyのジョブの手順だけ。呼ぶ側は秘密を渡さない', () => {
+test('MW-23: 秘密を読むのはapplyのジョブの手順だけ。呼ぶ側は名前を指定して渡さない', () => {
   assert.doesNotMatch(planJob, /secrets\./);
   // applyのジョブのenv（stepsより前）にsecrets.が無い。
   const applyHead = applyJob.slice(0, applyJob.indexOf('    steps:'));
@@ -107,9 +108,10 @@ test('MW-23: 秘密を読むのはapplyのジョブの手順だけ。呼ぶ側�
   assert.ok(npmCiStart > -1);
   const npmCi = applyJob.slice(npmCiStart, applyJob.indexOf('\n      - ', npmCiStart));
   assert.doesNotMatch(npmCi, /MIGRATION_DATABASE_URL|secrets\./);
-  // 呼ぶ側は秘密を渡さない。secrets:の指定（inheritを含む）が無い。
+  // 呼ぶ側のsecrets:はinheritの1行だけ。名前を指定して渡す形は無い。
   for (const name of Object.keys(buttons)) {
-    assert.doesNotMatch(read(name), /^\s*secrets:/m, name);
+    const lines = read(name).match(/^\s*secrets:.*$/gm) ?? [];
+    assert.deepEqual(lines.map((l) => l.trim()), ['secrets: inherit'], name);
   }
   // 呼ばれる側もsecrets: inheritを使わない。
   assert.doesNotMatch(shared, /^\s*secrets:\s*inherit\s*$/m);

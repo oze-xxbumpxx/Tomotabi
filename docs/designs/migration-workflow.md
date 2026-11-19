@@ -112,7 +112,7 @@ planのジョブは、Environmentを使わない。GitHubは、承認が必須�
 - 実行の名前は`migrate-integration <SHA>`（空なら`main latest`）。承認の画面で、どの環境の何を流すかが見える。
 - 同時実行は、環境ごとの`concurrency`の組（`migrate-integration`・`migrate-production`）で1つにし、あとのものを待たせる（`queue: max`、`cancel-in-progress: false`。デプロイと同じ）。
 - 権限は`contents: read`だけ。
-- 秘密は渡さない。ボタンは`secrets:`も`secrets: inherit`も使わず、`MIGRATION_DATABASE_URL`はapplyのジョブが自分の`environment`の秘密から直接読む。
+- ボタンは`secrets: inherit`だけを付け、名前を指定して秘密を渡さない。`MIGRATION_DATABASE_URL`は、applyのジョブが自分の`environment`の秘密から読む。`inherit`が無いと、呼ばれる側でEnvironmentの秘密が空になる（2026-11-20 検証用で実際に止まった。デプロイのボタンと同じ形）。リポジトリの秘密に`MIGRATION_DATABASE_URL`は置かないので、`inherit`で渡るのはEnvironmentの秘密だけ。
 
 ### planのジョブ（Environmentなし）
 
@@ -142,7 +142,7 @@ Node 24の`fetch`だけを使う。`npm ci`は要らない。判定は純粋関�
 
 `needs: plan`、`if: needs.plan.outputs.state != 'none'`、`environment: <migrate-…>`。承認のあとに始まる。
 
-1. `secrets.MIGRATION_DATABASE_URL`（このジョブの`environment`の秘密。呼ぶ側からは渡さない）があるかを確かめる。無ければ、Environmentの名前を出して止める（値は出さない）。
+1. `secrets.MIGRATION_DATABASE_URL`（このジョブの`environment`の秘密。呼ぶ側は`secrets: inherit`だけを付ける）があるかを確かめる。無ければ、Environmentの名前を出して止める（値は出さない）。
 2. 流すcommitを取り出し、`main`の履歴にあるかをもう一度確かめる（承認を待つあいだに`main`が変わっても、同じSHAを使う。SHAはplanの出力から受け取る）。
 3. `actions/setup-node`（24）と`npm ci`。
 4. 流す前の時刻を読む（planと同じくワークフローを動かした版から取り出した`.github/scripts/read-last-migration-time.mjs`を`node`で動かす。`MIGRATION_DATABASE_URL`は環境変数で渡す）。

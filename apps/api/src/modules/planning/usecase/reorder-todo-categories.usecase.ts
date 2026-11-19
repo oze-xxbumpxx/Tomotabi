@@ -68,8 +68,8 @@ export class ReorderTodoCategoriesUseCase implements ReorderTodoCategoriesInputP
               throw new ApiError({
                 code: "TODO_CATEGORY_ORDER_CHANGED",
                 status: 409,
-                retryable: true,
-                message: "Todo category order has changed. Retry",
+                message:
+                  "Todo category order has changed. Fetch it again and retry",
               });
             }
             if (!isPermutation(input.from, input.to)) {

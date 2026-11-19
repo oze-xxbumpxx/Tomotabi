@@ -46,7 +46,7 @@ apiとwebのコードは変えないので、アプリの単体の試験とE2E�
 | #     | 観点                                      | 期待結果                                                                                                                           |
 | ----- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | MW-20 | ボタンは手で押すときだけ動く（制約）      | `migrate-integration.yml`・`migrate-production.yml`の`on`は`workflow_dispatch`だけ。`push`・`pull_request`・`schedule`が無い       |
-| MW-21 | 環境の取り違えが無い（B-03）              | 検証用は`migrate-integration`と`MIGRATE_API_ORIGIN_INTEGRATION`、本番は`migrate-production`と`MIGRATE_API_ORIGIN_PRODUCTION`を渡す。呼ぶ側は秘密を渡さない（`MIGRATION_DATABASE_URL:`も`secrets: inherit`も無い） |
+| MW-21 | 環境の取り違えが無い（B-03）              | 検証用は`migrate-integration`と`MIGRATE_API_ORIGIN_INTEGRATION`、本番は`migrate-production`と`MIGRATE_API_ORIGIN_PRODUCTION`を渡す。呼ぶ側は秘密を渡さない（`MIGRATION_DATABASE_URL:`も`secrets: inherit`も無い）。呼ばれる側の`workflow_call`も秘密を宣言しない（宣言すると空の値が先に使われる） |
 | MW-22 | planは秘密を読まない                      | planのジョブに`environment`が無く、`secrets.`を1つも読まない                                                                       |
 | MW-23 | 秘密を読むのはapplyだけ                   | `secrets.MIGRATION_DATABASE_URL`を読むのは、applyのジョブの手順だけ。applyのジョブの`env`に`secrets.`が無く、`npm ci`の手順に`MIGRATION_DATABASE_URL`が無い。`secrets: inherit`でほかのワークフローに渡さない。呼ぶ側は秘密を渡さず、applyのジョブが自分のEnvironmentの秘密を直接読む              |
 | MW-24 | applyは承認のあと、流すものがあるときだけ | applyに`environment`と`needs: plan`があり、`if`が`state`が`none`でないことを見る                                                   |

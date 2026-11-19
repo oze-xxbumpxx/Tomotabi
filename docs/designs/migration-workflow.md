@@ -112,7 +112,7 @@ planのジョブは、Environmentを使わない。GitHubは、承認が必須�
 - 実行の名前は`migrate-integration <SHA>`（空なら`main latest`）。承認の画面で、どの環境の何を流すかが見える。
 - 同時実行は、環境ごとの`concurrency`の組（`migrate-integration`・`migrate-production`）で1つにし、あとのものを待たせる（`queue: max`、`cancel-in-progress: false`。デプロイと同じ）。
 - 権限は`contents: read`だけ。
-- ボタンは`secrets: inherit`だけを付け、名前を指定して秘密を渡さない。`MIGRATION_DATABASE_URL`は、applyのジョブが自分の`environment`の秘密から読む。`inherit`が無いと、呼ばれる側でEnvironmentの秘密が空になる（2026-11-20 検証用で実際に止まった。デプロイのボタンと同じ形）。リポジトリの秘密に`MIGRATION_DATABASE_URL`は置かないので、`inherit`で渡るのはEnvironmentの秘密だけ。
+- ボタンは`secrets: inherit`だけを付け、名前を指定して秘密を渡さない。`MIGRATION_DATABASE_URL`は、applyのジョブが自分の`environment`の秘密から読む。`inherit`が無いと、呼ばれる側でEnvironmentの秘密が空になる（2026-11-20 検証用で実際に止まった。デプロイのボタンと同じ形）。`inherit`は、ボタンが読めるリポジトリの秘密も呼ばれる側へ渡す。`MIGRATION_DATABASE_URL`はリポジトリに置かないので、applyのジョブが読むのは自分のEnvironmentの値になる。planのジョブはどの秘密も読まない（MW-22）。
 
 ### planのジョブ（Environmentなし）
 

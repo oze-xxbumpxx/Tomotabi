@@ -30,9 +30,8 @@ on:
         required: false
         type: boolean
         default: false
-    # MIGRATION_DATABASE_URLはここで宣言しない。宣言すると、呼ぶ側が渡した値（渡さないので空）が
-    # applyのジョブのEnvironmentの秘密より先に使われ、空になる（2026-11-20 検証用で実際に止まった）。
-    # deploy-vercel.ymlと同じく、applyのジョブのEnvironmentの秘密をそのまま読む。
+    # MIGRATION_DATABASE_URLはここで宣言しない。呼ぶ側がsecrets: inheritで渡し、
+    # applyのジョブが自分のEnvironmentの秘密を読む（deploy-vercel.ymlと同じ形）。
 
 permissions:
   contents: read

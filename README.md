@@ -90,15 +90,21 @@ apiは、業務ごとに6つのモジュール（`identity`・`planning`・`reco
 ## 変更が本番に届くまで
 
 ```mermaid
-flowchart LR
-  pr["PR"] --> ci["CI<br/>lint・型・単体<br/>実DBの試験・E2E"]
-  ci --> review["レビュー<br/>Claude Code・Devin"]
-  review --> merge["マージ<br/>人が決める"]
-  merge --> mi["migrate-integration<br/>承認して流す"]
-  mi --> di["deploy-integration"]
-  di --> check["検証用の環境で<br/>実機の確かめ"]
-  check --> mp["migrate-production<br/>承認して流す"]
-  mp --> dp["deploy-production<br/>承認して出す"]
+flowchart TB
+  subgraph dev["開発"]
+    direction LR
+    pr["PR"] --> ci["CI<br/>lint・型・単体<br/>実DBの試験・E2E"] --> review["レビュー<br/>Claude Code・Devin"] --> merge["マージ<br/>人が決める"]
+  end
+  subgraph stg["検証用の環境"]
+    direction LR
+    mi["migrate-integration<br/>承認して流す"] --> di["deploy-integration"] --> check["実機で確かめる"]
+  end
+  subgraph prod["本番"]
+    direction LR
+    mp["migrate-production<br/>承認して流す"] --> dp["deploy-production<br/>承認して出す"]
+  end
+  merge --> mi
+  check --> mp
 ```
 
 検証用と本番は、VercelもNeonも別のプロジェクトです。デプロイとmigrationのボタンは、GitHubのEnvironmentで承認者と`main`だけのブランチ制限を付けています。DBにつなぐ秘密は、承認のあとに動く手順だけが読みます。出した記録は[docs/releases/](docs/releases/)に残しています。

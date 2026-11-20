@@ -103,8 +103,7 @@ flowchart TB
     direction LR
     mp["migrate-production<br/>承認して流す"] --> dp["deploy-production<br/>承認して出す"]
   end
-  merge --> mi
-  check --> mp
+  dev --> stg --> prod
 ```
 
 検証用と本番は、VercelもNeonも別のプロジェクトです。デプロイとmigrationのボタンは、GitHubのEnvironmentで承認者と`main`だけのブランチ制限を付けています。DBにつなぐ秘密は、承認のあとに動く手順だけが読みます。出した記録は[docs/releases/](docs/releases/)に残しています。
